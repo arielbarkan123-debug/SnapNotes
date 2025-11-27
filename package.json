@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "v1": "git checkout v1 && npm run dev",
+    "v2": "git checkout v2 && npm run dev",
+    "latest": "git checkout main && npm run dev"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
