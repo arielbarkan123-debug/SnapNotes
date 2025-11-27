@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -74,7 +74,7 @@ function ProcessingContent() {
 
   const [state, setState] = useState<ProcessingState>({ status: 'processing' })
   const [currentStage, setCurrentStage] = useState(0)
-  const [hasStarted, setHasStarted] = useState(false)
+  const hasStartedRef = useRef(false)
 
   // Redirect if no image URL
   useEffect(() => {
@@ -146,21 +146,17 @@ function ProcessingContent() {
     }
   }, [imageUrl, title, router])
 
-  // Start generation on mount
+  // Start generation on mount (ref prevents duplicate calls in StrictMode)
   useEffect(() => {
-    if (!hasStarted && imageUrl) {
-      setHasStarted(true)
+    if (!hasStartedRef.current && imageUrl) {
+      hasStartedRef.current = true
       generateCourse()
     }
-  }, [hasStarted, imageUrl, generateCourse])
+  }, [imageUrl, generateCourse])
 
   // Handle retry
   const handleRetry = () => {
-    setHasStarted(false)
-    setTimeout(() => {
-      setHasStarted(true)
-      generateCourse()
-    }, 100)
+    generateCourse()
   }
 
   if (!imageUrl) {
