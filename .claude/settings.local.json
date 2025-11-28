@@ -21,7 +21,12 @@
       "Bash(git tag:*)",
       "Bash(git checkout:*)",
       "Bash(git merge:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(gh auth logout:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npx tsc:*)",
+      "Bash(lsof:*)"
     ],
     "deny": [],
     "ask": []

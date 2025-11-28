@@ -1,13 +1,56 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import Button from '@/components/ui/Button'
 import CourseCard from '@/components/course/CourseCard'
 import UploadModal from '@/components/upload/UploadModal'
+import { DashboardWidget } from '@/components/srs'
+import { StreakWidget, MiniStreak } from '@/components/gamification/StreakWidget'
 import { Course } from '@/types'
 import { useCourses } from '@/hooks'
 import { useToast } from '@/contexts/ToastContext'
+import { useXP } from '@/contexts/XPContext'
+import { formatXP, getLevelTitle, getLevelBadge } from '@/lib/gamification/xp'
+
+interface GamificationStats {
+  totalXP: number
+  level: number
+  levelTitle: string
+  levelProgress: {
+    current: number
+    target: number
+    percent: number
+  }
+  streak: {
+    current: number
+    longest: number
+    isAtRisk: boolean
+    activeToday: boolean
+    hoursRemaining: number
+  }
+}
+
+interface Recommendation {
+  type: 'review' | 'practice' | 'new_lesson' | 'break'
+  message: string
+  action: {
+    label: string
+    href: string
+  }
+  reason: string
+  priority: number
+  icon: string
+}
+
+interface SessionSuggestion {
+  type: 'quick' | 'standard' | 'deep'
+  duration: number
+  cardCount: number
+  message: string
+  icon: string
+}
 
 interface DashboardContentProps {
   initialCourses: Course[]
@@ -16,7 +59,66 @@ interface DashboardContentProps {
 export default function DashboardContent({ initialCourses }: DashboardContentProps) {
   const router = useRouter()
   const { error: showError } = useToast()
+  const { showXP, showLevelUp } = useXP()
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
+  const [gamificationStats, setGamificationStats] = useState<GamificationStats | null>(null)
+  const [recommendation, setRecommendation] = useState<Recommendation | null>(null)
+  const [sessionSuggestion, setSessionSuggestion] = useState<SessionSuggestion | null>(null)
+  const hasCheckedStreak = useRef(false)
+
+  // Fetch gamification stats, recommendations, and check streak on mount
+  useEffect(() => {
+    const fetchStatsAndCheckStreak = async () => {
+      try {
+        // Fetch gamification stats and recommendations in parallel
+        const [statsResponse, recResponse] = await Promise.all([
+          fetch('/api/gamification/stats'),
+          fetch('/api/recommendations'),
+        ])
+
+        if (statsResponse.ok) {
+          const stats = await statsResponse.json()
+          setGamificationStats(stats)
+        }
+
+        if (recResponse.ok) {
+          const recData = await recResponse.json()
+          setRecommendation(recData.recommendation)
+          setSessionSuggestion(recData.session)
+        }
+
+        // Check streak (only once per session)
+        if (!hasCheckedStreak.current) {
+          hasCheckedStreak.current = true
+
+          const streakResponse = await fetch('/api/gamification/streak', { method: 'POST' })
+          if (streakResponse.ok) {
+            const streakData = await streakResponse.json()
+
+            // Show streak bonus XP if earned
+            if (streakData.bonusXP > 0 && streakData.streak.maintained) {
+              showXP(streakData.bonusXP)
+            }
+
+            // Check for level up from streak
+            if (streakData.levelUp && streakData.newLevel) {
+              setTimeout(() => showLevelUp(streakData.newLevel), 1500)
+            }
+
+            // Refresh stats after streak update
+            const updatedStats = await fetch('/api/gamification/stats')
+            if (updatedStats.ok) {
+              setGamificationStats(await updatedStats.json())
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch gamification stats:', error)
+      }
+    }
+
+    fetchStatsAndCheckStreak()
+  }, [showXP, showLevelUp])
 
   const {
     filteredCourses,
@@ -67,6 +169,101 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
   return (
     <>
       <div className="container mx-auto px-4 py-6 sm:py-8 pb-24 sm:pb-8">
+        {/* Gamification Stats Header */}
+        {gamificationStats && (
+          <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Level & XP Card */}
+            <Link
+              href="/profile"
+              className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800 hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-center gap-3">
+                <div className="text-3xl">{getLevelBadge(gamificationStats.level)}</div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-gray-900 dark:text-white">
+                      Level {gamificationStats.level}
+                    </span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {gamificationStats.levelTitle}
+                    </span>
+                  </div>
+                  <div className="mt-1.5">
+                    <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
+                        style={{ width: `${gamificationStats.levelProgress.percent}%` }}
+                      />
+                    </div>
+                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      {formatXP(gamificationStats.levelProgress.current)} / {formatXP(gamificationStats.levelProgress.target)} XP
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Link>
+
+            {/* Streak Card */}
+            <Link
+              href="/profile"
+              className={`
+                rounded-xl border p-4 transition-shadow hover:shadow-md
+                ${gamificationStats.streak.current > 0
+                  ? 'border-orange-200 bg-gradient-to-br from-orange-50 to-red-50 dark:border-orange-800/50 dark:from-orange-900/20 dark:to-red-900/20'
+                  : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'
+                }
+                ${gamificationStats.streak.isAtRisk ? 'animate-pulse' : ''}
+              `}
+            >
+              <div className="flex items-center gap-3">
+                <div className="text-3xl">🔥</div>
+                <div>
+                  <div className="font-bold text-gray-900 dark:text-white">
+                    {gamificationStats.streak.current} Day Streak
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {gamificationStats.streak.isAtRisk && !gamificationStats.streak.activeToday ? (
+                      <span className="text-orange-600 dark:text-orange-400">
+                        {Math.floor(gamificationStats.streak.hoursRemaining)}h left to maintain!
+                      </span>
+                    ) : gamificationStats.streak.activeToday ? (
+                      <span className="text-green-600 dark:text-green-400">Active today!</span>
+                    ) : (
+                      `Best: ${gamificationStats.streak.longest} days`
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Link>
+
+            {/* Total XP Card */}
+            <Link
+              href="/profile"
+              className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800 hover:shadow-md transition-shadow sm:col-span-2 lg:col-span-1"
+            >
+              <div className="flex items-center gap-3">
+                <div className="text-3xl">⭐</div>
+                <div>
+                  <div className="font-bold text-gray-900 dark:text-white">
+                    {formatXP(gamificationStats.totalXP)} XP
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Total earned
+                  </div>
+                </div>
+              </div>
+            </Link>
+          </div>
+        )}
+
+        {/* Personalized Recommendation */}
+        {recommendation && (
+          <RecommendationCard
+            recommendation={recommendation}
+            sessionSuggestion={sessionSuggestion}
+          />
+        )}
+
         {/* Page Header */}
         <div className="flex flex-col gap-4 mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -106,6 +303,9 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
             </Button>
           </div>
         </div>
+
+        {/* SRS Review Widget */}
+        <DashboardWidget />
 
         {/* Search and Sort Bar - only show if there are courses */}
         {totalCount > 0 && (
@@ -350,6 +550,105 @@ function NoSearchResults({ query, onClear }: NoSearchResultsProps) {
       <Button variant="secondary" onClick={onClear} className="w-full sm:w-auto min-h-[44px]">
         Clear search
       </Button>
+    </div>
+  )
+}
+
+// ============================================================================
+// Recommendation Card
+// ============================================================================
+
+interface RecommendationCardProps {
+  recommendation: Recommendation
+  sessionSuggestion: SessionSuggestion | null
+}
+
+function RecommendationCard({ recommendation, sessionSuggestion }: RecommendationCardProps) {
+  // Get background color based on recommendation type
+  const getBgClass = () => {
+    switch (recommendation.type) {
+      case 'review':
+        return 'from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 border-indigo-200 dark:border-indigo-800/50'
+      case 'practice':
+        return 'from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-800/50'
+      case 'new_lesson':
+        return 'from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-200 dark:border-emerald-800/50'
+      case 'break':
+        return 'from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-amber-200 dark:border-amber-800/50'
+      default:
+        return 'from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 border-gray-200 dark:border-gray-700'
+    }
+  }
+
+  const getButtonClass = () => {
+    switch (recommendation.type) {
+      case 'review':
+        return 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800'
+      case 'practice':
+        return 'bg-purple-600 hover:bg-purple-700 active:bg-purple-800'
+      case 'new_lesson':
+        return 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800'
+      case 'break':
+        return 'bg-amber-600 hover:bg-amber-700 active:bg-amber-800'
+      default:
+        return 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800'
+    }
+  }
+
+  return (
+    <div className={`mb-6 rounded-xl border bg-gradient-to-br p-4 sm:p-5 ${getBgClass()}`}>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        {/* Icon and Content */}
+        <div className="flex items-start gap-3 flex-1">
+          <div className="text-3xl sm:text-4xl flex-shrink-0">{recommendation.icon}</div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Suggested for you
+              </span>
+            </div>
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-1">
+              {recommendation.message}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {recommendation.reason}
+            </p>
+
+            {/* Session suggestion badge */}
+            {sessionSuggestion && recommendation.type !== 'break' && (
+              <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 bg-white/50 dark:bg-gray-800/50 rounded-full px-2.5 py-1">
+                <span>{sessionSuggestion.icon}</span>
+                <span>
+                  {sessionSuggestion.type === 'quick' ? 'Quick' : sessionSuggestion.type === 'deep' ? 'Deep' : 'Standard'} session
+                </span>
+                <span className="text-gray-400 dark:text-gray-500">•</span>
+                <span>{sessionSuggestion.duration} min</span>
+                {sessionSuggestion.cardCount > 0 && (
+                  <>
+                    <span className="text-gray-400 dark:text-gray-500">•</span>
+                    <span>~{sessionSuggestion.cardCount} cards</span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Action Button */}
+        <Link
+          href={recommendation.action.href}
+          className={`
+            flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-white font-semibold
+            transition-colors whitespace-nowrap min-h-[48px] w-full sm:w-auto
+            ${getButtonClass()}
+          `}
+        >
+          {recommendation.action.label}
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+          </svg>
+        </Link>
+      </div>
     </div>
   )
 }

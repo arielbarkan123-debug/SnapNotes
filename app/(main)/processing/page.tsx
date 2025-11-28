@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, Suspense, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useXP } from '@/contexts/XPContext'
 
 // ============================================================================
 // Types
@@ -14,6 +15,7 @@ interface ProcessingState {
   error?: string
   retryable?: boolean
   courseId?: string
+  cardsGenerated?: number
 }
 
 interface ProgressStage {
@@ -68,13 +70,18 @@ const STAGE_INTERVAL = 4000 // 4 seconds per stage
 function ProcessingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { showXP, showLevelUp } = useXP()
 
   const imageUrl = searchParams.get('imageUrl')
   const title = searchParams.get('title')
 
   const [state, setState] = useState<ProcessingState>({ status: 'processing' })
   const [currentStage, setCurrentStage] = useState(0)
+  const [xpAwarded, setXpAwarded] = useState(0)
   const hasStartedRef = useRef(false)
+
+  // Generate a unique key for this processing session based on imageUrl
+  const processingKey = imageUrl ? `processing_${imageUrl}` : null
 
   // Redirect if no image URL
   useEffect(() => {
@@ -101,7 +108,17 @@ function ProcessingContent() {
 
   // API call
   const generateCourse = useCallback(async () => {
-    if (!imageUrl) return
+    if (!imageUrl || !processingKey) return
+
+    // Check if we're already processing this image (prevents duplicates on remount)
+    const isAlreadyProcessing = sessionStorage.getItem(processingKey)
+    if (isAlreadyProcessing === 'started') {
+      console.log('Course generation already in progress for this image')
+      return
+    }
+
+    // Mark as started in sessionStorage
+    sessionStorage.setItem(processingKey, 'started')
 
     setState({ status: 'processing' })
     setCurrentStage(0)
@@ -121,6 +138,10 @@ function ProcessingContent() {
       const data = await response.json()
 
       if (!response.ok) {
+        // Clear the processing flag so retry can work
+        if (processingKey) {
+          sessionStorage.removeItem(processingKey)
+        }
         setState({
           status: 'error',
           error: data.error || 'Failed to generate course',
@@ -129,22 +150,61 @@ function ProcessingContent() {
         return
       }
 
+      // Clear the processing flag on success
+      if (processingKey) {
+        sessionStorage.removeItem(processingKey)
+      }
+
       setState({
         status: 'success',
         courseId: data.courseId,
+        cardsGenerated: data.cardsGenerated || 0,
       })
 
-      // Redirect to the new course
-      router.push(`/course/${data.courseId}`)
+      // Award XP for course creation
+      try {
+        const xpResponse = await fetch('/api/gamification/xp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event: 'course_created' }),
+        })
+
+        if (xpResponse.ok) {
+          const xpData = await xpResponse.json()
+          setXpAwarded(xpData.xpAwarded)
+          showXP(xpData.xpAwarded)
+
+          if (xpData.levelUp && xpData.newLevel) {
+            setTimeout(() => showLevelUp(xpData.newLevel, xpData.newTitle), 1500)
+          }
+        }
+
+        // Update streak
+        await fetch('/api/gamification/streak', { method: 'POST' })
+
+        // Check for achievements (first_course, etc.)
+        await fetch('/api/gamification/check', { method: 'POST' })
+      } catch (error) {
+        console.error('Failed to award XP:', error)
+      }
+
+      // Redirect to the new course after a brief delay to show success
+      setTimeout(() => {
+        router.push(`/course/${data.courseId}`)
+      }, 2500)
     } catch (error) {
       console.error('Generation error:', error)
+      // Clear the processing flag so retry can work
+      if (processingKey) {
+        sessionStorage.removeItem(processingKey)
+      }
       setState({
         status: 'error',
         error: 'Connection error. Please check your internet and try again.',
         retryable: true,
       })
     }
-  }, [imageUrl, title, router])
+  }, [imageUrl, title, router, processingKey])
 
   // Start generation on mount (ref prevents duplicate calls in StrictMode)
   useEffect(() => {
@@ -176,7 +236,7 @@ function ProcessingContent() {
         )}
 
         {state.status === 'success' && (
-          <SuccessView />
+          <SuccessView cardsGenerated={state.cardsGenerated || 0} xpAwarded={xpAwarded} />
         )}
 
         {state.status === 'error' && (
@@ -271,7 +331,12 @@ function ProcessingView({ stage, imageUrl }: ProcessingViewProps) {
 // Success View
 // ============================================================================
 
-function SuccessView() {
+interface SuccessViewProps {
+  cardsGenerated: number
+  xpAwarded: number
+}
+
+function SuccessView({ cardsGenerated, xpAwarded }: SuccessViewProps) {
   return (
     <div className="text-center">
       {/* Success Icon */}
@@ -296,6 +361,27 @@ function SuccessView() {
       <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
         Course Created!
       </h2>
+
+      {/* XP Badge */}
+      {xpAwarded > 0 && (
+        <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/30 dark:to-yellow-900/30 rounded-full border border-amber-200 dark:border-amber-800/50">
+          <span className="text-2xl">⭐</span>
+          <span className="text-amber-700 dark:text-amber-300 font-bold">
+            +{xpAwarded} XP
+          </span>
+        </div>
+      )}
+
+      {/* Card count badge */}
+      {cardsGenerated > 0 && (
+        <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-full">
+          <span className="text-2xl">📚</span>
+          <span className="text-indigo-700 dark:text-indigo-300 font-medium">
+            {cardsGenerated} flashcard{cardsGenerated !== 1 ? 's' : ''} ready for review
+          </span>
+        </div>
+      )}
+
       <p className="text-gray-500 dark:text-gray-400 mb-4">
         Redirecting you to your new study course...
       </p>

@@ -342,8 +342,9 @@ export async function generateStudyCourse(
       )
     }
 
-    // Validate required fields
-    if (!course.title || !course.overview || !course.sections) {
+    // Validate required fields (AI may return "sections" or "lessons")
+    const hasLessons = course.lessons || (course as any).sections
+    if (!course.title || !course.overview || !hasLessons) {
       throw new ClaudeAPIError(
         'Generated course is missing required fields',
         'PARSE_ERROR'
@@ -463,8 +464,9 @@ export async function generateCourseFromImageSingleCall(
       )
     }
 
-    // Validate and apply user title
-    if (!course.title || !course.overview || !course.sections) {
+    // Validate and apply user title (AI may return "sections" or "lessons")
+    const hasLessons = course.lessons || (course as any).sections
+    if (!course.title || !course.overview || !hasLessons) {
       throw new ClaudeAPIError(
         'Generated course is missing required fields',
         'PARSE_ERROR'
@@ -492,18 +494,34 @@ export async function generateCourseFromImageSingleCall(
 
 /**
  * Normalizes a generated course by ensuring all optional arrays exist
+ * Also handles the sections -> lessons mapping (AI generates "sections" but type expects "lessons")
  */
-function normalizeGeneratedCourse(course: GeneratedCourse): GeneratedCourse {
+function normalizeGeneratedCourse(course: GeneratedCourse & { sections?: any[] }): GeneratedCourse {
+  // Handle AI response that uses "sections" instead of "lessons"
+  const lessonsData = course.lessons || course.sections || []
+
   return {
-    ...course,
-    keyConcepts: course.keyConcepts || [],
-    furtherStudy: course.furtherStudy || [],
-    sections: course.sections.map(section => ({
-      ...section,
-      keyPoints: section.keyPoints || [],
-      formulas: section.formulas || [],
-      diagrams: section.diagrams || [],
-      examples: section.examples || [],
+    title: course.title,
+    overview: course.overview,
+    lessons: lessonsData.map((lesson: any) => ({
+      title: lesson.title || 'Untitled Lesson',
+      steps: (lesson.steps || []).map((step: any) => {
+        // For question steps, put the question text in content
+        // AI generates: { type: "question", question: "What is...?", options: [...] }
+        // We need: { type: "question", content: "What is...?", options: [...] }
+        const content = step.type === 'question'
+          ? (step.question || step.content || '')
+          : (step.content || '')
+
+        return {
+          type: step.type || 'explanation',
+          content,
+          title: step.title,
+          options: step.options,
+          correct_answer: step.correctIndex ?? step.correct_answer,
+          explanation: step.explanation,
+        }
+      }),
     })),
   }
 }

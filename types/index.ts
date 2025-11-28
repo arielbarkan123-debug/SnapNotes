@@ -60,68 +60,93 @@ export interface CourseUpdate {
 
 // ============================================
 // GENERATED COURSE CONTENT STRUCTURE
-// Types for the AI-generated course content
+// Duolingo-style course structure
 // ============================================
+
+/**
+ * StepType - The type of content in a lesson step
+ */
+export type StepType = 'explanation' | 'key_point' | 'question' | 'formula' | 'diagram' | 'example' | 'summary'
+
+/**
+ * Step - A single step in a lesson
+ */
+export interface Step {
+  type: StepType
+  content: string
+  /** Optional title for the step */
+  title?: string
+  /** Answer options for questions */
+  options?: string[]
+  /** Index of correct answer for questions (0-3) */
+  correct_answer?: number
+  /** Explanation for questions */
+  explanation?: string
+}
+
+/**
+ * LessonStep - Alias for Step (used in lesson components)
+ */
+export type LessonStep = Step
+
+/**
+ * Lesson - A lesson containing multiple steps
+ */
+export interface Lesson {
+  title: string
+  steps: Step[]
+}
 
 /**
  * GeneratedCourse - The complete AI-generated course structure
  * Stored as JSONB in the database
  */
 export interface GeneratedCourse {
-  /** The course title generated from notes */
   title: string
-  /** High-level overview of what the notes cover */
   overview: string
-  /** List of key concepts/terms identified in the notes */
-  keyConcepts: string[]
-  /** Detailed sections breaking down the content */
-  sections: CourseSection[]
-  /** How different concepts connect to each other */
-  connections: string
-  /** Condensed summary of all the material */
-  summary: string
-  /** Suggested topics for further study */
-  furtherStudy: string[]
+  lessons: Lesson[]
 }
 
 /**
- * CourseSection - A section of the course covering a specific topic
+ * UserProgress - Tracks user progress through a course
  */
-export interface CourseSection {
-  /** Section title/heading */
-  title: string
-  /** Detailed explanation of the topic */
-  explanation: string
-  /** What the user originally wrote in their notes */
-  originalNotes: string
-  /** Bullet points of key takeaways */
-  keyPoints: string[]
-  /** Mathematical formulas if present (optional) */
-  formulas?: Formula[]
-  /** Descriptions of diagrams/visuals if present (optional) */
-  diagrams?: DiagramDescription[]
-  /** Practical examples to reinforce understanding (optional) */
-  examples?: string[]
+export interface UserProgress {
+  id: string
+  user_id: string
+  course_id: string
+  current_lesson: number
+  current_step: number
+  completed_lessons: number[]
+  /** Cumulative questions answered across all lessons */
+  questions_answered: number
+  /** Cumulative questions answered correctly */
+  questions_correct: number
+  created_at: string
+  updated_at: string
 }
 
 /**
- * Formula - A mathematical formula with explanation
+ * UserProgressInsert - Type for creating new progress records
  */
-export interface Formula {
-  /** The formula itself (can include LaTeX notation) */
-  formula: string
-  /** Plain English explanation of what the formula means */
-  explanation: string
+export interface UserProgressInsert {
+  user_id: string
+  course_id: string
+  current_lesson?: number
+  current_step?: number
+  completed_lessons?: number[]
+  questions_answered?: number
+  questions_correct?: number
 }
 
 /**
- * DiagramDescription - Description of a visual/diagram from the notes
+ * UserProgressUpdate - Type for updating progress records
  */
-export interface DiagramDescription {
-  /** What the diagram shows */
-  description: string
-  /** Why this diagram is important */
-  significance: string
+export interface UserProgressUpdate {
+  current_lesson?: number
+  current_step?: number
+  completed_lessons?: number[]
+  questions_answered?: number
+  questions_correct?: number
 }
 
 // ============================================
@@ -210,3 +235,10 @@ export interface PaginatedResponse<T> {
   /** Whether there are more pages */
   hasMore: boolean
 }
+
+// ============================================
+// SRS (SPACED REPETITION SYSTEM) TYPES
+// Types for the flashcard review system
+// ============================================
+
+export * from './srs'
