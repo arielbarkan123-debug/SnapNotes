@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Step } from '@/types'
-import { generateHint, HintContext, Hint } from '@/lib/adaptive/hints'
+import { Step, HelpContext } from '@/types'
+import { generateHint, HintContext as HintCtx, Hint } from '@/lib/adaptive/hints'
 import HintBubble, { HintButton } from './HintBubble'
+import HelpModal from '@/components/help/HelpModal'
 
 interface QuestionStepProps {
   question: string
@@ -15,6 +16,12 @@ interface QuestionStepProps {
   step?: Step
   /** Number of consecutive wrong answers across session */
   consecutiveWrong?: number
+  /** Help system context - optional */
+  courseId?: string
+  courseTitle?: string
+  lessonIndex?: number
+  lessonTitle?: string
+  stepIndex?: number
 }
 
 export default function QuestionStep({
@@ -25,18 +32,38 @@ export default function QuestionStep({
   onComplete,
   step,
   consecutiveWrong = 0,
+  courseId,
+  courseTitle,
+  lessonIndex,
+  lessonTitle,
+  stepIndex,
 }: QuestionStepProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [hasChecked, setHasChecked] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
   const [wrongAttempts, setWrongAttempts] = useState(0)
   const [timeOnStep, setTimeOnStep] = useState(0)
+  const [showHelp, setShowHelp] = useState(false)
 
   // Hint state
   const [currentHint, setCurrentHint] = useState<Hint | null>(null)
-  const [hintRequested, setHintRequested] = useState(false)
+  const [, setHintRequested] = useState(false)
   const [hintUsed, setHintUsed] = useState(false)
   const [hintDismissed, setHintDismissed] = useState(false)
+
+  // Help context for HelpModal
+  const helpContext: HelpContext = {
+    courseId: courseId || '',
+    courseTitle: courseTitle || 'Course',
+    lessonIndex: lessonIndex ?? 0,
+    lessonTitle: lessonTitle || 'Lesson',
+    stepIndex: stepIndex ?? 0,
+    stepContent: question || '',
+    stepType: 'question',
+    userAnswer: selectedAnswer !== null ? options[selectedAnswer] : '',
+    correctAnswer: options[correct_answer] || '',
+    wasCorrect: false,
+  }
 
   // Track time spent on this step
   useEffect(() => {
@@ -51,7 +78,7 @@ export default function QuestionStep({
   useEffect(() => {
     if (hintDismissed || currentHint || !step) return
 
-    const context: HintContext = {
+    const context: HintCtx = {
       step,
       consecutiveWrong: consecutiveWrong + wrongAttempts,
       timeOnStep,
@@ -96,7 +123,7 @@ export default function QuestionStep({
     setHintRequested(true)
     setHintUsed(true)
 
-    const context: HintContext = {
+    const context: HintCtx = {
       step,
       consecutiveWrong: consecutiveWrong + wrongAttempts,
       timeOnStep,
@@ -307,6 +334,21 @@ export default function QuestionStep({
               The correct answer was: <span className="font-bold">{options[correct_answer]}</span>
             </p>
           )}
+
+          {/* Help button for wrong answers */}
+          {!isCorrect && courseId && (
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Still confused?</p>
+              <button
+                onClick={() => setShowHelp(true)}
+                type="button"
+                className="w-full py-2 px-4 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg font-medium hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition flex items-center justify-center gap-2"
+              >
+                <span>🤔</span>
+                <span>Help me understand</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -339,6 +381,13 @@ export default function QuestionStep({
           Continue
         </button>
       )}
+
+      {/* Help Modal */}
+      <HelpModal
+        isOpen={showHelp}
+        onClose={() => setShowHelp(false)}
+        context={helpContext}
+      />
     </div>
   )
 }

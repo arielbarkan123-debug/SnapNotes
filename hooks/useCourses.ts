@@ -133,9 +133,12 @@ export function useCourses(options: UseCoursesOptions = {}): UseCoursesReturn {
         if (generatedCourse.overview?.toLowerCase().includes(query)) {
           return true
         }
-        // Search in key concepts
-        if (generatedCourse.keyConcepts?.some(concept =>
-          concept.toLowerCase().includes(query)
+        // Search in lessons and steps
+        if (generatedCourse.lessons?.some(lesson =>
+          lesson.title?.toLowerCase().includes(query) ||
+          lesson.steps?.some(step =>
+            step.content?.toLowerCase().includes(query)
+          )
         )) {
           return true
         }

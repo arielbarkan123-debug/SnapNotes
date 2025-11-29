@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
-import { Course, UserProgress, GeneratedCourse } from '@/types'
+import { Course, UserProgress, GeneratedCourse, Lesson } from '@/types'
 
 interface CourseViewProps {
   course: Course
@@ -12,7 +12,7 @@ interface CourseViewProps {
 type LessonStatus = 'completed' | 'current' | 'locked'
 
 export default function CourseView({ course, progress }: CourseViewProps) {
-  const generatedCourse = course.generated_course as GeneratedCourse & { sections?: any[] }
+  const generatedCourse = course.generated_course as GeneratedCourse & { sections?: Lesson[] }
   // Handle both "lessons" and legacy "sections" from AI response
   const lessons = generatedCourse.lessons || generatedCourse.sections || []
 

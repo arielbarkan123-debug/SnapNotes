@@ -6,16 +6,18 @@ import {
   getXPProgress,
   getLevelTitle,
   getLevelBadge,
-  getLevelColor,
-  getLevelGradient,
+  getLevelColor as _getLevelColor,
+  getLevelGradient as _getLevelGradient,
   formatXP,
 } from '@/lib/gamification/xp'
 import {
   ACHIEVEMENTS,
-  getAchievementsByCategory,
   getAchievementColor,
   type AchievementCategory,
 } from '@/lib/gamification/achievements'
+// Reserved for future achievement display features
+void _getLevelColor
+void _getLevelGradient
 import { StreakWidget } from '@/components/gamification/StreakWidget'
 
 // =============================================================================

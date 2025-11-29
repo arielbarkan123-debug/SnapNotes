@@ -7,12 +7,16 @@ import Button from '@/components/ui/Button'
 import CourseCard from '@/components/course/CourseCard'
 import UploadModal from '@/components/upload/UploadModal'
 import { DashboardWidget } from '@/components/srs'
-import { StreakWidget, MiniStreak } from '@/components/gamification/StreakWidget'
+import { StreakWidget as _StreakWidget, MiniStreak as _MiniStreak } from '@/components/gamification/StreakWidget'
+// Streak widgets imported for future use
+void _StreakWidget
+void _MiniStreak
 import { Course } from '@/types'
 import { useCourses } from '@/hooks'
 import { useToast } from '@/contexts/ToastContext'
 import { useXP } from '@/contexts/XPContext'
-import { formatXP, getLevelTitle, getLevelBadge } from '@/lib/gamification/xp'
+import { formatXP, getLevelTitle as _getLevelTitle, getLevelBadge } from '@/lib/gamification/xp'
+void _getLevelTitle
 
 interface GamificationStats {
   totalXP: number

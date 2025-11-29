@@ -10,27 +10,18 @@
 
 import type {
   GeneratedCourse,
-  CourseSection,
   Formula,
   ReviewCardInsert,
   CardType,
   LessonStep,
-  QuestionStep,
-  KeyPointStep,
-  ExplanationStep,
+  Step,
   MultipleChoiceData,
   TrueFalseData,
-  FillBlankData,
-  MatchingData,
-  SequenceData,
 } from '@/types'
 
 import {
   createMultipleChoiceBack,
   createTrueFalseBack,
-  createFillBlankBack,
-  createMatchingBack,
-  createSequenceBack,
 } from '@/types/srs'
 
 // =============================================================================
@@ -41,7 +32,7 @@ import {
 const MIN_EXPLANATION_WORDS = 20
 
 /** Maximum words for card front (questions) */
-const MAX_FRONT_WORDS = 30
+const _MAX_FRONT_WORDS = 30
 
 /** Maximum words for card back (answers) */
 const MAX_BACK_WORDS = 200
@@ -286,7 +277,7 @@ function determineQuestionCardType(options: string[]): CardType {
 /**
  * Format a question answer from step data
  */
-function formatQuestionAnswerFromStep(options: string[], correctIndex: number, explanation?: string): string {
+function _formatQuestionAnswerFromStep(options: string[], correctIndex: number, explanation?: string): string {
   const correctAnswer = options[correctIndex] || options[0] || ''
   return `**Answer:** ${correctAnswer}${explanation ? `\n\n**Explanation:** ${explanation}` : ''}`
 }
@@ -295,9 +286,10 @@ function formatQuestionAnswerFromStep(options: string[], correctIndex: number, e
  * Format a question step into a card answer
  * Includes correct answer and explanation
  */
-function formatQuestionAnswer(question: QuestionStep): string {
-  const correctAnswer = question.options[question.correctIndex]
-  return `**Answer:** ${correctAnswer}\n\n**Explanation:** ${question.explanation}`
+function _formatQuestionAnswer(question: Step): string {
+  const correctIndex = question.correct_answer ?? 0
+  const correctAnswer = question.options?.[correctIndex] ?? ''
+  return `**Answer:** ${correctAnswer}\n\n**Explanation:** ${question.explanation ?? ''}`
 }
 
 // =============================================================================
@@ -533,11 +525,13 @@ export function estimateCardCount(course: GeneratedCourse & { sections?: any[]; 
   // Handle both "sections" and "lessons"
   const lessonsData = course.lessons || course.sections || []
 
-  lessonsData.forEach((section) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  lessonsData.forEach((section: any) => {
     // Check for new steps format
     if (section.steps && Array.isArray(section.steps) && section.steps.length > 0) {
       // Count questions and key_points from steps
-      section.steps.forEach((step) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      section.steps.forEach((step: any) => {
         if (step.type === 'question' || step.type === 'key_point') {
           count += 1
         }
@@ -560,8 +554,12 @@ export function estimateCardCount(course: GeneratedCourse & { sections?: any[]; 
     count += section.formulas?.length || 0
   })
 
-  // Key concepts (max 5 from first section)
-  count += Math.min(course.keyConcepts.length, 5)
+  // Key concepts (max 5 from first section) - legacy format only
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const keyConcepts = (course as any).keyConcepts
+  if (keyConcepts && Array.isArray(keyConcepts)) {
+    count += Math.min(keyConcepts.length, 5)
+  }
 
   return count
 }
@@ -585,9 +583,11 @@ export function getCardTypeSummary(
   // Handle both "sections" and "lessons"
   const lessonsData = course.lessons || course.sections || []
 
-  lessonsData.forEach((section) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  lessonsData.forEach((section: any) => {
     // Check for new steps format
     if (section.steps && Array.isArray(section.steps) && section.steps.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       section.steps.forEach((step: any) => {
         if (step.type === 'question') {
           const options = step.options || []
@@ -624,8 +624,12 @@ export function getCardTypeSummary(
     }
   })
 
-  // Key concepts count as flashcard
-  summary.flashcard = (summary.flashcard || 0) + Math.min(course.keyConcepts?.length || 0, 5)
+  // Key concepts count as flashcard - legacy format only
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const keyConcepts2 = (course as any).keyConcepts
+  if (keyConcepts2 && Array.isArray(keyConcepts2)) {
+    summary.flashcard = (summary.flashcard || 0) + Math.min(keyConcepts2.length, 5)
+  }
 
   return summary
 }

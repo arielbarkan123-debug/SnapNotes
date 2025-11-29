@@ -147,7 +147,7 @@ async function calculateStreak(
 
   // Count consecutive days starting from today/yesterday
   const today = new Date()
-  let currentDate = new Date(today)
+  const currentDate = new Date(today)
   currentDate.setHours(0, 0, 0, 0)
 
   // Check if reviewed today, if not start from yesterday

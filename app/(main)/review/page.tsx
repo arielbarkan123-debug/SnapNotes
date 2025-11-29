@@ -6,7 +6,7 @@ import Link from 'next/link'
 import ReviewCard from '@/components/srs/ReviewCard'
 import RatingButtons from '@/components/srs/RatingButtons'
 import ReviewComplete from '@/components/srs/ReviewComplete'
-import type { ReviewCard as ReviewCardType, Rating, ReviewSession } from '@/types'
+import type { Rating, ReviewSession } from '@/types'
 
 // =============================================================================
 // Types
@@ -320,7 +320,7 @@ function StartScreen({ session, error, onStart, onRefresh }: StartScreenProps) {
             All Caught Up!
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mb-8">
-            You've reviewed all your cards for today. Come back later for more!
+            You&apos;ve reviewed all your cards for today. Come back later for more!
           </p>
 
           <div className="space-y-3">

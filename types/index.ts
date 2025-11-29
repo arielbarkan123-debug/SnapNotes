@@ -14,8 +14,14 @@ export interface Course {
   user_id: string
   /** Course title derived from the notes content */
   title: string
-  /** URL to the original uploaded image in Supabase Storage */
-  original_image_url: string
+  /** URL to the original uploaded image in Supabase Storage (legacy, single image) */
+  original_image_url: string | null
+  /** Array of URLs to uploaded images (multi-page support) */
+  image_urls?: string[] | null
+  /** URL to the uploaded document in Supabase Storage (PDF, PPTX, DOCX) */
+  document_url?: string | null
+  /** Source type of the course content */
+  source_type?: 'image' | 'pdf' | 'pptx' | 'docx'
   /** Raw text content extracted from the image by AI (nullable) */
   extracted_content: string | null
   /** The full AI-generated course structure */
@@ -35,8 +41,14 @@ export interface CourseInsert {
   user_id: string
   /** Course title */
   title: string
-  /** URL to the uploaded image in Supabase Storage */
-  original_image_url: string
+  /** URL to the uploaded image in Supabase Storage (legacy, for backward compatibility) */
+  original_image_url?: string | null
+  /** Array of URLs to uploaded images (multi-page support) */
+  image_urls?: string[] | null
+  /** URL to the uploaded document in Supabase Storage (PDF, PPTX, DOCX) */
+  document_url?: string | null
+  /** Source type of the course content */
+  source_type?: 'image' | 'pdf' | 'pptx' | 'docx'
   /** Raw extracted content (optional during initial creation) */
   extracted_content?: string | null
   /** The AI-generated course structure */
@@ -50,8 +62,14 @@ export interface CourseInsert {
 export interface CourseUpdate {
   /** Updated course title */
   title?: string
-  /** Updated image URL */
-  original_image_url?: string
+  /** Updated image URL (legacy) */
+  original_image_url?: string | null
+  /** Updated image URLs array */
+  image_urls?: string[] | null
+  /** Updated document URL */
+  document_url?: string | null
+  /** Updated source type */
+  source_type?: 'image' | 'pdf' | 'pptx' | 'docx'
   /** Updated extracted content */
   extracted_content?: string | null
   /** Updated course structure */
@@ -62,6 +80,36 @@ export interface CourseUpdate {
 // GENERATED COURSE CONTENT STRUCTURE
 // Duolingo-style course structure
 // ============================================
+
+/**
+ * Formula - A formula with its explanation
+ */
+export interface Formula {
+  formula: string
+  explanation: string
+}
+
+/**
+ * Diagram - A diagram/visual description
+ */
+export interface Diagram {
+  description: string
+  significance: string
+}
+
+/**
+ * CourseSection - Legacy section structure
+ * Used for displaying course content in section view
+ */
+export interface CourseSection {
+  title: string
+  explanation: string
+  originalNotes?: string
+  keyPoints?: string[]
+  formulas?: Formula[]
+  diagrams?: Diagram[]
+  examples?: string[]
+}
 
 /**
  * StepType - The type of content in a lesson step
@@ -242,3 +290,5 @@ export interface PaginatedResponse<T> {
 // ============================================
 
 export * from './srs'
+
+export * from './help'

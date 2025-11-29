@@ -4,14 +4,17 @@ import { createErrorResponse, ErrorCodes, logError } from '@/lib/api/errors'
 import { calculateLevel, getXPProgress, awardCustomXP } from '@/lib/gamification/xp'
 import {
   checkAllAchievements,
-  getAchievement,
+  getAchievement as _getAchievement,
   getAchievementMessage,
   prepareAchievementInsert,
-  type Achievement,
+  type Achievement as _Achievement,
   type StreakStats,
   type LearningStats,
   type MasteryStats,
 } from '@/lib/gamification/achievements'
+// Reserved for future achievement lookup features
+void _getAchievement
+void (0 as unknown as _Achievement)
 
 // =============================================================================
 // Types

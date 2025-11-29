@@ -5,10 +5,13 @@ import {
   XP_REWARDS,
   type XPRewardType,
   calculateLevel,
-  getLevelTitle,
+  getLevelTitle as _getLevelTitle,
   awardXP,
-  awardCustomXP,
+  awardCustomXP as _awardCustomXP,
 } from '@/lib/gamification/xp'
+// Reserved for future XP system features
+void _getLevelTitle
+void _awardCustomXP
 
 // =============================================================================
 // Types

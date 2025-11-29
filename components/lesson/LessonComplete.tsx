@@ -748,7 +748,7 @@ function CompleteView({
             <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4 mb-2">
               <span className="text-2xl mb-2 block">🎓</span>
               <p className="text-white font-semibold">Course Complete!</p>
-              <p className="text-indigo-200 text-sm">You've finished all lessons</p>
+              <p className="text-indigo-200 text-sm">You&apos;ve finished all lessons</p>
             </div>
             <Link
               href={`/course/${courseId}`}

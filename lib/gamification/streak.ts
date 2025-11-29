@@ -443,7 +443,7 @@ export function getMilestoneMessage(milestone: StreakMilestone): string {
  * @param streakData - Current streak data
  * @returns Whether freeze is available
  */
-export function canUseStreakFreeze(streakData: StreakData): boolean {
+export function canUseStreakFreeze(_streakData: StreakData): boolean {
   // MVP: Always return false (feature disabled)
   return false
 
@@ -466,7 +466,7 @@ export function canUseStreakFreeze(streakData: StreakData): boolean {
  * @param streakData - Current streak data
  * @returns Updated streak data or null if freeze unavailable
  */
-export function useStreakFreeze(streakData: StreakData): StreakData | null {
+export function useStreakFreeze(_streakData: StreakData): StreakData | null {
   // MVP: Feature disabled
   return null
 

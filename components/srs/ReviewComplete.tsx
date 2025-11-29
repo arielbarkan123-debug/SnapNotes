@@ -254,11 +254,9 @@ export default function ReviewComplete({
       {showReflection && (
         <SessionReflection
           type="session"
-          sessionContext={{
-            type: 'review',
-            cardsReviewed,
-            timeSpentMs,
-          }}
+          sessionType="review"
+          cardsReviewed={cardsReviewed}
+          timeSpentMs={timeSpentMs}
           onComplete={() => setShowReflection(false)}
           onSkip={() => setShowReflection(false)}
         />

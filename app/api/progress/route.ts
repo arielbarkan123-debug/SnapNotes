@@ -17,7 +17,7 @@ export async function GET() {
 
     // Calculate date ranges
     const now = new Date()
-    const today = now.toISOString().split('T')[0]
+    void now.toISOString().split('T')[0] // today - reserved for daily filtering
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
     const startOfWeek = getStartOfWeek(now)
@@ -175,28 +175,43 @@ export async function GET() {
     const masteryMap = buildMasteryMap(courseProgress.data || [])
 
     // Get weak and strong areas
+    // Note: Supabase returns joined relations in a specific structure
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const weakAreas = allLessonProgress
       .filter(lp => (lp.mastery_level || 0) < 0.5)
       .slice(0, 5)
-      .map((lp: any) => ({
-        lessonId: lp.lesson_id,
-        lessonTitle: lp.lessons.title,
-        courseId: lp.lessons.course_id,
-        courseTitle: lp.lessons.courses.title,
-        mastery: lp.mastery_level || 0,
-      }))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((lp: any) => {
+        const lesson = Array.isArray(lp.lessons) ? lp.lessons[0] : lp.lessons
+        const course = lesson?.courses
+        const courseData = Array.isArray(course) ? course[0] : course
+        return {
+          lessonId: lp.lesson_id,
+          lessonTitle: lesson?.title || 'Unknown',
+          courseId: lesson?.course_id || '',
+          courseTitle: courseData?.title || 'Unknown',
+          mastery: lp.mastery_level || 0,
+        }
+      })
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const strongAreas = [...allLessonProgress]
       .filter(lp => (lp.mastery_level || 0) >= 0.8 && lp.completed)
       .sort((a, b) => (b.mastery_level || 0) - (a.mastery_level || 0))
       .slice(0, 5)
-      .map((lp: any) => ({
-        lessonId: lp.lesson_id,
-        lessonTitle: lp.lessons.title,
-        courseId: lp.lessons.course_id,
-        courseTitle: lp.lessons.courses.title,
-        mastery: lp.mastery_level || 0,
-      }))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((lp: any) => {
+        const lesson = Array.isArray(lp.lessons) ? lp.lessons[0] : lp.lessons
+        const course = lesson?.courses
+        const courseData = Array.isArray(course) ? course[0] : course
+        return {
+          lessonId: lp.lesson_id,
+          lessonTitle: lesson?.title || 'Unknown',
+          courseId: lesson?.course_id || '',
+          courseTitle: courseData?.title || 'Unknown',
+          mastery: lp.mastery_level || 0,
+        }
+      })
 
     // Generate insights
     const insights = generateInsights(

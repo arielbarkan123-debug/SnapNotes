@@ -11,7 +11,7 @@
  * - Retention: Target probability of remembering (default 90%)
  */
 
-import type { Rating, CardState, ReviewCard, FSRSOutput } from '@/types'
+import type { Rating, ReviewCard, FSRSOutput } from '@/types'
 
 // =============================================================================
 // Constants

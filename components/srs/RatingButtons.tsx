@@ -103,7 +103,7 @@ export default function RatingButtons({ card, onRate, isLoading, interactiveResu
           </button>
         </div>
         <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-3">
-          Don't worry, you'll see this again soon
+          Don&apos;t worry, you&apos;ll see this again soon
         </p>
       </div>
     )

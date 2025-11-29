@@ -7,9 +7,12 @@
 // Claude API service - functions
 export {
   analyzeNotebookImage,
+  analyzeMultipleNotebookImages,
   generateStudyCourse,
   generateCourseFromImage,
+  generateCourseFromMultipleImages,
   generateCourseFromImageSingleCall,
+  generateCourseFromDocument,
   fetchImageAsBase64,
   ClaudeAPIError,
   isRetryableError,
@@ -24,14 +27,17 @@ export type {
   AnalysisResult,
   CourseGenerationResult,
   FullPipelineResult,
+  DocumentCourseResult,
   ClaudeErrorCode,
 } from './claude'
 
 // Prompts - functions
 export {
   getImageAnalysisPrompt,
+  getMultiPageImageAnalysisPrompt,
   getCourseGenerationPrompt,
   getCombinedAnalysisPrompt,
+  getDocumentCoursePrompt,
   cleanJsonResponse,
   validateExtractedContent,
   formatExtractedContentForPrompt,

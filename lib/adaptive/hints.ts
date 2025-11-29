@@ -178,7 +178,7 @@ function generateQuestionHint(step: Step, reason: HintTriggerResult['reason']): 
   }
 }
 
-function generateFormulaHint(step: Step): Hint {
+function generateFormulaHint(_step: Step): Hint {
   return {
     type: 'example',
     content: 'Try plugging in simple numbers first (like 1, 2, or 10) to see how the formula works. This helps build intuition.',
@@ -202,7 +202,7 @@ function generateExplanationHint(step: Step, reason: HintTriggerResult['reason']
   }
 }
 
-function generateKeyPointHint(step: Step): Hint {
+function generateKeyPointHint(_step: Step): Hint {
   return {
     type: 'reminder',
     content: 'This is an important concept to remember. Try connecting it to something you already know.',
@@ -210,7 +210,7 @@ function generateKeyPointHint(step: Step): Hint {
   }
 }
 
-function generateExampleHint(step: Step): Hint {
+function generateExampleHint(_step: Step): Hint {
   return {
     type: 'tip',
     content: 'Pay attention to how this example applies the concept. Can you think of a similar example?',
@@ -218,7 +218,7 @@ function generateExampleHint(step: Step): Hint {
   }
 }
 
-function generateDiagramHint(step: Step): Hint {
+function generateDiagramHint(_step: Step): Hint {
   return {
     type: 'tip',
     content: 'Look at the original image in your notes. Visual connections help reinforce understanding.',
@@ -226,7 +226,7 @@ function generateDiagramHint(step: Step): Hint {
   }
 }
 
-function generateSummaryHint(step: Step): Hint {
+function generateSummaryHint(_step: Step): Hint {
   return {
     type: 'reminder',
     content: 'This summary captures the key takeaways. Try reciting them from memory before moving on.',

@@ -104,7 +104,7 @@ interface ReviewLogRecord {
 // Constants
 // =============================================================================
 
-const TIME_PERIODS = {
+const _TIME_PERIODS = {
   morning: { start: 5, end: 12, label: 'Morning (5 AM - 12 PM)' },
   afternoon: { start: 12, end: 17, label: 'Afternoon (12 PM - 5 PM)' },
   evening: { start: 17, end: 21, label: 'Evening (5 PM - 9 PM)' },
@@ -116,7 +116,7 @@ const MAX_SESSION_LENGTH = 60 // minutes
 const DEFAULT_SESSION_LENGTH = 15 // minutes
 
 const MIN_DATA_POINTS_FOR_ANALYSIS = 10
-const TREND_WINDOW_DAYS = 30
+const _TREND_WINDOW_DAYS = 30
 
 // =============================================================================
 // Main Analysis Functions

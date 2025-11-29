@@ -222,7 +222,7 @@ function interleaveCards(cards: ReviewCard[]): ReviewCard[] {
  * Advanced interleaving with lesson-level grouping
  * For use when cards have varied lesson indices within courses
  */
-function interleaveByCourseAndLesson(cards: ReviewCard[]): ReviewCard[] {
+function _interleaveByCourseAndLesson(cards: ReviewCard[]): ReviewCard[] {
   if (cards.length <= 3) {
     return cards
   }

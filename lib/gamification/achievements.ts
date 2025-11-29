@@ -826,16 +826,18 @@ export function getRecentlyEarned(
   const now = new Date()
   const cutoff = new Date(now.getTime() - withinMs)
 
-  return earnedRecords
-    .filter((r) => new Date(r.earned_at) >= cutoff)
-    .map((r) => {
-      const achievement = getAchievement(r.achievement_code)
-      if (!achievement) return null
-      return {
-        ...achievement,
-        earned: true,
-        earnedAt: new Date(r.earned_at),
-      }
+  const results: AchievementWithStatus[] = []
+
+  for (const r of earnedRecords) {
+    if (new Date(r.earned_at) < cutoff) continue
+    const achievement = getAchievement(r.achievement_code)
+    if (!achievement) continue
+    results.push({
+      ...achievement,
+      earned: true,
+      earnedAt: new Date(r.earned_at),
     })
-    .filter((a): a is AchievementWithStatus => a !== null)
+  }
+
+  return results
 }

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Course, UserProgress, GeneratedCourse } from '@/types'
+import { Course, UserProgress, GeneratedCourse, Lesson } from '@/types'
 import LessonView from './LessonView'
 
 interface LessonPageProps {
@@ -30,7 +30,7 @@ async function getLessonData(courseId: string, lessonIndex: number) {
     return null
   }
 
-  const generatedCourse = course.generated_course as GeneratedCourse & { sections?: any[] }
+  const generatedCourse = course.generated_course as GeneratedCourse & { sections?: Lesson[] }
   // Handle both "lessons" and legacy "sections" from AI response
   const lessons = generatedCourse.lessons || generatedCourse.sections || []
 

@@ -3,17 +3,20 @@ import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes, logError } from '@/lib/api/errors'
 import { getXPProgress } from '@/lib/gamification/xp'
 import {
-  ACHIEVEMENTS,
+  ACHIEVEMENTS as _ACHIEVEMENTS,
   mapEarnedAchievements,
   getAchievementSummary,
   getAllAchievementProgress,
-  getCategoryLabel,
+  getCategoryLabel as _getCategoryLabel,
   type StreakStats,
   type LearningStats,
   type MasteryStats,
   type AchievementWithStatus,
   type AchievementCategory,
 } from '@/lib/gamification/achievements'
+// Reserved for future achievement system expansion
+void _ACHIEVEMENTS
+void _getCategoryLabel
 
 // =============================================================================
 // Types

@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense, useRef } from 'react'
+import { useState, useEffect, useCallback, Suspense, useRef, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useXP } from '@/contexts/XPContext'
+import type { ExtractedDocument } from '@/lib/documents'
 
 // ============================================================================
 // Types
@@ -24,11 +25,13 @@ interface ProgressStage {
   percent: number
 }
 
+type SourceType = 'image' | 'pdf' | 'pptx' | 'docx'
+
 // ============================================================================
 // Constants
 // ============================================================================
 
-const PROGRESS_STAGES: ProgressStage[] = [
+const IMAGE_PROGRESS_STAGES: ProgressStage[] = [
   {
     message: 'Analyzing your notebook page...',
     submessage: 'Scanning for text, diagrams, and formulas',
@@ -61,6 +64,48 @@ const PROGRESS_STAGES: ProgressStage[] = [
   },
 ]
 
+const DOCUMENT_PROGRESS_STAGES: ProgressStage[] = [
+  {
+    message: 'Processing your document...',
+    submessage: 'Preparing content for analysis',
+    percent: 20,
+  },
+  {
+    message: 'Analyzing document structure...',
+    submessage: 'Identifying sections and topics',
+    percent: 40,
+  },
+  {
+    message: 'Generating your study course...',
+    submessage: 'Creating explanations and examples',
+    percent: 65,
+  },
+  {
+    message: 'Adding finishing touches...',
+    submessage: 'Organizing sections and key points',
+    percent: 85,
+  },
+  {
+    message: 'Almost done...',
+    submessage: 'Finalizing your course',
+    percent: 95,
+  },
+]
+
+const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
+  image: 'image',
+  pdf: 'PDF',
+  pptx: 'presentation',
+  docx: 'document',
+}
+
+const SOURCE_TYPE_ICONS: Record<SourceType, string> = {
+  image: '🖼️',
+  pdf: '📄',
+  pptx: '📊',
+  docx: '📝',
+}
+
 const STAGE_INTERVAL = 4000 // 4 seconds per stage
 
 // ============================================================================
@@ -72,23 +117,71 @@ function ProcessingContent() {
   const searchParams = useSearchParams()
   const { showXP, showLevelUp } = useXP()
 
+  // Image params
   const imageUrl = searchParams.get('imageUrl')
+  const imageUrlsParam = searchParams.get('imageUrls')
   const title = searchParams.get('title')
+
+  // Document params
+  const documentContentParam = searchParams.get('documentContent')
+  const documentUrl = searchParams.get('documentUrl')
+  const sourceTypeParam = searchParams.get('sourceType') as SourceType | null
+
+  // Parse document content if present
+  const documentContent = useMemo<ExtractedDocument | null>(() => {
+    if (!documentContentParam) return null
+    try {
+      return JSON.parse(documentContentParam)
+    } catch {
+      console.error('Failed to parse document content')
+      return null
+    }
+  }, [documentContentParam])
+
+  // Parse image URLs array if present
+  const imageUrls = useMemo<string[] | null>(() => {
+    if (!imageUrlsParam) return null
+    try {
+      return JSON.parse(imageUrlsParam)
+    } catch {
+      console.error('Failed to parse image URLs')
+      return null
+    }
+  }, [imageUrlsParam])
+
+  // Determine source type and whether we have valid input
+  const sourceType: SourceType = sourceTypeParam || (documentContent?.type as SourceType) || 'image'
+  const isDocumentSource = sourceType !== 'image' && documentContent !== null
+  const hasValidInput = isDocumentSource || imageUrl || (imageUrls && imageUrls.length > 0)
+
+  // Select progress stages based on source type
+  const progressStages = isDocumentSource ? DOCUMENT_PROGRESS_STAGES : IMAGE_PROGRESS_STAGES
 
   const [state, setState] = useState<ProcessingState>({ status: 'processing' })
   const [currentStage, setCurrentStage] = useState(0)
   const [xpAwarded, setXpAwarded] = useState(0)
   const hasStartedRef = useRef(false)
 
-  // Generate a unique key for this processing session based on imageUrl
-  const processingKey = imageUrl ? `processing_${imageUrl}` : null
+  // Generate a unique key for this processing session
+  const processingKey = useMemo(() => {
+    if (documentContent) {
+      return `processing_doc_${documentContent.title || documentUrl || Date.now()}`
+    }
+    if (imageUrls && imageUrls.length > 0) {
+      return `processing_${imageUrls[0]}`
+    }
+    if (imageUrl) {
+      return `processing_${imageUrl}`
+    }
+    return null
+  }, [documentContent, documentUrl, imageUrls, imageUrl])
 
-  // Redirect if no image URL
+  // Redirect if no valid input
   useEffect(() => {
-    if (!imageUrl) {
+    if (!hasValidInput) {
       router.replace('/dashboard')
     }
-  }, [imageUrl, router])
+  }, [hasValidInput, router])
 
   // Progress animation
   useEffect(() => {
@@ -96,7 +189,7 @@ function ProcessingContent() {
 
     const interval = setInterval(() => {
       setCurrentStage((prev) => {
-        if (prev < PROGRESS_STAGES.length - 1) {
+        if (prev < progressStages.length - 1) {
           return prev + 1
         }
         return prev // Stay on last stage
@@ -104,16 +197,16 @@ function ProcessingContent() {
     }, STAGE_INTERVAL)
 
     return () => clearInterval(interval)
-  }, [state.status])
+  }, [state.status, progressStages.length])
 
   // API call
   const generateCourse = useCallback(async () => {
-    if (!imageUrl || !processingKey) return
+    if (!hasValidInput || !processingKey) return
 
-    // Check if we're already processing this image (prevents duplicates on remount)
+    // Check if we're already processing (prevents duplicates on remount)
     const isAlreadyProcessing = sessionStorage.getItem(processingKey)
     if (isAlreadyProcessing === 'started') {
-      console.log('Course generation already in progress for this image')
+      console.log('Course generation already in progress')
       return
     }
 
@@ -124,15 +217,38 @@ function ProcessingContent() {
     setCurrentStage(0)
 
     try {
+      // Build request body based on source type
+      const requestBody: Record<string, unknown> = {}
+
+      if (documentContent) {
+        // Document-based request
+        requestBody.documentContent = documentContent
+        requestBody.documentUrl = documentUrl || undefined
+      } else if (imageUrls && imageUrls.length > 0) {
+        // Multiple images
+        requestBody.imageUrls = imageUrls
+      } else if (imageUrl) {
+        // Single image (legacy)
+        requestBody.imageUrl = imageUrl
+      }
+
+      if (title) {
+        requestBody.title = title
+      }
+
+      console.log('[Processing] Calling generate-course API with:', {
+        hasDocumentContent: !!documentContent,
+        hasImageUrls: !!(imageUrls && imageUrls.length > 0),
+        hasImageUrl: !!imageUrl,
+        sourceType,
+      })
+
       const response = await fetch('/api/generate-course', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          imageUrl,
-          title: title || undefined,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       const data = await response.json()
@@ -204,26 +320,26 @@ function ProcessingContent() {
         retryable: true,
       })
     }
-  }, [imageUrl, title, router, processingKey])
+  }, [hasValidInput, documentContent, documentUrl, imageUrls, imageUrl, title, sourceType, router, processingKey, showXP, showLevelUp])
 
   // Start generation on mount (ref prevents duplicate calls in StrictMode)
   useEffect(() => {
-    if (!hasStartedRef.current && imageUrl) {
+    if (!hasStartedRef.current && hasValidInput) {
       hasStartedRef.current = true
       generateCourse()
     }
-  }, [imageUrl, generateCourse])
+  }, [hasValidInput, generateCourse])
 
   // Handle retry
   const handleRetry = () => {
     generateCourse()
   }
 
-  if (!imageUrl) {
+  if (!hasValidInput) {
     return null // Will redirect
   }
 
-  const stage = PROGRESS_STAGES[currentStage]
+  const stage = progressStages[currentStage]
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
@@ -231,7 +347,9 @@ function ProcessingContent() {
         {state.status === 'processing' && (
           <ProcessingView
             stage={stage}
-            imageUrl={imageUrl}
+            imageUrl={imageUrls?.[0] || imageUrl}
+            sourceType={sourceType}
+            documentTitle={documentContent?.title}
           />
         )}
 
@@ -257,24 +375,52 @@ function ProcessingContent() {
 
 interface ProcessingViewProps {
   stage: ProgressStage
-  imageUrl: string
+  imageUrl: string | null
+  sourceType: SourceType
+  documentTitle?: string
 }
 
-function ProcessingView({ stage, imageUrl }: ProcessingViewProps) {
+function ProcessingView({ stage, imageUrl, sourceType, documentTitle }: ProcessingViewProps) {
+  const isDocument = sourceType !== 'image'
+
   return (
     <div className="text-center">
-      {/* Image Preview */}
+      {/* Preview - Image or Document Icon */}
       <div className="mb-8 flex justify-center">
-        <div className="relative w-32 h-40 rounded-lg overflow-hidden shadow-lg bg-gray-100 dark:bg-gray-700 ring-4 ring-indigo-100 dark:ring-indigo-900/50">
-          <Image
-            src={imageUrl}
-            alt="Your notebook page"
-            fill
-            className="object-cover"
-          />
-          {/* Scanning animation overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/20 to-transparent animate-scan" />
-        </div>
+        {isDocument ? (
+          /* Document Preview */
+          <div className="relative w-32 h-40 rounded-lg overflow-hidden shadow-lg bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 ring-4 ring-indigo-100 dark:ring-indigo-900/50 flex flex-col items-center justify-center">
+            <span className="text-5xl mb-2">{SOURCE_TYPE_ICONS[sourceType]}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 uppercase font-medium px-2 text-center truncate max-w-full">
+              {SOURCE_TYPE_LABELS[sourceType]}
+            </span>
+            {documentTitle && (
+              <span className="text-[10px] text-gray-400 dark:text-gray-500 px-2 text-center truncate max-w-full mt-1">
+                {documentTitle.length > 20 ? documentTitle.slice(0, 20) + '...' : documentTitle}
+              </span>
+            )}
+            {/* Pulse animation overlay */}
+            <div className="absolute inset-0 bg-indigo-500/10 animate-pulse" />
+          </div>
+        ) : imageUrl ? (
+          /* Image Preview */
+          <div className="relative w-32 h-40 rounded-lg overflow-hidden shadow-lg bg-gray-100 dark:bg-gray-700 ring-4 ring-indigo-100 dark:ring-indigo-900/50">
+            <Image
+              src={imageUrl}
+              alt="Your notebook page"
+              fill
+              className="object-cover"
+            />
+            {/* Scanning animation overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/20 to-transparent animate-scan" />
+          </div>
+        ) : (
+          /* Fallback - no preview */
+          <div className="relative w-32 h-40 rounded-lg overflow-hidden shadow-lg bg-gray-100 dark:bg-gray-700 ring-4 ring-indigo-100 dark:ring-indigo-900/50 flex items-center justify-center">
+            <span className="text-4xl">📝</span>
+            <div className="absolute inset-0 bg-indigo-500/10 animate-pulse" />
+          </div>
+        )}
       </div>
 
       {/* Spinner */}

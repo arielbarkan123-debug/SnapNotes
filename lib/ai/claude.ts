@@ -10,13 +10,16 @@
 import Anthropic from '@anthropic-ai/sdk'
 import {
   getImageAnalysisPrompt,
+  getMultiPageImageAnalysisPrompt,
   getCourseGenerationPrompt,
   getCombinedAnalysisPrompt,
+  getDocumentCoursePrompt,
   cleanJsonResponse,
   validateExtractedContent,
   formatExtractedContentForPrompt,
   ExtractedContent,
 } from './prompts'
+import type { ExtractedDocument } from '@/lib/documents'
 import { GeneratedCourse } from '@/types'
 
 // ============================================================================
@@ -26,6 +29,7 @@ import { GeneratedCourse } from '@/types'
 const AI_MODEL = 'claude-sonnet-4-20250514'
 const MAX_TOKENS_EXTRACTION = 4096
 const MAX_TOKENS_GENERATION = 8192
+const MAX_IMAGES_PER_REQUEST = 5 // Claude's recommended limit for optimal performance
 
 // Initialize Anthropic client (singleton)
 let anthropicClient: Anthropic | null = null
@@ -489,6 +493,330 @@ export async function generateCourseFromImageSingleCall(
 }
 
 // ============================================================================
+// Multi-Image Analysis Functions
+// ============================================================================
+
+/**
+ * Analyzes multiple notebook images and extracts combined structured content
+ * Processes images in batches if more than MAX_IMAGES_PER_REQUEST
+ *
+ * @param imageUrls - Array of URLs of images to analyze
+ * @returns Combined extracted content and raw text
+ * @throws ClaudeAPIError on failure
+ */
+export async function analyzeMultipleNotebookImages(
+  imageUrls: string[]
+): Promise<AnalysisResult> {
+  if (imageUrls.length === 0) {
+    throw new ClaudeAPIError('No images provided', 'INVALID_IMAGE')
+  }
+
+  // If only one image, use existing single-image function
+  if (imageUrls.length === 1) {
+    return analyzeNotebookImage(imageUrls[0])
+  }
+
+  // Process in batches if more than MAX_IMAGES_PER_REQUEST
+  if (imageUrls.length > MAX_IMAGES_PER_REQUEST) {
+    return analyzeImagesInBatches(imageUrls)
+  }
+
+  // Process all images in a single request
+  return analyzeImageBatch(imageUrls)
+}
+
+/**
+ * Analyzes a batch of images (up to MAX_IMAGES_PER_REQUEST) in a single API call
+ */
+async function analyzeImageBatch(imageUrls: string[]): Promise<AnalysisResult> {
+  const client = getAnthropicClient()
+
+  // Fetch all images in parallel
+  const imageDataPromises = imageUrls.map((url) => fetchImageAsBase64(url))
+  const imagesData = await Promise.all(imageDataPromises)
+
+  // Use multi-page prompts for multiple images
+  const { systemPrompt, userPrompt } = getMultiPageImageAnalysisPrompt(imageUrls.length)
+
+  // Build message content with all images
+  const messageContent: Anthropic.MessageCreateParams['messages'][0]['content'] = []
+
+  // Add each image with page indicators
+  imagesData.forEach((imageData, index) => {
+    // Add page label before each image
+    messageContent.push({
+      type: 'text',
+      text: `--- Page ${index + 1} of ${imageUrls.length} ---`,
+    })
+    messageContent.push({
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: imageData.mediaType,
+        data: imageData.base64,
+      },
+    })
+  })
+
+  // Add the analysis prompt at the end
+  messageContent.push({
+    type: 'text',
+    text: userPrompt,
+  })
+
+  try {
+    const response = await client.messages.create({
+      model: AI_MODEL,
+      max_tokens: MAX_TOKENS_EXTRACTION * 2, // More tokens for multiple images
+      system: systemPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: messageContent,
+        },
+      ],
+    })
+
+    // Extract text from response
+    const textContent = response.content.find((block) => block.type === 'text')
+    if (!textContent || textContent.type !== 'text') {
+      throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
+    }
+
+    const rawText = textContent.text
+
+    // Parse JSON response
+    const jsonText = cleanJsonResponse(rawText)
+    let extractedContent: ExtractedContent
+
+    try {
+      extractedContent = JSON.parse(jsonText)
+    } catch {
+      throw new ClaudeAPIError(
+        'Failed to parse extracted content as JSON. The AI response format was unexpected.',
+        'PARSE_ERROR'
+      )
+    }
+
+    // Validate structure
+    if (!validateExtractedContent(extractedContent)) {
+      throw new ClaudeAPIError(
+        'Extracted content is missing required fields',
+        'PARSE_ERROR'
+      )
+    }
+
+    // Check for meaningful content
+    if (
+      extractedContent.content.length === 0 &&
+      extractedContent.mainTopics.length === 0
+    ) {
+      throw new ClaudeAPIError(
+        'No readable content found in the images. Please upload clearer photos.',
+        'EMPTY_CONTENT'
+      )
+    }
+
+    return { extractedContent, rawText }
+  } catch (error) {
+    if (error instanceof ClaudeAPIError) {
+      throw error
+    }
+    throw ClaudeAPIError.fromAnthropicError(error)
+  }
+}
+
+/**
+ * Processes images in batches when there are more than MAX_IMAGES_PER_REQUEST
+ * Combines extracted content from all batches
+ */
+async function analyzeImagesInBatches(imageUrls: string[]): Promise<AnalysisResult> {
+  const batches: string[][] = []
+
+  // Split into batches
+  for (let i = 0; i < imageUrls.length; i += MAX_IMAGES_PER_REQUEST) {
+    batches.push(imageUrls.slice(i, i + MAX_IMAGES_PER_REQUEST))
+  }
+
+  // Process each batch
+  const batchResults: AnalysisResult[] = []
+  for (let i = 0; i < batches.length; i++) {
+    const result = await analyzeImageBatch(batches[i])
+    batchResults.push(result)
+  }
+
+  // Combine results from all batches
+  const combinedContent: ExtractedContent = {
+    subject: '',
+    mainTopics: [],
+    content: [],
+    diagrams: [],
+    formulas: [],
+    structure: '',
+    summary: '',
+  }
+
+  const rawTexts: string[] = []
+
+  for (let i = 0; i < batchResults.length; i++) {
+    const result = batchResults[i]
+    const content = result.extractedContent
+
+    // Use subject and structure from first batch result
+    if (i === 0) {
+      combinedContent.subject = content.subject
+      combinedContent.structure = content.structure
+    }
+
+    // Merge arrays, avoiding duplicates in mainTopics
+    content.mainTopics.forEach((topic) => {
+      if (!combinedContent.mainTopics.includes(topic)) {
+        combinedContent.mainTopics.push(topic)
+      }
+    })
+
+    combinedContent.content.push(...content.content)
+    if (content.diagrams) {
+      combinedContent.diagrams!.push(...content.diagrams)
+    }
+    if (content.formulas) {
+      combinedContent.formulas!.push(...content.formulas)
+    }
+
+    // Combine summaries
+    if (content.summary) {
+      combinedContent.summary = combinedContent.summary
+        ? `${combinedContent.summary}\n\n${content.summary}`
+        : content.summary
+    }
+
+    rawTexts.push(result.rawText)
+  }
+
+  return {
+    extractedContent: combinedContent,
+    rawText: rawTexts.join('\n\n---\n\n'),
+  }
+}
+
+/**
+ * Full pipeline for multiple images: Analyzes all images and generates a single course
+ *
+ * @param imageUrls - Array of URLs of images to process
+ * @param userTitle - Optional user-provided title
+ * @returns Both extracted content and generated course
+ * @throws ClaudeAPIError on failure
+ */
+export async function generateCourseFromMultipleImages(
+  imageUrls: string[],
+  userTitle?: string
+): Promise<FullPipelineResult> {
+  // Step 1: Extract content from all images
+  const { extractedContent, rawText: extractionRawText } =
+    await analyzeMultipleNotebookImages(imageUrls)
+
+  // Step 2: Generate course from combined extracted content
+  const { course: generatedCourse, rawText: generationRawText } =
+    await generateStudyCourse(extractedContent, userTitle)
+
+  return {
+    extractedContent,
+    generatedCourse,
+    extractionRawText,
+    generationRawText,
+  }
+}
+
+// ============================================================================
+// Document-Based Course Generation
+// ============================================================================
+
+export interface DocumentCourseResult {
+  generatedCourse: GeneratedCourse
+  generationRawText: string
+}
+
+/**
+ * Generates a study course directly from extracted document content
+ * Skips image analysis step since document content is already extracted
+ *
+ * @param document - ExtractedDocument from PDF, PPTX, or DOCX processing
+ * @param userTitle - Optional user-provided title
+ * @returns Generated course and raw response text
+ * @throws ClaudeAPIError on failure
+ */
+export async function generateCourseFromDocument(
+  document: ExtractedDocument,
+  userTitle?: string
+): Promise<DocumentCourseResult> {
+  const client = getAnthropicClient()
+  const { systemPrompt, userPrompt } = getDocumentCoursePrompt(document, userTitle)
+
+  try {
+    const response = await client.messages.create({
+      model: AI_MODEL,
+      max_tokens: MAX_TOKENS_GENERATION,
+      system: systemPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: userPrompt,
+        },
+      ],
+    })
+
+    // Extract text from response
+    const textContent = response.content.find((block) => block.type === 'text')
+    if (!textContent || textContent.type !== 'text') {
+      throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
+    }
+
+    const rawText = textContent.text
+
+    // Parse JSON response
+    const jsonText = cleanJsonResponse(rawText)
+    let course: GeneratedCourse
+
+    try {
+      course = JSON.parse(jsonText)
+    } catch {
+      throw new ClaudeAPIError(
+        'Failed to parse course structure as JSON. The AI response format was unexpected.',
+        'PARSE_ERROR'
+      )
+    }
+
+    // Validate required fields (AI may return "sections" or "lessons")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const hasLessons = course.lessons || (course as any).sections
+    if (!course.title || !course.overview || !hasLessons) {
+      throw new ClaudeAPIError(
+        'Generated course is missing required fields',
+        'PARSE_ERROR'
+      )
+    }
+
+    // Apply user title if provided
+    if (userTitle && userTitle.trim()) {
+      course.title = userTitle.trim()
+    }
+
+    // Ensure optional arrays exist
+    course = normalizeGeneratedCourse(course)
+
+    return {
+      generatedCourse: course,
+      generationRawText: rawText,
+    }
+  } catch (error) {
+    if (error instanceof ClaudeAPIError) {
+      throw error
+    }
+    throw ClaudeAPIError.fromAnthropicError(error)
+  }
+}
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 
@@ -565,5 +893,5 @@ export function getUserFriendlyError(error: unknown): string {
 // Exports
 // ============================================================================
 
-export type { ExtractedContent }
+export type { ExtractedContent, ExtractedDocument }
 export { AI_MODEL }

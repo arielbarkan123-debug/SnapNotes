@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
-import type { Course } from '@/types'
+import type { Course, HelpContext } from '@/types'
 import type { ReviewCard as ReviewCardType } from '@/types/srs'
 import { parseCardBack, isMultipleChoice, isTrueFalse, isFillBlank, isMatching, isSequence } from '@/types/srs'
 import MultipleChoice from '@/components/practice/MultipleChoice'
@@ -11,6 +11,7 @@ import FillBlank from '@/components/practice/FillBlank'
 import ShortAnswer from '@/components/practice/ShortAnswer'
 import Matching from '@/components/practice/Matching'
 import Sequence from '@/components/practice/Sequence'
+import HelpModal from '@/components/help/HelpModal'
 
 // =============================================================================
 // Types
@@ -63,8 +64,9 @@ export default function PracticePage() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAnswerShown, setIsAnswerShown] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [_answers, setAnswers] = useState<Answer[]>([])
+  const [, setAnswers] = useState<Answer[]>([])
   const [interactiveResult, setInteractiveResult] = useState<boolean | null>(null) // Track if interactive card was answered correctly
+  const [showHelp, setShowHelp] = useState(false)
 
   // Stats
   const [stats, setStats] = useState<PracticeStats>({
@@ -288,6 +290,17 @@ export default function PracticePage() {
 
   const currentCard = cards[currentIndex]
 
+  // Help context for current card
+  const helpContext: HelpContext | null = currentCard ? {
+    courseId: currentCard.course_id || '',
+    courseTitle: currentCard.courseName || 'Practice Session',
+    lessonIndex: currentCard.lesson_index ?? 0,
+    lessonTitle: currentCard.lessonTitle || `Lesson ${(currentCard.lesson_index ?? 0) + 1}`,
+    stepIndex: currentCard.step_index ?? 0,
+    stepContent: currentCard.front || '',
+    stepType: currentCard.card_type || 'flashcard',
+  } : null
+
   // Check if card is an interactive type
   const isInteractiveCard = (card: PracticeCard): boolean => {
     return ['multiple_choice', 'true_false', 'fill_blank', 'matching', 'sequence'].includes(card.card_type)
@@ -302,7 +315,8 @@ export default function PracticePage() {
     })
   }, [stats.byCourse])
 
-  const _weakestCourse = courseStatsArray[0]
+  // Weakest course available for future use (focus mode, recommendations)
+  void courseStatsArray[0]
 
   // ==========================================================================
   // Render: Loading
@@ -510,7 +524,7 @@ export default function PracticePage() {
           {hasNoCourses ? (
             <div className="text-center py-8">
               <p className="text-gray-600 dark:text-gray-400 mb-4">
-                You don't have any courses yet. Create a course to start practicing!
+                You don&apos;t have any courses yet. Create a course to start practicing!
               </p>
               <Link
                 href="/dashboard"
@@ -785,7 +799,19 @@ export default function PracticePage() {
 
             // Default: Flashcard / Key Point / Explanation / Formula (simple reveal)
             return (
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden relative">
+                {/* Help Button */}
+                {helpContext && (
+                  <button
+                    onClick={() => setShowHelp(true)}
+                    className="absolute top-3 right-3 p-2 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition z-10"
+                    aria-label="Get help"
+                    type="button"
+                  >
+                    <span>❓</span>
+                  </button>
+                )}
+
                 {/* Card Type Badge */}
                 <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
                   <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
@@ -815,6 +841,17 @@ export default function PracticePage() {
                           <span className="font-medium">From:</span> {currentCard.courseName} — {currentCard.lessonTitle}
                         </p>
                       </div>
+
+                      {/* Help link */}
+                      {helpContext && (
+                        <button
+                          onClick={() => setShowHelp(true)}
+                          className="mt-3 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition"
+                          type="button"
+                        >
+                          🤔 Need help understanding this?
+                        </button>
+                      )}
                     </div>
                   </>
                 )}
@@ -887,6 +924,15 @@ export default function PracticePage() {
           return null
         })()}
       </div>
+
+      {/* Help Modal */}
+      {helpContext && (
+        <HelpModal
+          isOpen={showHelp}
+          onClose={() => setShowHelp(false)}
+          context={helpContext}
+        />
+      )}
     </div>
   )
 }

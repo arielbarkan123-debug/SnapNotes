@@ -6,8 +6,8 @@
  * leads to better long-term retention than blocked practice.
  */
 
-import { Course, GeneratedCourse } from '@/types'
-import { ReviewCard, CardState } from '@/types/srs'
+import { Course as _Course, GeneratedCourse as _GeneratedCourse } from '@/types'
+import { ReviewCard } from '@/types/srs'
 
 // ============================================
 // TYPES
@@ -146,7 +146,7 @@ export function shuffleWithConstraints(
   }
 
   // Initial shuffle
-  let result = fisherYatesShuffle([...cards])
+  const result = fisherYatesShuffle([...cards])
 
   // Apply constraints with max iterations to prevent infinite loops
   const maxIterations = cards.length * 3

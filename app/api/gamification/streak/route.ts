@@ -53,12 +53,21 @@ export async function POST(): Promise<NextResponse> {
       return createErrorResponse(ErrorCodes.UNAUTHORIZED, 'Please log in to update streak')
     }
 
+    console.log('[Streak:POST] User authenticated:', user.id)
+
     // Get current gamification record
-    const { data: gamification } = await supabase
+    const { data: gamification, error: gamificationError } = await supabase
       .from('user_gamification')
       .select('*')
       .eq('user_id', user.id)
       .single()
+
+    if (gamificationError && gamificationError.code !== 'PGRST116') {
+      // PGRST116 = no rows found, which is OK for new users
+      console.error('[Streak:POST] Error fetching gamification:', gamificationError)
+    }
+
+    console.log('[Streak:POST] Current gamification:', gamification)
 
     // Prepare streak data
     const streakData: StreakData = {
@@ -102,6 +111,7 @@ export async function POST(): Promise<NextResponse> {
         return createErrorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to update streak')
       }
     } else {
+      // Insert only essential fields - other fields have defaults in the database
       const { error: insertError } = await supabase.from('user_gamification').insert({
         user_id: user.id,
         total_xp: xpGain?.newTotal || 0,
@@ -109,10 +119,6 @@ export async function POST(): Promise<NextResponse> {
         current_streak: result.currentStreak,
         longest_streak: result.longestStreak,
         last_activity_date: getTodayDateString(),
-        total_lessons_completed: 0,
-        total_courses_completed: 0,
-        total_cards_reviewed: 0,
-        perfect_lessons: 0,
       })
 
       if (insertError) {
@@ -148,6 +154,7 @@ export async function POST(): Promise<NextResponse> {
 
     return NextResponse.json(response)
   } catch (error) {
+    console.error('[Streak:POST] Unhandled error:', error)
     logError('Gamification:streak:post', error)
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to update streak')
   }
@@ -200,6 +207,7 @@ export async function GET(): Promise<NextResponse> {
       daysToMilestone: status.daysToMilestone,
     })
   } catch (error) {
+    console.error('[Streak:GET] Unhandled error:', error)
     logError('Gamification:streak:get', error)
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to fetch streak status')
   }

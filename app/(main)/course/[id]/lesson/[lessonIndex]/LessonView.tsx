@@ -2,12 +2,13 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Course, UserProgress, Lesson } from '@/types'
+import { Course, UserProgress, Lesson, HelpContext } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import ProgressBar from '@/components/lesson/ProgressBar'
 import StepContent from '@/components/lesson/StepContent'
 import QuestionStep from '@/components/lesson/QuestionStep'
 import LessonComplete from '@/components/lesson/LessonComplete'
+import HelpModal from '@/components/help/HelpModal'
 
 interface QuestionAnswer {
   stepIndex: number
@@ -59,6 +60,7 @@ export default function LessonView({
   const [currentStep, setCurrentStep] = useState(getInitialStep)
   const [isSaving, setIsSaving] = useState(false)
   const [showCompletion, setShowCompletion] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
 
   // Question tracking state
   const [answers, setAnswers] = useState<QuestionAnswer[]>([])
@@ -77,6 +79,34 @@ export default function LessonView({
     }
     return count
   }, [answers])
+
+  // Help context for floating help button
+  const helpContext: HelpContext = useMemo(() => {
+    const stepData = steps[currentStep] || {}
+    return {
+      courseId: course.id,
+      courseTitle: course.generated_course?.title || course.title,
+      lessonIndex,
+      lessonTitle: lesson.title || `Lesson ${lessonIndex + 1}`,
+      stepIndex: currentStep,
+      stepContent: stepData.content || '',
+      stepType: stepData.type || 'unknown',
+    }
+  }, [course.id, course.generated_course?.title, course.title, lessonIndex, lesson.title, currentStep, steps])
+
+  // Keyboard shortcut for help (H or ?)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+      if (e.key === 'h' || e.key === 'H' || e.key === '?') {
+        e.preventDefault()
+        setShowHelp(true)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Step timing tracking
   const stepStartTimeRef = useRef<number>(Date.now())
@@ -220,10 +250,6 @@ export default function LessonView({
   }, [router, course.id])
 
   // Calculate final stats for completion screen
-  const finalQuestionsAnswered = useMemo(() => {
-    return answers.length
-  }, [answers])
-
   const finalQuestionsCorrect = useMemo(() => {
     return answers.filter(a => a.correct).length
   }, [answers])
@@ -285,13 +311,18 @@ export default function LessonView({
             {isQuestion ? (
               <QuestionStep
                 key={currentStep}
-                question={currentStepData.content || (currentStepData as any).question || ''}
+                question={currentStepData.content || (currentStepData as unknown as { question?: string }).question || ''}
                 options={currentStepData.options || []}
-                correct_answer={currentStepData.correct_answer ?? (currentStepData as any).correctIndex ?? 0}
+                correct_answer={currentStepData.correct_answer ?? (currentStepData as unknown as { correctIndex?: number }).correctIndex ?? 0}
                 explanation={currentStepData.explanation}
                 onComplete={(wasCorrect, usedHint) => handleAdvance(wasCorrect, usedHint)}
                 step={currentStepData}
                 consecutiveWrong={consecutiveWrong}
+                courseId={course.id}
+                courseTitle={course.generated_course?.title || course.title}
+                lessonIndex={lessonIndex}
+                lessonTitle={lesson.title}
+                stepIndex={currentStep}
               />
             ) : (
               <StepContent
@@ -345,6 +376,26 @@ export default function LessonView({
           </div>
         </footer>
       )}
+
+      {/* Floating Help Button - only show for non-question steps */}
+      {!isQuestion && (
+        <button
+          onClick={() => setShowHelp(true)}
+          className="fixed bottom-24 right-4 md:bottom-8 md:right-8 w-12 h-12 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-200 dark:hover:bg-indigo-900 transition-all hover:scale-110 z-40"
+          aria-label="Get help"
+          title="Need help? Press H"
+          type="button"
+        >
+          <span className="text-xl">❓</span>
+        </button>
+      )}
+
+      {/* Help Modal */}
+      <HelpModal
+        isOpen={showHelp}
+        onClose={() => setShowHelp(false)}
+        context={helpContext}
+      />
     </div>
   )
 }

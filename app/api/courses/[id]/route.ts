@@ -71,7 +71,7 @@ export async function DELETE(
         .from('review_cards')
         .delete()
         .eq('course_id', courseId)
-    } catch (e) {
+    } catch {
       // Tables might not exist, continue
     }
 
@@ -81,7 +81,7 @@ export async function DELETE(
         .from('user_progress')
         .delete()
         .eq('course_id', courseId)
-    } catch (e) {
+    } catch {
       // Table might not exist, continue
     }
 
@@ -91,7 +91,7 @@ export async function DELETE(
         .from('lesson_self_assessment')
         .delete()
         .eq('course_id', courseId)
-    } catch (e) {
+    } catch {
       // Table might not exist, continue
     }
 
@@ -101,7 +101,7 @@ export async function DELETE(
         .from('step_performance')
         .delete()
         .eq('course_id', courseId)
-    } catch (e) {
+    } catch {
       // Table might not exist, continue
     }
 
@@ -111,7 +111,7 @@ export async function DELETE(
         .from('user_mastery')
         .delete()
         .eq('course_id', courseId)
-    } catch (e) {
+    } catch {
       // Table might not exist, continue
     }
 

@@ -179,7 +179,7 @@ export default function DashboardWidget() {
       {stats.cards_reviewed_today > 0 && (
         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
-            <span>Today's progress</span>
+            <span>Today&apos;s progress</span>
             <span>{stats.cards_reviewed_today} reviewed</span>
           </div>
           <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">

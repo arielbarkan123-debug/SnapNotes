@@ -200,7 +200,7 @@ function IncorrectFeedback({
             Not quite
           </h3>
           <p className="text-sm text-orange-600 dark:text-orange-500">
-            Let's learn from this
+            Let&apos;s learn from this
           </p>
         </div>
       </div>

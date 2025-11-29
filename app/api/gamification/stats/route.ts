@@ -74,7 +74,7 @@ export async function GET(): Promise<NextResponse> {
     }
 
     // Get or create gamification record
-    let gamification = await getOrCreateGamification(supabase, user.id)
+    const gamification = await getOrCreateGamification(supabase, user.id)
 
     // Get earned achievements
     const { data: earnedAchievements } = await supabase

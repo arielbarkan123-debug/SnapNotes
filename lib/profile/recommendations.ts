@@ -259,7 +259,7 @@ export async function getRecommendations(
   limit: number = 3
 ): Promise<Recommendation[]> {
   const stats = await getUserStudyStats(userId)
-  const profile = await getUserProfile(userId)
+  const _profile = await getUserProfile(userId)
   const recommendations: Recommendation[] = []
 
   // Build all possible recommendations

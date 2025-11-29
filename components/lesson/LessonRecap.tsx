@@ -62,7 +62,7 @@ export default function LessonRecap({
         <div className="text-center px-6">
           <span className="text-6xl mb-4 block">📚</span>
           <h2 className="text-2xl font-bold text-white mb-4">No Content to Review</h2>
-          <p className="text-indigo-200 mb-6">This lesson doesn't have any content to recap.</p>
+          <p className="text-indigo-200 mb-6">This lesson doesn&apos;t have any content to recap.</p>
           <button
             onClick={onClose}
             className="px-6 py-3 bg-white text-indigo-600 font-semibold rounded-xl"

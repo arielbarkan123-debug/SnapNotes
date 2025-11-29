@@ -28,6 +28,12 @@ export const ErrorCodes = {
   UPLOAD_FAILED: 'UPLOAD_FAILED',
   STORAGE_QUOTA_EXCEEDED: 'STORAGE_QUOTA_EXCEEDED',
 
+  // Document processing errors
+  DOCUMENT_PROCESSING_FAILED: 'DOCUMENT_PROCESSING_FAILED',
+  DOCUMENT_PASSWORD_PROTECTED: 'DOCUMENT_PASSWORD_PROTECTED',
+  DOCUMENT_EMPTY: 'DOCUMENT_EMPTY',
+  DOCUMENT_SCANNED: 'DOCUMENT_SCANNED',
+
   // AI/Processing errors
   AI_SERVICE_UNAVAILABLE: 'AI_SERVICE_UNAVAILABLE',
   AI_PROCESSING_FAILED: 'AI_PROCESSING_FAILED',
@@ -86,6 +92,12 @@ const defaultErrorMessages: Record<ErrorCode, string> = {
   [ErrorCodes.INVALID_FILE_TYPE]: 'Invalid file type. Please upload an image',
   [ErrorCodes.UPLOAD_FAILED]: 'Failed to upload file. Please try again',
   [ErrorCodes.STORAGE_QUOTA_EXCEEDED]: 'Storage quota exceeded',
+
+  // Document processing
+  [ErrorCodes.DOCUMENT_PROCESSING_FAILED]: 'Failed to process document. Please try again',
+  [ErrorCodes.DOCUMENT_PASSWORD_PROTECTED]: 'Password-protected documents are not supported',
+  [ErrorCodes.DOCUMENT_EMPTY]: 'Document appears to be empty or contains no readable text',
+  [ErrorCodes.DOCUMENT_SCANNED]: 'This document appears to be scanned. Please upload images instead',
 
   // AI
   [ErrorCodes.AI_SERVICE_UNAVAILABLE]: 'AI service is temporarily unavailable. Please try again later',
@@ -151,6 +163,9 @@ function getStatusCodeForError(code: ErrorCode): number {
     case ErrorCodes.FILE_TOO_LARGE:
     case ErrorCodes.INVALID_FILE_TYPE:
     case ErrorCodes.IMAGE_UNREADABLE:
+    case ErrorCodes.DOCUMENT_PASSWORD_PROTECTED:
+    case ErrorCodes.DOCUMENT_EMPTY:
+    case ErrorCodes.DOCUMENT_SCANNED:
       return 400
 
     // 401 Unauthorized
@@ -192,6 +207,7 @@ function getStatusCodeForError(code: ErrorCode): number {
     case ErrorCodes.AI_PROCESSING_FAILED:
     case ErrorCodes.NETWORK_ERROR:
     case ErrorCodes.STORAGE_QUOTA_EXCEEDED:
+    case ErrorCodes.DOCUMENT_PROCESSING_FAILED:
     default:
       return 500
   }

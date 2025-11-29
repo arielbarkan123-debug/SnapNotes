@@ -3,9 +3,12 @@ import { createClient } from '@/lib/supabase/server'
 import { CourseInsert } from '@/types'
 import {
   generateCourseFromImage,
+  generateCourseFromMultipleImages,
+  generateCourseFromDocument,
   ClaudeAPIError,
   getUserFriendlyError,
 } from '@/lib/ai'
+import type { ExtractedDocument } from '@/lib/documents'
 import {
   ErrorCodes,
   createErrorResponse,
@@ -19,14 +22,28 @@ import { generateCardsFromCourse } from '@/lib/srs'
 // ============================================================================
 
 interface GenerateCourseRequest {
-  imageUrl: string
+  /** Single image URL (legacy, for backward compatibility) */
+  imageUrl?: string
+  /** Array of image URLs (new multi-image support) */
+  imageUrls?: string[]
+  /** Extracted document content (for PDF, PPTX, DOCX) */
+  documentContent?: ExtractedDocument
+  /** URL to stored document in Supabase Storage */
+  documentUrl?: string
+  /** Optional user-provided course title */
   title?: string
 }
+
+type SourceType = 'image' | 'pdf' | 'pptx' | 'docx'
 
 interface GenerateCourseSuccessResponse {
   success: true
   courseId: string
   cardsGenerated: number
+  /** Number of images processed */
+  imagesProcessed?: number
+  /** Source type of the course */
+  sourceType?: SourceType
 }
 
 // ============================================================================
@@ -37,7 +54,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // 1. Verify authentication
     const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
 
     if (authError || !user) {
       return createErrorResponse(ErrorCodes.UNAUTHORIZED, 'Please log in to generate a course')
@@ -51,59 +71,111 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return createErrorResponse(ErrorCodes.INVALID_INPUT, 'Invalid request body')
     }
 
-    const { imageUrl, title } = body
+    const { imageUrl, imageUrls, documentContent, documentUrl, title } = body
 
-    if (!imageUrl) {
-      return createErrorResponse(ErrorCodes.MISSING_FIELD, 'Image URL is required')
+    // 3. Determine source type and validate input
+    let sourceType: SourceType = 'image'
+    let urls: string[] = []
+
+    // Check if this is a document-based request
+    if (documentContent && documentContent.type) {
+      // Document content provided - skip image processing
+      sourceType = documentContent.type as SourceType
+    } else {
+      // Image-based request - normalize to array of URLs
+      if (imageUrls && Array.isArray(imageUrls) && imageUrls.length > 0) {
+        urls = imageUrls.filter((url) => typeof url === 'string' && url.trim())
+      } else if (imageUrl && typeof imageUrl === 'string') {
+        urls = [imageUrl]
+      }
+
+      if (urls.length === 0) {
+        return createErrorResponse(
+          ErrorCodes.MISSING_FIELD,
+          'Either imageUrl/imageUrls or documentContent is required'
+        )
+      }
+
+      // Limit to 10 images max
+      if (urls.length > 10) {
+        return createErrorResponse(ErrorCodes.VALIDATION_ERROR, 'Maximum 10 images allowed per course')
+      }
     }
 
-    // 3. Check if a course with this image already exists (prevent duplicates)
-    const { data: existingCourse } = await supabase
-      .from('courses')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('original_image_url', imageUrl)
-      .single()
+    // 4. Check for duplicate courses
+    // For images: check by primary image URL
+    // For documents: check by document URL or document title
+    const duplicateCheckField = documentContent ? documentUrl : urls[0]
 
-    if (existingCourse) {
-      // Course already exists, return the existing one
-      return NextResponse.json({
-        success: true,
-        courseId: existingCourse.id,
-        cardsGenerated: 0,
-        isDuplicate: true,
-      })
+    if (duplicateCheckField) {
+      const { data: existingCourse } = await supabase
+        .from('courses')
+        .select('id')
+        .eq('user_id', user.id)
+        .or(`original_image_url.eq.${duplicateCheckField},document_url.eq.${duplicateCheckField}`)
+        .single()
+
+      if (existingCourse) {
+        return NextResponse.json({
+          success: true,
+          courseId: existingCourse.id,
+          cardsGenerated: 0,
+          isDuplicate: true,
+          imagesProcessed: 0,
+          sourceType,
+        })
+      }
     }
 
-    // 4. Generate course from image using AI service (now step 4 due to duplicate check)
+    // 5. Generate course using AI service
     let extractedContent: string
     let generatedCourse
 
     try {
-      const result = await generateCourseFromImage(imageUrl, title)
-      generatedCourse = result.generatedCourse
-      extractedContent = result.extractionRawText
+      if (documentContent) {
+        // Document-based generation - skip image analysis
+        const result = await generateCourseFromDocument(documentContent, title)
+        generatedCourse = result.generatedCourse
+        extractedContent = documentContent.content // Use the already extracted content
+      } else if (urls.length === 1) {
+        // Single image
+        const result = await generateCourseFromImage(urls[0], title)
+        generatedCourse = result.generatedCourse
+        extractedContent = result.extractionRawText
+      } else {
+        // Multiple images
+        const result = await generateCourseFromMultipleImages(urls, title)
+        generatedCourse = result.generatedCourse
+        extractedContent = result.extractionRawText
+      }
     } catch (error) {
       logError('GenerateCourse:AI', error)
 
       if (error instanceof ClaudeAPIError) {
-        // Map ClaudeAPIError to our standardized error codes
         const errorCode = mapClaudeAPIErrorCode(error.code)
         return createErrorResponse(errorCode, getUserFriendlyError(error))
       }
 
-      // Use our generic Claude error mapper for unknown errors
       const { code, message } = mapClaudeAPIError(error)
       return createErrorResponse(code, message)
     }
 
-    // 5. Save to database
+    // 6. Save to database
     const courseData: CourseInsert = {
       user_id: user.id,
       title: generatedCourse.title,
-      original_image_url: imageUrl,
       extracted_content: extractedContent,
       generated_course: generatedCourse,
+      source_type: sourceType,
+    }
+
+    // Set source-specific fields
+    if (documentContent) {
+      courseData.document_url = documentUrl || null
+      courseData.original_image_url = null // No image for document-based courses
+    } else {
+      courseData.original_image_url = urls[0]
+      courseData.image_urls = urls.length > 1 ? urls : null
     }
 
     const { data: course, error: dbError } = await supabase
@@ -114,21 +186,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (dbError || !course) {
       logError('GenerateCourse:database', dbError)
-      return createErrorResponse(
-        ErrorCodes.DATABASE_ERROR,
-        'Failed to save course. Please try again.'
-      )
+      return createErrorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to save course. Please try again.')
     }
 
-    // 6. Generate review cards from course content
+    // 7. Generate review cards from course content
     let cardsGenerated = 0
 
     try {
       const cards = generateCardsFromCourse(generatedCourse, course.id)
 
       if (cards.length > 0) {
-        // Add user_id to each card
-        const cardsWithUser = cards.map(card => ({
+        const cardsWithUser = cards.map((card) => ({
           ...card,
           user_id: user.id,
         }))
@@ -140,31 +208,27 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         if (cardsError) {
           logError('GenerateCourse:cards', cardsError)
-          // Don't fail the request, just log the error
         } else {
           cardsGenerated = insertedCards?.length || 0
         }
       }
     } catch (cardError) {
       logError('GenerateCourse:cardGeneration', cardError)
-      // Don't fail the request if card generation fails
     }
 
-    // 7. Return success with course ID and card count
+    // 8. Return success
     const response: GenerateCourseSuccessResponse = {
       success: true,
       courseId: course.id,
       cardsGenerated,
+      imagesProcessed: documentContent ? 0 : urls.length,
+      sourceType,
     }
 
     return NextResponse.json(response)
-
   } catch (error) {
     logError('GenerateCourse:unhandled', error)
-    return createErrorResponse(
-      ErrorCodes.INTERNAL_ERROR,
-      'An unexpected error occurred. Please try again.'
-    )
+    return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'An unexpected error occurred. Please try again.')
   }
 }
 

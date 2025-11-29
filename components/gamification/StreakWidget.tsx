@@ -258,7 +258,7 @@ export function StreakWidget({
           </div>
         ) : (
           <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-            Don't break the chain!
+            Don&apos;t break the chain!
           </div>
         )}
       </div>
@@ -364,7 +364,7 @@ export function StreakBroken({ previousStreak, onClose, onStartNew }: StreakBrok
       <p className="text-gray-600 dark:text-gray-400 mb-4">
         Your {previousStreak} day streak has ended.
         <br />
-        Don't worry - you can start a new one today!
+        Don&apos;t worry - you can start a new one today!
       </p>
       <div className="flex gap-3 justify-center">
         {onClose && (
