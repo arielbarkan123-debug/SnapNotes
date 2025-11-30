@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
+import useSWR from 'swr'
 import { Course } from '@/types'
 import { useDebounce } from './useDebounce'
 
@@ -9,6 +10,12 @@ import { useDebounce } from './useDebounce'
 // ============================================================================
 
 export type SortOrder = 'newest' | 'oldest'
+
+interface CoursesApiResponse {
+  success: boolean
+  courses: Course[]
+  count: number
+}
 
 export interface UseCoursesOptions {
   initialCourses?: Course[]
@@ -38,10 +45,18 @@ export interface UseCoursesReturn {
   // Loading/Error states
   isLoading: boolean
   error: string | null
+  isValidating: boolean
 
   // Actions
   refetch: () => Promise<void>
+  mutate: () => Promise<void>
 }
+
+// ============================================================================
+// SWR Cache Key
+// ============================================================================
+
+export const COURSES_CACHE_KEY = '/api/courses'
 
 // ============================================================================
 // Hook Implementation
@@ -55,48 +70,36 @@ export function useCourses(options: UseCoursesOptions = {}): UseCoursesReturn {
     debounceDelay = 300,
   } = options
 
-  // State
-  const [courses, setCourses] = useState<Course[]>(initialCourses)
+  // Local state for search and sort (not cached)
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
   const [sortOrder, setSortOrder] = useState<SortOrder>(initialSortOrder)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   // Debounced search query
   const debouncedSearchQuery = useDebounce(searchQuery, debounceDelay)
 
-  // Fetch courses from API
-  const fetchCourses = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const response = await fetch('/api/courses')
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch courses')
-      }
-
-      const data = await response.json()
-
-      if (data.success && Array.isArray(data.courses)) {
-        setCourses(data.courses)
-      } else {
-        throw new Error(data.error || 'Invalid response')
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load courses')
-    } finally {
-      setIsLoading(false)
+  // SWR for data fetching with caching
+  const {
+    data,
+    error: swrError,
+    isLoading,
+    isValidating,
+    mutate,
+  } = useSWR<CoursesApiResponse>(
+    COURSES_CACHE_KEY,
+    {
+      // Use initial data from server if provided
+      fallbackData: initialCourses.length > 0
+        ? { success: true, courses: initialCourses, count: initialCourses.length }
+        : undefined,
+      // Revalidate on mount if we have initial data
+      revalidateOnMount: initialCourses.length === 0,
     }
-  }, [])
+  )
 
-  // Update courses when initialCourses changes (from server)
-  useEffect(() => {
-    if (initialCourses.length > 0) {
-      setCourses(initialCourses)
-    }
-  }, [initialCourses])
+  // Extract courses from response
+  const courses = useMemo(() => {
+    return data?.courses || initialCourses
+  }, [data?.courses, initialCourses])
 
   // Sort courses
   const sortedCourses = useMemo(() => {
@@ -158,6 +161,19 @@ export function useCourses(options: UseCoursesOptions = {}): UseCoursesReturn {
     setSortOrder((prev) => (prev === 'newest' ? 'oldest' : 'newest'))
   }, [])
 
+  // Refetch function for manual refresh
+  const refetch = useCallback(async () => {
+    await mutate()
+  }, [mutate])
+
+  // Mutate function for cache invalidation
+  const handleMutate = useCallback(async () => {
+    await mutate()
+  }, [mutate])
+
+  // Convert SWR error to string
+  const error = swrError ? (swrError.message || 'Failed to load courses') : null
+
   return {
     // Data
     courses: sortedCourses,
@@ -179,9 +195,11 @@ export function useCourses(options: UseCoursesOptions = {}): UseCoursesReturn {
     // Loading/Error states
     isLoading,
     error,
+    isValidating,
 
     // Actions
-    refetch: fetchCourses,
+    refetch,
+    mutate: handleMutate,
   }
 }
 

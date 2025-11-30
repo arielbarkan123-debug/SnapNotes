@@ -194,7 +194,7 @@ export function shuffleWithConstraints(
  * Priority order:
  * 1. Cards due today (highest)
  * 2. Cards from low-mastery lessons
- * 3. New cards (limited by maxNewCards)
+ * 3. New cards (limited by maxNewCards, but relaxed if needed to hit target)
  * 4. Recently reviewed (lowest)
  */
 export function selectCardsByPriority(
@@ -204,9 +204,10 @@ export function selectCardsByPriority(
   // Sort by priority score descending
   const sorted = [...cards].sort((a, b) => b.priorityScore - a.priorityScore)
 
-  // Apply new card limit
+  // First pass: Apply new card limit strictly
   let newCardCount = 0
   const selected: CardWithMeta[] = []
+  const skippedNewCards: CardWithMeta[] = []
 
   for (const card of sorted) {
     if (selected.length >= config.cardCount) {
@@ -216,12 +217,20 @@ export function selectCardsByPriority(
     // Check new card limit
     if (card.state === 'new') {
       if (newCardCount >= config.maxNewCards) {
-        continue // Skip this new card
+        skippedNewCards.push(card) // Save for potential use later
+        continue // Skip this new card for now
       }
       newCardCount++
     }
 
     selected.push(card)
+  }
+
+  // Second pass: If we didn't reach the target count, add skipped new cards
+  if (selected.length < config.cardCount && skippedNewCards.length > 0) {
+    const needed = config.cardCount - selected.length
+    const extras = skippedNewCards.slice(0, needed)
+    selected.push(...extras)
   }
 
   return selected

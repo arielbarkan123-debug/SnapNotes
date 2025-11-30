@@ -2,8 +2,38 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
-import type { Course, HelpContext } from '@/types'
+import dynamic from 'next/dynamic'
+import type { HelpContext } from '@/types'
 import type { ReviewCard as ReviewCardType } from '@/types/srs'
+import { useCourses } from '@/hooks'
+
+// Custom slider styles
+const sliderStyles = `
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgb(99, 102, 241);
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: transform 0.15s ease;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgb(99, 102, 241);
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  }
+`
 import { parseCardBack, isMultipleChoice, isTrueFalse, isFillBlank, isMatching, isSequence } from '@/types/srs'
 import MultipleChoice from '@/components/practice/MultipleChoice'
 import TrueFalse from '@/components/practice/TrueFalse'
@@ -11,7 +41,12 @@ import FillBlank from '@/components/practice/FillBlank'
 import ShortAnswer from '@/components/practice/ShortAnswer'
 import Matching from '@/components/practice/Matching'
 import Sequence from '@/components/practice/Sequence'
-import HelpModal from '@/components/help/HelpModal'
+
+// Lazy load HelpModal - only loaded when user requests help
+const HelpModal = dynamic(
+  () => import('@/components/help/HelpModal'),
+  { ssr: false }
+)
 
 // =============================================================================
 // Types
@@ -19,7 +54,37 @@ import HelpModal from '@/components/help/HelpModal'
 
 type SessionState = 'loading' | 'setup' | 'practicing' | 'complete'
 
-type CardCount = 10 | 20 | 50
+// Study session tracking helper
+async function startStudySession(): Promise<string | null> {
+  try {
+    const res = await fetch('/api/study-sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionType: 'practice' }),
+    })
+    const data = await res.json()
+    return data.success ? data.session?.id : null
+  } catch {
+    return null
+  }
+}
+
+async function endStudySession(sessionId: string, cardsReviewed: number, correct: number) {
+  try {
+    await fetch('/api/study-sessions', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId,
+        cardsReviewed,
+        questionsAnswered: cardsReviewed,
+        questionsCorrect: correct,
+      }),
+    })
+  } catch (error) {
+    console.error('Failed to end study session:', error)
+  }
+}
 
 interface PracticeCard extends ReviewCardType {
   courseName: string
@@ -52,11 +117,13 @@ interface Answer {
 // =============================================================================
 
 export default function PracticePage() {
+  // SWR hook for courses with caching
+  const { courses, isLoading: coursesLoading, error: coursesError } = useCourses()
+
   // Setup state
   const [sessionState, setSessionState] = useState<SessionState>('loading')
-  const [courses, setCourses] = useState<Course[]>([])
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([])
-  const [cardCount, setCardCount] = useState<CardCount>(20)
+  const [questionCount, setQuestionCount] = useState<number>(20)
   const [error, setError] = useState<string | null>(null)
 
   // Practice session state
@@ -80,30 +147,27 @@ export default function PracticePage() {
   // Timing
   const cardStartTimeRef = useRef<number>(0)
 
+  // Study session tracking
+  const sessionIdRef = useRef<string | null>(null)
+
   // ==========================================================================
-  // Load courses
+  // Respond to SWR loading state
   // ==========================================================================
 
   useEffect(() => {
-    async function loadCourses() {
-      try {
-        const response = await fetch('/api/courses')
-        const data = await response.json()
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to load courses')
-        }
-
-        setCourses(data.courses || [])
-        setSessionState('setup')
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load courses')
-        setSessionState('setup')
-      }
-    }
-
-    loadCourses()
+    console.time('practice-page-load')
   }, [])
+
+  useEffect(() => {
+    // Transition to setup once courses are loaded
+    if (!coursesLoading && sessionState === 'loading') {
+      console.timeEnd('practice-page-load')
+      if (coursesError) {
+        setError(coursesError)
+      }
+      setSessionState('setup')
+    }
+  }, [coursesLoading, coursesError, sessionState])
 
   // ==========================================================================
   // Generate practice session
@@ -118,13 +182,13 @@ export default function PracticePage() {
       // Build course filter (empty = all courses)
       const courseFilter = selectedCourseIds.length > 0 ? selectedCourseIds : courses.map(c => c.id)
 
-      // Fetch cards for practice
+      // Fetch questions for practice
       const response = await fetch('/api/practice/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           course_ids: courseFilter,
-          card_count: cardCount,
+          card_count: questionCount,
         }),
       })
 
@@ -135,8 +199,16 @@ export default function PracticePage() {
       }
 
       if (!data.cards || data.cards.length === 0) {
-        setError('No cards available for practice. Complete some lessons first!')
+        setError('No questions available for practice. Complete some lessons first!')
         return
+      }
+
+      // Check if we got fewer questions than requested
+      const requested = data.requested || questionCount
+      const delivered = data.delivered || data.cards.length
+      if (delivered < requested) {
+        console.log(`[Practice] Requested ${requested} questions, got ${delivered} (${data.available || 'unknown'} available)`)
+        // Don't error, just proceed with what we have
       }
 
       // Map course info to cards
@@ -180,10 +252,14 @@ export default function PracticePage() {
       setInteractiveResult(null)
       setSessionState('practicing')
       cardStartTimeRef.current = Date.now()
+
+      // Start study session tracking
+      const sessionId = await startStudySession()
+      sessionIdRef.current = sessionId
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start practice')
     }
-  }, [courses, selectedCourseIds, cardCount])
+  }, [courses, selectedCourseIds, questionCount])
 
   // ==========================================================================
   // Toggle course selection
@@ -277,6 +353,12 @@ export default function PracticePage() {
         setInteractiveResult(null)
         cardStartTimeRef.current = Date.now()
       } else {
+        // End study session when practice completes
+        const finalCorrect = wasCorrect ? stats.correctCount + 1 : stats.correctCount
+        if (sessionIdRef.current) {
+          endStudySession(sessionIdRef.current, stats.totalCards, finalCorrect)
+          sessionIdRef.current = null
+        }
         setSessionState('complete')
       }
     } finally {
@@ -324,10 +406,35 @@ export default function PracticePage() {
 
   if (sessionState === 'loading') {
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-indigo-200 dark:border-indigo-900 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
+        <div className="w-full max-w-2xl">
+          {/* Flashcard skeleton */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
+            {/* Progress bar skeleton */}
+            <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full mb-6 skeleton-shimmer-item" />
+
+            {/* Card type badge skeleton */}
+            <div className="flex justify-center mb-4">
+              <div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 rounded-full skeleton-shimmer-item" />
+            </div>
+
+            {/* Question area skeleton */}
+            <div className="min-h-[180px] flex flex-col items-center justify-center space-y-4 mb-8">
+              <div className="h-6 w-4/5 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item" />
+              <div className="h-6 w-3/5 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item" />
+              <div className="h-6 w-2/5 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item" />
+            </div>
+
+            {/* Answer options skeleton */}
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map(i => (
+                <div
+                  key={i}
+                  className="h-12 bg-gray-100 dark:bg-gray-700/50 rounded-lg skeleton-shimmer-item"
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -370,7 +477,7 @@ export default function PracticePage() {
                 {stats.totalCards}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Cards Practiced
+                Questions
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-sm border border-gray-100 dark:border-gray-700">
@@ -476,8 +583,10 @@ export default function PracticePage() {
     const hasNoCourses = courses.length === 0
 
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
-        <div className="w-full max-w-lg">
+      <>
+        <style>{sliderStyles}</style>
+        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
+          <div className="w-full max-w-lg">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="mb-4 flex justify-center">
@@ -496,7 +605,7 @@ export default function PracticePage() {
           {error && (
             <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-300 text-sm">
               {error}
-              {error.includes('No cards available') && (
+              {error.includes('No questions available') && (
                 <button
                   onClick={async () => {
                     setError(null)
@@ -507,15 +616,15 @@ export default function PracticePage() {
                         setError(null)
                         startPractice()
                       } else if (data.totalCreated === 0) {
-                        setError('No cards could be generated. Try completing some lessons first.')
+                        setError('No questions could be generated. Try completing some lessons first.')
                       }
                     } catch {
-                      setError('Failed to generate cards. Please try again.')
+                      setError('Failed to generate questions. Please try again.')
                     }
                   }}
                   className="mt-3 w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors text-sm"
                 >
-                  Generate Practice Cards
+                  Generate Practice Questions
                 </button>
               )}
             </div>
@@ -535,23 +644,63 @@ export default function PracticePage() {
             </div>
           ) : (
             <>
-              {/* Card Count Selection */}
+              {/* Question Count Selection - Slider */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  Number of Cards
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {([10, 20, 50] as CardCount[]).map(count => (
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Number of Questions
+                  </label>
+                  <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                    {questionCount}
+                  </span>
+                </div>
+
+                {/* Slider */}
+                <div className="relative">
+                  <input
+                    type="range"
+                    min="5"
+                    max="50"
+                    step="5"
+                    value={questionCount}
+                    onChange={(e) => setQuestionCount(Number(e.target.value))}
+                    className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider-thumb"
+                    style={{
+                      background: `linear-gradient(to right, rgb(99, 102, 241) 0%, rgb(99, 102, 241) ${((questionCount - 5) / 45) * 100}%, rgb(229, 231, 235) ${((questionCount - 5) / 45) * 100}%, rgb(229, 231, 235) 100%)`,
+                    }}
+                  />
+
+                  {/* Tick marks */}
+                  <div className="flex justify-between mt-2 px-1">
+                    {[5, 10, 15, 20, 25, 30, 35, 40, 45, 50].map((tick) => (
+                      <button
+                        key={tick}
+                        onClick={() => setQuestionCount(tick)}
+                        className={`text-xs transition-colors ${
+                          questionCount === tick
+                            ? 'text-indigo-600 dark:text-indigo-400 font-bold'
+                            : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+                        }`}
+                      >
+                        {tick}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quick select buttons */}
+                <div className="flex gap-2 mt-4">
+                  {[10, 20, 30, 50].map((count) => (
                     <button
                       key={count}
-                      onClick={() => setCardCount(count)}
-                      className={`py-3 px-4 rounded-xl font-semibold transition-all ${
-                        cardCount === count
-                          ? 'bg-indigo-600 text-white shadow-lg'
-                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600'
+                      onClick={() => setQuestionCount(count)}
+                      className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                        questionCount === count
+                          ? 'bg-indigo-600 text-white shadow-md'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                       }`}
                     >
-                      {count} cards
+                      {count}
                     </button>
                   ))}
                 </div>
@@ -644,8 +793,9 @@ export default function PracticePage() {
               </div>
             </>
           )}
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
@@ -657,7 +807,7 @@ export default function PracticePage() {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
         <div className="text-center">
-          <p className="text-gray-600 dark:text-gray-400">No card to display</p>
+          <p className="text-gray-600 dark:text-gray-400">No question to display</p>
           <button
             onClick={() => setSessionState('complete')}
             className="mt-4 px-4 py-2 text-indigo-600 hover:text-indigo-700"

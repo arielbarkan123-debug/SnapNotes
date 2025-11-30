@@ -2,107 +2,37 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-
-// =============================================================================
-// Types
-// =============================================================================
-
-interface ProgressData {
-  overview: {
-    studyTime: {
-      week: number
-      month: number
-    }
-    cardsReviewed: {
-      count: number
-      trend: number
-    }
-    accuracy: {
-      percent: number
-      trend: number
-    }
-    mastery: {
-      percent: number
-      totalLessons: number
-    }
-  }
-  accuracyChart: Array<{
-    date: string
-    accuracy: number
-    count: number
-  }>
-  timeChart: Array<{
-    date: string
-    minutes: number
-    dayLabel: string
-  }>
-  masteryMap: Array<{
-    id: string
-    title: string
-    coverImage: string | null
-    mastery: number
-    lessons: Array<{
-      id: string
-      title: string
-      mastery: number
-      completed: boolean
-    }>
-    lessonCount: number
-    completedCount: number
-  }>
-  weakAreas: Array<{
-    lessonId: string
-    lessonTitle: string
-    courseId: string
-    courseTitle: string
-    mastery: number
-  }>
-  strongAreas: Array<{
-    lessonId: string
-    lessonTitle: string
-    courseId: string
-    courseTitle: string
-    mastery: number
-  }>
-  insights: Array<{
-    icon: string
-    text: string
-    type: 'positive' | 'neutral' | 'suggestion'
-  }>
-}
+import { useProgress } from '@/hooks'
+import {
+  LazySection,
+  ChartSectionSkeleton,
+  MasteryMapSkeleton,
+  AreasSectionSkeleton,
+  InsightsSkeleton,
+} from '@/components/ui/LazySection'
 
 // =============================================================================
 // Main Component
 // =============================================================================
 
 export default function ProgressPage() {
-  const [data, setData] = useState<ProgressData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  // SWR hook for data fetching with caching
+  const { data, isLoading, error } = useProgress()
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null)
 
+  // Log performance
   useEffect(() => {
-    const fetchProgress = async () => {
-      try {
-        const response = await fetch('/api/progress')
-        if (response.ok) {
-          const progressData = await response.json()
-          setData(progressData)
-        }
-      } catch (error) {
-        console.error('Failed to fetch progress:', error)
-      } finally {
-        setIsLoading(false)
-      }
+    console.time('progress-page-load')
+    return () => {
+      console.timeEnd('progress-page-load')
     }
-
-    fetchProgress()
   }, [])
 
   if (isLoading) {
     return <LoadingSkeleton />
   }
 
-  if (!data) {
+  if (error || !data) {
     return <ErrorState />
   }
 
@@ -152,122 +82,155 @@ export default function ProgressPage() {
         />
       </div>
 
-      {/* Charts Row */}
-      <div className="grid lg:grid-cols-2 gap-6 mb-8">
-        {/* Accuracy Chart */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Accuracy Over Time
-          </h2>
-          <AccuracyChart data={data.accuracyChart} />
-        </div>
-
-        {/* Time Chart */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Study Time (Last 7 Days)
-          </h2>
-          <TimeChart data={data.timeChart} />
-        </div>
-      </div>
-
-      {/* Mastery Map */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Mastery Map
-        </h2>
-        {data.masteryMap.length > 0 ? (
-          <div className="space-y-4">
-            {data.masteryMap.map(course => (
-              <MasteryMapCourse
-                key={course.id}
-                course={course}
-                isExpanded={expandedCourse === course.id}
-                onToggle={() => setExpandedCourse(
-                  expandedCourse === course.id ? null : course.id
-                )}
-              />
-            ))}
+      {/* Charts Row - Lazy loaded */}
+      <LazySection
+        skeleton={
+          <div className="grid lg:grid-cols-2 gap-6 mb-8">
+            <ChartSectionSkeleton />
+            <ChartSectionSkeleton />
           </div>
-        ) : (
-          <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-            Complete some lessons to see your mastery progress
-          </p>
-        )}
-      </div>
-
-      {/* Weak & Strong Areas */}
-      <div className="grid lg:grid-cols-2 gap-6 mb-8">
-        {/* Weak Areas */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-xl">💪</span>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Focus Areas
+        }
+        minHeight={280}
+        className="mb-8"
+      >
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Accuracy Chart */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Accuracy Over Time
             </h2>
+            <AccuracyChart data={data.accuracyChart} />
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Practice these lessons to improve your overall mastery
-          </p>
-          {data.weakAreas.length > 0 ? (
-            <div className="space-y-3">
-              {data.weakAreas.map(area => (
-                <WeakAreaItem key={area.lessonId} area={area} />
+
+          {/* Time Chart */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Study Time (Last 7 Days)
+            </h2>
+            <TimeChart data={data.timeChart} />
+          </div>
+        </div>
+      </LazySection>
+
+      {/* Mastery Map - Lazy loaded */}
+      <LazySection
+        skeleton={<MasteryMapSkeleton />}
+        minHeight={300}
+        className="mb-8"
+      >
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Mastery Map
+          </h2>
+          {data.masteryMap.length > 0 ? (
+            <div className="space-y-4">
+              {data.masteryMap.map(course => (
+                <MasteryMapCourse
+                  key={course.id}
+                  course={course}
+                  isExpanded={expandedCourse === course.id}
+                  onToggle={() => setExpandedCourse(
+                    expandedCourse === course.id ? null : course.id
+                  )}
+                />
               ))}
             </div>
           ) : (
-            <div className="text-center py-6">
-              <span className="text-3xl mb-2 block">🎉</span>
-              <p className="text-gray-500 dark:text-gray-400">
-                No weak areas! You&apos;re doing great.
-              </p>
-            </div>
+            <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+              Complete some lessons to see your mastery progress
+            </p>
           )}
         </div>
+      </LazySection>
 
-        {/* Strong Areas */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-xl">🏆</span>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Mastered Topics
-            </h2>
+      {/* Weak & Strong Areas - Lazy loaded */}
+      <LazySection
+        skeleton={
+          <div className="grid lg:grid-cols-2 gap-6 mb-8">
+            <AreasSectionSkeleton />
+            <AreasSectionSkeleton />
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Celebrate your progress on these lessons
-          </p>
-          {data.strongAreas.length > 0 ? (
-            <div className="space-y-3">
-              {data.strongAreas.map(area => (
-                <StrongAreaItem key={area.lessonId} area={area} />
-              ))}
+        }
+        minHeight={300}
+        className="mb-8"
+      >
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Weak Areas */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-xl">💪</span>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Focus Areas
+              </h2>
             </div>
-          ) : (
-            <div className="text-center py-6">
-              <span className="text-3xl mb-2 block">📖</span>
-              <p className="text-gray-500 dark:text-gray-400">
-                Keep studying to master more lessons!
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Practice these lessons to improve your overall mastery
+            </p>
+            {data.weakAreas.length > 0 ? (
+              <div className="space-y-3">
+                {data.weakAreas.map(area => (
+                  <WeakAreaItem key={area.lessonId} area={area} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <span className="text-3xl mb-2 block">🎉</span>
+                <p className="text-gray-500 dark:text-gray-400">
+                  No weak areas! You&apos;re doing great.
+                </p>
+              </div>
+            )}
+          </div>
 
-      {/* Insights */}
+          {/* Strong Areas */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-xl">🏆</span>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Mastered Topics
+              </h2>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Celebrate your progress on these lessons
+            </p>
+            {data.strongAreas.length > 0 ? (
+              <div className="space-y-3">
+                {data.strongAreas.map(area => (
+                  <StrongAreaItem key={area.lessonId} area={area} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <span className="text-3xl mb-2 block">📖</span>
+                <p className="text-gray-500 dark:text-gray-400">
+                  Keep studying to master more lessons!
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </LazySection>
+
+      {/* Insights - Lazy loaded */}
       {data.insights.length > 0 && (
-        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800/50 p-4 sm:p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-xl">🧠</span>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Personalized Insights
-            </h2>
+        <LazySection
+          skeleton={<InsightsSkeleton />}
+          minHeight={200}
+        >
+          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800/50 p-4 sm:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-xl">🧠</span>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Personalized Insights
+              </h2>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {data.insights.map((insight, index) => (
+                <InsightCard key={index} insight={insight} />
+              ))}
+            </div>
           </div>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {data.insights.map((insight, index) => (
-              <InsightCard key={index} insight={insight} />
-            ))}
-          </div>
-        </div>
+        </LazySection>
       )}
     </div>
   )
@@ -678,15 +641,53 @@ function InsightCard({ insight }: InsightCardProps) {
 function LoadingSkeleton() {
   return (
     <div className="container mx-auto px-4 py-6 sm:py-8">
-      <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded mb-6 animate-pulse" />
+      {/* Page title */}
+      <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded mb-6 skeleton-shimmer-item" />
+
+      {/* Stat cards grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
+          <div
+            key={i}
+            className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700 skeleton-shimmer-item" />
+              <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item" />
+            </div>
+            <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item mb-2" />
+            <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item" />
+          </div>
         ))}
       </div>
+
+      {/* Charts grid */}
       <div className="grid lg:grid-cols-2 gap-6 mb-8">
-        <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
-        <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
+        {[1, 2].map(i => (
+          <div
+            key={i}
+            className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700"
+          >
+            <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item mb-4" />
+            <div className="h-48 bg-gray-100 dark:bg-gray-700/50 rounded-lg skeleton-shimmer-item" />
+          </div>
+        ))}
+      </div>
+
+      {/* Mastery section */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+        <div className="h-5 w-40 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item mb-4" />
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg skeleton-shimmer-item" />
+              <div className="flex-1">
+                <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item mb-2" />
+                <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full skeleton-shimmer-item" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )

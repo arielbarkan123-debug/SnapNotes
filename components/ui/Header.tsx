@@ -65,6 +65,12 @@ export default function Header({ userEmail, userName }: HeaderProps) {
                 <span className="text-xs px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 rounded-full">Mix</span>
               </Link>
               <Link
+                href="/exams"
+                className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                Exams
+              </Link>
+              <Link
                 href="/progress"
                 className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 font-medium transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
               >
@@ -155,6 +161,13 @@ export default function Header({ userEmail, userName }: HeaderProps) {
                 >
                   <span>Mixed Practice</span>
                   <span className="text-xs px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 rounded-full">New</span>
+                </Link>
+                <Link
+                  href="/exams"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  Exams
                 </Link>
                 <Link
                   href="/progress"

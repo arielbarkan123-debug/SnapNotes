@@ -5,6 +5,14 @@ import { createClient } from '@/lib/supabase/server'
  * GET /api/progress
  *
  * Returns comprehensive progress analytics for the current user
+ * Data sources:
+ * - study_sessions: Total study time tracking
+ * - review_logs: Card review history and accuracy
+ * - practice_logs: Practice session data
+ * - step_performance: Lesson step performance
+ * - lesson_progress: Per-lesson mastery and completion
+ * - user_gamification: Streaks, XP, levels
+ * - user_learning_profile: Learning preferences
  */
 export async function GET() {
   try {
@@ -17,23 +25,29 @@ export async function GET() {
 
     // Calculate date ranges
     const now = new Date()
-    void now.toISOString().split('T')[0] // today - reserved for daily filtering
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
     const startOfWeek = getStartOfWeek(now)
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-    // Fetch all data in parallel
+    // Fetch all data in parallel (with error handling for missing tables)
     const [
-      reviewLogsWeek,
-      reviewLogsMonth,
-      reviewLogs30Days,
-      reviewLogs7Days,
-      previousPeriodLogs,
-      courseProgress,
-      lessonProgress,
-      userProfile,
-      gamificationStats,
+      reviewLogsWeekResult,
+      reviewLogsMonthResult,
+      reviewLogs30DaysResult,
+      reviewLogs7DaysResult,
+      previousPeriodLogsResult,
+      practiceLogsWeekResult,
+      practiceLogs30DaysResult,
+      practiceLogsPrevPeriodResult,
+      studySessionsWeekResult,
+      studySessionsMonthResult,
+      coursesResult,
+      lessonProgressResult,
+      stepPerformanceResult,
+      userProfileResult,
+      gamificationStatsResult,
     ] = await Promise.all([
       // Review logs this week
       supabase
@@ -70,86 +84,154 @@ export async function GET() {
         .from('review_logs')
         .select('id, rating')
         .eq('user_id', user.id)
-        .gte('reviewed_at', new Date(sevenDaysAgo.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString())
+        .gte('reviewed_at', fourteenDaysAgo.toISOString())
         .lt('reviewed_at', sevenDaysAgo.toISOString()),
 
-      // Course progress with course details
+      // Practice logs this week (mixed practice sessions)
+      supabase
+        .from('practice_logs')
+        .select('id, was_correct, duration_ms, created_at')
+        .eq('user_id', user.id)
+        .gte('created_at', sevenDaysAgo.toISOString())
+        .order('created_at', { ascending: true }),
+
+      // Practice logs last 30 days (for chart)
+      supabase
+        .from('practice_logs')
+        .select('id, was_correct, duration_ms, created_at')
+        .eq('user_id', user.id)
+        .gte('created_at', thirtyDaysAgo.toISOString())
+        .order('created_at', { ascending: true }),
+
+      // Practice logs previous 7 days (for trend)
+      supabase
+        .from('practice_logs')
+        .select('id, was_correct')
+        .eq('user_id', user.id)
+        .gte('created_at', fourteenDaysAgo.toISOString())
+        .lt('created_at', sevenDaysAgo.toISOString()),
+
+      // Study sessions this week
+      supabase
+        .from('study_sessions')
+        .select('duration_seconds, session_type, started_at')
+        .eq('user_id', user.id)
+        .eq('is_completed', true)
+        .gte('started_at', startOfWeek.toISOString()),
+
+      // Study sessions this month
+      supabase
+        .from('study_sessions')
+        .select('duration_seconds, session_type, started_at')
+        .eq('user_id', user.id)
+        .eq('is_completed', true)
+        .gte('started_at', startOfMonth.toISOString()),
+
+      // User's courses
       supabase
         .from('courses')
-        .select(`
-          id,
-          title,
-          cover_image_url,
-          lessons(
-            id,
-            title,
-            order_index,
-            lesson_progress(
-              mastery_level,
-              completed
-            )
-          )
-        `)
+        .select('id, title, cover_image_url, generated_course')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
 
-      // All lesson progress for weak/strong areas
+      // Lesson progress - select only needed fields for mastery calculations
       supabase
         .from('lesson_progress')
-        .select(`
-          lesson_id,
-          mastery_level,
-          completed,
-          lessons!inner(
-            id,
-            title,
-            course_id,
-            courses!inner(title)
-          )
-        `)
+        .select('id, course_id, lesson_index, lesson_title, completed, mastery_level, total_attempts, total_correct')
         .eq('user_id', user.id)
         .order('mastery_level', { ascending: true }),
 
-      // User learning profile
+      // Step performance for fallback mastery calculation
+      supabase
+        .from('step_performance')
+        .select('course_id, lesson_index, was_correct, created_at')
+        .eq('user_id', user.id)
+        .gte('created_at', thirtyDaysAgo.toISOString()),
+
+      // User learning profile - select only fields needed for insights
       supabase
         .from('user_learning_profile')
-        .select('*')
+        .select('preferred_study_time, optimal_session_length, peak_performance_hour, accuracy_trend, study_goal')
         .eq('user_id', user.id)
         .single(),
 
-      // Gamification stats
+      // Gamification stats - select only fields needed for insights
       supabase
         .from('user_gamification')
-        .select('*')
+        .select('current_streak, total_xp')
         .eq('user_id', user.id)
         .single(),
     ])
 
-    // Calculate overview stats
-    const weekLogs = reviewLogsWeek.data || []
-    const monthLogs = reviewLogsMonth.data || []
-    const last30DaysLogs = reviewLogs30Days.data || []
-    const last7DaysLogs = reviewLogs7Days.data || []
-    const prevPeriodLogs = previousPeriodLogs.data || []
+    // Extract data with fallbacks
+    const weekLogs: ReviewLog[] = (reviewLogsWeekResult.data || []) as ReviewLog[]
+    const monthLogs: ReviewLog[] = (reviewLogsMonthResult.data || []) as ReviewLog[]
+    const last30DaysLogs: ReviewLog[] = (reviewLogs30DaysResult.data || []) as ReviewLog[]
+    const last7DaysLogs: ReviewLog[] = (reviewLogs7DaysResult.data || []) as ReviewLog[]
+    const prevPeriodLogs: ReviewLog[] = (previousPeriodLogsResult.data || []) as ReviewLog[]
+    const practiceLogsWeek: PracticeLog[] = (practiceLogsWeekResult.data || []) as PracticeLog[]
+    const practiceLogs30Days: PracticeLog[] = (practiceLogs30DaysResult.data || []) as PracticeLog[]
+    const practiceLogsPrevPeriod: PracticeLog[] = (practiceLogsPrevPeriodResult.data || []) as PracticeLog[]
+    const studySessionsWeek: StudySession[] = (studySessionsWeekResult.data || []) as StudySession[]
+    const studySessionsMonth: StudySession[] = (studySessionsMonthResult.data || []) as StudySession[]
+    const courses: Course[] = (coursesResult.data || []) as Course[]
+    const lessonProgress: LessonProgress[] = (lessonProgressResult.data || []) as LessonProgress[]
+    const stepPerformance: StepPerformance[] = (stepPerformanceResult.data || []) as StepPerformance[]
+    const userProfile = userProfileResult.data as LearningProfile | null
+    const gamificationStats = gamificationStatsResult.data as GamificationStats | null
 
-    // Study time calculations
-    const studyTimeWeek = weekLogs.reduce((sum, l) => sum + (l.review_duration_ms || 0), 0)
-    const studyTimeMonth = monthLogs.reduce((sum, l) => sum + (l.review_duration_ms || 0), 0)
+    // =========================================================================
+    // Study Time Calculations
+    // =========================================================================
 
-    // Cards reviewed with trend
-    const cardsThisPeriod = last7DaysLogs.length
-    const cardsPrevPeriod = prevPeriodLogs.length
+    // From review_logs (card review duration in ms)
+    const reviewTimeWeekMs = weekLogs.reduce((sum, l) => sum + (l.review_duration_ms || 0), 0)
+    const reviewTimeMonthMs = monthLogs.reduce((sum, l) => sum + (l.review_duration_ms || 0), 0)
+
+    // From practice_logs (duration in ms)
+    const practiceTimeWeekMs = practiceLogsWeek.reduce((sum, l) => sum + (l.duration_ms || 0), 0)
+    const practiceTimeMonthMs = practiceLogs30Days.reduce((sum, l) => sum + (l.duration_ms || 0), 0)
+
+    // From study_sessions (session duration in seconds)
+    const sessionTimeWeekSec = studySessionsWeek.reduce((sum, s) => sum + (s.duration_seconds || 0), 0)
+    const sessionTimeMonthSec = studySessionsMonth.reduce((sum, s) => sum + (s.duration_seconds || 0), 0)
+
+    // Total study time in milliseconds
+    const studyTimeWeek = reviewTimeWeekMs + practiceTimeWeekMs + (sessionTimeWeekSec * 1000)
+    const studyTimeMonth = reviewTimeMonthMs + practiceTimeMonthMs + (sessionTimeMonthSec * 1000)
+
+    // =========================================================================
+    // Cards Reviewed with Trend (combines review_logs + practice_logs)
+    // =========================================================================
+    const reviewCardsThisPeriod = last7DaysLogs.length
+    const practiceCardsThisPeriod = practiceLogsWeek.length
+    const cardsThisPeriod = reviewCardsThisPeriod + practiceCardsThisPeriod
+
+    const reviewCardsPrevPeriod = prevPeriodLogs.length
+    const practiceCardsPrevPeriod = practiceLogsPrevPeriod.length
+    const cardsPrevPeriod = reviewCardsPrevPeriod + practiceCardsPrevPeriod
+
     const cardsTrend = cardsPrevPeriod > 0
       ? ((cardsThisPeriod - cardsPrevPeriod) / cardsPrevPeriod) * 100
       : cardsThisPeriod > 0 ? 100 : 0
 
-    // Accuracy calculations
-    const correctThisPeriod = last7DaysLogs.filter(l => l.rating >= 3).length
+    // =========================================================================
+    // Accuracy Calculations (combines review_logs + practice_logs)
+    // =========================================================================
+    // Review logs: rating >= 3 = correct
+    const reviewCorrectThisPeriod = last7DaysLogs.filter(l => l.rating >= 3).length
+    // Practice logs: was_correct = true
+    const practiceCorrectThisPeriod = practiceLogsWeek.filter(l => l.was_correct === true).length
+    const correctThisPeriod = reviewCorrectThisPeriod + practiceCorrectThisPeriod
+
     const accuracyThisPeriod = cardsThisPeriod > 0
       ? Math.round((correctThisPeriod / cardsThisPeriod) * 100)
       : 0
 
-    const correctPrevPeriod = prevPeriodLogs.filter(l => l.rating >= 3).length
+    const reviewCorrectPrevPeriod = prevPeriodLogs.filter(l => l.rating >= 3).length
+    const practiceCorrectPrevPeriod = practiceLogsPrevPeriod.filter(l => l.was_correct === true).length
+    const correctPrevPeriod = reviewCorrectPrevPeriod + practiceCorrectPrevPeriod
+
     const accuracyPrevPeriod = cardsPrevPeriod > 0
       ? Math.round((correctPrevPeriod / cardsPrevPeriod) * 100)
       : 0
@@ -158,69 +240,55 @@ export async function GET() {
       ? accuracyThisPeriod - accuracyPrevPeriod
       : 0
 
-    // Overall mastery calculation
-    const allLessonProgress = lessonProgress.data || []
-    const totalLessons = allLessonProgress.length
-    const avgMastery = totalLessons > 0
-      ? allLessonProgress.reduce((sum, lp) => sum + (lp.mastery_level || 0), 0) / totalLessons
-      : 0
+    // =========================================================================
+    // Mastery Calculation
+    // =========================================================================
+    let avgMastery = 0
+    let totalLessons = 0
 
-    // Build accuracy chart data (daily accuracy for last 30 days)
-    const accuracyChart = buildDailyAccuracyData(last30DaysLogs, 30)
+    if (lessonProgress.length > 0) {
+      // Use lesson_progress table if available
+      totalLessons = lessonProgress.length
+      avgMastery = lessonProgress.reduce((sum, lp) => sum + (lp.mastery_level || 0), 0) / totalLessons
+    } else if (stepPerformance.length > 0) {
+      // Fallback: calculate from step_performance
+      const lessonMastery = calculateMasteryFromStepPerformance(stepPerformance)
+      totalLessons = Object.keys(lessonMastery).length
+      if (totalLessons > 0) {
+        avgMastery = Object.values(lessonMastery).reduce((sum, m) => sum + m, 0) / totalLessons
+      }
+    }
 
-    // Build time chart data (daily time for last 7 days)
-    const timeChart = buildDailyTimeData(last7DaysLogs, 7)
+    // =========================================================================
+    // Build Charts Data
+    // =========================================================================
+    const accuracyChart = buildDailyAccuracyData(last30DaysLogs, practiceLogs30Days, stepPerformance, 30)
+    const timeChart = buildDailyTimeData(last7DaysLogs, practiceLogsWeek, studySessionsWeek, 7)
 
-    // Build mastery map
-    const masteryMap = buildMasteryMap(courseProgress.data || [])
+    // =========================================================================
+    // Build Mastery Map (per course with lessons)
+    // =========================================================================
+    const masteryMap = buildMasteryMap(courses, lessonProgress, stepPerformance)
 
-    // Get weak and strong areas
-    // Note: Supabase returns joined relations in a specific structure
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const weakAreas = allLessonProgress
-      .filter(lp => (lp.mastery_level || 0) < 0.5)
-      .slice(0, 5)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((lp: any) => {
-        const lesson = Array.isArray(lp.lessons) ? lp.lessons[0] : lp.lessons
-        const course = lesson?.courses
-        const courseData = Array.isArray(course) ? course[0] : course
-        return {
-          lessonId: lp.lesson_id,
-          lessonTitle: lesson?.title || 'Unknown',
-          courseId: lesson?.course_id || '',
-          courseTitle: courseData?.title || 'Unknown',
-          mastery: lp.mastery_level || 0,
-        }
-      })
+    // =========================================================================
+    // Weak and Strong Areas
+    // =========================================================================
+    const { weakAreas, strongAreas } = getWeakAndStrongAreas(
+      courses,
+      lessonProgress,
+      stepPerformance
+    )
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const strongAreas = [...allLessonProgress]
-      .filter(lp => (lp.mastery_level || 0) >= 0.8 && lp.completed)
-      .sort((a, b) => (b.mastery_level || 0) - (a.mastery_level || 0))
-      .slice(0, 5)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((lp: any) => {
-        const lesson = Array.isArray(lp.lessons) ? lp.lessons[0] : lp.lessons
-        const course = lesson?.courses
-        const courseData = Array.isArray(course) ? course[0] : course
-        return {
-          lessonId: lp.lesson_id,
-          lessonTitle: lesson?.title || 'Unknown',
-          courseId: lesson?.course_id || '',
-          courseTitle: courseData?.title || 'Unknown',
-          mastery: lp.mastery_level || 0,
-        }
-      })
-
-    // Generate insights
+    // =========================================================================
+    // Generate Insights
+    // =========================================================================
     const insights = generateInsights(
-      userProfile.data,
+      userProfile,
       accuracyChart,
       timeChart,
       weakAreas,
       strongAreas,
-      gamificationStats.data
+      gamificationStats
     )
 
     return NextResponse.json({
@@ -265,7 +333,7 @@ export async function GET() {
 function getStartOfWeek(date: Date): Date {
   const d = new Date(date)
   const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1) // Adjust for Sunday
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
   d.setDate(diff)
   d.setHours(0, 0, 0, 0)
   return d
@@ -278,7 +346,97 @@ interface ReviewLog {
   reviewed_at: string
 }
 
-function buildDailyAccuracyData(logs: ReviewLog[], days: number) {
+interface StepPerformance {
+  course_id: string
+  lesson_index: number
+  was_correct: boolean | null
+  created_at: string
+}
+
+interface StudySession {
+  duration_seconds: number | null
+  session_type: string
+  started_at: string
+}
+
+interface PracticeLog {
+  id: string
+  was_correct: boolean | null
+  duration_ms: number | null
+  created_at: string
+}
+
+interface Course {
+  id: string
+  title: string
+  cover_image_url: string | null
+  generated_course: {
+    lessons?: Array<{ title?: string; steps?: unknown[] }>
+    sections?: Array<{ title?: string; steps?: unknown[] }>
+  }
+}
+
+interface LessonProgress {
+  id: string
+  course_id: string
+  lesson_index: number
+  lesson_title: string | null
+  completed: boolean
+  mastery_level: number
+  total_attempts: number
+  total_correct: number
+}
+
+/**
+ * Calculate mastery from step_performance when lesson_progress is empty
+ */
+function calculateMasteryFromStepPerformance(steps: StepPerformance[]): Record<string, number> {
+  const lessonData: Record<string, { correct: number; total: number; lastDate: Date }> = {}
+
+  for (const step of steps) {
+    if (step.was_correct === null) continue
+
+    const key = `${step.course_id}-${step.lesson_index}`
+    if (!lessonData[key]) {
+      lessonData[key] = { correct: 0, total: 0, lastDate: new Date(0) }
+    }
+
+    lessonData[key].total++
+    if (step.was_correct) lessonData[key].correct++
+
+    const stepDate = new Date(step.created_at)
+    if (stepDate > lessonData[key].lastDate) {
+      lessonData[key].lastDate = stepDate
+    }
+  }
+
+  const mastery: Record<string, number> = {}
+  for (const [key, data] of Object.entries(lessonData)) {
+    if (data.total === 0) continue
+
+    const accuracy = data.correct / data.total
+    const daysSince = (Date.now() - data.lastDate.getTime()) / (1000 * 60 * 60 * 24)
+
+    let recencyWeight = 1.0
+    if (daysSince > 14) recencyWeight = 0.6
+    else if (daysSince > 7) recencyWeight = 0.7
+    else if (daysSince > 3) recencyWeight = 0.85
+
+    mastery[key] = Math.min(accuracy * recencyWeight, 1.0)
+  }
+
+  return mastery
+}
+
+/**
+ * Build daily accuracy data for chart
+ */
+function buildDailyAccuracyData(
+  reviewLogs: ReviewLog[],
+  practiceLogs: PracticeLog[],
+  stepPerformance: StepPerformance[],
+  days: number
+) {
   const data: { date: string; accuracy: number; count: number }[] = []
   const now = new Date()
 
@@ -287,21 +445,41 @@ function buildDailyAccuracyData(logs: ReviewLog[], days: number) {
     date.setDate(date.getDate() - i)
     const dateStr = date.toISOString().split('T')[0]
 
-    const dayLogs = logs.filter(l => l.reviewed_at.startsWith(dateStr))
-    const correct = dayLogs.filter(l => l.rating >= 3).length
-    const accuracy = dayLogs.length > 0 ? Math.round((correct / dayLogs.length) * 100) : null
+    // From review_logs
+    const dayReviewLogs = reviewLogs.filter(l => l.reviewed_at.startsWith(dateStr))
+    const reviewCorrect = dayReviewLogs.filter(l => l.rating >= 3).length
+
+    // From practice_logs
+    const dayPracticeLogs = practiceLogs.filter(l => l.created_at.startsWith(dateStr))
+    const practiceCorrect = dayPracticeLogs.filter(l => l.was_correct === true).length
+
+    // From step_performance
+    const daySteps = stepPerformance.filter(s => s.created_at.startsWith(dateStr) && s.was_correct !== null)
+    const stepCorrect = daySteps.filter(s => s.was_correct).length
+
+    const totalCount = dayReviewLogs.length + dayPracticeLogs.length + daySteps.length
+    const totalCorrect = reviewCorrect + practiceCorrect + stepCorrect
+    const accuracy = totalCount > 0 ? Math.round((totalCorrect / totalCount) * 100) : 0
 
     data.push({
       date: dateStr,
-      accuracy: accuracy ?? 0,
-      count: dayLogs.length,
+      accuracy,
+      count: totalCount,
     })
   }
 
   return data
 }
 
-function buildDailyTimeData(logs: ReviewLog[], days: number) {
+/**
+ * Build daily time data for chart
+ */
+function buildDailyTimeData(
+  reviewLogs: ReviewLog[],
+  practiceLogs: PracticeLog[],
+  studySessions: StudySession[],
+  days: number
+) {
   const data: { date: string; minutes: number; dayLabel: string }[] = []
   const now = new Date()
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -311,12 +489,24 @@ function buildDailyTimeData(logs: ReviewLog[], days: number) {
     date.setDate(date.getDate() - i)
     const dateStr = date.toISOString().split('T')[0]
 
-    const dayLogs = logs.filter(l => l.reviewed_at.startsWith(dateStr))
-    const totalMs = dayLogs.reduce((sum, l) => sum + (l.review_duration_ms || 0), 0)
+    // From review_logs (ms)
+    const dayReviewLogs = reviewLogs.filter(l => l.reviewed_at.startsWith(dateStr))
+    const reviewTimeMs = dayReviewLogs.reduce((sum, l) => sum + (l.review_duration_ms || 0), 0)
+
+    // From practice_logs (ms)
+    const dayPracticeLogs = practiceLogs.filter(l => l.created_at.startsWith(dateStr))
+    const practiceTimeMs = dayPracticeLogs.reduce((sum, l) => sum + (l.duration_ms || 0), 0)
+
+    // From study_sessions (seconds)
+    const daySessions = studySessions.filter(s => s.started_at.startsWith(dateStr))
+    const sessionTimeSec = daySessions.reduce((sum, s) => sum + (s.duration_seconds || 0), 0)
+
+    // Total minutes
+    const totalMinutes = Math.round((reviewTimeMs / 60000) + (practiceTimeMs / 60000) + (sessionTimeSec / 60))
 
     data.push({
       date: dateStr,
-      minutes: Math.round(totalMs / 60000),
+      minutes: totalMinutes,
       dayLabel: dayNames[date.getDay()],
     })
   }
@@ -324,34 +514,39 @@ function buildDailyTimeData(logs: ReviewLog[], days: number) {
   return data
 }
 
-interface CourseWithLessons {
-  id: string
-  title: string
-  cover_image_url: string | null
-  lessons: Array<{
-    id: string
-    title: string
-    order_index: number
-    lesson_progress: Array<{
-      mastery_level: number
-      completed: boolean
-    }>
-  }>
-}
+/**
+ * Build mastery map for all courses
+ */
+function buildMasteryMap(
+  courses: Course[],
+  lessonProgress: LessonProgress[],
+  stepPerformance: StepPerformance[]
+) {
+  // Calculate mastery from step_performance for fallback
+  const stepMastery = calculateMasteryFromStepPerformance(stepPerformance)
 
-function buildMasteryMap(courses: CourseWithLessons[]) {
   return courses.map(course => {
-    const lessons = course.lessons || []
-    const lessonsWithMastery = lessons.map(lesson => {
-      const progress = lesson.lesson_progress?.[0]
+    // Get lessons from generated_course
+    const generatedCourse = course.generated_course || {}
+    const lessons = generatedCourse.lessons || generatedCourse.sections || []
+
+    const lessonsWithMastery = lessons.map((lesson, index) => {
+      // Try lesson_progress first
+      const progress = lessonProgress.find(
+        lp => lp.course_id === course.id && lp.lesson_index === index
+      )
+
+      // Fallback to step_performance
+      const fallbackMastery = stepMastery[`${course.id}-${index}`] || 0
+
       return {
-        id: lesson.id,
-        title: lesson.title,
-        order: lesson.order_index,
-        mastery: progress?.mastery_level || 0,
+        id: `${course.id}-${index}`,
+        title: lesson?.title || `Lesson ${index + 1}`,
+        order: index,
+        mastery: progress?.mastery_level || fallbackMastery,
         completed: progress?.completed || false,
       }
-    }).sort((a, b) => a.order - b.order)
+    })
 
     const totalMastery = lessonsWithMastery.reduce((sum, l) => sum + l.mastery, 0)
     const avgMastery = lessonsWithMastery.length > 0
@@ -370,6 +565,68 @@ function buildMasteryMap(courses: CourseWithLessons[]) {
   })
 }
 
+/**
+ * Get weak and strong areas
+ */
+function getWeakAndStrongAreas(
+  courses: Course[],
+  lessonProgress: LessonProgress[],
+  stepPerformance: StepPerformance[]
+) {
+  const stepMastery = calculateMasteryFromStepPerformance(stepPerformance)
+
+  // Build list of all lessons with mastery
+  interface LessonArea {
+    lessonId: string
+    lessonTitle: string
+    courseId: string
+    courseTitle: string
+    mastery: number
+    completed: boolean
+  }
+
+  const allLessons: LessonArea[] = []
+
+  for (const course of courses) {
+    const generatedCourse = course.generated_course || {}
+    const lessons = generatedCourse.lessons || generatedCourse.sections || []
+
+    lessons.forEach((lesson, index) => {
+      const progress = lessonProgress.find(
+        lp => lp.course_id === course.id && lp.lesson_index === index
+      )
+      const fallbackMastery = stepMastery[`${course.id}-${index}`] || 0
+      const mastery = progress?.mastery_level || fallbackMastery
+
+      allLessons.push({
+        lessonId: `${course.id}-${index}`,
+        lessonTitle: lesson?.title || progress?.lesson_title || `Lesson ${index + 1}`,
+        courseId: course.id,
+        courseTitle: course.title,
+        mastery,
+        completed: progress?.completed || false,
+      })
+    })
+  }
+
+  // Weak areas: mastery < 0.5
+  const weakAreas = allLessons
+    .filter(l => l.mastery < 0.5 && l.mastery > 0) // Has some activity but low mastery
+    .sort((a, b) => a.mastery - b.mastery)
+    .slice(0, 5)
+
+  // Strong areas: mastery >= 0.8 and completed
+  const strongAreas = allLessons
+    .filter(l => l.mastery >= 0.8)
+    .sort((a, b) => b.mastery - a.mastery)
+    .slice(0, 5)
+
+  return { weakAreas, strongAreas }
+}
+
+/**
+ * Generate personalized insights
+ */
 interface LearningProfile {
   preferred_study_time: string | null
   optimal_session_length: number | null
@@ -378,22 +635,22 @@ interface LearningProfile {
   study_goal: string | null
 }
 
-interface WeakArea {
-  lessonTitle: string
-  courseTitle: string
-}
-
 interface GamificationStats {
   current_streak: number
   total_xp: number
+}
+
+interface LessonArea {
+  lessonTitle: string
+  courseTitle: string
 }
 
 function generateInsights(
   profile: LearningProfile | null,
   accuracyChart: { date: string; accuracy: number; count: number }[],
   timeChart: { date: string; minutes: number }[],
-  weakAreas: WeakArea[],
-  strongAreas: WeakArea[],
+  weakAreas: LessonArea[],
+  strongAreas: LessonArea[],
   gamification: GamificationStats | null
 ): { icon: string; text: string; type: 'positive' | 'neutral' | 'suggestion' }[] {
   const insights: { icon: string; text: string; type: 'positive' | 'neutral' | 'suggestion' }[] = []
@@ -414,12 +671,14 @@ function generateInsights(
   }
 
   // Accuracy trend insight
-  const recentAccuracy = accuracyChart.slice(-7)
-  const avgRecent = recentAccuracy.filter(d => d.count > 0).reduce((sum, d) => sum + d.accuracy, 0) /
-    Math.max(recentAccuracy.filter(d => d.count > 0).length, 1)
+  const recentAccuracy = accuracyChart.slice(-7).filter(d => d.count > 0)
+  const avgRecent = recentAccuracy.length > 0
+    ? recentAccuracy.reduce((sum, d) => sum + d.accuracy, 0) / recentAccuracy.length
+    : 0
   const olderAccuracy = accuracyChart.slice(0, 14).filter(d => d.count > 0)
-  const avgOlder = olderAccuracy.reduce((sum, d) => sum + d.accuracy, 0) /
-    Math.max(olderAccuracy.length, 1)
+  const avgOlder = olderAccuracy.length > 0
+    ? olderAccuracy.reduce((sum, d) => sum + d.accuracy, 0) / olderAccuracy.length
+    : avgRecent
 
   if (avgRecent > avgOlder + 5) {
     insights.push({
@@ -427,7 +686,7 @@ function generateInsights(
       text: 'Your accuracy is improving! Keep up the great work.',
       type: 'positive',
     })
-  } else if (avgRecent < avgOlder - 5) {
+  } else if (avgRecent < avgOlder - 5 && avgRecent > 0) {
     insights.push({
       icon: '💡',
       text: 'Your accuracy has dipped recently. Try shorter, more focused sessions.',
@@ -443,10 +702,16 @@ function generateInsights(
       text: `You studied ${studyDays} out of the last 7 days. Excellent consistency!`,
       type: 'positive',
     })
-  } else if (studyDays <= 2) {
+  } else if (studyDays <= 2 && studyDays > 0) {
     insights.push({
       icon: '📅',
       text: 'Try to study more consistently. Even 5 minutes daily helps retention.',
+      type: 'suggestion',
+    })
+  } else if (studyDays === 0) {
+    insights.push({
+      icon: '📚',
+      text: 'Start reviewing to build your study streak!',
       type: 'suggestion',
     })
   }
@@ -466,6 +731,12 @@ function generateInsights(
     insights.push({
       icon: '🏆',
       text: `Amazing ${gamification.current_streak}-day streak! You're building a strong habit.`,
+      type: 'positive',
+    })
+  } else if (gamification?.current_streak && gamification.current_streak >= 3) {
+    insights.push({
+      icon: '🔥',
+      text: `${gamification.current_streak}-day streak! Keep going to build momentum.`,
       type: 'positive',
     })
   }
@@ -488,5 +759,14 @@ function generateInsights(
     })
   }
 
-  return insights.slice(0, 5) // Limit to 5 insights
+  // No activity insight
+  if (studyDays === 0 && weakAreas.length === 0 && strongAreas.length === 0) {
+    insights.push({
+      icon: '🚀',
+      text: 'Complete some lessons to start tracking your progress!',
+      type: 'suggestion',
+    })
+  }
+
+  return insights.slice(0, 5)
 }

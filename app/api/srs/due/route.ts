@@ -44,7 +44,7 @@ export async function GET(): Promise<NextResponse> {
     // Get new cards (state = 'new'), limited by daily max
     const { data: newCards, error: newError } = await supabase
       .from('review_cards')
-      .select('*')
+      .select('id, user_id, course_id, lesson_index, step_index, card_type, front, back, stability, difficulty, elapsed_days, scheduled_days, reps, lapses, state, due_date, last_review, created_at, updated_at')
       .eq('user_id', user.id)
       .eq('state', 'new')
       .order('created_at', { ascending: true })
@@ -61,7 +61,7 @@ export async function GET(): Promise<NextResponse> {
     // Get due review cards (due_date <= now, state != 'new')
     const { data: dueCards, error: dueError } = await supabase
       .from('review_cards')
-      .select('*')
+      .select('id, user_id, course_id, lesson_index, step_index, card_type, front, back, stability, difficulty, elapsed_days, scheduled_days, reps, lapses, state, due_date, last_review, created_at, updated_at')
       .eq('user_id', user.id)
       .neq('state', 'new')
       .lte('due_date', now)

@@ -10,26 +10,28 @@ interface CoursePageProps {
 }
 
 async function getCourseWithProgress(id: string): Promise<{ course: Course; progress: UserProgress } | null> {
+  console.time('course-page-load')
   const supabase = await createClient()
 
-  // Get authenticated user
-  const { data: { user } } = await supabase.auth.getUser()
+  // Fetch user and course in parallel for better performance
+  const [userResult, courseResult] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('courses').select('*').eq('id', id).single()
+  ])
+
+  const user = userResult.data?.user
   if (!user) {
+    console.timeEnd('course-page-load')
     return null
   }
 
-  // Fetch course
-  const { data: course, error: courseError } = await supabase
-    .from('courses')
-    .select('*')
-    .eq('id', id)
-    .single()
-
+  const { data: course, error: courseError } = courseResult
   if (courseError || !course) {
+    console.timeEnd('course-page-load')
     return null
   }
 
-  // Fetch user progress
+  // Fetch user progress (requires user ID, so must be after user fetch)
   let { data: progress } = await supabase
     .from('user_progress')
     .select('*')
@@ -71,6 +73,7 @@ async function getCourseWithProgress(id: string): Promise<{ course: Course; prog
     }
   }
 
+  console.timeEnd('course-page-load')
   return { course: course as Course, progress: progress as UserProgress }
 }
 

@@ -198,10 +198,10 @@ async function getOrCreateGamification(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string
 ): Promise<GamificationRecord> {
-  // Try to get existing record
+  // Try to get existing record - select only needed fields
   const { data: existing } = await supabase
     .from('user_gamification')
-    .select('*')
+    .select('id, user_id, total_xp, current_level, current_streak, longest_streak, last_activity_date, streak_freezes, last_freeze_used, total_lessons_completed, total_courses_completed, total_cards_reviewed, perfect_lessons')
     .eq('user_id', userId)
     .single()
 

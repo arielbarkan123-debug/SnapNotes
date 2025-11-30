@@ -19,10 +19,12 @@ export async function GET(): Promise<NextResponse> {
       return createErrorResponse(ErrorCodes.UNAUTHORIZED, 'Please log in to view courses')
     }
 
+    // Only select fields needed for list view (exclude large generated_course JSONB)
     const { data: courses, error } = await supabase
       .from('courses')
-      .select('*')
+      .select('id, user_id, title, original_image_url, image_urls, source_type, created_at, updated_at')
       .order('created_at', { ascending: false })
+      .limit(50)
 
     if (error) {
       logError('Courses:fetch', error)

@@ -28,10 +28,10 @@ export async function GET(request: Request) {
     const type = searchParams.get('type') || 'daily'
     const limit = parseInt(searchParams.get('limit') || '3')
 
-    // Get user profile for session suggestions
+    // Get user profile for session suggestions - select only needed fields
     const { data: profile } = await supabase
       .from('user_learning_profile')
-      .select('*')
+      .select('preferred_study_time, optimal_session_length, peak_performance_hour')
       .eq('user_id', user.id)
       .single()
 

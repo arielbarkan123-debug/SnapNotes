@@ -3,10 +3,17 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import Button from '@/components/ui/Button'
 import CourseCard from '@/components/course/CourseCard'
-import UploadModal from '@/components/upload/UploadModal'
 import { DashboardWidget } from '@/components/srs'
+import { LazySection, RecommendationSkeleton, SRSWidgetSkeleton } from '@/components/ui/LazySection'
+
+// Lazy load UploadModal - only loaded when user opens it
+const UploadModal = dynamic(
+  () => import('@/components/upload/UploadModal'),
+  { ssr: false }
+)
 import { StreakWidget as _StreakWidget, MiniStreak as _MiniStreak } from '@/components/gamification/StreakWidget'
 // Streak widgets imported for future use
 void _StreakWidget
@@ -73,6 +80,7 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
   // Fetch gamification stats, recommendations, and check streak on mount
   useEffect(() => {
     const fetchStatsAndCheckStreak = async () => {
+      console.time('dashboard-page-load')
       try {
         // Fetch gamification stats and recommendations in parallel
         const [statsResponse, recResponse] = await Promise.all([
@@ -118,6 +126,8 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
         }
       } catch (error) {
         console.error('Failed to fetch gamification stats:', error)
+      } finally {
+        console.timeEnd('dashboard-page-load')
       }
     }
 
@@ -260,12 +270,18 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
           </div>
         )}
 
-        {/* Personalized Recommendation */}
+        {/* Personalized Recommendation - Lazy loaded */}
         {recommendation && (
-          <RecommendationCard
-            recommendation={recommendation}
-            sessionSuggestion={sessionSuggestion}
-          />
+          <LazySection
+            skeleton={<RecommendationSkeleton />}
+            minHeight={120}
+            rootMargin="100px"
+          >
+            <RecommendationCard
+              recommendation={recommendation}
+              sessionSuggestion={sessionSuggestion}
+            />
+          </LazySection>
         )}
 
         {/* Page Header */}
@@ -308,8 +324,14 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
           </div>
         </div>
 
-        {/* SRS Review Widget */}
-        <DashboardWidget />
+        {/* SRS Review Widget - Lazy loaded */}
+        <LazySection
+          skeleton={<SRSWidgetSkeleton />}
+          minHeight={150}
+          rootMargin="150px"
+        >
+          <DashboardWidget />
+        </LazySection>
 
         {/* Search and Sort Bar - only show if there are courses */}
         {totalCount > 0 && (
@@ -424,7 +446,25 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
         )}
 
         {/* Courses Grid or Empty State */}
-        {hasNoCourses ? (
+        {isLoading && filteredCourses.length === 0 ? (
+          /* Skeleton loading state for courses */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div
+                key={i}
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden"
+              >
+                <div className="relative aspect-square w-full bg-gray-200 dark:bg-gray-700">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-300/50 dark:via-gray-600/50 to-transparent skeleton-shimmer" />
+                </div>
+                <div className="p-4">
+                  <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item w-4/5 mb-2" />
+                  <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : hasNoCourses ? (
           <EmptyState onUploadClick={handleOpenUploadModal} />
         ) : hasNoResults ? (
           <NoSearchResults query={debouncedSearchQuery} onClear={clearSearch} />

@@ -28,7 +28,8 @@
       "Bash(npx tsc:*)",
       "Bash(lsof:*)",
       "Bash(npm ls:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []

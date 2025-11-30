@@ -292,3 +292,5 @@ export interface PaginatedResponse<T> {
 export * from './srs'
 
 export * from './help'
+
+export * from './exam'

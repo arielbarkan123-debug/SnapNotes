@@ -44,6 +44,10 @@ export default function LessonView({
   const steps = lesson.steps || []
   const totalSteps = steps.length
 
+  // Study session tracking
+  const sessionIdRef = useRef<string | null>(null)
+  const lessonStartTimeRef = useRef<number>(Date.now())
+
   // Count total questions in this lesson
   const totalQuestions = useMemo(() => {
     return steps.filter(step => step.type === 'question').length
@@ -107,6 +111,45 @@ export default function LessonView({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  // Start study session when lesson begins
+  useEffect(() => {
+    const startSession = async () => {
+      try {
+        const res = await fetch('/api/study-sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionType: 'lesson',
+            courseId: course.id,
+            lessonIndex,
+          }),
+        })
+        const data = await res.json()
+        if (data.success && data.session?.id) {
+          sessionIdRef.current = data.session.id
+        }
+      } catch (error) {
+        console.error('Failed to start study session:', error)
+      }
+    }
+
+    startSession()
+    lessonStartTimeRef.current = Date.now()
+
+    // Cleanup: end session on unmount (if user navigates away without completing)
+    return () => {
+      if (sessionIdRef.current) {
+        // Use sendBeacon for reliable cleanup on page unload
+        const payload = JSON.stringify({
+          sessionId: sessionIdRef.current,
+          questionsAnswered: 0, // Will be updated in handleAdvance for completion
+          questionsCorrect: 0,
+        })
+        navigator.sendBeacon('/api/study-sessions', payload)
+      }
+    }
+  }, [course.id, lessonIndex])
 
   // Step timing tracking
   const stepStartTimeRef = useRef<number>(Date.now())
@@ -192,6 +235,49 @@ export default function LessonView({
     }
   }, [course.id, lessonIndex])
 
+  // End study session and update lesson progress
+  const endStudySession = useCallback(async (questionsAnswered: number, questionsCorrect: number, completed: boolean) => {
+    // End the study session
+    if (sessionIdRef.current) {
+      try {
+        await fetch('/api/study-sessions', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: sessionIdRef.current,
+            questionsAnswered,
+            questionsCorrect,
+          }),
+        })
+        sessionIdRef.current = null // Clear so cleanup doesn't re-end
+      } catch (error) {
+        console.error('Failed to end study session:', error)
+      }
+    }
+
+    // Update lesson progress with mastery calculation
+    if (completed) {
+      const timeSeconds = Math.round((Date.now() - lessonStartTimeRef.current) / 1000)
+      try {
+        await fetch('/api/lesson-progress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            courseId: course.id,
+            lessonIndex,
+            lessonTitle: lesson.title,
+            questionsAnswered,
+            questionsCorrect,
+            timeSeconds,
+            completed: true,
+          }),
+        })
+      } catch (error) {
+        console.error('Failed to update lesson progress:', error)
+      }
+    }
+  }, [course.id, lessonIndex, lesson.title])
+
   // Record step timing
   const recordStepTiming = useCallback((wasCorrect?: boolean, usedHint?: boolean) => {
     const timeMs = Date.now() - stepStartTimeRef.current
@@ -237,12 +323,15 @@ export default function LessonView({
       const allTimings = [...stepTimings, timing]
       await saveStepPerformance(allTimings)
 
+      // End study session and update lesson progress with mastery
+      await endStudySession(finalAnswered, finalCorrect, true)
+
       setShowCompletion(true)
     } else {
       // Go to next step
       setCurrentStep(prev => prev + 1)
     }
-  }, [isLastStep, currentStep, saveProgress, saveQuestionStats, questionsAnswered, questionsCorrect, recordStepTiming, stepTimings, saveStepPerformance])
+  }, [isLastStep, currentStep, saveProgress, saveQuestionStats, questionsAnswered, questionsCorrect, recordStepTiming, stepTimings, saveStepPerformance, endStudySession])
 
   // Handle exit
   const handleExit = useCallback(() => {
