@@ -17,6 +17,22 @@ import JSZip from 'jszip'
 // Types
 // =============================================================================
 
+/**
+ * ExtractedImage - An image extracted from a document
+ */
+export interface ExtractedImage {
+  /** Base64 encoded image data */
+  data: string
+  /** MIME type of the image */
+  mimeType: string
+  /** Original filename in the document */
+  filename?: string
+  /** Page/slide number where the image was found */
+  pageNumber?: number
+  /** Alt text or description if available */
+  alt?: string
+}
+
 export interface ExtractedDocument {
   type: 'pptx' | 'pdf' | 'docx'
   title: string
@@ -32,6 +48,8 @@ export interface ExtractedDocument {
     createdDate?: string
     modifiedDate?: string
   }
+  /** Images extracted from the document */
+  images?: ExtractedImage[]
 }
 
 interface SlideContent {
@@ -39,6 +57,8 @@ interface SlideContent {
   title: string
   content: string
   notes?: string
+  /** Image references found in this slide */
+  imageRefs?: string[]
 }
 
 // =============================================================================
@@ -112,12 +132,31 @@ function extractTitleFromXML(xml: string): string {
 }
 
 /**
+ * Extract image references from slide XML
+ * Images are referenced via r:embed attributes that point to relationship IDs
+ */
+function extractImageRefsFromXML(xml: string): string[] {
+  const imageRefs: string[] = []
+
+  // Match image references in blip elements (a:blip r:embed="rId...")
+  const blipRegex = /r:embed="([^"]+)"/g
+  let match
+
+  while ((match = blipRegex.exec(xml)) !== null) {
+    imageRefs.push(match[1])
+  }
+
+  return imageRefs
+}
+
+/**
  * Extract structured content from slide XML
  * Separates title from body content
  */
 function parseSlideXML(xml: string, slideNumber: number): SlideContent {
   const title = extractTitleFromXML(xml)
   const allText = extractTextFromXML(xml)
+  const imageRefs = extractImageRefsFromXML(xml)
 
   // Remove title from content if found
   let content = allText
@@ -132,6 +171,7 @@ function parseSlideXML(xml: string, slideNumber: number): SlideContent {
     slideNumber,
     title: title || `Slide ${slideNumber}`,
     content,
+    imageRefs: imageRefs.length > 0 ? imageRefs : undefined,
   }
 }
 
@@ -292,6 +332,50 @@ export async function processPPTX(buffer: Buffer): Promise<ExtractedDocument> {
     documentTitle = slides[0].title
   }
 
+  // Extract images from ppt/media folder
+  const extractedImages: ExtractedImage[] = []
+  const mediaFiles: { path: string; filename: string }[] = []
+
+  zip.forEach((relativePath) => {
+    if (relativePath.startsWith('ppt/media/')) {
+      const filename = relativePath.split('/').pop() || ''
+      // Only extract common image formats
+      if (/\.(png|jpg|jpeg|gif|webp|bmp|tiff?)$/i.test(filename)) {
+        mediaFiles.push({ path: relativePath, filename })
+      }
+    }
+  })
+
+  // Extract images (limit to 20 to avoid memory issues)
+  const maxImages = 20
+  for (const mediaFile of mediaFiles.slice(0, maxImages)) {
+    const file = zip.file(mediaFile.path)
+    if (!file) continue
+
+    try {
+      const arrayBuffer = await file.async('arraybuffer')
+      const base64 = Buffer.from(arrayBuffer).toString('base64')
+
+      // Determine MIME type from filename
+      let mimeType = 'image/jpeg'
+      const ext = mediaFile.filename.split('.').pop()?.toLowerCase()
+      if (ext === 'png') mimeType = 'image/png'
+      else if (ext === 'gif') mimeType = 'image/gif'
+      else if (ext === 'webp') mimeType = 'image/webp'
+      else if (ext === 'bmp') mimeType = 'image/bmp'
+      else if (ext === 'tif' || ext === 'tiff') mimeType = 'image/tiff'
+
+      extractedImages.push({
+        data: base64,
+        mimeType,
+        filename: mediaFile.filename,
+      })
+    } catch {
+      // Skip images that fail to extract
+      console.warn(`Failed to extract image: ${mediaFile.filename}`)
+    }
+  }
+
   // Build sections from slides
   const sections = slides.map((slide) => ({
     title: slide.title,
@@ -321,6 +405,7 @@ export async function processPPTX(buffer: Buffer): Promise<ExtractedDocument> {
       createdDate,
       modifiedDate,
     },
+    images: extractedImages.length > 0 ? extractedImages : undefined,
   }
 }
 

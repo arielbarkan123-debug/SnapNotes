@@ -13,6 +13,16 @@ const nextConfig = {
         hostname: '*.supabase.in',
         pathname: '/storage/v1/object/**',
       },
+      // Unsplash images for web-searched course images
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+      // Unsplash photos CDN
+      {
+        protocol: 'https',
+        hostname: '*.unsplash.com',
+      },
     ],
     // Optimize images for performance
     formats: ['image/avif', 'image/webp'],
@@ -24,6 +34,31 @@ const nextConfig = {
   reactStrictMode: true,
   // Improve production performance
   poweredByHeader: false,
+
+  // Bundle optimization
+  experimental: {
+    // Optimize package imports - only import what's used
+    optimizePackageImports: ['@supabase/supabase-js', 'swr'],
+  },
+
+  // Webpack optimizations
+  webpack: (config, { isServer }) => {
+    // Don't bundle server-only packages on client
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: false,
+        path: false,
+        os: false,
+        stream: false,
+        buffer: false,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

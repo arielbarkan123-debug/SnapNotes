@@ -36,6 +36,8 @@ interface UploadFileError {
 
 type FileCategory = 'image' | 'pdf' | 'pptx' | 'docx'
 
+type InputMode = 'files' | 'text'
+
 interface SelectedFile {
   file: File
   preview: string
@@ -234,7 +236,9 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
 
+  const [inputMode, setInputMode] = useState<InputMode>('files')
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([])
+  const [textContent, setTextContent] = useState('')
   const [title, setTitle] = useState('')
   const [error, setError] = useState<UploadError | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -274,7 +278,9 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
     if (!isOpen) {
       // Revoke object URLs to prevent memory leaks (only for images)
       selectedFiles.forEach(sf => sf.preview && URL.revokeObjectURL(sf.preview))
+      setInputMode('files')
       setSelectedFiles([])
+      setTextContent('')
       setTitle('')
       setError(null)
       setIsDragging(false)
@@ -517,6 +523,44 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
   }, [onClose, isUploading])
 
   const handleSubmit = async () => {
+    // Handle text mode submission
+    if (inputMode === 'text') {
+      if (!textContent.trim() || textContent.trim().length < 20) {
+        setError({
+          message: 'Please enter at least 20 characters of content to generate a course.',
+          isRetryable: false,
+        })
+        return
+      }
+
+      setIsUploading(true)
+      setError(null)
+      setUploadProgress({ current: 0, total: 1, status: 'processing' })
+
+      try {
+        // Close modal and redirect to processing page with text content
+        onClose()
+
+        const params = new URLSearchParams()
+        params.set('textContent', textContent.trim())
+        params.set('sourceType', 'text')
+
+        if (title.trim()) {
+          params.set('title', title.trim())
+        }
+
+        router.push(`/processing?${params.toString()}`)
+        return
+      } catch (err) {
+        const errorInfo = getErrorMessage(err)
+        setError(errorInfo)
+        setIsUploading(false)
+        setUploadProgress(null)
+      }
+      return
+    }
+
+    // Handle file mode submission
     if (selectedFiles.length === 0) return
 
     setIsUploading(true)
@@ -572,8 +616,12 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         // Close modal and redirect to processing page with document content
         onClose()
 
+        // Store document content in sessionStorage to avoid URL length limits
+        const docId = `doc_${Date.now()}`
+        sessionStorage.setItem(docId, JSON.stringify(uploadData.extractedContent))
+
         const params = new URLSearchParams()
-        params.set('documentContent', JSON.stringify(uploadData.extractedContent))
+        params.set('documentId', docId)
         params.set('documentUrl', uploadData.storagePath || '')
         params.set('sourceType', uploadData.documentType)
 
@@ -707,7 +755,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <h2 id="modal-title" className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
-            Upload Notebook Page
+            Create Course
           </h2>
           <button
             onClick={onClose}
@@ -718,6 +766,48 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
+          </button>
+        </div>
+
+        {/* Mode Toggle Tabs */}
+        <div className="flex border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6">
+          <button
+            onClick={() => { setInputMode('files'); setError(null) }}
+            disabled={isUploading}
+            className={`
+              flex-1 py-3 text-sm font-medium border-b-2 transition-colors
+              ${inputMode === 'files'
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              }
+              disabled:opacity-50
+            `}
+          >
+            <span className="flex items-center justify-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Upload Files
+            </span>
+          </button>
+          <button
+            onClick={() => { setInputMode('text'); setError(null) }}
+            disabled={isUploading}
+            className={`
+              flex-1 py-3 text-sm font-medium border-b-2 transition-colors
+              ${inputMode === 'text'
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              }
+              disabled:opacity-50
+            `}
+          >
+            <span className="flex items-center justify-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Enter Text
+            </span>
           </button>
         </div>
 
@@ -784,7 +874,73 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
             className="hidden"
           />
 
-          {selectedFiles.length === 0 ? (
+          {/* Text Input Mode */}
+          {inputMode === 'text' ? (
+            <div className="space-y-4">
+              {/* Text Input Area */}
+              <div>
+                <label htmlFor="text-content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Enter your topics, notes, or outline
+                </label>
+                <textarea
+                  id="text-content"
+                  value={textContent}
+                  onChange={(e) => setTextContent(e.target.value)}
+                  placeholder="Example:
+The exam will include the following topics:
+
+Number Systems: Rounding, Standard Form, Indices (laws & solving for exponents), Surds (operations & rationalizing).
+
+Algebra: Factorization (grouping), Algebraic Fractions (solving linear equations with denominators), Substitution.
+
+Functions: Composite functions, Domain & Range concepts.
+
+Statistics: Mean, Median, Mode, Range."
+                  disabled={isUploading}
+                  rows={10}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition disabled:opacity-50 text-sm resize-none"
+                />
+                <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  Enter topics, subject outlines, or study notes. AI will expand them into a comprehensive course with lessons and questions.
+                </p>
+              </div>
+
+              {/* Character count */}
+              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                <span>
+                  {textContent.length < 20 ? (
+                    <span className="text-amber-600 dark:text-amber-400">
+                      Minimum 20 characters required ({20 - textContent.length} more needed)
+                    </span>
+                  ) : (
+                    <span className="text-green-600 dark:text-green-400">
+                      Ready to generate
+                    </span>
+                  )}
+                </span>
+                <span>{textContent.length} characters</span>
+              </div>
+
+              {/* Title Input */}
+              <div>
+                <label htmlFor="text-course-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Course Title
+                </label>
+                <input
+                  id="text-course-title"
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Course title (optional)"
+                  disabled={isUploading}
+                  className="w-full px-4 py-3 sm:py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl sm:rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition disabled:opacity-50 text-base"
+                />
+                <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  Leave blank to auto-generate from your content
+                </p>
+              </div>
+            </div>
+          ) : selectedFiles.length === 0 ? (
             /* Drop Zone - No files selected */
             <div
               onDragOver={handleDragOver}
@@ -1096,16 +1252,22 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={selectedFiles.length === 0 || isUploading}
+            disabled={
+              inputMode === 'text'
+                ? textContent.trim().length < 20 || isUploading
+                : selectedFiles.length === 0 || isUploading
+            }
             isLoading={isUploading}
             loadingText={
-              uploadProgress?.status === 'uploading'
-                ? getUploadingText(selectedFiles)
-                : 'Processing...'
+              inputMode === 'text'
+                ? 'Processing...'
+                : uploadProgress?.status === 'uploading'
+                  ? getUploadingText(selectedFiles)
+                  : 'Processing...'
             }
             className="w-full sm:w-auto min-h-[48px] sm:min-h-[44px]"
           >
-            {getButtonText(selectedFiles)}
+            {inputMode === 'text' ? 'Generate from Text' : getButtonText(selectedFiles)}
           </Button>
         </div>
       </div>

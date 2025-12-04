@@ -3,10 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import ReviewCard from '@/components/srs/ReviewCard'
 import RatingButtons from '@/components/srs/RatingButtons'
-import ReviewComplete from '@/components/srs/ReviewComplete'
 import type { Rating, ReviewSession } from '@/types'
+
+// Dynamic import - only loaded when review session completes
+const ReviewComplete = dynamic(() => import('@/components/srs/ReviewComplete'))
 
 // =============================================================================
 // Types

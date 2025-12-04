@@ -14,6 +14,7 @@ import {
   getCourseGenerationPrompt,
   getCombinedAnalysisPrompt,
   getDocumentCoursePrompt,
+  getTextCoursePrompt,
   cleanJsonResponse,
   validateExtractedContent,
   formatExtractedContentForPrompt,
@@ -296,18 +297,21 @@ export async function analyzeNotebookImage(imageUrl: string): Promise<AnalysisRe
  *
  * @param extractedContent - Previously extracted content from image
  * @param userTitle - Optional user-provided title
+ * @param imageUrls - Optional array of image URLs available for the course
  * @returns Generated course object and raw response text
  * @throws ClaudeAPIError on failure
  */
 export async function generateStudyCourse(
   extractedContent: ExtractedContent,
-  userTitle?: string
+  userTitle?: string,
+  imageUrls?: string[]
 ): Promise<CourseGenerationResult> {
   const client = getAnthropicClient()
 
   // Format extracted content for the prompt
   const formattedContent = formatExtractedContentForPrompt(extractedContent)
-  const { systemPrompt, userPrompt } = getCourseGenerationPrompt(formattedContent, userTitle)
+  const imageCount = imageUrls?.length || 0
+  const { systemPrompt, userPrompt } = getCourseGenerationPrompt(formattedContent, userTitle, imageCount)
 
   try {
     const response = await client.messages.create({
@@ -360,8 +364,36 @@ export async function generateStudyCourse(
       course.title = userTitle.trim()
     }
 
-    // Ensure optional arrays exist
-    course = normalizeGeneratedCourse(course)
+    // Ensure optional arrays exist and map image URLs
+    const { normalizedCourse, webImageQueries } = normalizeGeneratedCourse(course, imageUrls)
+    course = normalizedCourse
+
+    // Fetch web images if needed
+    if (webImageQueries.length > 0) {
+      const { searchEducationalImages } = await import('@/lib/images')
+      const subject = course.title.split(':')[0].trim()
+
+      for (const query of webImageQueries) {
+        try {
+          const searchQuery = `${query.query} ${subject}`
+          const webImages = await searchEducationalImages(searchQuery.slice(0, 100))
+          if (webImages.length > 0) {
+            const webImage = webImages[0]
+            const step = course.lessons[query.lessonIndex]?.steps[query.stepIndex]
+            if (step) {
+              step.imageUrl = webImage.url
+              step.imageAlt = query.alt
+              step.imageSource = 'web'
+              step.imageCaption = query.alt
+              step.imageCredit = webImage.credit
+              step.imageCreditUrl = webImage.creditUrl
+            }
+          }
+        } catch {
+          // Continue without this image
+        }
+      }
+    }
 
     return { course, rawText }
   } catch (error) {
@@ -481,7 +513,35 @@ export async function generateCourseFromImageSingleCall(
       course.title = userTitle.trim()
     }
 
-    course = normalizeGeneratedCourse(course)
+    const { normalizedCourse, webImageQueries } = normalizeGeneratedCourse(course)
+    course = normalizedCourse
+
+    // Fetch web images if requested
+    if (webImageQueries.length > 0) {
+      const { searchEducationalImages } = await import('@/lib/images')
+      const subject = course.title.split(':')[0].trim()
+
+      for (const query of webImageQueries) {
+        try {
+          const searchQuery = `${query.query} ${subject}`
+          const webImages = await searchEducationalImages(searchQuery.slice(0, 100))
+          if (webImages.length > 0) {
+            const webImage = webImages[0]
+            const step = course.lessons[query.lessonIndex]?.steps[query.stepIndex]
+            if (step) {
+              step.imageUrl = webImage.url
+              step.imageAlt = query.alt
+              step.imageSource = 'web'
+              step.imageCaption = query.alt
+              step.imageCredit = webImage.credit
+              step.imageCreditUrl = webImage.creditUrl
+            }
+          }
+        } catch {
+          // Continue without this image
+        }
+      }
+    }
 
     return { course, rawText }
   } catch (error) {
@@ -742,15 +802,18 @@ export interface DocumentCourseResult {
  *
  * @param document - ExtractedDocument from PDF, PPTX, or DOCX processing
  * @param userTitle - Optional user-provided title
+ * @param imageUrls - Optional array of image URLs extracted from the document
  * @returns Generated course and raw response text
  * @throws ClaudeAPIError on failure
  */
 export async function generateCourseFromDocument(
   document: ExtractedDocument,
-  userTitle?: string
+  userTitle?: string,
+  imageUrls?: string[]
 ): Promise<DocumentCourseResult> {
   const client = getAnthropicClient()
-  const { systemPrompt, userPrompt } = getDocumentCoursePrompt(document, userTitle)
+  const imageCount = imageUrls?.length || 0
+  const { systemPrompt, userPrompt } = getDocumentCoursePrompt(document, userTitle, imageCount)
 
   try {
     const response = await client.messages.create({
@@ -801,8 +864,195 @@ export async function generateCourseFromDocument(
       course.title = userTitle.trim()
     }
 
+    // Log raw steps to see if AI included imageIndex or webImageQuery
+    const rawSteps = (course.lessons || (course as any).sections || []).flatMap((l: any) => l.steps || [])
+    const stepsWithImageIndex = rawSteps.filter((s: any) => typeof s.imageIndex === 'number')
+    const stepsWithWebQuery = rawSteps.filter((s: any) => typeof s.webImageQuery === 'string')
+    console.log('[generateCourseFromDocument] AI response stats:', {
+      totalSteps: rawSteps.length,
+      stepsWithImageIndex: stepsWithImageIndex.length,
+      stepsWithWebQuery: stepsWithWebQuery.length,
+      imageUrlsProvided: imageUrls?.length || 0,
+    })
+
+    // Ensure optional arrays exist and map image URLs
+    const { normalizedCourse, webImageQueries } = normalizeGeneratedCourse(course, imageUrls)
+    course = normalizedCourse
+
+    // Fetch web images for any webImageQuery requests
+    if (webImageQueries.length > 0) {
+      console.log('[generateCourseFromDocument] Fetching', webImageQueries.length, 'web images...')
+      const { searchEducationalImages } = await import('@/lib/images')
+
+      // Use course title as subject context for better searches
+      const subject = course.title.split(':')[0].trim()
+
+      for (const query of webImageQueries) {
+        try {
+          // Search with the specific query + subject context
+          const searchQuery = `${query.query} ${subject}`
+          const webImages = await searchEducationalImages(searchQuery.slice(0, 100)) // Limit query length
+
+          if (webImages.length > 0) {
+            const webImage = webImages[0]
+            const step = course.lessons[query.lessonIndex]?.steps[query.stepIndex]
+            if (step) {
+              step.imageUrl = webImage.url
+              step.imageAlt = query.alt
+              step.imageSource = 'web'
+              step.imageCaption = query.alt
+              step.imageCredit = webImage.credit
+              step.imageCreditUrl = webImage.creditUrl
+            }
+          } else {
+            console.warn('[generateCourseFromDocument] No images found for:', query.query)
+          }
+        } catch (err) {
+          console.warn('[generateCourseFromDocument] Failed to fetch web image for:', query.query, err)
+        }
+      }
+    }
+
+    // Log final course steps with images
+    const finalStepsWithImages = course.lessons.flatMap(l => l.steps).filter(s => s.imageUrl)
+    console.log('[generateCourseFromDocument] Final course:', {
+      stepsWithImages: finalStepsWithImages.length,
+      webImagesAdded: webImageQueries.length,
+    })
+
+    return {
+      generatedCourse: course,
+      generationRawText: rawText,
+    }
+  } catch (error) {
+    if (error instanceof ClaudeAPIError) {
+      throw error
+    }
+    throw ClaudeAPIError.fromAnthropicError(error)
+  }
+}
+
+// ============================================================================
+// Text-Based Course Generation
+// ============================================================================
+
+export interface TextCourseResult {
+  generatedCourse: GeneratedCourse
+  generationRawText: string
+}
+
+/**
+ * Generates a study course directly from user-provided text content
+ * The text can be topics, outlines, study notes, or subject descriptions
+ *
+ * @param textContent - Plain text content provided by the user
+ * @param userTitle - Optional user-provided title
+ * @returns Generated course and raw response text
+ * @throws ClaudeAPIError on failure
+ */
+export async function generateCourseFromText(
+  textContent: string,
+  userTitle?: string
+): Promise<TextCourseResult> {
+  // Validate text content
+  if (!textContent || textContent.trim().length === 0) {
+    throw new ClaudeAPIError(
+      'Text content cannot be empty',
+      'EMPTY_CONTENT'
+    )
+  }
+
+  // Minimum content length check (at least 20 characters)
+  if (textContent.trim().length < 20) {
+    throw new ClaudeAPIError(
+      'Please provide more detailed content to generate a course',
+      'EMPTY_CONTENT'
+    )
+  }
+
+  const client = getAnthropicClient()
+  const { systemPrompt, userPrompt } = getTextCoursePrompt(textContent, userTitle)
+
+  try {
+    const response = await client.messages.create({
+      model: AI_MODEL,
+      max_tokens: MAX_TOKENS_GENERATION,
+      system: systemPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: userPrompt,
+        },
+      ],
+    })
+
+    // Extract text from response
+    const textResponseContent = response.content.find((block) => block.type === 'text')
+    if (!textResponseContent || textResponseContent.type !== 'text') {
+      throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
+    }
+
+    const rawText = textResponseContent.text
+
+    // Parse JSON response
+    const jsonText = cleanJsonResponse(rawText)
+    let course: GeneratedCourse
+
+    try {
+      course = JSON.parse(jsonText)
+    } catch {
+      throw new ClaudeAPIError(
+        'Failed to parse course structure as JSON. The AI response format was unexpected.',
+        'PARSE_ERROR'
+      )
+    }
+
+    // Validate required fields (AI may return "sections" or "lessons")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const hasLessons = course.lessons || (course as any).sections
+    if (!course.title || !course.overview || !hasLessons) {
+      throw new ClaudeAPIError(
+        'Generated course is missing required fields',
+        'PARSE_ERROR'
+      )
+    }
+
+    // Apply user title if provided
+    if (userTitle && userTitle.trim()) {
+      course.title = userTitle.trim()
+    }
+
     // Ensure optional arrays exist
-    course = normalizeGeneratedCourse(course)
+    const { normalizedCourse, webImageQueries } = normalizeGeneratedCourse(course)
+    course = normalizedCourse
+
+    // Fetch web images if requested (text courses often need web images)
+    if (webImageQueries.length > 0) {
+      console.log('[generateCourseFromText] Fetching', webImageQueries.length, 'web images...')
+      const { searchEducationalImages } = await import('@/lib/images')
+      const subject = course.title.split(':')[0].trim()
+
+      for (const query of webImageQueries) {
+        try {
+          const searchQuery = `${query.query} ${subject}`
+          const webImages = await searchEducationalImages(searchQuery.slice(0, 100))
+          if (webImages.length > 0) {
+            const webImage = webImages[0]
+            const step = course.lessons[query.lessonIndex]?.steps[query.stepIndex]
+            if (step) {
+              step.imageUrl = webImage.url
+              step.imageAlt = query.alt
+              step.imageSource = 'web'
+              step.imageCaption = query.alt
+              step.imageCredit = webImage.credit
+              step.imageCreditUrl = webImage.creditUrl
+            }
+          }
+        } catch {
+          // Continue without this image
+        }
+      }
+    }
 
     return {
       generatedCourse: course,
@@ -823,23 +1073,57 @@ export async function generateCourseFromDocument(
 /**
  * Normalizes a generated course by ensuring all optional arrays exist
  * Also handles the sections -> lessons mapping (AI generates "sections" but type expects "lessons")
+ * Maps imageIndex references to actual image URLs if provided
+ * Collects webImageQuery requests for later processing
+ *
+ * @param course - The raw course object from AI
+ * @param imageUrls - Optional array of image URLs to map from imageIndex
+ * @returns Normalized course and any web image queries that need to be fetched
  */
-function normalizeGeneratedCourse(course: GeneratedCourse & { sections?: any[] }): GeneratedCourse {
+function normalizeGeneratedCourse(
+  course: GeneratedCourse & { sections?: any[] },
+  imageUrls?: string[]
+): { normalizedCourse: GeneratedCourse; webImageQueries: { lessonIndex: number; stepIndex: number; query: string; alt: string }[] } {
   // Handle AI response that uses "sections" instead of "lessons"
   const lessonsData = course.lessons || course.sections || []
+  const webImageQueries: { lessonIndex: number; stepIndex: number; query: string; alt: string }[] = []
 
-  return {
+  const normalizedCourse: GeneratedCourse = {
     title: course.title,
     overview: course.overview,
-    lessons: lessonsData.map((lesson: any) => ({
+    lessons: lessonsData.map((lesson: any, lessonIndex: number) => ({
       title: lesson.title || 'Untitled Lesson',
-      steps: (lesson.steps || []).map((step: any) => {
+      steps: (lesson.steps || []).map((step: any, stepIndex: number) => {
         // For question steps, put the question text in content
         // AI generates: { type: "question", question: "What is...?", options: [...] }
         // We need: { type: "question", content: "What is...?", options: [...] }
         const content = step.type === 'question'
           ? (step.question || step.content || '')
           : (step.content || '')
+
+        // Map imageIndex to actual URL if available
+        let imageUrl: string | undefined
+        let imageAlt: string | undefined
+        let imageSource: 'extracted' | 'web' | 'uploaded' | undefined
+
+        if (
+          typeof step.imageIndex === 'number' &&
+          imageUrls &&
+          step.imageIndex >= 0 &&
+          step.imageIndex < imageUrls.length
+        ) {
+          imageUrl = imageUrls[step.imageIndex]
+          imageAlt = step.imageAlt || `Image ${step.imageIndex + 1}`
+          imageSource = 'extracted'
+        } else if (step.webImageQuery && typeof step.webImageQuery === 'string') {
+          // Collect web image queries for later processing
+          webImageQueries.push({
+            lessonIndex,
+            stepIndex,
+            query: step.webImageQuery,
+            alt: step.imageAlt || step.webImageQuery,
+          })
+        }
 
         return {
           type: step.type || 'explanation',
@@ -848,10 +1132,15 @@ function normalizeGeneratedCourse(course: GeneratedCourse & { sections?: any[] }
           options: step.options,
           correct_answer: step.correctIndex ?? step.correct_answer,
           explanation: step.explanation,
+          imageUrl,
+          imageAlt,
+          imageSource,
         }
       }),
     })),
   }
+
+  return { normalizedCourse, webImageQueries }
 }
 
 /**

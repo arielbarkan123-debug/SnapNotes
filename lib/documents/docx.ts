@@ -3,10 +3,12 @@
  *
  * Extracts text content from Word documents using mammoth library.
  * Parses document structure to identify headings and sections.
+ * Also extracts embedded images from the word/media folder.
  */
 
 import mammoth from 'mammoth'
-import { ExtractedDocument } from './pptx'
+import JSZip from 'jszip'
+import { ExtractedDocument, ExtractedImage } from './pptx'
 
 // =============================================================================
 // Types
@@ -140,6 +142,63 @@ function estimatePageCount(text: string): number {
 // =============================================================================
 
 /**
+ * Extract images from DOCX file (stored in word/media folder)
+ */
+async function extractImagesFromDOCX(buffer: Buffer): Promise<ExtractedImage[]> {
+  const extractedImages: ExtractedImage[] = []
+
+  try {
+    const zip = await JSZip.loadAsync(buffer)
+    const mediaFiles: { path: string; filename: string }[] = []
+
+    zip.forEach((relativePath) => {
+      if (relativePath.startsWith('word/media/')) {
+        const filename = relativePath.split('/').pop() || ''
+        // Only extract common image formats
+        if (/\.(png|jpg|jpeg|gif|webp|bmp|tiff?)$/i.test(filename)) {
+          mediaFiles.push({ path: relativePath, filename })
+        }
+      }
+    })
+
+    // Extract images (limit to 20 to avoid memory issues)
+    const maxImages = 20
+    for (const mediaFile of mediaFiles.slice(0, maxImages)) {
+      const file = zip.file(mediaFile.path)
+      if (!file) continue
+
+      try {
+        const arrayBuffer = await file.async('arraybuffer')
+        const base64 = Buffer.from(arrayBuffer).toString('base64')
+
+        // Determine MIME type from filename
+        let mimeType = 'image/jpeg'
+        const ext = mediaFile.filename.split('.').pop()?.toLowerCase()
+        if (ext === 'png') mimeType = 'image/png'
+        else if (ext === 'gif') mimeType = 'image/gif'
+        else if (ext === 'webp') mimeType = 'image/webp'
+        else if (ext === 'bmp') mimeType = 'image/bmp'
+        else if (ext === 'tif' || ext === 'tiff') mimeType = 'image/tiff'
+
+        extractedImages.push({
+          data: base64,
+          mimeType,
+          filename: mediaFile.filename,
+        })
+      } catch {
+        // Skip images that fail to extract
+        console.warn(`Failed to extract image: ${mediaFile.filename}`)
+      }
+    }
+  } catch {
+    // Image extraction failed, continue without images
+    console.warn('Failed to extract images from DOCX')
+  }
+
+  return extractedImages
+}
+
+/**
  * Process a Word document and extract all text content
  *
  * @param buffer - The DOCX file as a Buffer
@@ -201,6 +260,9 @@ export async function processDOCX(buffer: Buffer): Promise<ExtractedDocument> {
     }
   }
 
+  // Extract images from the document
+  const extractedImages = await extractImagesFromDOCX(buffer)
+
   // Build formatted content
   const formattedContent = sections
     .map((section) => `## ${section.title}\n\n${section.content}`)
@@ -217,6 +279,7 @@ export async function processDOCX(buffer: Buffer): Promise<ExtractedDocument> {
     metadata: {
       pageCount: Math.max(sections.length, estimatedPages),
     },
+    images: extractedImages.length > 0 ? extractedImages : undefined,
   }
 }
 

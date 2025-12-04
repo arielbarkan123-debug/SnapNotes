@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { ExamQuestion, ExamAnswer, MatchingPair, SubQuestion } from '@/types'
+import { formatMathInText } from '@/lib/utils/math-format'
 
 // =============================================================================
 // Types
@@ -182,7 +183,7 @@ function MultipleChoiceRenderer({
   return (
     <div className="space-y-4">
       <p className="text-lg font-semibold text-gray-900 dark:text-white leading-relaxed">
-        {question.question_text}
+        {formatMathInText(question.question_text)}
       </p>
 
       <div className="space-y-3">
@@ -199,7 +200,7 @@ function MultipleChoiceRenderer({
               >
                 {String.fromCharCode(65 + index)}
               </span>
-              <span className="flex-1">{option}</span>
+              <span className="flex-1">{formatMathInText(option)}</span>
               {showResults && isCorrectOption(option) && (
                 <span className="text-green-500 text-xl">✓</span>
               )}
@@ -214,7 +215,7 @@ function MultipleChoiceRenderer({
       {showResults && question.explanation && (
         <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Explanation</p>
-          <p className="text-gray-700 dark:text-gray-300">{question.explanation}</p>
+          <p className="text-gray-700 dark:text-gray-300">{formatMathInText(question.explanation)}</p>
         </div>
       )}
     </div>
@@ -279,7 +280,7 @@ function TrueFalseRenderer({
   return (
     <div className="space-y-4">
       <p className="text-lg font-semibold text-gray-900 dark:text-white leading-relaxed">
-        {question.question_text}
+        {formatMathInText(question.question_text)}
       </p>
 
       <div className="flex gap-4">
@@ -302,7 +303,7 @@ function TrueFalseRenderer({
       {showResults && question.explanation && (
         <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Explanation</p>
-          <p className="text-gray-700 dark:text-gray-300">{question.explanation}</p>
+          <p className="text-gray-700 dark:text-gray-300">{formatMathInText(question.explanation)}</p>
         </div>
       )}
     </div>
@@ -344,7 +345,7 @@ function FillBlankRenderer({
     if (parts.length === 1) {
       return (
         <p className="text-lg font-semibold text-gray-900 dark:text-white leading-relaxed mb-4">
-          {question.question_text}
+          {formatMathInText(question.question_text)}
         </p>
       )
     }
@@ -353,7 +354,7 @@ function FillBlankRenderer({
       <p className="text-lg font-semibold text-gray-900 dark:text-white leading-relaxed mb-4">
         {parts.map((part, index) => (
           <span key={index}>
-            {part}
+            {formatMathInText(part)}
             {index < parts.length - 1 && (
               <span
                 className={`inline-block min-w-[100px] mx-1 px-2 py-1 rounded-lg border-2 border-dashed ${
@@ -364,7 +365,7 @@ function FillBlankRenderer({
                     : 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
                 }`}
               >
-                {inputValue || '___'}
+                {formatMathInText(inputValue) || '___'}
               </span>
             )}
           </span>
@@ -402,7 +403,7 @@ function FillBlankRenderer({
         <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
           <p className="text-red-600 dark:text-red-400">
             Correct answer:{' '}
-            <span className="font-semibold">{question.correct_answer}</span>
+            <span className="font-semibold">{formatMathInText(question.correct_answer)}</span>
           </p>
         </div>
       )}
@@ -410,7 +411,7 @@ function FillBlankRenderer({
       {showResults && question.explanation && (
         <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Explanation</p>
-          <p className="text-gray-700 dark:text-gray-300">{question.explanation}</p>
+          <p className="text-gray-700 dark:text-gray-300">{formatMathInText(question.explanation)}</p>
         </div>
       )}
     </div>
@@ -447,7 +448,7 @@ function ShortAnswerRenderer({
   return (
     <div className="space-y-4">
       <p className="text-lg font-semibold text-gray-900 dark:text-white leading-relaxed">
-        {question.question_text}
+        {formatMathInText(question.question_text)}
       </p>
 
       <div>
@@ -475,7 +476,7 @@ function ShortAnswerRenderer({
         <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
           <p className="text-red-600 dark:text-red-400">
             Correct answer:{' '}
-            <span className="font-semibold">{question.correct_answer}</span>
+            <span className="font-semibold">{formatMathInText(question.correct_answer)}</span>
           </p>
         </div>
       )}
@@ -483,7 +484,7 @@ function ShortAnswerRenderer({
       {showResults && question.explanation && (
         <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Explanation</p>
-          <p className="text-gray-700 dark:text-gray-300">{question.explanation}</p>
+          <p className="text-gray-700 dark:text-gray-300">{formatMathInText(question.explanation)}</p>
         </div>
       )}
     </div>
@@ -678,7 +679,7 @@ function MatchingRenderer({
   return (
     <div className="space-y-4">
       <p className="text-lg font-semibold text-gray-900 dark:text-white leading-relaxed">
-        {question.question_text}
+        {formatMathInText(question.question_text)}
       </p>
 
       {!showResults && (
@@ -707,7 +708,7 @@ function MatchingRenderer({
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-bold">
                     {index + 1}
                   </span>
-                  <span>{pair.left}</span>
+                  <span>{formatMathInText(pair.left)}</span>
                 </span>
               </button>
             ) : null
@@ -730,7 +731,7 @@ function MatchingRenderer({
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-bold">
                   {String.fromCharCode(65 + index)}
                 </span>
-                <span>{def.text}</span>
+                <span>{formatMathInText(def.text)}</span>
               </span>
             </button>
           ))}
@@ -755,9 +756,9 @@ function MatchingRenderer({
             {correctPairs.map((pair, index) => (
               pair?.left && pair?.right ? (
                 <div key={index} className="flex items-center gap-2 text-sm">
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{pair.left}</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-300">{formatMathInText(pair.left)}</span>
                   <span className="text-gray-400">→</span>
-                  <span className="text-green-600 dark:text-green-400">{pair.right}</span>
+                  <span className="text-green-600 dark:text-green-400">{formatMathInText(pair.right)}</span>
                 </div>
               ) : null
             ))}
@@ -850,7 +851,7 @@ function OrderingRenderer({
   return (
     <div className="space-y-4">
       <p className="text-lg font-semibold text-gray-900 dark:text-white leading-relaxed">
-        {question.question_text}
+        {formatMathInText(question.question_text)}
       </p>
 
       {!showResults && (
@@ -876,7 +877,7 @@ function OrderingRenderer({
             </span>
 
             {/* Item Text */}
-            <span className="flex-1">{item}</span>
+            <span className="flex-1">{formatMathInText(item)}</span>
 
             {/* Up/Down Buttons */}
             {!showResults && (
@@ -929,7 +930,7 @@ function OrderingRenderer({
                 <span className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center font-bold text-xs">
                   {index + 1}
                 </span>
-                <span className="text-gray-700 dark:text-gray-300">{item}</span>
+                <span className="text-gray-700 dark:text-gray-300">{formatMathInText(item)}</span>
               </li>
             ))}
           </ol>
@@ -993,7 +994,7 @@ function PassageBasedRenderer({
           Read the passage:
         </p>
         <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
-          {question.passage}
+          {formatMathInText(question.passage || '')}
         </p>
       </div>
 
@@ -1110,7 +1111,7 @@ function SubQuestionMultipleChoice({
 
   return (
     <div className="space-y-2">
-      <p className="font-medium text-gray-900 dark:text-white">{subQuestion.question_text}</p>
+      <p className="font-medium text-gray-900 dark:text-white">{formatMathInText(subQuestion.question_text)}</p>
       <div className="space-y-2">
         {validOptions.map((option, index) => (
           <button
@@ -1119,7 +1120,7 @@ function SubQuestionMultipleChoice({
             disabled={showResults}
             className={getOptionStyle(option)}
           >
-            {option}
+            {formatMathInText(option)}
           </button>
         ))}
       </div>
@@ -1174,7 +1175,7 @@ function SubQuestionTrueFalse({
 
   return (
     <div className="space-y-2">
-      <p className="font-medium text-gray-900 dark:text-white">{subQuestion.question_text}</p>
+      <p className="font-medium text-gray-900 dark:text-white">{formatMathInText(subQuestion.question_text)}</p>
       <div className="flex gap-3">
         <button
           onClick={() => handleClick('True')}
@@ -1210,7 +1211,7 @@ function SubQuestionFillBlank({
 
   return (
     <div className="space-y-2">
-      <p className="font-medium text-gray-900 dark:text-white">{subQuestion.question_text}</p>
+      <p className="font-medium text-gray-900 dark:text-white">{formatMathInText(subQuestion.question_text)}</p>
       <input
         type="text"
         value={userAnswer || ''}
@@ -1227,7 +1228,7 @@ function SubQuestionFillBlank({
       />
       {showResults && !isCorrect && subQuestion.correct_answer && (
         <p className="text-sm text-red-600 dark:text-red-400">
-          Correct: <span className="font-semibold">{subQuestion.correct_answer}</span>
+          Correct: <span className="font-semibold">{formatMathInText(subQuestion.correct_answer)}</span>
         </p>
       )}
     </div>

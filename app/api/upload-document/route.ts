@@ -153,6 +153,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         title: extractedContent.title,
         sections: extractedContent.sections.length,
         pageCount: extractedContent.metadata.pageCount,
+        imagesExtracted: extractedContent.images?.length || 0,
       })
     } catch (error) {
       console.error('[UploadDocument] Document processing error:', error)

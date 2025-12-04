@@ -13,6 +13,7 @@ export {
   generateCourseFromMultipleImages,
   generateCourseFromImageSingleCall,
   generateCourseFromDocument,
+  generateCourseFromText,
   fetchImageAsBase64,
   ClaudeAPIError,
   isRetryableError,
@@ -28,6 +29,7 @@ export type {
   CourseGenerationResult,
   FullPipelineResult,
   DocumentCourseResult,
+  TextCourseResult,
   ClaudeErrorCode,
 } from './claude'
 
@@ -38,6 +40,7 @@ export {
   getCourseGenerationPrompt,
   getCombinedAnalysisPrompt,
   getDocumentCoursePrompt,
+  getTextCoursePrompt,
   cleanJsonResponse,
   validateExtractedContent,
   formatExtractedContentForPrompt,

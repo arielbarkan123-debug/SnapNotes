@@ -35,18 +35,17 @@ const sliderStyles = `
   }
 `
 import { parseCardBack, isMultipleChoice, isTrueFalse, isFillBlank, isMatching, isSequence } from '@/types/srs'
-import MultipleChoice from '@/components/practice/MultipleChoice'
-import TrueFalse from '@/components/practice/TrueFalse'
-import FillBlank from '@/components/practice/FillBlank'
-import ShortAnswer from '@/components/practice/ShortAnswer'
-import Matching from '@/components/practice/Matching'
-import Sequence from '@/components/practice/Sequence'
+
+// Lazy load practice components - only loaded when practice session starts
+const MultipleChoice = dynamic(() => import('@/components/practice/MultipleChoice'))
+const TrueFalse = dynamic(() => import('@/components/practice/TrueFalse'))
+const FillBlank = dynamic(() => import('@/components/practice/FillBlank'))
+const ShortAnswer = dynamic(() => import('@/components/practice/ShortAnswer'))
+const Matching = dynamic(() => import('@/components/practice/Matching'))
+const Sequence = dynamic(() => import('@/components/practice/Sequence'))
 
 // Lazy load HelpModal - only loaded when user requests help
-const HelpModal = dynamic(
-  () => import('@/components/help/HelpModal'),
-  { ssr: false }
-)
+const HelpModal = dynamic(() => import('@/components/help/HelpModal'), { ssr: false })
 
 // =============================================================================
 // Types

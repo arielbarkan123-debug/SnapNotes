@@ -2,13 +2,18 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { Course, UserProgress, Lesson, HelpContext } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import ProgressBar from '@/components/lesson/ProgressBar'
 import StepContent from '@/components/lesson/StepContent'
 import QuestionStep from '@/components/lesson/QuestionStep'
-import LessonComplete from '@/components/lesson/LessonComplete'
-import HelpModal from '@/components/help/HelpModal'
+
+// Dynamic imports for components not needed immediately
+const LessonComplete = dynamic(() => import('@/components/lesson/LessonComplete'), {
+  loading: () => <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 flex items-center justify-center"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>
+})
+const HelpModal = dynamic(() => import('@/components/help/HelpModal'))
 
 interface QuestionAnswer {
   stepIndex: number

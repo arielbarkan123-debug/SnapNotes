@@ -21,7 +21,7 @@ export interface Course {
   /** URL to the uploaded document in Supabase Storage (PDF, PPTX, DOCX) */
   document_url?: string | null
   /** Source type of the course content */
-  source_type?: 'image' | 'pdf' | 'pptx' | 'docx'
+  source_type?: 'image' | 'pdf' | 'pptx' | 'docx' | 'text'
   /** Raw text content extracted from the image by AI (nullable) */
   extracted_content: string | null
   /** The full AI-generated course structure */
@@ -48,7 +48,7 @@ export interface CourseInsert {
   /** URL to the uploaded document in Supabase Storage (PDF, PPTX, DOCX) */
   document_url?: string | null
   /** Source type of the course content */
-  source_type?: 'image' | 'pdf' | 'pptx' | 'docx'
+  source_type?: 'image' | 'pdf' | 'pptx' | 'docx' | 'text'
   /** Raw extracted content (optional during initial creation) */
   extracted_content?: string | null
   /** The AI-generated course structure */
@@ -130,6 +130,18 @@ export interface Step {
   correct_answer?: number
   /** Explanation for questions */
   explanation?: string
+  /** Optional image URL for visual content */
+  imageUrl?: string
+  /** Optional image alt text for accessibility */
+  imageAlt?: string
+  /** Source of the image: 'extracted' from document, 'web' from internet search, or 'uploaded' from user */
+  imageSource?: 'extracted' | 'web' | 'uploaded'
+  /** Caption to display below the image */
+  imageCaption?: string
+  /** Photographer credit for web images (required for Unsplash) */
+  imageCredit?: string
+  /** Link to photographer's profile */
+  imageCreditUrl?: string
 }
 
 /**
@@ -146,6 +158,22 @@ export interface Lesson {
 }
 
 /**
+ * CourseImage - An image used in the course
+ */
+export interface CourseImage {
+  /** URL to the image */
+  url: string
+  /** Alt text for accessibility */
+  alt: string
+  /** Source of the image */
+  source: 'extracted' | 'web' | 'uploaded'
+  /** Caption or description */
+  caption?: string
+  /** Related topic or keyword */
+  topic?: string
+}
+
+/**
  * GeneratedCourse - The complete AI-generated course structure
  * Stored as JSONB in the database
  */
@@ -153,6 +181,8 @@ export interface GeneratedCourse {
   title: string
   overview: string
   lessons: Lesson[]
+  /** Images used in the course (extracted from documents or fetched from web) */
+  images?: CourseImage[]
 }
 
 /**

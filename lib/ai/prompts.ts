@@ -281,6 +281,15 @@ const COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who creates 
 - Use a friendly, encouraging tone
 - Embed questions throughout to test understanding
 - Make learning feel like a game, not a lecture
+- Reference available images when they help explain concepts
+
+## Image Usage
+When images are provided, incorporate them into the course:
+- Reference images using their index number (e.g., "image_0", "image_1")
+- Include imageIndex in steps where images should appear
+- Use images for diagrams, examples, and visual explanations
+- Each image can only be used once per course
+- If no images are provided, the course will search for relevant web images
 
 ## Duolingo-Style Course Structure
 
@@ -337,12 +346,23 @@ const COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who creates 
 - Test understanding, not memory tricks
 - Feel encouraging, not overwhelming`
 
-function buildCourseGenerationUserPrompt(extractedContent: string, userTitle?: string): string {
+function buildCourseGenerationUserPrompt(
+  extractedContent: string,
+  userTitle?: string,
+  imageCount?: number
+): string {
   const titleInstruction = userTitle
     ? `The user has specified the course title should be: "${userTitle}". Use this as the title.`
     : `Generate an appropriate, descriptive title based on the content.`
 
-  return `Based on the following extracted notes, create a comprehensive study course with embedded active recall questions.
+  const imageInstruction = imageCount && imageCount > 0
+    ? `\n\n## Available Images
+There are ${imageCount} images available for this course (indexed from 0 to ${imageCount - 1}).
+When including an image in a step, add "imageIndex": <number> to reference it.
+Use images where they would enhance understanding of the concepts.`
+    : ''
+
+  return `Based on the following extracted notes, create a comprehensive study course with embedded active recall questions.${imageInstruction}
 
 ## Extracted Notes Content:
 ${extractedContent}
@@ -363,15 +383,19 @@ Create a structured course that transforms these notes into complete study mater
       "steps": [
         {
           "type": "explanation",
-          "content": "A paragraph introducing or explaining a concept. Start with the big picture."
+          "content": "A paragraph introducing or explaining a concept. Start with the big picture.",
+          "imageIndex": 0,
+          "imageAlt": "Description of the image content for accessibility"
         },
         {
           "type": "key_point",
           "content": "A specific, memorable key point to remember."
         },
         {
-          "type": "explanation",
-          "content": "Another paragraph elaborating on the concept with more detail."
+          "type": "diagram",
+          "content": "Description of what the diagram shows and its significance.",
+          "imageIndex": 1,
+          "imageAlt": "Visual diagram showing the concept"
         },
         {
           "type": "question",
@@ -390,8 +414,10 @@ Create a structured course that transforms these notes into complete study mater
           "content": "Another important point about this topic."
         },
         {
-          "type": "explanation",
-          "content": "Further elaboration with examples or applications."
+          "type": "example",
+          "content": "A concrete example with visual illustration.",
+          "imageIndex": 2,
+          "imageAlt": "Example illustration"
         },
         {
           "type": "question",
@@ -469,19 +495,32 @@ Create a structured course that transforms these notes into complete study mater
 
 6. **Be thorough** - this should feel like a complete mini-course.
 
+7. **Use images effectively** - EVERY lesson MUST have at least one image.
+   - Prefer document images ("imageIndex") when available
+   - For web images, use "webImageQuery" that EXACTLY matches the step content
+   - **IMAGE MATCHING RULES**:
+     * Query must describe the SPECIFIC concept being taught (not a related concept)
+     * Include "labeled diagram" or "scientific illustration" for technical topics
+     * Example: If teaching about cell division → "mitosis cell division phases labeled diagram"
+     * Example: If teaching about photosynthesis → "photosynthesis process chloroplast diagram"
+
 Return ONLY the JSON object, no additional text, markdown formatting, or code blocks.`
 }
 
 /**
  * Returns the prompts for generating a study course from extracted content
+ * @param extractedContent - The extracted content from image analysis
+ * @param userTitle - Optional user-provided title
+ * @param imageCount - Number of available images for the course
  */
 export function getCourseGenerationPrompt(
   extractedContent: string,
-  userTitle?: string
+  userTitle?: string,
+  imageCount?: number
 ): { systemPrompt: string; userPrompt: string } {
   return {
     systemPrompt: COURSE_GENERATION_SYSTEM_PROMPT,
-    userPrompt: buildCourseGenerationUserPrompt(extractedContent, userTitle)
+    userPrompt: buildCourseGenerationUserPrompt(extractedContent, userTitle, imageCount)
   }
 }
 
@@ -626,6 +665,14 @@ const DOCUMENT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who
 - Embed questions throughout to test understanding
 - Make learning feel like a game, not a lecture
 - Preserve the document's structure and flow
+- Use available images to enhance learning visually
+
+## Image Usage
+When images are extracted from the document, incorporate them:
+- Reference images using their index number (imageIndex: 0, 1, 2, etc.)
+- Include imageAlt for accessibility descriptions
+- Use images for diagrams, examples, and visual explanations
+- Each image can only be used once per course
 
 ## Document-Based Course Structure
 
@@ -677,7 +724,8 @@ const DOCUMENT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who
 
 function buildDocumentCourseGenerationUserPrompt(
   document: ExtractedDocument,
-  userTitle?: string
+  userTitle?: string,
+  imageCount?: number
 ): string {
   const titleInstruction = userTitle
     ? `The user has specified the course title should be: "${userTitle}". Use this as the title.`
@@ -689,12 +737,18 @@ function buildDocumentCourseGenerationUserPrompt(
     docx: 'Word document',
   }[document.type]
 
+  const imageInstruction = imageCount && imageCount > 0
+    ? `\n- Images extracted: ${imageCount} (indexed 0 to ${imageCount - 1})
+
+IMPORTANT: You MUST include images in your course! For each image available, add "imageIndex": <number> and "imageAlt": "<description>" to at least one relevant step. Distribute images throughout the course to enhance visual learning.`
+    : ''
+
   return `Create a comprehensive study course from this ${documentTypeLabel}.
 
 ## Document Information:
 - Title: ${document.title}
 - Type: ${document.type.toUpperCase()}
-- Pages/Slides: ${document.metadata.pageCount}
+- Pages/Slides: ${document.metadata.pageCount}${imageInstruction}
 ${document.metadata.author ? `- Author: ${document.metadata.author}` : ''}
 
 ## Document Content:
@@ -722,15 +776,19 @@ Create a structured course that transforms this document content into complete s
       "steps": [
         {
           "type": "explanation",
-          "content": "A paragraph introducing or explaining a concept. Start with the big picture."
+          "content": "A paragraph introducing or explaining a concept. Start with the big picture.",
+          "imageIndex": 0,
+          "imageAlt": "Visual representation of the concept"
         },
         {
           "type": "key_point",
           "content": "A specific, memorable key point to remember."
         },
         {
-          "type": "explanation",
-          "content": "Another paragraph elaborating on the concept with more detail."
+          "type": "diagram",
+          "content": "Description of what this diagram shows and why it's important.",
+          "imageIndex": 1,
+          "imageAlt": "Diagram illustrating the concept"
         },
         {
           "type": "question",
@@ -778,19 +836,228 @@ Create a structured course that transforms this document content into complete s
 
 7. **Be thorough** - this should feel like a complete mini-course covering all the document content.
 
+8. **USE IMAGES (REQUIRED)**: EVERY section/lesson MUST have at least one step with an image.
+   - If document images are available (check imageCount), prefer using "imageIndex" to reference extracted images
+   - For web images, use "webImageQuery" with a VERY SPECIFIC search that EXACTLY matches the step content
+   - **CRITICAL IMAGE MATCHING RULES**:
+     * The image query MUST describe the EXACT concept in that step - NOT a related but different concept
+     * If step teaches "what atoms are made of" → query "atom structure protons neutrons electrons diagram"
+     * If step teaches "history of atomic theory" → query "atomic theory history Dalton Thomson Rutherford"
+     * If step teaches "electron shells" → query "electron shells energy levels Bohr model"
+     * NEVER use a generic query like "atom" - always specify WHAT ASPECT of the topic
+   - Include "labeled diagram" or "scientific illustration" for technical content
+   - Example: {"type": "explanation", "content": "Every atom has protons and neutrons in its nucleus...", "webImageQuery": "atom nucleus protons neutrons labeled scientific diagram", "imageAlt": "Labeled diagram showing protons and neutrons in atomic nucleus"}
+
 Return ONLY the JSON object, no additional text, markdown formatting, or code blocks.`
 }
 
 /**
  * Returns the prompts for generating a study course from extracted document content
+ * @param document - The extracted document content
+ * @param userTitle - Optional user-provided title
+ * @param imageCount - Number of available images extracted from the document
  */
 export function getDocumentCoursePrompt(
   document: ExtractedDocument,
-  userTitle?: string
+  userTitle?: string,
+  imageCount?: number
 ): { systemPrompt: string; userPrompt: string } {
   return {
     systemPrompt: DOCUMENT_COURSE_GENERATION_SYSTEM_PROMPT,
-    userPrompt: buildDocumentCourseGenerationUserPrompt(document, userTitle),
+    userPrompt: buildDocumentCourseGenerationUserPrompt(document, userTitle, imageCount),
+  }
+}
+
+// ============================================================================
+// Text-Based Course Generation Prompts
+// ============================================================================
+
+const TEXT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who creates Duolingo-style micro-lessons from text content. Your task is to transform user-provided text (topics, outlines, study notes, or subject descriptions) into bite-sized, interactive learning experiences.
+
+## Your Role
+- Create SHORT, focused explanations (max 50 words each)
+- Break content into small, digestible steps
+- Use a friendly, encouraging tone
+- Embed questions throughout to test understanding
+- Make learning feel like a game, not a lecture
+- EXPAND the topics into comprehensive educational content
+
+## Text-Based Course Structure
+
+### Understanding Input Text
+- Users may provide: topic lists, outlines, study notes, subject descriptions
+- The text serves as a GUIDE for what to teach
+- You should EXPAND brief topics into full educational content
+- Add standard knowledge and examples to make it comprehensive
+
+### Course Layout
+- 3-6 lessons per course (based on content complexity)
+- 5-10 steps per lesson
+- Each lesson focuses on ONE main concept or topic
+- Lessons build on each other progressively
+- Group related topics into cohesive lessons
+
+### Step Types
+1. **explanation**: Short teaching moment (MAX 50 words, 1-3 sentences)
+2. **key_point**: Single memorable fact or rule
+3. **question**: Multiple choice quiz (4 options)
+4. **formula**: Mathematical formula with brief explanation
+5. **diagram**: Description of visual concept
+6. **example**: Concrete real-world application
+7. **summary**: Brief lesson recap (always end lesson with this)
+
+### Question Rules
+- 2-3 questions per lesson
+- Place AFTER teaching content
+- Never two questions in a row
+- Test what was just taught
+- Vary question types:
+  * Recall: "What is...?"
+  * Application: "If X happens, what would...?"
+  * Comparison: "What's the difference between...?"
+
+### Wrong Answer Rules (CRITICAL)
+- Make ALL wrong answers PLAUSIBLE
+- Use common misconceptions
+- Same length/format as correct answer
+- Never obviously wrong or silly
+- Vary correct answer position (0, 1, 2, or 3)
+
+## Quality Standards
+- Every step should be completable in 10-30 seconds
+- Build confidence through quick wins
+- Test understanding, not memory tricks
+- Feel encouraging, not overwhelming
+- EXPAND brief topics into proper educational content
+- Add standard curriculum knowledge where appropriate`
+
+function buildTextCourseGenerationUserPrompt(textContent: string, userTitle?: string): string {
+  const titleInstruction = userTitle
+    ? `The user has specified the course title should be: "${userTitle}". Use this as the title.`
+    : `Generate an appropriate, descriptive title based on the content.`
+
+  return `Create a comprehensive study course from the following text content. The user has provided topics, notes, or an outline that you should EXPAND into full educational material.
+
+## User-Provided Content:
+
+${textContent}
+
+## Instructions:
+${titleInstruction}
+
+IMPORTANT: The text above may be brief topic lists or outlines. You should EXPAND each topic into comprehensive educational content using standard curriculum knowledge. Don't just repeat the topics - teach them fully.
+
+Create a structured course that transforms these topics into complete study material with interactive questions. Return a JSON object with this exact structure:
+
+{
+  "title": "Clear, descriptive course title",
+  "overview": "A 2-3 paragraph overview explaining what this course covers, why it's important, and what the student will learn. Make it engaging and informative.",
+  "keyConcepts": ["Array of 5-10 key terms, concepts, or vocabulary that students should know"],
+  "sections": [
+    {
+      "title": "Section/Lesson title",
+      "originalNotes": "The relevant portion from the user's input that this section covers",
+      "steps": [
+        {
+          "type": "explanation",
+          "content": "A paragraph introducing or explaining a concept. Start with the big picture."
+        },
+        {
+          "type": "key_point",
+          "content": "A specific, memorable key point to remember."
+        },
+        {
+          "type": "explanation",
+          "content": "Another paragraph elaborating on the concept with more detail."
+        },
+        {
+          "type": "question",
+          "question": "What is the main purpose of [concept just taught]?",
+          "options": [
+            "Correct answer that accurately describes the concept",
+            "Plausible wrong answer based on common misconception",
+            "Another plausible wrong answer using similar vocabulary",
+            "Third wrong answer that a confused student might choose"
+          ],
+          "correctIndex": 0,
+          "explanation": "Brief explanation of why the correct answer is right."
+        },
+        {
+          "type": "key_point",
+          "content": "Another important point about this topic."
+        },
+        {
+          "type": "explanation",
+          "content": "Further elaboration with examples or applications."
+        },
+        {
+          "type": "question",
+          "question": "If [scenario], what would happen?",
+          "options": [
+            "Wrong answer A",
+            "Wrong answer B",
+            "Correct answer explaining the outcome",
+            "Wrong answer C"
+          ],
+          "correctIndex": 2,
+          "explanation": "This is correct because..."
+        },
+        {
+          "type": "summary",
+          "content": "Brief recap of the key takeaways from this section."
+        }
+      ],
+      "formulas": [
+        {
+          "formula": "The formula in clear notation",
+          "explanation": "What this formula means and when/how to use it"
+        }
+      ],
+      "diagrams": []
+    }
+  ],
+  "connections": "A paragraph explaining how the different concepts in this course connect to each other.",
+  "summary": "A concise 1-2 paragraph summary of the entire course.",
+  "furtherStudy": [
+    "Suggested topic or resource 1 for deeper learning",
+    "Suggested topic or resource 2",
+    "Suggested topic or resource 3"
+  ]
+}
+
+## CRITICAL Requirements:
+
+1. **EXPAND the topics** - Don't just list what the user provided. Create full educational content for each topic.
+
+2. **Include 2-3 questions per section** distributed throughout the steps.
+
+3. **Question placement**: After every 2-3 explanation/key_point steps, add a question.
+
+4. **Never put two questions in a row**.
+
+5. **Wrong answer quality**: Make wrong answers PLAUSIBLE (common misconceptions).
+
+6. **Correct answer position**: Vary correctIndex (0-3) across questions.
+
+7. **Create multiple sections** based on the topics provided. Each major topic should be its own section.
+
+8. **Include formulas** if the topics are mathematical or scientific in nature.
+
+9. **Be thorough** - this should feel like a complete mini-course covering all the topics mentioned.
+
+Return ONLY the JSON object, no additional text, markdown formatting, or code blocks.`
+}
+
+/**
+ * Returns the prompts for generating a study course from plain text content
+ */
+export function getTextCoursePrompt(
+  textContent: string,
+  userTitle?: string
+): { systemPrompt: string; userPrompt: string } {
+  return {
+    systemPrompt: TEXT_COURSE_GENERATION_SYSTEM_PROMPT,
+    userPrompt: buildTextCourseGenerationUserPrompt(textContent, userTitle),
   }
 }
 

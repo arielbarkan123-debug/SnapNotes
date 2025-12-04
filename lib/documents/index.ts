@@ -15,7 +15,7 @@ import { processPDF, getPDFPreview, isValidPDF } from './pdf'
 import { processDOCX, getDOCXPreview, isValidDOCX } from './docx'
 
 // Re-export types and functions from specific processors
-export { type ExtractedDocument } from './pptx'
+export { type ExtractedDocument, type ExtractedImage } from './pptx'
 export { processPPTX, getPPTXPreview, isValidPPTX }
 export { processPDF, getPDFPreview, isValidPDF }
 export { processDOCX, getDOCXPreview, isValidDOCX }

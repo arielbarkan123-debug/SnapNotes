@@ -25,7 +25,7 @@ interface ProgressStage {
   percent: number
 }
 
-type SourceType = 'image' | 'pdf' | 'pptx' | 'docx'
+type SourceType = 'image' | 'pdf' | 'pptx' | 'docx' | 'text'
 
 // ============================================================================
 // Constants
@@ -92,11 +92,45 @@ const DOCUMENT_PROGRESS_STAGES: ProgressStage[] = [
   },
 ]
 
+const TEXT_PROGRESS_STAGES: ProgressStage[] = [
+  {
+    message: 'Analyzing your content...',
+    submessage: 'Understanding topics and structure',
+    percent: 15,
+  },
+  {
+    message: 'Expanding your topics...',
+    submessage: 'Adding educational content and explanations',
+    percent: 35,
+  },
+  {
+    message: 'Creating lessons...',
+    submessage: 'Organizing content into bite-sized steps',
+    percent: 55,
+  },
+  {
+    message: 'Generating questions...',
+    submessage: 'Creating interactive quizzes',
+    percent: 75,
+  },
+  {
+    message: 'Adding finishing touches...',
+    submessage: 'Organizing sections and key points',
+    percent: 90,
+  },
+  {
+    message: 'Almost done...',
+    submessage: 'Finalizing your course',
+    percent: 95,
+  },
+]
+
 const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
   image: 'image',
   pdf: 'PDF',
   pptx: 'presentation',
   docx: 'document',
+  text: 'text',
 }
 
 const SOURCE_TYPE_ICONS: Record<SourceType, string> = {
@@ -104,6 +138,7 @@ const SOURCE_TYPE_ICONS: Record<SourceType, string> = {
   pdf: '📄',
   pptx: '📊',
   docx: '📝',
+  text: '✏️',
 }
 
 const STAGE_INTERVAL = 4000 // 4 seconds per stage
@@ -123,20 +158,33 @@ function ProcessingContent() {
   const title = searchParams.get('title')
 
   // Document params
-  const documentContentParam = searchParams.get('documentContent')
+  const documentId = searchParams.get('documentId')
   const documentUrl = searchParams.get('documentUrl')
   const sourceTypeParam = searchParams.get('sourceType') as SourceType | null
 
-  // Parse document content if present
-  const documentContent = useMemo<ExtractedDocument | null>(() => {
-    if (!documentContentParam) return null
+  // Text params
+  const textContent = searchParams.get('textContent')
+
+  // State to hold document content loaded from sessionStorage
+  const [documentContent, setDocumentContent] = useState<ExtractedDocument | null>(null)
+
+  // Load document content from sessionStorage on mount
+  useEffect(() => {
+    if (!documentId) return
     try {
-      return JSON.parse(documentContentParam)
+      const stored = sessionStorage.getItem(documentId)
+      if (!stored) {
+        console.error('Document content not found in sessionStorage')
+        return
+      }
+      const parsed = JSON.parse(stored)
+      setDocumentContent(parsed)
+      // Clean up sessionStorage after successful read
+      sessionStorage.removeItem(documentId)
     } catch {
-      console.error('Failed to parse document content')
-      return null
+      console.error('Failed to parse document content from sessionStorage')
     }
-  }, [documentContentParam])
+  }, [documentId])
 
   // Parse image URLs array if present
   const imageUrls = useMemo<string[] | null>(() => {
@@ -151,11 +199,18 @@ function ProcessingContent() {
 
   // Determine source type and whether we have valid input
   const sourceType: SourceType = sourceTypeParam || (documentContent?.type as SourceType) || 'image'
-  const isDocumentSource = sourceType !== 'image' && documentContent !== null
-  const hasValidInput = isDocumentSource || imageUrl || (imageUrls && imageUrls.length > 0)
+  const isDocumentSource = sourceType !== 'image' && sourceType !== 'text' && documentContent !== null
+  const isTextSource = sourceType === 'text' && textContent !== null && textContent.length > 0
+  // For documents, we need to wait for content to load from sessionStorage
+  const isWaitingForDocumentContent = documentId && !documentContent
+  const hasValidInput = isTextSource || isDocumentSource || imageUrl || (imageUrls && imageUrls.length > 0)
 
   // Select progress stages based on source type
-  const progressStages = isDocumentSource ? DOCUMENT_PROGRESS_STAGES : IMAGE_PROGRESS_STAGES
+  const progressStages = isTextSource
+    ? TEXT_PROGRESS_STAGES
+    : isDocumentSource
+      ? DOCUMENT_PROGRESS_STAGES
+      : IMAGE_PROGRESS_STAGES
 
   const [state, setState] = useState<ProcessingState>({ status: 'processing' })
   const [currentStage, setCurrentStage] = useState(0)
@@ -164,6 +219,10 @@ function ProcessingContent() {
 
   // Generate a unique key for this processing session
   const processingKey = useMemo(() => {
+    if (textContent) {
+      // Use a hash of the text content for uniqueness
+      return `processing_text_${textContent.slice(0, 50).replace(/\s+/g, '_')}_${Date.now()}`
+    }
     if (documentContent) {
       return `processing_doc_${documentContent.title || documentUrl || Date.now()}`
     }
@@ -174,14 +233,14 @@ function ProcessingContent() {
       return `processing_${imageUrl}`
     }
     return null
-  }, [documentContent, documentUrl, imageUrls, imageUrl])
+  }, [textContent, documentContent, documentUrl, imageUrls, imageUrl])
 
-  // Redirect if no valid input
+  // Redirect if no valid input (but wait for document content to potentially load)
   useEffect(() => {
-    if (!hasValidInput) {
+    if (!hasValidInput && !isWaitingForDocumentContent) {
       router.replace('/dashboard')
     }
-  }, [hasValidInput, router])
+  }, [hasValidInput, isWaitingForDocumentContent, router])
 
   // Progress animation
   useEffect(() => {
@@ -220,7 +279,10 @@ function ProcessingContent() {
       // Build request body based on source type
       const requestBody: Record<string, unknown> = {}
 
-      if (documentContent) {
+      if (textContent) {
+        // Text-based request
+        requestBody.textContent = textContent
+      } else if (documentContent) {
         // Document-based request
         requestBody.documentContent = documentContent
         requestBody.documentUrl = documentUrl || undefined
@@ -237,6 +299,7 @@ function ProcessingContent() {
       }
 
       console.log('[Processing] Calling generate-course API with:', {
+        hasTextContent: !!textContent,
         hasDocumentContent: !!documentContent,
         hasImageUrls: !!(imageUrls && imageUrls.length > 0),
         hasImageUrl: !!imageUrl,
@@ -320,23 +383,38 @@ function ProcessingContent() {
         retryable: true,
       })
     }
-  }, [hasValidInput, documentContent, documentUrl, imageUrls, imageUrl, title, sourceType, router, processingKey, showXP, showLevelUp])
+  }, [hasValidInput, textContent, documentContent, documentUrl, imageUrls, imageUrl, title, sourceType, router, processingKey, showXP, showLevelUp])
 
   // Start generation on mount (ref prevents duplicate calls in StrictMode)
+  // Wait for document content to load if we have a documentId
   useEffect(() => {
-    if (!hasStartedRef.current && hasValidInput) {
+    if (!hasStartedRef.current && hasValidInput && !isWaitingForDocumentContent) {
       hasStartedRef.current = true
       generateCourse()
     }
-  }, [hasValidInput, generateCourse])
+  }, [hasValidInput, isWaitingForDocumentContent, generateCourse])
 
   // Handle retry
   const handleRetry = () => {
     generateCourse()
   }
 
-  if (!hasValidInput) {
+  if (!hasValidInput && !isWaitingForDocumentContent) {
     return null // Will redirect
+  }
+
+  // Show loading while waiting for document content
+  if (isWaitingForDocumentContent) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="mb-6 flex justify-center">
+            <div className="w-16 h-16 border-4 border-indigo-100 dark:border-indigo-900/50 rounded-full border-t-indigo-600 dark:border-t-indigo-400 animate-spin" />
+          </div>
+          <p className="text-gray-500 dark:text-gray-400">Loading document...</p>
+        </div>
+      </div>
+    )
   }
 
   const stage = progressStages[currentStage]
@@ -350,6 +428,7 @@ function ProcessingContent() {
             imageUrl={imageUrls?.[0] || imageUrl}
             sourceType={sourceType}
             documentTitle={documentContent?.title}
+            textPreview={textContent?.slice(0, 100)}
           />
         )}
 
@@ -378,16 +457,28 @@ interface ProcessingViewProps {
   imageUrl: string | null
   sourceType: SourceType
   documentTitle?: string
+  textPreview?: string
 }
 
-function ProcessingView({ stage, imageUrl, sourceType, documentTitle }: ProcessingViewProps) {
-  const isDocument = sourceType !== 'image'
+function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPreview }: ProcessingViewProps) {
+  const isDocument = sourceType !== 'image' && sourceType !== 'text'
+  const isText = sourceType === 'text'
 
   return (
     <div className="text-center">
-      {/* Preview - Image or Document Icon */}
+      {/* Preview - Image, Document Icon, or Text Preview */}
       <div className="mb-8 flex justify-center">
-        {isDocument ? (
+        {isText ? (
+          /* Text Preview */
+          <div className="relative w-40 h-40 rounded-lg overflow-hidden shadow-lg bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 ring-4 ring-indigo-100 dark:ring-indigo-900/50 flex flex-col items-center justify-center p-4">
+            <span className="text-4xl mb-2">{SOURCE_TYPE_ICONS[sourceType]}</span>
+            <span className="text-xs text-gray-600 dark:text-gray-300 text-center line-clamp-3 leading-tight">
+              {textPreview ? `"${textPreview}..."` : 'Your text content'}
+            </span>
+            {/* Pulse animation overlay */}
+            <div className="absolute inset-0 bg-indigo-500/10 animate-pulse" />
+          </div>
+        ) : isDocument ? (
           /* Document Preview */
           <div className="relative w-32 h-40 rounded-lg overflow-hidden shadow-lg bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 ring-4 ring-indigo-100 dark:ring-indigo-900/50 flex flex-col items-center justify-center">
             <span className="text-5xl mb-2">{SOURCE_TYPE_ICONS[sourceType]}</span>
