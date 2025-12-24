@@ -10,6 +10,87 @@
 import type { ExtractedDocument } from '@/lib/documents'
 
 // ============================================================================
+// User Context Types for Personalization
+// ============================================================================
+
+export interface UserLearningContext {
+  educationLevel: 'elementary' | 'middle_school' | 'high_school' | 'university' | 'graduate' | 'professional'
+  studySystem: 'general' | 'us' | 'uk' | 'israeli_bagrut' | 'ib' | 'ap' | 'other'
+  studyGoal: 'exam_prep' | 'general_learning' | 'skill_improvement'
+  learningStyles: string[]
+}
+
+// Helper function to get education level description for prompts
+function getEducationLevelDescription(level: UserLearningContext['educationLevel']): string {
+  const descriptions: Record<UserLearningContext['educationLevel'], string> = {
+    elementary: 'elementary school student (ages 6-11). Use very simple vocabulary, short sentences, fun examples, and lots of encouragement. Avoid complex terms.',
+    middle_school: 'middle school student (ages 11-14). Use clear language, relatable examples, and build concepts step by step. Introduce technical terms gradually.',
+    high_school: 'high school student (ages 14-18). Use age-appropriate vocabulary, provide real-world applications, and prepare them for exams.',
+    university: 'university/college student. Use academic language, include theoretical depth, and reference scholarly concepts when appropriate.',
+    graduate: 'graduate student (Masters/PhD level). Use advanced terminology, assume foundational knowledge, and include nuanced explanations.',
+    professional: 'working professional seeking practical knowledge. Focus on real-world applications, efficiency, and actionable insights.',
+  }
+  return descriptions[level]
+}
+
+// Helper function to get study system context for prompts
+function getStudySystemContext(system: UserLearningContext['studySystem']): string {
+  const contexts: Record<UserLearningContext['studySystem'], string> = {
+    general: '',
+    us: 'The student follows the US educational system. Reference Common Core standards when relevant.',
+    uk: 'The student follows the UK educational system. Reference GCSE/A-Level standards when relevant.',
+    israeli_bagrut: 'The student is preparing for Israeli Bagrut exams. Structure content to align with matriculation exam format.',
+    ib: 'The student is in the IB (International Baccalaureate) program. Emphasize critical thinking and international perspectives.',
+    ap: 'The student is taking AP (Advanced Placement) courses. Prepare content at college-level rigor.',
+    other: '',
+  }
+  return contexts[system]
+}
+
+// Helper function to get study goal context for prompts
+function getStudyGoalContext(goal: UserLearningContext['studyGoal']): string {
+  const contexts: Record<UserLearningContext['studyGoal'], string> = {
+    exam_prep: 'The student is preparing for exams. Emphasize testable knowledge, include more practice questions, and highlight commonly tested concepts.',
+    general_learning: 'The student is learning for general knowledge. Focus on understanding concepts deeply and making connections between ideas.',
+    skill_improvement: 'The student is building practical skills. Include hands-on examples, real-world applications, and actionable takeaways.',
+  }
+  return contexts[goal]
+}
+
+// Build personalization section for prompts
+function buildPersonalizationSection(userContext?: UserLearningContext): string {
+  if (!userContext) return ''
+
+  const parts: string[] = []
+
+  parts.push(`\n## Student Profile - IMPORTANT: Adapt ALL content to this level`)
+  parts.push(`The student is a ${getEducationLevelDescription(userContext.educationLevel)}`)
+
+  const systemContext = getStudySystemContext(userContext.studySystem)
+  if (systemContext) {
+    parts.push(systemContext)
+  }
+
+  parts.push(getStudyGoalContext(userContext.studyGoal))
+
+  if (userContext.learningStyles.length > 0) {
+    const styleDescriptions: Record<string, string> = {
+      reading: 'reading and text explanations',
+      visual: 'diagrams and visual content',
+      practice: 'hands-on practice and self-testing',
+    }
+    const styles = userContext.learningStyles
+      .map(s => styleDescriptions[s] || s)
+      .join(', ')
+    parts.push(`The student prefers learning through: ${styles}.`)
+  }
+
+  parts.push(`\n**CRITICAL**: Vocabulary, examples, and complexity MUST match the student's education level. Do not use terms or concepts above their level without explanation.`)
+
+  return parts.join('\n')
+}
+
+// ============================================================================
 // Types for Prompt Responses
 // ============================================================================
 
@@ -349,7 +430,8 @@ When images are provided, incorporate them into the course:
 function buildCourseGenerationUserPrompt(
   extractedContent: string,
   userTitle?: string,
-  imageCount?: number
+  imageCount?: number,
+  userContext?: UserLearningContext
 ): string {
   const titleInstruction = userTitle
     ? `The user has specified the course title should be: "${userTitle}". Use this as the title.`
@@ -362,7 +444,9 @@ When including an image in a step, add "imageIndex": <number> to reference it.
 Use images where they would enhance understanding of the concepts.`
     : ''
 
-  return `Based on the following extracted notes, create a comprehensive study course with embedded active recall questions.${imageInstruction}
+  const personalizationSection = buildPersonalizationSection(userContext)
+
+  return `Based on the following extracted notes, create a comprehensive study course with embedded active recall questions.${imageInstruction}${personalizationSection}
 
 ## Extracted Notes Content:
 ${extractedContent}
@@ -512,15 +596,17 @@ Return ONLY the JSON object, no additional text, markdown formatting, or code bl
  * @param extractedContent - The extracted content from image analysis
  * @param userTitle - Optional user-provided title
  * @param imageCount - Number of available images for the course
+ * @param userContext - Optional user learning context for personalization
  */
 export function getCourseGenerationPrompt(
   extractedContent: string,
   userTitle?: string,
-  imageCount?: number
+  imageCount?: number,
+  userContext?: UserLearningContext
 ): { systemPrompt: string; userPrompt: string } {
   return {
     systemPrompt: COURSE_GENERATION_SYSTEM_PROMPT,
-    userPrompt: buildCourseGenerationUserPrompt(extractedContent, userTitle, imageCount)
+    userPrompt: buildCourseGenerationUserPrompt(extractedContent, userTitle, imageCount, userContext)
   }
 }
 
@@ -725,7 +811,8 @@ When images are extracted from the document, incorporate them:
 function buildDocumentCourseGenerationUserPrompt(
   document: ExtractedDocument,
   userTitle?: string,
-  imageCount?: number
+  imageCount?: number,
+  userContext?: UserLearningContext
 ): string {
   const titleInstruction = userTitle
     ? `The user has specified the course title should be: "${userTitle}". Use this as the title.`
@@ -743,7 +830,9 @@ function buildDocumentCourseGenerationUserPrompt(
 IMPORTANT: You MUST include images in your course! For each image available, add "imageIndex": <number> and "imageAlt": "<description>" to at least one relevant step. Distribute images throughout the course to enhance visual learning.`
     : ''
 
-  return `Create a comprehensive study course from this ${documentTypeLabel}.
+  const personalizationSection = buildPersonalizationSection(userContext)
+
+  return `Create a comprehensive study course from this ${documentTypeLabel}.${personalizationSection}
 
 ## Document Information:
 - Title: ${document.title}
@@ -856,15 +945,17 @@ Return ONLY the JSON object, no additional text, markdown formatting, or code bl
  * @param document - The extracted document content
  * @param userTitle - Optional user-provided title
  * @param imageCount - Number of available images extracted from the document
+ * @param userContext - Optional user learning context for personalization
  */
 export function getDocumentCoursePrompt(
   document: ExtractedDocument,
   userTitle?: string,
-  imageCount?: number
+  imageCount?: number,
+  userContext?: UserLearningContext
 ): { systemPrompt: string; userPrompt: string } {
   return {
     systemPrompt: DOCUMENT_COURSE_GENERATION_SYSTEM_PROMPT,
-    userPrompt: buildDocumentCourseGenerationUserPrompt(document, userTitle, imageCount),
+    userPrompt: buildDocumentCourseGenerationUserPrompt(document, userTitle, imageCount, userContext),
   }
 }
 
@@ -931,12 +1022,14 @@ const TEXT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who cre
 - EXPAND brief topics into proper educational content
 - Add standard curriculum knowledge where appropriate`
 
-function buildTextCourseGenerationUserPrompt(textContent: string, userTitle?: string): string {
+function buildTextCourseGenerationUserPrompt(textContent: string, userTitle?: string, userContext?: UserLearningContext): string {
   const titleInstruction = userTitle
     ? `The user has specified the course title should be: "${userTitle}". Use this as the title.`
     : `Generate an appropriate, descriptive title based on the content.`
 
-  return `Create a comprehensive study course from the following text content. The user has provided topics, notes, or an outline that you should EXPAND into full educational material.
+  const personalizationSection = buildPersonalizationSection(userContext)
+
+  return `Create a comprehensive study course from the following text content. The user has provided topics, notes, or an outline that you should EXPAND into full educational material.${personalizationSection}
 
 ## User-Provided Content:
 
@@ -1050,14 +1143,18 @@ Return ONLY the JSON object, no additional text, markdown formatting, or code bl
 
 /**
  * Returns the prompts for generating a study course from plain text content
+ * @param textContent - The plain text content to generate a course from
+ * @param userTitle - Optional user-provided title
+ * @param userContext - Optional user learning context for personalization
  */
 export function getTextCoursePrompt(
   textContent: string,
-  userTitle?: string
+  userTitle?: string,
+  userContext?: UserLearningContext
 ): { systemPrompt: string; userPrompt: string } {
   return {
     systemPrompt: TEXT_COURSE_GENERATION_SYSTEM_PROMPT,
-    userPrompt: buildTextCourseGenerationUserPrompt(textContent, userTitle),
+    userPrompt: buildTextCourseGenerationUserPrompt(textContent, userTitle, userContext),
   }
 }
 

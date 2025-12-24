@@ -19,6 +19,7 @@ import {
   validateExtractedContent,
   formatExtractedContentForPrompt,
   ExtractedContent,
+  UserLearningContext,
 } from './prompts'
 import type { ExtractedDocument } from '@/lib/documents'
 import { GeneratedCourse } from '@/types'
@@ -298,20 +299,22 @@ export async function analyzeNotebookImage(imageUrl: string): Promise<AnalysisRe
  * @param extractedContent - Previously extracted content from image
  * @param userTitle - Optional user-provided title
  * @param imageUrls - Optional array of image URLs available for the course
+ * @param userContext - Optional user learning context for personalization
  * @returns Generated course object and raw response text
  * @throws ClaudeAPIError on failure
  */
 export async function generateStudyCourse(
   extractedContent: ExtractedContent,
   userTitle?: string,
-  imageUrls?: string[]
+  imageUrls?: string[],
+  userContext?: UserLearningContext
 ): Promise<CourseGenerationResult> {
   const client = getAnthropicClient()
 
   // Format extracted content for the prompt
   const formattedContent = formatExtractedContentForPrompt(extractedContent)
   const imageCount = imageUrls?.length || 0
-  const { systemPrompt, userPrompt } = getCourseGenerationPrompt(formattedContent, userTitle, imageCount)
+  const { systemPrompt, userPrompt } = getCourseGenerationPrompt(formattedContent, userTitle, imageCount, userContext)
 
   try {
     const response = await client.messages.create({
@@ -409,12 +412,14 @@ export async function generateStudyCourse(
  *
  * @param imageUrl - URL of the image to process
  * @param userTitle - Optional user-provided title
+ * @param userContext - Optional user learning context for personalization
  * @returns Both extracted content and generated course
  * @throws ClaudeAPIError on failure
  */
 export async function generateCourseFromImage(
   imageUrl: string,
-  userTitle?: string
+  userTitle?: string,
+  userContext?: UserLearningContext
 ): Promise<FullPipelineResult> {
   // Step 1: Extract content from image
   const { extractedContent, rawText: extractionRawText } = await analyzeNotebookImage(imageUrl)
@@ -422,7 +427,9 @@ export async function generateCourseFromImage(
   // Step 2: Generate course from extracted content
   const { course: generatedCourse, rawText: generationRawText } = await generateStudyCourse(
     extractedContent,
-    userTitle
+    userTitle,
+    undefined,
+    userContext
   )
 
   return {
@@ -764,12 +771,14 @@ async function analyzeImagesInBatches(imageUrls: string[]): Promise<AnalysisResu
  *
  * @param imageUrls - Array of URLs of images to process
  * @param userTitle - Optional user-provided title
+ * @param userContext - Optional user learning context for personalization
  * @returns Both extracted content and generated course
  * @throws ClaudeAPIError on failure
  */
 export async function generateCourseFromMultipleImages(
   imageUrls: string[],
-  userTitle?: string
+  userTitle?: string,
+  userContext?: UserLearningContext
 ): Promise<FullPipelineResult> {
   // Step 1: Extract content from all images
   const { extractedContent, rawText: extractionRawText } =
@@ -777,7 +786,7 @@ export async function generateCourseFromMultipleImages(
 
   // Step 2: Generate course from combined extracted content
   const { course: generatedCourse, rawText: generationRawText } =
-    await generateStudyCourse(extractedContent, userTitle)
+    await generateStudyCourse(extractedContent, userTitle, undefined, userContext)
 
   return {
     extractedContent,
@@ -803,17 +812,19 @@ export interface DocumentCourseResult {
  * @param document - ExtractedDocument from PDF, PPTX, or DOCX processing
  * @param userTitle - Optional user-provided title
  * @param imageUrls - Optional array of image URLs extracted from the document
+ * @param userContext - Optional user learning context for personalization
  * @returns Generated course and raw response text
  * @throws ClaudeAPIError on failure
  */
 export async function generateCourseFromDocument(
   document: ExtractedDocument,
   userTitle?: string,
-  imageUrls?: string[]
+  imageUrls?: string[],
+  userContext?: UserLearningContext
 ): Promise<DocumentCourseResult> {
   const client = getAnthropicClient()
   const imageCount = imageUrls?.length || 0
-  const { systemPrompt, userPrompt } = getDocumentCoursePrompt(document, userTitle, imageCount)
+  const { systemPrompt, userPrompt } = getDocumentCoursePrompt(document, userTitle, imageCount, userContext)
 
   try {
     const response = await client.messages.create({
@@ -947,12 +958,14 @@ export interface TextCourseResult {
  *
  * @param textContent - Plain text content provided by the user
  * @param userTitle - Optional user-provided title
+ * @param userContext - Optional user learning context for personalization
  * @returns Generated course and raw response text
  * @throws ClaudeAPIError on failure
  */
 export async function generateCourseFromText(
   textContent: string,
-  userTitle?: string
+  userTitle?: string,
+  userContext?: UserLearningContext
 ): Promise<TextCourseResult> {
   // Validate text content
   if (!textContent || textContent.trim().length === 0) {
@@ -971,7 +984,7 @@ export async function generateCourseFromText(
   }
 
   const client = getAnthropicClient()
-  const { systemPrompt, userPrompt } = getTextCoursePrompt(textContent, userTitle)
+  const { systemPrompt, userPrompt } = getTextCoursePrompt(textContent, userTitle, userContext)
 
   try {
     const response = await client.messages.create({

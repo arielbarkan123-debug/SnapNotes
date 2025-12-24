@@ -139,20 +139,35 @@ export default function TrueFalse({
               : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
           }`}
         >
-          <p
-            className={`font-bold text-lg text-center ${
-              isCorrect ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
-            }`}
-          >
-            {isCorrect ? 'Correct! 🎉' : 'Not quite right'}
-          </p>
-          {!isCorrect && (
-            <p className="text-gray-600 dark:text-gray-400 mt-1 text-center">
-              The statement is{' '}
-              <span className="font-semibold text-green-600 dark:text-green-400">
-                {correct ? 'TRUE' : 'FALSE'}
-              </span>
-            </p>
+          {isCorrect ? (
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <span className="text-2xl">🎉</span>
+                <p className="font-bold text-lg text-green-700 dark:text-green-400">
+                  Correct!
+                </p>
+              </div>
+              <p className="text-sm text-green-600 dark:text-green-500">
+                You correctly identified this statement as {correct ? 'true' : 'false'}.
+              </p>
+            </div>
+          ) : (
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <span className="text-2xl">💡</span>
+                <p className="font-bold text-lg text-red-700 dark:text-red-400">
+                  Let&apos;s learn from this
+                </p>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 mb-3">
+                This is a common misconception. The statement is actually:
+              </p>
+              <div className="inline-block bg-white dark:bg-gray-800 rounded-lg px-4 py-2">
+                <span className={`font-bold text-lg ${correct ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                  {correct ? '✓ TRUE' : '✗ FALSE'}
+                </span>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -160,7 +175,9 @@ export default function TrueFalse({
       {/* Explanation */}
       {hasAnswered && explanation && (
         <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Explanation</p>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+            {isCorrect ? 'Why this is correct:' : 'Here\'s why:'}
+          </p>
           <p className="text-gray-700 dark:text-gray-300">{explanation}</p>
         </div>
       )}

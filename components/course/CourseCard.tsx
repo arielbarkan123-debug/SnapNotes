@@ -1,16 +1,133 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { Course } from '@/types'
+import { Course, GeneratedCourse } from '@/types'
 import { useToast } from '@/contexts/ToastContext'
 import DeleteConfirmModal from './DeleteConfirmModal'
 
 interface CourseCardProps {
   course: Course
   onDelete?: (courseId: string) => void
+}
+
+// Subject detection and cover image generation
+const SUBJECT_PATTERNS: { pattern: RegExp; icon: string; gradient: string }[] = [
+  { pattern: /math|algebra|calcul|geometry|trigonometry|equation|fraction/i, icon: '📐', gradient: 'from-blue-500 to-indigo-600' },
+  { pattern: /physic|force|motion|energy|wave|electric|magnet/i, icon: '⚛️', gradient: 'from-purple-500 to-pink-600' },
+  { pattern: /chemistry|chem|molecule|atom|element|reaction|compound/i, icon: '🧪', gradient: 'from-green-500 to-teal-600' },
+  { pattern: /biology|bio|cell|dna|organism|plant|animal|anatomy/i, icon: '🧬', gradient: 'from-emerald-500 to-green-600' },
+  { pattern: /history|war|ancient|civilization|revolution|empire/i, icon: '🏛️', gradient: 'from-amber-500 to-orange-600' },
+  { pattern: /geography|geo|map|country|continent|climate|earth/i, icon: '🌍', gradient: 'from-cyan-500 to-blue-600' },
+  { pattern: /english|grammar|literature|writing|essay|poem|novel/i, icon: '📝', gradient: 'from-rose-500 to-red-600' },
+  { pattern: /language|spanish|french|german|hebrew|arabic|chinese/i, icon: '🗣️', gradient: 'from-violet-500 to-purple-600' },
+  { pattern: /computer|programming|code|software|algorithm|data/i, icon: '💻', gradient: 'from-slate-500 to-gray-700' },
+  { pattern: /art|paint|draw|design|creative|music|sculpture/i, icon: '🎨', gradient: 'from-pink-500 to-rose-600' },
+  { pattern: /economics|economy|market|business|finance|money/i, icon: '📊', gradient: 'from-green-600 to-emerald-700' },
+  { pattern: /psychology|psych|mind|behavior|mental|cognitive/i, icon: '🧠', gradient: 'from-fuchsia-500 to-pink-600' },
+  { pattern: /philosophy|ethics|logic|socrates|plato|aristotle/i, icon: '🤔', gradient: 'from-indigo-500 to-violet-600' },
+  { pattern: /medicine|health|disease|treatment|diagnosis|anatomy/i, icon: '🏥', gradient: 'from-red-500 to-rose-600' },
+  { pattern: /law|legal|constitution|court|rights|justice/i, icon: '⚖️', gradient: 'from-gray-600 to-slate-700' },
+  { pattern: /sociology|social|society|culture|community/i, icon: '👥', gradient: 'from-orange-500 to-amber-600' },
+]
+
+function detectSubject(title: string): { icon: string; gradient: string } {
+  for (const subject of SUBJECT_PATTERNS) {
+    if (subject.pattern.test(title)) {
+      return { icon: subject.icon, gradient: subject.gradient }
+    }
+  }
+  // Default gradient based on title hash for variety
+  const hash = title.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  const defaultGradients = [
+    { icon: '📚', gradient: 'from-indigo-500 to-purple-600' },
+    { icon: '📖', gradient: 'from-blue-500 to-cyan-600' },
+    { icon: '✏️', gradient: 'from-amber-500 to-yellow-600' },
+    { icon: '🎯', gradient: 'from-red-500 to-orange-600' },
+    { icon: '💡', gradient: 'from-yellow-500 to-amber-600' },
+  ]
+  return defaultGradients[hash % defaultGradients.length]
+}
+
+// Difficulty levels with styling
+type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced'
+
+interface DifficultyInfo {
+  level: DifficultyLevel
+  label: string
+  color: string
+  bgColor: string
+  icon: string
+}
+
+// Estimate course difficulty based on content analysis
+function estimateDifficulty(generatedCourse: GeneratedCourse | null): DifficultyInfo {
+  if (!generatedCourse || !generatedCourse.lessons) {
+    return {
+      level: 'beginner',
+      label: 'Beginner',
+      color: 'text-green-600 dark:text-green-400',
+      bgColor: 'bg-green-100 dark:bg-green-900/30',
+      icon: '🌱',
+    }
+  }
+
+  const lessons = generatedCourse.lessons
+  let score = 0
+
+  // Factor 1: Number of lessons (more lessons = more complex)
+  if (lessons.length >= 6) score += 2
+  else if (lessons.length >= 4) score += 1
+
+  // Factor 2: Average steps per lesson
+  const totalSteps = lessons.reduce((sum, l) => sum + (l.steps?.length || 0), 0)
+  const avgSteps = totalSteps / Math.max(lessons.length, 1)
+  if (avgSteps >= 8) score += 2
+  else if (avgSteps >= 5) score += 1
+
+  // Factor 3: Question complexity (matching, sequence are harder)
+  const allSteps = lessons.flatMap(l => l.steps || [])
+  const complexQuestionTypes = ['matching', 'sequence', 'short_answer']
+  const complexQuestions = allSteps.filter(s =>
+    complexQuestionTypes.includes(s.type)
+  ).length
+  if (complexQuestions >= 5) score += 2
+  else if (complexQuestions >= 2) score += 1
+
+  // Factor 4: Content length (longer explanations = more depth)
+  const totalContentLength = allSteps.reduce(
+    (sum, s) => sum + (s.content?.length || 0),
+    0
+  )
+  if (totalContentLength >= 5000) score += 1
+
+  // Determine difficulty level
+  if (score >= 5) {
+    return {
+      level: 'advanced',
+      label: 'Advanced',
+      color: 'text-red-600 dark:text-red-400',
+      bgColor: 'bg-red-100 dark:bg-red-900/30',
+      icon: '🔥',
+    }
+  } else if (score >= 2) {
+    return {
+      level: 'intermediate',
+      label: 'Intermediate',
+      color: 'text-amber-600 dark:text-amber-400',
+      bgColor: 'bg-amber-100 dark:bg-amber-900/30',
+      icon: '⚡',
+    }
+  } else {
+    return {
+      level: 'beginner',
+      label: 'Beginner',
+      color: 'text-green-600 dark:text-green-400',
+      bgColor: 'bg-green-100 dark:bg-green-900/30',
+      icon: '🌱',
+    }
+  }
 }
 
 function formatDate(dateString: string): string {
@@ -32,6 +149,21 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
   const { success, error: showError } = useToast()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  // Calculate difficulty from course content
+  const difficulty = useMemo(
+    () => estimateDifficulty(course.generated_course),
+    [course.generated_course]
+  )
+
+  // Detect subject for cover image
+  const subject = useMemo(
+    () => detectSubject(course.title),
+    [course.title]
+  )
+
+  // Get lesson count for display
+  const lessonCount = course.generated_course?.lessons?.length || 0
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -93,31 +225,58 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
         </button>
 
         <Link href={`/course/${course.id}`} className="block">
-          {/* Thumbnail */}
-          <div className="relative aspect-square w-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-            {course.original_image_url ? (
-              <Image
-                src={course.original_image_url}
+          {/* Cover Image - External URL or Gradient Fallback */}
+          <div className={`relative aspect-[4/3] w-full overflow-hidden ${!course.cover_image_url ? `bg-gradient-to-br ${subject.gradient}` : 'bg-gray-200 dark:bg-gray-700'}`}>
+            {course.cover_image_url ? (
+              /* External cover image - use img tag for any domain */
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={course.cover_image_url}
                 alt={course.title}
-                fill
-                className="object-cover group-hover:scale-105 transition-transform duration-200"
-                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                loading="lazy"
               />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-4xl">📚</span>
+              /* Gradient fallback with decorative elements */
+              <>
+                <div className="absolute inset-0 opacity-10">
+                  <div className="absolute top-4 left-4 w-20 h-20 rounded-full bg-white/20" />
+                  <div className="absolute bottom-8 right-8 w-32 h-32 rounded-full bg-white/10" />
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full bg-white/5" />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-7xl drop-shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    {subject.icon}
+                  </span>
+                </div>
+              </>
+            )}
+            {/* Lesson count badge */}
+            {lessonCount > 0 && (
+              <div className="absolute bottom-3 left-3 bg-black/30 backdrop-blur-sm text-white text-xs font-medium px-2 py-1 rounded-full">
+                {lessonCount} lesson{lessonCount !== 1 ? 's' : ''}
               </div>
             )}
           </div>
 
           {/* Content */}
           <div className="p-4">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
               {truncateText(course.title, 50)}
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {formatDate(course.created_at)}
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {formatDate(course.created_at)}
+              </p>
+              {/* Difficulty Badge */}
+              <div
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${difficulty.bgColor} ${difficulty.color}`}
+                title={`${difficulty.label} difficulty - ${lessonCount} lesson${lessonCount !== 1 ? 's' : ''}`}
+              >
+                <span>{difficulty.icon}</span>
+                <span>{difficulty.label}</span>
+              </div>
+            </div>
           </div>
         </Link>
       </div>

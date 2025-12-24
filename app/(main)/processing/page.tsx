@@ -141,7 +141,16 @@ const SOURCE_TYPE_ICONS: Record<SourceType, string> = {
   text: '✏️',
 }
 
-const STAGE_INTERVAL = 4000 // 4 seconds per stage
+// Progress timing - faster initial stages, slower final stages
+// This creates a more honest UX where we don't fake completion
+const STAGE_INTERVALS = [
+  2000,  // Stage 1: 2s - Quick initial feedback
+  2500,  // Stage 2: 2.5s
+  3000,  // Stage 3: 3s
+  4000,  // Stage 4: 4s
+  8000,  // Stage 5: 8s - Longer for actual generation
+  15000, // Stage 6: 15s - Stay here while waiting
+]
 
 // ============================================================================
 // Main Component
@@ -242,21 +251,29 @@ function ProcessingContent() {
     }
   }, [hasValidInput, isWaitingForDocumentContent, router])
 
-  // Progress animation
+  // Track if we're on the final waiting stage
+  const [isWaitingOnFinalStage, setIsWaitingOnFinalStage] = useState(false)
+
+  // Progress animation with variable timing per stage
   useEffect(() => {
     if (state.status !== 'processing') return
 
-    const interval = setInterval(() => {
+    // Get the interval for current stage (fallback to 5s if out of bounds)
+    const currentInterval = STAGE_INTERVALS[currentStage] || 5000
+
+    const timeout = setTimeout(() => {
       setCurrentStage((prev) => {
         if (prev < progressStages.length - 1) {
           return prev + 1
         }
-        return prev // Stay on last stage
+        // On last stage, mark as waiting
+        setIsWaitingOnFinalStage(true)
+        return prev
       })
-    }, STAGE_INTERVAL)
+    }, currentInterval)
 
-    return () => clearInterval(interval)
-  }, [state.status, progressStages.length])
+    return () => clearTimeout(timeout)
+  }, [state.status, currentStage, progressStages.length])
 
   // API call
   const generateCourse = useCallback(async () => {
@@ -429,6 +446,7 @@ function ProcessingContent() {
             sourceType={sourceType}
             documentTitle={documentContent?.title}
             textPreview={textContent?.slice(0, 100)}
+            isWaitingOnFinalStage={isWaitingOnFinalStage}
           />
         )}
 
@@ -458,9 +476,10 @@ interface ProcessingViewProps {
   sourceType: SourceType
   documentTitle?: string
   textPreview?: string
+  isWaitingOnFinalStage?: boolean
 }
 
-function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPreview }: ProcessingViewProps) {
+function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPreview, isWaitingOnFinalStage }: ProcessingViewProps) {
   const isDocument = sourceType !== 'image' && sourceType !== 'text'
   const isText = sourceType === 'text'
 
@@ -532,14 +551,31 @@ function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPrevie
 
       {/* Progress Bar */}
       <div className="mb-6">
-        <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000 ease-out"
-            style={{ width: `${stage.percent}%` }}
-          />
+        <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
+          {isWaitingOnFinalStage ? (
+            /* Indeterminate progress bar when waiting on final stage */
+            <div className="absolute inset-0">
+              <div
+                className="h-full w-1/3 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full animate-indeterminate"
+              />
+            </div>
+          ) : (
+            /* Normal progress bar */
+            <div
+              className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000 ease-out"
+              style={{ width: `${stage.percent}%` }}
+            />
+          )}
         </div>
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-          {stage.percent}% complete
+          {isWaitingOnFinalStage ? (
+            <span className="flex items-center justify-center gap-2">
+              <span>Generating your course</span>
+              <span className="animate-pulse">...</span>
+            </span>
+          ) : (
+            `${stage.percent}% complete`
+          )}
         </p>
       </div>
 

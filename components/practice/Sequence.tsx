@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useCallback } from 'react'
 
 // =============================================================================
 // Types
@@ -49,14 +49,90 @@ export default function Sequence({
     dragOverIndex: null,
   })
 
-  const moveItem = (fromIndex: number, toIndex: number) => {
+  // Keyboard navigation state
+  const [focusedIndex, setFocusedIndex] = useState(0)
+  const [selectedForMove, setSelectedForMove] = useState<number | null>(null)
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([])
+
+  const moveItem = useCallback((fromIndex: number, toIndex: number) => {
     if (hasChecked) return
     if (fromIndex === toIndex) return
 
-    const newOrder = [...currentOrder]
-    const [movedItem] = newOrder.splice(fromIndex, 1)
-    newOrder.splice(toIndex, 0, movedItem)
-    setCurrentOrder(newOrder)
+    setCurrentOrder(prev => {
+      const newOrder = [...prev]
+      const [movedItem] = newOrder.splice(fromIndex, 1)
+      newOrder.splice(toIndex, 0, movedItem)
+      return newOrder
+    })
+  }, [hasChecked])
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (hasChecked) return
+
+    const maxIndex = currentOrder.length - 1
+
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault()
+        if (selectedForMove !== null) {
+          // Move selected item up
+          if (selectedForMove > 0) {
+            moveItem(selectedForMove, selectedForMove - 1)
+            setSelectedForMove(selectedForMove - 1)
+            setFocusedIndex(selectedForMove - 1)
+            setTimeout(() => itemRefs.current[selectedForMove - 1]?.focus(), 0)
+          }
+        } else {
+          // Just navigate focus up
+          const newIndex = Math.max(0, focusedIndex - 1)
+          setFocusedIndex(newIndex)
+          itemRefs.current[newIndex]?.focus()
+        }
+        break
+
+      case 'ArrowDown':
+        e.preventDefault()
+        if (selectedForMove !== null) {
+          // Move selected item down
+          if (selectedForMove < maxIndex) {
+            moveItem(selectedForMove, selectedForMove + 1)
+            setSelectedForMove(selectedForMove + 1)
+            setFocusedIndex(selectedForMove + 1)
+            setTimeout(() => itemRefs.current[selectedForMove + 1]?.focus(), 0)
+          }
+        } else {
+          // Just navigate focus down
+          const newIndex = Math.min(maxIndex, focusedIndex + 1)
+          setFocusedIndex(newIndex)
+          itemRefs.current[newIndex]?.focus()
+        }
+        break
+
+      case 'Enter':
+      case ' ':
+        e.preventDefault()
+        if (selectedForMove === focusedIndex) {
+          // Deselect
+          setSelectedForMove(null)
+        } else if (selectedForMove !== null) {
+          // Move to this position and deselect
+          moveItem(selectedForMove, focusedIndex)
+          setSelectedForMove(null)
+        } else {
+          // Select for moving
+          setSelectedForMove(focusedIndex)
+        }
+        break
+
+      case 'Escape':
+        // Deselect
+        if (selectedForMove !== null) {
+          e.preventDefault()
+          setSelectedForMove(null)
+        }
+        break
+    }
   }
 
   const moveUp = (index: number) => {
@@ -138,9 +214,10 @@ export default function Sequence({
     const isDragging = dragState.dragIndex === index
     const isDragOver = dragState.dragOverIndex === index
     const isTouchDragging = touchDragIndex === index
+    const isSelectedForMove = selectedForMove === index
 
     let baseClass =
-      'w-full p-4 rounded-xl border-2 transition-all duration-200 font-medium flex items-center gap-3 '
+      'w-full p-4 rounded-xl border-2 transition-all duration-200 font-medium flex items-center gap-3 outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 '
 
     if (hasChecked) {
       if (results[index]) {
@@ -149,6 +226,10 @@ export default function Sequence({
       } else {
         baseClass += 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'
       }
+    } else if (isSelectedForMove) {
+      // Keyboard-selected for moving
+      baseClass +=
+        'border-purple-500 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 ring-2 ring-purple-300 dark:ring-purple-700'
     } else if (isDragging || isTouchDragging) {
       baseClass +=
         'border-indigo-500 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 opacity-50 scale-95'
@@ -183,16 +264,23 @@ export default function Sequence({
   const correctCount = results.filter((r) => r).length
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="w-full max-w-2xl mx-auto" onKeyDown={handleKeyDown}>
       {/* Instruction */}
       <div className="mb-6">
         <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white leading-relaxed text-center">
           {instruction}
         </p>
         {!hasChecked && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">
-            Drag items or use arrows to reorder
-          </p>
+          <>
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">
+              {selectedForMove !== null
+                ? 'Use arrow keys to move item, Enter to place, Esc to cancel'
+                : 'Drag items or use arrows to reorder'}
+            </p>
+            <p className="text-gray-400 dark:text-gray-500 text-xs text-center mt-1">
+              Keyboard: Arrow keys to navigate, Enter/Space to select & move
+            </p>
+          </>
         )}
       </div>
 
@@ -201,6 +289,10 @@ export default function Sequence({
         {currentOrder.map((itemIndex, position) => (
           <div
             key={itemIndex}
+            ref={(el) => { itemRefs.current[position] = el }}
+            tabIndex={hasChecked ? -1 : 0}
+            role="button"
+            aria-label={`${items[itemIndex]}. Position ${position + 1} of ${items.length}. ${selectedForMove === position ? 'Selected for moving.' : ''}`}
             draggable={!hasChecked}
             onDragStart={(e) => handleDragStart(e, position)}
             onDragOver={(e) => handleDragOver(e, position)}
@@ -210,6 +302,7 @@ export default function Sequence({
             onTouchStart={() => handleTouchStart(position)}
             onTouchMove={() => handleTouchMove(position)}
             onTouchEnd={handleTouchEnd}
+            onFocus={() => setFocusedIndex(position)}
             className={getItemStyle(position)}
           >
             {/* Drag Handle */}

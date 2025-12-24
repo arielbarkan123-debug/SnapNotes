@@ -26,6 +26,8 @@ export interface Course {
   extracted_content: string | null
   /** The full AI-generated course structure */
   generated_course: GeneratedCourse
+  /** AI-generated cover image URL */
+  cover_image_url?: string | null
   /** Timestamp when the course was created */
   created_at: string
   /** Timestamp when the course was last updated */

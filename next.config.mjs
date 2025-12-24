@@ -23,6 +23,16 @@ const nextConfig = {
         protocol: 'https',
         hostname: '*.unsplash.com',
       },
+      // Lorem Picsum for course cover images
+      {
+        protocol: 'https',
+        hostname: 'picsum.photos',
+      },
+      // Fastly CDN for Picsum
+      {
+        protocol: 'https',
+        hostname: '*.picsum.photos',
+      },
     ],
     // Optimize images for performance
     formats: ['image/avif', 'image/webp'],

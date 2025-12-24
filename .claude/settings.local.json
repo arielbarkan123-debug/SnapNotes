@@ -30,7 +30,12 @@
       "Bash(npm ls:*)",
       "Bash(curl:*)",
       "Bash(echo:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(git fetch:*)",
+      "Bash(find:*)",
+      "WebSearch",
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(source /Users/curvalux/NoteSnap/.env.local)"
     ],
     "deny": [],
     "ask": []

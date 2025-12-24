@@ -12,8 +12,12 @@ type StudyGoal = 'exam_prep' | 'general_learning' | 'skill_improvement'
 type TimeAvailability = 'short' | 'medium' | 'long'
 type PreferredTime = 'morning' | 'afternoon' | 'evening' | 'varies'
 type LearningStyle = 'reading' | 'visual' | 'practice'
+type EducationLevel = 'elementary' | 'middle_school' | 'high_school' | 'university' | 'graduate' | 'professional'
+type StudySystem = 'general' | 'us' | 'uk' | 'israeli_bagrut' | 'ib' | 'ap' | 'other'
 
 interface OnboardingData {
+  educationLevel: EducationLevel | null
+  studySystem: StudySystem | null
   studyGoal: StudyGoal | null
   timeAvailability: TimeAvailability | null
   preferredTime: PreferredTime | null
@@ -23,6 +27,84 @@ interface OnboardingData {
 // =============================================================================
 // Constants
 // =============================================================================
+
+const EDUCATION_LEVELS = [
+  {
+    id: 'elementary' as EducationLevel,
+    icon: '🎒',
+    title: 'Elementary School',
+    description: 'Grades 1-5 (ages 6-11)',
+  },
+  {
+    id: 'middle_school' as EducationLevel,
+    icon: '📓',
+    title: 'Middle School',
+    description: 'Grades 6-8 (ages 11-14)',
+  },
+  {
+    id: 'high_school' as EducationLevel,
+    icon: '🎓',
+    title: 'High School',
+    description: 'Grades 9-12 (ages 14-18)',
+  },
+  {
+    id: 'university' as EducationLevel,
+    icon: '🏛️',
+    title: 'University / College',
+    description: 'Undergraduate studies',
+  },
+  {
+    id: 'graduate' as EducationLevel,
+    icon: '📜',
+    title: 'Graduate School',
+    description: "Master's or PhD studies",
+  },
+  {
+    id: 'professional' as EducationLevel,
+    icon: '💼',
+    title: 'Professional',
+    description: 'Work-related learning or certifications',
+  },
+]
+
+const STUDY_SYSTEMS = [
+  {
+    id: 'general' as StudySystem,
+    icon: '🌍',
+    title: 'General',
+    description: 'Standard curriculum or self-study',
+  },
+  {
+    id: 'us' as StudySystem,
+    icon: '🇺🇸',
+    title: 'US System',
+    description: 'American curriculum (Common Core, SAT, ACT)',
+  },
+  {
+    id: 'uk' as StudySystem,
+    icon: '🇬🇧',
+    title: 'UK System',
+    description: 'British curriculum (GCSE, A-Levels)',
+  },
+  {
+    id: 'israeli_bagrut' as StudySystem,
+    icon: '🇮🇱',
+    title: 'Israeli Bagrut',
+    description: 'Israeli matriculation exams',
+  },
+  {
+    id: 'ib' as StudySystem,
+    icon: '🌐',
+    title: 'IB (International Baccalaureate)',
+    description: 'International Baccalaureate program',
+  },
+  {
+    id: 'ap' as StudySystem,
+    icon: '📚',
+    title: 'AP (Advanced Placement)',
+    description: 'College-level courses in high school',
+  },
+]
 
 const STUDY_GOALS = [
   {
@@ -114,7 +196,7 @@ const LEARNING_STYLES = [
   },
 ]
 
-const TOTAL_STEPS = 4
+const TOTAL_STEPS = 6
 
 // =============================================================================
 // Main Component
@@ -128,6 +210,8 @@ export default function OnboardingPage() {
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward')
 
   const [data, setData] = useState<OnboardingData>({
+    educationLevel: null,
+    studySystem: null,
     studyGoal: null,
     timeAvailability: null,
     preferredTime: null,
@@ -167,14 +251,22 @@ export default function OnboardingPage() {
   const handleSelect = (value: string) => {
     switch (currentStep) {
       case 1:
-        setData(prev => ({ ...prev, studyGoal: value as StudyGoal }))
+        setData(prev => ({ ...prev, educationLevel: value as EducationLevel }))
         nextStep()
         break
       case 2:
-        setData(prev => ({ ...prev, timeAvailability: value as TimeAvailability }))
+        setData(prev => ({ ...prev, studySystem: value as StudySystem }))
         nextStep()
         break
       case 3:
+        setData(prev => ({ ...prev, studyGoal: value as StudyGoal }))
+        nextStep()
+        break
+      case 4:
+        setData(prev => ({ ...prev, timeAvailability: value as TimeAvailability }))
+        nextStep()
+        break
+      case 5:
         setData(prev => ({ ...prev, preferredTime: value as PreferredTime }))
         nextStep()
         break
@@ -241,6 +333,8 @@ export default function OnboardingPage() {
       // Create learning profile
       const profileData = {
         user_id: user.id,
+        education_level: data.educationLevel || 'high_school',
+        study_system: data.studySystem || 'general',
         study_goal: data.studyGoal || 'general_learning',
         preferred_study_time: data.preferredTime || 'varies',
         learning_styles: data.learningStyles.length > 0
@@ -332,6 +426,26 @@ export default function OnboardingPage() {
           >
             {currentStep === 1 && (
               <StepContent
+                title="What's your education level?"
+                subtitle="We'll adjust content complexity to match your level"
+                options={EDUCATION_LEVELS}
+                selected={data.educationLevel}
+                onSelect={handleSelect}
+              />
+            )}
+
+            {currentStep === 2 && (
+              <StepContent
+                title="What study system are you in?"
+                subtitle="This helps us tailor content to your curriculum (optional)"
+                options={STUDY_SYSTEMS}
+                selected={data.studySystem}
+                onSelect={handleSelect}
+              />
+            )}
+
+            {currentStep === 3 && (
+              <StepContent
                 title="What's your main study goal?"
                 subtitle="This helps us personalize your learning experience"
                 options={STUDY_GOALS}
@@ -340,7 +454,7 @@ export default function OnboardingPage() {
               />
             )}
 
-            {currentStep === 2 && (
+            {currentStep === 4 && (
               <StepContent
                 title="How much time can you study daily?"
                 subtitle="We'll optimize session lengths for your schedule"
@@ -350,7 +464,7 @@ export default function OnboardingPage() {
               />
             )}
 
-            {currentStep === 3 && (
+            {currentStep === 5 && (
               <StepContent
                 title="When do you prefer to study?"
                 subtitle="We'll remind you at the best times"
@@ -360,7 +474,7 @@ export default function OnboardingPage() {
               />
             )}
 
-            {currentStep === 4 && (
+            {currentStep === 6 && (
               <div className="text-center">
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
                   How do you learn best?

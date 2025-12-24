@@ -14,6 +14,23 @@ interface MultipleChoiceProps {
   onAnswer: (correct: boolean) => void
 }
 
+// Encouraging messages for wrong answers
+const ENCOURAGEMENT_MESSAGES = [
+  "Almost there! Let's see why this wasn't quite right.",
+  "Good try! Learning from mistakes is how we grow.",
+  "Don't worry, this is a tricky one. Let's review.",
+  "Close! Take a moment to understand the correct answer.",
+  "Keep going! Every attempt brings you closer to mastery.",
+]
+
+// Learning tips based on question patterns
+const LEARNING_TIPS = [
+  "Take your time to read all options before selecting.",
+  "Look for keywords that distinguish similar options.",
+  "Consider eliminating obviously wrong answers first.",
+  "Think about why the correct answer makes sense.",
+]
+
 interface ShuffledOption {
   text: string
   originalIndex: number
@@ -33,6 +50,18 @@ export default function MultipleChoice({
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [hasChecked, setHasChecked] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
+  const [attemptCount, setAttemptCount] = useState(0)
+  const [showFinalFeedback, setShowFinalFeedback] = useState(false)
+
+  // Get random encouraging message and tip (stable per render)
+  const encouragementMessage = useMemo(() =>
+    ENCOURAGEMENT_MESSAGES[Math.floor(Math.random() * ENCOURAGEMENT_MESSAGES.length)],
+    []
+  )
+  const learningTip = useMemo(() =>
+    LEARNING_TIPS[Math.floor(Math.random() * LEARNING_TIPS.length)],
+    []
+  )
 
   // Shuffle options on mount (preserving original indices)
   const shuffledOptions = useMemo<ShuffledOption[]>(() => {
@@ -61,7 +90,33 @@ export default function MultipleChoice({
     const correct = selectedIndex === correctShuffledIndex
     setIsCorrect(correct)
     setHasChecked(true)
-    onAnswer(correct)
+    setAttemptCount(prev => prev + 1)
+
+    if (correct) {
+      // Correct answer - show final feedback and notify parent
+      setShowFinalFeedback(true)
+      onAnswer(true)
+    } else if (attemptCount === 0) {
+      // First wrong attempt - allow retry
+      // Don't notify parent yet, wait for second attempt or continue
+    } else {
+      // Second+ wrong attempt - show final feedback
+      setShowFinalFeedback(true)
+      onAnswer(false)
+    }
+  }
+
+  const handleTryAgain = () => {
+    // Reset for another attempt
+    setSelectedIndex(null)
+    setHasChecked(false)
+    setIsCorrect(false)
+  }
+
+  const handleShowAnswer = () => {
+    // User chose to see answer instead of trying again
+    setShowFinalFeedback(true)
+    onAnswer(false)
   }
 
   const getOptionStyle = (index: number) => {
@@ -154,31 +209,89 @@ export default function MultipleChoice({
           className={`mb-4 p-4 rounded-xl ${
             isCorrect
               ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-              : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+              : showFinalFeedback
+                ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                : 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800'
           }`}
         >
-          <p
-            className={`font-bold text-lg ${
-              isCorrect ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
-            }`}
-          >
-            {isCorrect ? 'Correct! 🎉' : 'Not quite right'}
-          </p>
-          {!isCorrect && (
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              The correct answer was:{' '}
-              <span className="font-semibold text-green-600 dark:text-green-400">
-                {options[correctIndex]}
-              </span>
-            </p>
+          {isCorrect ? (
+            // Correct answer feedback
+            <>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">🎉</span>
+                <p className="font-bold text-lg text-green-700 dark:text-green-400">
+                  {attemptCount === 1 ? 'Correct! First try!' : 'Correct! Great perseverance!'}
+                </p>
+              </div>
+              {attemptCount > 1 && (
+                <p className="text-sm text-green-600 dark:text-green-500">
+                  You got it on attempt #{attemptCount}. Practice makes perfect!
+                </p>
+              )}
+            </>
+          ) : showFinalFeedback ? (
+            // Final wrong answer feedback (after all attempts)
+            <>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">💡</span>
+                <p className="font-bold text-lg text-red-700 dark:text-red-400">
+                  Let&apos;s learn from this
+                </p>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 mb-2">
+                {encouragementMessage}
+              </p>
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 mt-3">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  The correct answer:
+                </p>
+                <p className="font-semibold text-green-600 dark:text-green-400">
+                  {options[correctIndex]}
+                </p>
+              </div>
+              {/* Learning tip */}
+              <div className="mt-3 flex items-start gap-2 text-sm text-gray-500 dark:text-gray-400">
+                <span>💭</span>
+                <p className="italic">{learningTip}</p>
+              </div>
+            </>
+          ) : (
+            // First wrong attempt - encourage retry
+            <>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">🤔</span>
+                <p className="font-bold text-lg text-amber-700 dark:text-amber-400">
+                  Not quite - want to try again?
+                </p>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
+                Take another look at the options. You&apos;ve got this!
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={handleTryAgain}
+                  className="flex-1 py-2.5 px-4 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition flex items-center justify-center gap-2"
+                >
+                  <span>🔄</span>
+                  <span>Try Again</span>
+                </button>
+                <button
+                  onClick={handleShowAnswer}
+                  className="flex-1 py-2.5 px-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition flex items-center justify-center gap-2"
+                >
+                  <span>👁️</span>
+                  <span>Show Answer</span>
+                </button>
+              </div>
+            </>
           )}
         </div>
       )}
 
-      {/* Explanation */}
-      {hasChecked && explanation && (
+      {/* Explanation - only show after final feedback */}
+      {showFinalFeedback && explanation && (
         <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Explanation</p>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Why this is correct:</p>
           <p className="text-gray-700 dark:text-gray-300">{explanation}</p>
         </div>
       )}
@@ -196,17 +309,20 @@ export default function MultipleChoice({
         >
           Check Answer
         </button>
-      ) : (
+      ) : showFinalFeedback ? (
         <button
           onClick={() => {
-            // Reset state handled by parent via onAnswer callback
-            // This button is for UI flow - parent should advance to next card
+            // Parent handles advancing to next question via onAnswer callback already called
           }}
-          className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all"
+          className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all ${
+            isCorrect
+              ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white'
+              : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white'
+          }`}
         >
-          Continue
+          {isCorrect ? 'Continue' : 'Got it, continue'}
         </button>
-      )}
+      ) : null /* Try Again / Show Answer buttons are shown inline above */}
     </div>
   )
 }

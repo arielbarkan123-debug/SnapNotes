@@ -44,6 +44,98 @@ export default function Matching({
     { x1: number; y1: number; x2: number; y2: number; termIndex: number }[]
   >([])
 
+  // Keyboard navigation state
+  const [focusedColumn, setFocusedColumn] = useState<'terms' | 'definitions'>('terms')
+  const [focusedIndex, setFocusedIndex] = useState(0)
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (hasChecked) return
+
+    const maxTermIndex = terms.length - 1
+    const maxDefIndex = definitions.length - 1
+
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault()
+        if (focusedColumn === 'terms') {
+          setFocusedIndex(Math.max(0, focusedIndex - 1))
+          termRefs.current[Math.max(0, focusedIndex - 1)]?.focus()
+        } else {
+          setFocusedIndex(Math.max(0, focusedIndex - 1))
+          defRefs.current[Math.max(0, focusedIndex - 1)]?.focus()
+        }
+        break
+
+      case 'ArrowDown':
+        e.preventDefault()
+        if (focusedColumn === 'terms') {
+          setFocusedIndex(Math.min(maxTermIndex, focusedIndex + 1))
+          termRefs.current[Math.min(maxTermIndex, focusedIndex + 1)]?.focus()
+        } else {
+          setFocusedIndex(Math.min(maxDefIndex, focusedIndex + 1))
+          defRefs.current[Math.min(maxDefIndex, focusedIndex + 1)]?.focus()
+        }
+        break
+
+      case 'ArrowLeft':
+        e.preventDefault()
+        if (focusedColumn === 'definitions') {
+          setFocusedColumn('terms')
+          const newIndex = Math.min(focusedIndex, maxTermIndex)
+          setFocusedIndex(newIndex)
+          termRefs.current[newIndex]?.focus()
+        }
+        break
+
+      case 'ArrowRight':
+      case 'Tab':
+        if (e.key === 'Tab' && e.shiftKey) return // Allow normal shift+tab
+        if (focusedColumn === 'terms' && selectedTerm !== null) {
+          e.preventDefault()
+          setFocusedColumn('definitions')
+          setFocusedIndex(0)
+          defRefs.current[0]?.focus()
+        }
+        break
+
+      case 'Enter':
+      case ' ':
+        e.preventDefault()
+        if (focusedColumn === 'terms') {
+          handleTermClick(focusedIndex)
+          // If term was selected, move to definitions
+          if (!isTermMatched(focusedIndex)) {
+            setFocusedColumn('definitions')
+            setFocusedIndex(0)
+            setTimeout(() => defRefs.current[0]?.focus(), 0)
+          }
+        } else if (selectedTerm !== null) {
+          handleDefinitionClick(focusedIndex)
+          // Move back to terms for next match
+          setFocusedColumn('terms')
+          const nextUnmatchedTerm = terms.findIndex((_, i) =>
+            !matches.some(m => m.termIndex === i) && i !== selectedTerm
+          )
+          if (nextUnmatchedTerm !== -1) {
+            setFocusedIndex(nextUnmatchedTerm)
+            setTimeout(() => termRefs.current[nextUnmatchedTerm]?.focus(), 0)
+          }
+        }
+        break
+
+      case 'Escape':
+        // Deselect current term
+        if (selectedTerm !== null) {
+          e.preventDefault()
+          setSelectedTerm(null)
+          setFocusedColumn('terms')
+          termRefs.current[focusedIndex]?.focus()
+        }
+        break
+    }
+  }
+
   // Shuffle definitions on mount
   const shuffledDefinitions = useMemo<ShuffledDefinition[]>(() => {
     const indexed = definitions.map((text, originalIndex) => ({ text, originalIndex }))
@@ -222,16 +314,22 @@ export default function Matching({
   const correctCount = results.filter((r) => r).length
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
+    <div className="w-full max-w-3xl mx-auto" onKeyDown={handleKeyDown}>
       {/* Instructions */}
       <div className="mb-4 text-center">
         <p className="text-gray-600 dark:text-gray-400 text-sm">
           {hasChecked
             ? `You got ${correctCount} of ${terms.length} correct`
             : selectedTerm !== null
-              ? 'Now tap a definition to match'
-              : 'Tap a term, then tap its matching definition'}
+              ? 'Now select a definition to match (use arrows or click)'
+              : 'Select a term, then its matching definition'}
         </p>
+        {/* Keyboard instructions - only show if not checked */}
+        {!hasChecked && (
+          <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
+            Keyboard: Arrow keys to navigate, Enter/Space to select, Esc to deselect
+          </p>
+        )}
       </div>
 
       {/* Matching Area */}

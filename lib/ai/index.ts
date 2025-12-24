@@ -52,4 +52,5 @@ export type {
   ContentItem,
   DiagramItem,
   FormulaItem,
+  UserLearningContext,
 } from './prompts'

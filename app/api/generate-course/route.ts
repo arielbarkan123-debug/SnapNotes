@@ -9,6 +9,7 @@ import {
   ClaudeAPIError,
   getUserFriendlyError,
 } from '@/lib/ai'
+import type { UserLearningContext } from '@/lib/ai'
 import type { ExtractedDocument } from '@/lib/documents'
 import {
   ErrorCodes,
@@ -18,6 +19,7 @@ import {
 } from '@/lib/api/errors'
 import { generateCardsFromCourse } from '@/lib/srs'
 import { uploadExtractedImages, searchEducationalImages } from '@/lib/images'
+import { generateCourseImage } from '@/lib/ai/image-generation'
 
 // ============================================================================
 // Types
@@ -65,6 +67,27 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (authError || !user) {
       return createErrorResponse(ErrorCodes.UNAUTHORIZED, 'Please log in to generate a course')
+    }
+
+    // 1.5. Fetch user learning profile for personalization
+    let userContext: UserLearningContext | undefined
+    try {
+      const { data: profile } = await supabase
+        .from('user_learning_profile')
+        .select('education_level, study_system, study_goal, learning_styles')
+        .eq('user_id', user.id)
+        .single()
+
+      if (profile) {
+        userContext = {
+          educationLevel: profile.education_level || 'high_school',
+          studySystem: profile.study_system || 'general',
+          studyGoal: profile.study_goal || 'general_learning',
+          learningStyles: profile.learning_styles || ['practice'],
+        }
+      }
+    } catch {
+      // Continue without personalization if profile fetch fails
     }
 
     // 2. Parse request body
@@ -150,7 +173,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       if (sourceType === 'text' && textContent) {
         // Text-based generation - use text directly
         // For text courses, we can optionally search for web images later
-        const result = await generateCourseFromText(textContent, title)
+        const result = await generateCourseFromText(textContent, title, userContext)
         generatedCourse = result.generatedCourse
         extractedContent = textContent // Use the user's text as extracted content
 
@@ -203,19 +226,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         // Generate course with image information
         console.log('[GenerateCourse] Generating course with', imageUrls.length, 'images')
-        const result = await generateCourseFromDocument(documentContent, title, imageUrls)
+        const result = await generateCourseFromDocument(documentContent, title, imageUrls, userContext)
         generatedCourse = result.generatedCourse
         extractedContent = documentContent.content // Use the already extracted content
       } else if (urls.length === 1) {
         // Single image - the uploaded image itself can be referenced
         _courseImageUrls = urls
-        const result = await generateCourseFromImage(urls[0], title)
+        const result = await generateCourseFromImage(urls[0], title, userContext)
         generatedCourse = result.generatedCourse
         extractedContent = result.extractionRawText
       } else {
         // Multiple images - all uploaded images can be referenced
         _courseImageUrls = urls
-        const result = await generateCourseFromMultipleImages(urls, title)
+        const result = await generateCourseFromMultipleImages(urls, title, userContext)
         generatedCourse = result.generatedCourse
         extractedContent = result.extractionRawText
       }
@@ -291,7 +314,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       logError('GenerateCourse:cardGeneration', cardError)
     }
 
-    // 8. Return success
+    // 8. Generate cover image (non-blocking - fire and forget)
+    // This runs in the background and updates the course when done
+    generateCoverImage(supabase, user.id, course.id, generatedCourse.title).catch((err) => {
+      logError('GenerateCourse:coverImage', err)
+    })
+
+    // 9. Return success
     const response: GenerateCourseSuccessResponse = {
       success: true,
       courseId: course.id,
@@ -329,6 +358,71 @@ function mapClaudeAPIErrorCode(errorCode: string): typeof ErrorCodes[keyof typeo
       return ErrorCodes.PROCESSING_TIMEOUT
     default:
       return ErrorCodes.AI_PROCESSING_FAILED
+  }
+}
+
+// ============================================================================
+// Cover Image Generation Helper
+// ============================================================================
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function generateCoverImage(supabase: any, userId: string, courseId: string, title: string) {
+  try {
+    // Generate the cover image using Gemini Nano Banana
+    const result = await generateCourseImage(title)
+
+    if (!result.success) {
+      console.log('[GenerateCourse] Cover image generation failed:', result.error)
+      return
+    }
+
+    let coverUrl: string
+
+    // If we got base64 image data, upload to Supabase storage
+    if (result.imageBase64) {
+      const imageBuffer = Buffer.from(result.imageBase64, 'base64')
+      const fileName = `covers/${userId}/${courseId}-cover.png`
+
+      const { error: uploadError } = await supabase.storage
+        .from('course-images')
+        .upload(fileName, imageBuffer, {
+          contentType: result.mimeType || 'image/png',
+          upsert: true,
+        })
+
+      if (uploadError) {
+        console.error('[GenerateCourse] Cover upload failed:', uploadError)
+        // Use data URL as fallback
+        coverUrl = `data:${result.mimeType || 'image/png'};base64,${result.imageBase64}`
+      } else {
+        // Get public URL from storage
+        const { data: { publicUrl } } = supabase.storage
+          .from('course-images')
+          .getPublicUrl(fileName)
+        coverUrl = publicUrl
+      }
+    } else if (result.imageUrl) {
+      // Direct URL (from fallback services)
+      coverUrl = result.imageUrl
+    } else {
+      console.log('[GenerateCourse] No image data in result')
+      return
+    }
+
+    // Update course with cover image URL
+    const { error: updateError } = await supabase
+      .from('courses')
+      .update({ cover_image_url: coverUrl })
+      .eq('id', courseId)
+      .eq('user_id', userId)
+
+    if (updateError) {
+      console.error('[GenerateCourse] Cover update failed:', updateError)
+    } else {
+      console.log('[GenerateCourse] Cover image saved successfully')
+    }
+  } catch (error) {
+    console.error('[GenerateCourse] Cover generation error:', error)
   }
 }
 
