@@ -2,6 +2,7 @@
 
 import { Component, ErrorInfo, ReactNode } from 'react'
 import Button from './ui/Button'
+import { analytics } from '@/lib/analytics'
 
 // ============================================================================
 // Types
@@ -37,14 +38,23 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log error to console (in production, send to error tracking service)
+    // Log error to console
     console.error('ErrorBoundary caught an error:', error)
     console.error('Component stack:', errorInfo.componentStack)
 
     this.setState({ errorInfo })
 
-    // In production, you would send this to an error tracking service like Sentry
-    // Example: Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } })
+    // Track error in analytics
+    analytics.trackError({
+      type: 'javascript',
+      message: error.message,
+      stackTrace: error.stack,
+      pagePath: typeof window !== 'undefined' ? window.location.pathname : '',
+      componentName: 'ErrorBoundary',
+      context: {
+        componentStack: errorInfo.componentStack,
+      },
+    })
   }
 
   handleReset = () => {

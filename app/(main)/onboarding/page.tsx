@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useFunnelTracking, useEventTracking } from '@/lib/analytics'
 
 // =============================================================================
 // Types
@@ -218,6 +219,26 @@ export default function OnboardingPage() {
     learningStyles: [],
   })
 
+  // Analytics tracking
+  const { trackStep } = useFunnelTracking('onboarding')
+  const { trackFeature } = useEventTracking()
+
+  // Track step changes
+  const trackOnboardingStep = useCallback((step: number) => {
+    const stepNames = [
+      'start',
+      'education_level',
+      'study_system',
+      'study_goal',
+      'time_availability',
+      'preferred_time',
+      'learning_style',
+    ]
+    if (step >= 1 && step <= stepNames.length) {
+      trackStep(stepNames[step - 1], step)
+    }
+  }, [trackStep])
+
   // Check if user already has a profile
   useEffect(() => {
     const checkProfile = async () => {
@@ -242,10 +263,12 @@ export default function OnboardingPage() {
       }
 
       setIsLoading(false)
+      // Track onboarding start
+      trackOnboardingStep(1)
     }
 
     checkProfile()
-  }, [router])
+  }, [router, trackOnboardingStep])
 
   // Handle option selection
   const handleSelect = (value: string) => {
@@ -286,7 +309,9 @@ export default function OnboardingPage() {
   const nextStep = () => {
     if (currentStep < TOTAL_STEPS) {
       setDirection('forward')
-      setCurrentStep(prev => prev + 1)
+      const newStep = currentStep + 1
+      setCurrentStep(newStep)
+      trackOnboardingStep(newStep)
     }
   }
 
@@ -309,6 +334,15 @@ export default function OnboardingPage() {
   // Save and complete onboarding
   const completeOnboarding = async () => {
     setIsSaving(true)
+
+    // Track completion
+    trackStep('complete', 8)
+    trackFeature('onboarding_complete', {
+      educationLevel: data.educationLevel,
+      studySystem: data.studySystem,
+      studyGoal: data.studyGoal,
+      learningStyles: data.learningStyles,
+    })
 
     try {
       const supabase = createClient()
