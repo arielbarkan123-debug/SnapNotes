@@ -16,7 +16,13 @@ export async function GET(request: NextRequest) {
   const supabase = createServiceClient()
 
   try {
-    // Get daily metrics for date range
+    // Calculate previous period dates (same duration, just before current period)
+    const periodDuration = endDate.getTime() - startDate.getTime()
+    const previousStartDate = new Date(startDate.getTime() - periodDuration)
+    const previousEndDate = new Date(startDate.getTime() - 1) // Day before current start
+    previousEndDate.setHours(23, 59, 59, 999)
+
+    // Get daily metrics for current date range
     const { data: dailyMetrics, error: metricsError } = await supabase
       .from('analytics_daily_metrics')
       .select('*')
@@ -26,7 +32,14 @@ export async function GET(request: NextRequest) {
 
     if (metricsError) throw metricsError
 
-    // Calculate totals
+    // Get daily metrics for previous period
+    const { data: previousMetrics } = await supabase
+      .from('analytics_daily_metrics')
+      .select('*')
+      .gte('date', formatDateForSQL(previousStartDate))
+      .lte('date', formatDateForSQL(previousEndDate))
+
+    // Calculate current period totals
     const totals = dailyMetrics?.reduce(
       (acc, day) => ({
         totalUsers: acc.totalUsers + (day.daily_active_users || 0),
@@ -38,6 +51,34 @@ export async function GET(request: NextRequest) {
       }),
       { totalUsers: 0, totalSessions: 0, totalPageViews: 0, totalEvents: 0, totalErrors: 0, newUsers: 0 }
     ) || { totalUsers: 0, totalSessions: 0, totalPageViews: 0, totalEvents: 0, totalErrors: 0, newUsers: 0 }
+
+    // Calculate previous period totals
+    const previousTotals = previousMetrics?.reduce(
+      (acc, day) => ({
+        totalUsers: acc.totalUsers + (day.daily_active_users || 0),
+        totalSessions: acc.totalSessions + (day.total_sessions || 0),
+        totalPageViews: acc.totalPageViews + (day.total_page_views || 0),
+        totalEvents: acc.totalEvents + (day.total_events || 0),
+        totalErrors: acc.totalErrors + (day.total_errors || 0),
+        newUsers: acc.newUsers + (day.new_users || 0),
+      }),
+      { totalUsers: 0, totalSessions: 0, totalPageViews: 0, totalEvents: 0, totalErrors: 0, newUsers: 0 }
+    ) || { totalUsers: 0, totalSessions: 0, totalPageViews: 0, totalEvents: 0, totalErrors: 0, newUsers: 0 }
+
+    // Calculate percentage changes
+    const calculateChange = (current: number, previous: number): number => {
+      if (previous === 0) return current > 0 ? 100 : 0
+      return Math.round(((current - previous) / previous) * 100)
+    }
+
+    const comparison = {
+      users: calculateChange(totals.totalUsers, previousTotals.totalUsers),
+      sessions: calculateChange(totals.totalSessions, previousTotals.totalSessions),
+      pageViews: calculateChange(totals.totalPageViews, previousTotals.totalPageViews),
+      events: calculateChange(totals.totalEvents, previousTotals.totalEvents),
+      errors: calculateChange(totals.totalErrors, previousTotals.totalErrors),
+      newUsers: calculateChange(totals.newUsers, previousTotals.newUsers),
+    }
 
     // Get real-time stats (last 24 hours)
     const yesterday = new Date()
@@ -96,7 +137,13 @@ export async function GET(request: NextRequest) {
         start: formatDateForSQL(startDate),
         end: formatDateForSQL(endDate),
       },
+      previousPeriod: {
+        start: formatDateForSQL(previousStartDate),
+        end: formatDateForSQL(previousEndDate),
+      },
       totals,
+      previousTotals,
+      comparison,
       dailyMetrics: dailyMetrics || [],
       realtime: {
         activeSessions: activeSessionsCount || 0,

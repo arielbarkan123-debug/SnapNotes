@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useXP } from '@/contexts/XPContext'
+import { useFunnelTracking } from '@/lib/analytics'
 import type { ExtractedDocument } from '@/lib/documents'
 
 // ============================================================================
@@ -160,6 +161,7 @@ function ProcessingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { showXP, showLevelUp } = useXP()
+  const { trackStep: trackFunnelStep } = useFunnelTracking('course_creation')
 
   // Image params
   const imageUrl = searchParams.get('imageUrl')
@@ -357,6 +359,13 @@ function ProcessingContent() {
         cardsGenerated: data.cardsGenerated || 0,
       })
 
+      // Track course created (step 5 - final step of course creation funnel)
+      trackFunnelStep('course_created', 5, {
+        courseId: data.courseId,
+        cardsGenerated: data.cardsGenerated || 0,
+        sourceType: sourceType,
+      })
+
       // Award XP for course creation
       try {
         const xpResponse = await fetch('/api/gamification/xp', {
@@ -400,7 +409,7 @@ function ProcessingContent() {
         retryable: true,
       })
     }
-  }, [hasValidInput, textContent, documentContent, documentUrl, imageUrls, imageUrl, title, sourceType, router, processingKey, showXP, showLevelUp])
+  }, [hasValidInput, textContent, documentContent, documentUrl, imageUrls, imageUrl, title, sourceType, router, processingKey, showXP, showLevelUp, trackFunnelStep])
 
   // Start generation on mount (ref prevents duplicate calls in StrictMode)
   // Wait for document content to load if we have a documentId

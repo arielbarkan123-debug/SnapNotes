@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import type { HelpContext } from '@/types'
 import type { ReviewCard as ReviewCardType } from '@/types/srs'
 import { useCourses } from '@/hooks'
+import { useEventTracking } from '@/lib/analytics'
 
 // Custom slider styles
 const sliderStyles = `
@@ -118,6 +119,9 @@ interface Answer {
 export default function PracticePage() {
   // SWR hook for courses with caching
   const { courses, isLoading: coursesLoading, error: coursesError } = useCourses()
+
+  // Analytics tracking
+  const { trackFeature } = useEventTracking()
 
   // Setup state
   const [sessionState, setSessionState] = useState<SessionState>('loading')
@@ -252,13 +256,19 @@ export default function PracticePage() {
       setSessionState('practicing')
       cardStartTimeRef.current = Date.now()
 
+      // Track practice session started
+      trackFeature('practice_started', {
+        questionCount: practiceCards.length,
+        courseCount: selectedCourseIds.length || courses.length,
+      })
+
       // Start study session tracking
       const sessionId = await startStudySession()
       sessionIdRef.current = sessionId
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start practice')
     }
-  }, [courses, selectedCourseIds, questionCount])
+  }, [courses, selectedCourseIds, questionCount, trackFeature])
 
   // ==========================================================================
   // Toggle course selection
@@ -358,6 +368,14 @@ export default function PracticePage() {
           endStudySession(sessionIdRef.current, stats.totalCards, finalCorrect)
           sessionIdRef.current = null
         }
+
+        // Track practice completed
+        trackFeature('practice_completed', {
+          totalQuestions: stats.totalCards,
+          correctCount: finalCorrect,
+          accuracy: stats.totalCards > 0 ? Math.round((finalCorrect / stats.totalCards) * 100) : 0,
+        })
+
         setSessionState('complete')
       }
     } finally {

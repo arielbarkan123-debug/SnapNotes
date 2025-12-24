@@ -6,6 +6,7 @@ import Image from 'next/image'
 import Button from '@/components/ui/Button'
 import { useToast } from '@/contexts/ToastContext'
 import { ErrorCodes } from '@/lib/api/errors'
+import { useFunnelTracking } from '@/lib/analytics'
 
 // ============================================================================
 // Types & Constants
@@ -236,6 +237,9 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
 
+  // Course creation funnel tracking
+  const { trackStep, resetFunnel } = useFunnelTracking('course_creation')
+
   const [inputMode, setInputMode] = useState<InputMode>('files')
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([])
   const [textContent, setTextContent] = useState('')
@@ -273,9 +277,12 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
     }
   }, [isOpen])
 
-  // Reset state when modal closes
+  // Track funnel when modal opens and reset when closes
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      // Track modal opened - start of course creation funnel
+      trackStep('upload_click', 1)
+    } else {
       // Revoke object URLs to prevent memory leaks (only for images)
       selectedFiles.forEach(sf => sf.preview && URL.revokeObjectURL(sf.preview))
       setInputMode('files')
@@ -287,8 +294,10 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
       setIsUploading(false)
       setUploadProgress(null)
       setFailedFiles([])
+      // Reset funnel tracking when modal closes
+      resetFunnel()
     }
-  }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, trackStep, resetFunnel]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const validateFile = useCallback((file: File): { error: UploadError | null; category: FileCategory | null } => {
     const category = getFileCategory(file)
@@ -374,8 +383,13 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
       setError(null)
     }
 
+    // Track file selection - step 2 of funnel
+    if (validFiles.length > 0) {
+      trackStep('file_selected', 2, { fileCount: validFiles.length })
+    }
+
     setSelectedFiles(prev => [...prev, ...validFiles])
-  }, [validateFile, selectedFiles.length])
+  }, [validateFile, selectedFiles.length, trackStep])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -537,7 +551,13 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
       setError(null)
       setUploadProgress({ current: 0, total: 1, status: 'processing' })
 
+      // Track upload started (step 3) for text mode
+      trackStep('upload_started', 3, { sourceType: 'text' })
+
       try {
+        // Track processing step (step 4)
+        trackStep('processing', 4)
+
         // Close modal and redirect to processing page with text content
         onClose()
 
@@ -567,6 +587,10 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
     setError(null)
     setFailedFiles([])
     setUploadProgress({ current: 0, total: selectedFiles.length, status: 'uploading' })
+
+    // Track upload started (step 3)
+    const categories = [...new Set(selectedFiles.map(f => f.category))]
+    trackStep('upload_started', 3, { fileCount: selectedFiles.length, categories })
 
     try {
       // Separate image files from document files
@@ -612,6 +636,9 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
           total: 1,
           status: 'complete',
         })
+
+        // Track processing step (step 4)
+        trackStep('processing', 4, { sourceType: 'document' })
 
         // Close modal and redirect to processing page with document content
         onClose()
@@ -700,6 +727,9 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
       const imageUrls = uploadData.images
         .sort((a: { index: number }, b: { index: number }) => a.index - b.index)
         .map((img: { url: string }) => img.url)
+
+      // Track processing step (step 4)
+      trackStep('processing', 4, { sourceType: 'images', imageCount: imageUrls.length })
 
       // Close modal and redirect to processing page
       onClose()

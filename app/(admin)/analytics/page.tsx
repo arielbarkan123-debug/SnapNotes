@@ -1,9 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import useSWR from 'swr'
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
+
+function formatLastUpdated(date: Date): string {
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffSec = Math.floor(diffMs / 1000)
+
+  if (diffSec < 5) return 'just now'
+  if (diffSec < 60) return `${diffSec}s ago`
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`
+  return date.toLocaleTimeString()
+}
 
 interface DailyMetric {
   date: string
@@ -17,12 +28,29 @@ interface DailyMetric {
 
 interface OverviewData {
   dateRange: { start: string; end: string }
+  previousPeriod: { start: string; end: string }
   totals: {
     totalUsers: number
     totalSessions: number
     totalPageViews: number
     totalEvents: number
     totalErrors: number
+    newUsers: number
+  }
+  previousTotals: {
+    totalUsers: number
+    totalSessions: number
+    totalPageViews: number
+    totalEvents: number
+    totalErrors: number
+    newUsers: number
+  }
+  comparison: {
+    users: number
+    sessions: number
+    pageViews: number
+    events: number
+    errors: number
     newUsers: number
   }
   dailyMetrics: DailyMetric[]
@@ -34,17 +62,53 @@ interface OverviewData {
   deviceBreakdown: Record<string, number>
 }
 
+function ChangeIndicator({ change, inverted = false }: { change: number; inverted?: boolean }) {
+  const isPositive = inverted ? change < 0 : change > 0
+  const isNegative = inverted ? change > 0 : change < 0
+
+  if (change === 0) {
+    return <span className="text-xs text-gray-400">—</span>
+  }
+
+  return (
+    <span
+      className={`text-xs font-medium flex items-center gap-0.5 ${
+        isPositive
+          ? 'text-green-600 dark:text-green-400'
+          : isNegative
+          ? 'text-red-600 dark:text-red-400'
+          : 'text-gray-500'
+      }`}
+    >
+      {change > 0 ? '↑' : '↓'}
+      {Math.abs(change)}%
+    </span>
+  )
+}
+
 export default function AnalyticsOverviewPage() {
   const [dateRange, setDateRange] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
   })
 
-  const { data, error, isLoading } = useSWR<OverviewData>(
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const { data, error, isLoading, mutate } = useSWR<OverviewData>(
     `/api/admin/analytics/overview?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`,
     fetcher,
-    { refreshInterval: 60000 } // Refresh every minute
+    {
+      refreshInterval: 30000, // Refresh every 30 seconds
+      onSuccess: () => setLastUpdated(new Date()),
+    }
   )
+
+  const handleManualRefresh = useCallback(async () => {
+    setIsRefreshing(true)
+    await mutate()
+    setIsRefreshing(false)
+  }, [mutate])
 
   if (error) {
     return (
@@ -58,9 +122,35 @@ export default function AnalyticsOverviewPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics Overview</h1>
+      <div className="flex flex-wrap justify-between items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics Overview</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Last updated: {formatLastUpdated(lastUpdated)}
+            {isRefreshing && <span className="ml-2 text-indigo-500">Refreshing...</span>}
+          </p>
+        </div>
         <div className="flex items-center gap-4">
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+            title="Refresh data"
+          >
+            <svg
+              className={`w-5 h-5 text-gray-600 dark:text-gray-400 ${isRefreshing ? 'animate-spin' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </button>
           <input
             type="date"
             value={dateRange.startDate}
@@ -124,21 +214,25 @@ export default function AnalyticsOverviewPage() {
               value={data?.totals.totalUsers || 0}
               subValue={`${data?.totals.newUsers || 0} new`}
               icon="users"
+              change={data?.comparison.users}
             />
             <MetricCard
               label="Total Sessions"
               value={data?.totals.totalSessions || 0}
               icon="sessions"
+              change={data?.comparison.sessions}
             />
             <MetricCard
               label="Page Views"
               value={data?.totals.totalPageViews || 0}
               icon="pages"
+              change={data?.comparison.pageViews}
             />
             <MetricCard
               label="Events"
               value={data?.totals.totalEvents || 0}
               icon="events"
+              change={data?.comparison.events}
             />
           </div>
 
@@ -226,15 +320,24 @@ function MetricCard({
   value,
   subValue,
   icon: _icon,
+  change,
+  invertChange,
 }: {
   label: string
   value: number
   subValue?: string
   icon: string
+  change?: number
+  invertChange?: boolean
 }) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
+        {change !== undefined && (
+          <ChangeIndicator change={change} inverted={invertChange} />
+        )}
+      </div>
       <p className="text-2xl font-bold text-gray-900 dark:text-white">
         {value.toLocaleString()}
       </p>

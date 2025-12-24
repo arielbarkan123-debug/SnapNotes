@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import ProgressBar from '@/components/lesson/ProgressBar'
 import StepContent from '@/components/lesson/StepContent'
 import QuestionStep from '@/components/lesson/QuestionStep'
+import { useFunnelTracking } from '@/lib/analytics'
 
 // Dynamic imports for components not needed immediately
 const LessonComplete = dynamic(() => import('@/components/lesson/LessonComplete'), {
@@ -48,6 +49,10 @@ export default function LessonView({
 
   const steps = lesson.steps || []
   const totalSteps = steps.length
+
+  // Lesson completion funnel tracking
+  const { trackStep: trackFunnelStep } = useFunnelTracking('lesson_completion')
+  const trackedStepsRef = useRef<Set<string>>(new Set())
 
   // Study session tracking
   const sessionIdRef = useRef<string | null>(null)
@@ -116,6 +121,39 @@ export default function LessonView({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  // Track lesson funnel steps
+  useEffect(() => {
+    // Calculate midpoint
+    const midpoint = Math.floor(totalSteps / 2)
+    const isFirstStep = currentStep === 0
+    const isMidpoint = currentStep === midpoint && totalSteps > 2
+    const isLastStep = currentStep === totalSteps - 1
+
+    // Track lesson started on mount (step 1)
+    if (!trackedStepsRef.current.has('lesson_started')) {
+      trackFunnelStep('lesson_started', 1, { lessonIndex, lessonTitle: lesson.title })
+      trackedStepsRef.current.add('lesson_started')
+    }
+
+    // Track first step (step 2)
+    if (isFirstStep && !trackedStepsRef.current.has('first_step')) {
+      trackFunnelStep('first_step', 2)
+      trackedStepsRef.current.add('first_step')
+    }
+
+    // Track midpoint (step 3)
+    if (isMidpoint && !trackedStepsRef.current.has('midpoint')) {
+      trackFunnelStep('midpoint', 3, { stepIndex: currentStep })
+      trackedStepsRef.current.add('midpoint')
+    }
+
+    // Track last step (step 4)
+    if (isLastStep && !trackedStepsRef.current.has('last_step')) {
+      trackFunnelStep('last_step', 4, { stepIndex: currentStep })
+      trackedStepsRef.current.add('last_step')
+    }
+  }, [currentStep, totalSteps, lessonIndex, lesson.title, trackFunnelStep])
 
   // Start study session when lesson begins
   useEffect(() => {
@@ -331,12 +369,19 @@ export default function LessonView({
       // End study session and update lesson progress with mastery
       await endStudySession(finalAnswered, finalCorrect, true)
 
+      // Track lesson completed (step 5)
+      trackFunnelStep('lesson_completed', 5, {
+        questionsAnswered: finalAnswered,
+        questionsCorrect: finalCorrect,
+        lessonIndex,
+      })
+
       setShowCompletion(true)
     } else {
       // Go to next step
       setCurrentStep(prev => prev + 1)
     }
-  }, [isLastStep, currentStep, saveProgress, saveQuestionStats, questionsAnswered, questionsCorrect, recordStepTiming, stepTimings, saveStepPerformance, endStudySession])
+  }, [isLastStep, currentStep, saveProgress, saveQuestionStats, questionsAnswered, questionsCorrect, recordStepTiming, stepTimings, saveStepPerformance, endStudySession, trackFunnelStep, lessonIndex])
 
   // Handle exit
   const handleExit = useCallback(() => {

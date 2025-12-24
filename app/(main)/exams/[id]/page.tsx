@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ExamWithQuestions, ExamQuestion, ExamAnswer } from '@/types'
 import QuestionRenderer from '@/components/exam/QuestionRenderer'
+import { useEventTracking } from '@/lib/analytics'
 
 // Helper to check if a question is answered based on its type
 function isQuestionAnswered(answer: ExamAnswer | undefined, questionType: string): boolean {
@@ -64,6 +65,7 @@ export default function TakeExamPage() {
   const params = useParams()
   const router = useRouter()
   const examId = params.id as string
+  const { trackFeature } = useEventTracking()
 
   const [exam, setExam] = useState<ExamWithQuestions | null>(null)
   const [loading, setLoading] = useState(true)
@@ -87,6 +89,14 @@ export default function TakeExamPage() {
       if (data.success && data.exam) {
         setExam(data.exam)
 
+        // Track exam started
+        trackFeature('exam_started', {
+          examId: data.exam.id,
+          courseId: data.exam.course_id,
+          questionCount: data.exam.questions?.length || 0,
+          timeLimitMinutes: data.exam.time_limit_minutes,
+        })
+
         if (data.exam.status === 'in_progress') {
           const existingAnswers: Record<string, ExamAnswer> = {}
           ;(data.exam.questions || []).forEach((q: ExamQuestion) => {
@@ -106,7 +116,7 @@ export default function TakeExamPage() {
     } finally {
       setLoading(false)
     }
-  }, [examId])
+  }, [examId, trackFeature])
 
   useEffect(() => {
     fetchExam()
@@ -141,6 +151,15 @@ export default function TakeExamPage() {
 
       const data = await res.json()
       if (data.success) {
+        // Track exam completed
+        const questions = exam.questions || []
+        trackFeature('exam_completed', {
+          examId: exam.id,
+          courseId: exam.course_id,
+          questionsAnswered: Object.keys(answers).length,
+          totalQuestions: questions.length,
+          autoSubmitted: autoSubmit,
+        })
         fetchExam()
       } else {
         setError(data.error || 'Failed to submit')
@@ -151,7 +170,7 @@ export default function TakeExamPage() {
     } finally {
       setSubmitting(false)
     }
-  }, [examId, answers, exam, submitting, fetchExam])
+  }, [examId, answers, exam, submitting, fetchExam, trackFeature])
 
   submitRef.current = handleSubmit
 

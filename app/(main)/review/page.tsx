@@ -6,6 +6,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import ReviewCard from '@/components/srs/ReviewCard'
 import RatingButtons from '@/components/srs/RatingButtons'
+import { useEventTracking } from '@/lib/analytics'
 import type { Rating, ReviewSession } from '@/types'
 
 // Dynamic import - only loaded when review session completes
@@ -30,6 +31,7 @@ interface SessionStats {
 
 export default function ReviewPage() {
   const router = useRouter()
+  const { trackFeature } = useEventTracking()
 
   // Session state
   const [sessionState, setSessionState] = useState<SessionState>('loading')
@@ -85,6 +87,11 @@ export default function ReviewPage() {
 
   const startSession = () => {
     if (!session || session.cards.length === 0) return
+
+    // Track review session started
+    trackFeature('review_started', {
+      dueCardCount: session.cards.length,
+    })
 
     setSessionState('reviewing')
     setCurrentIndex(0)
@@ -160,6 +167,12 @@ export default function ReviewPage() {
         setInteractiveResult(null)
         cardStartTimeRef.current = Date.now()
       } else {
+        // Track review completed
+        trackFeature('review_completed', {
+          cardsReviewed: session.cards.length,
+          correctCount: stats.correctCount + (rating >= 3 ? 1 : 0),
+          againCount: stats.againCount + (rating === 1 ? 1 : 0),
+        })
         setSessionState('complete')
       }
     } catch (err) {
