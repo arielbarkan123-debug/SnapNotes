@@ -30,6 +30,7 @@ class AnalyticsClient {
   private sessionId: string | null = null
   private userId: string | null = null
   private isInitialized = false
+  private isAdmin = false // Admin users are excluded from tracking
 
   // Event queues
   private eventQueue: BatchEvent[] = []
@@ -80,6 +81,28 @@ class AnalyticsClient {
   }
 
   /**
+   * Set admin status - admin users are excluded from all tracking
+   */
+  setIsAdmin(isAdmin: boolean): void {
+    this.isAdmin = isAdmin
+    if (isAdmin) {
+      console.log('[Analytics] Admin user detected - tracking disabled')
+      // Clear any queued data
+      this.eventQueue = []
+      this.pageViewQueue = []
+      this.errorQueue = []
+      this.funnelQueue = []
+    }
+  }
+
+  /**
+   * Check if tracking is enabled (not admin)
+   */
+  isTrackingEnabled(): boolean {
+    return !this.isAdmin
+  }
+
+  /**
    * Get current session ID
    */
   getSessionId(): string | null {
@@ -91,6 +114,11 @@ class AnalyticsClient {
   // ============================================================================
 
   private getOrCreateSession(): string {
+    // Don't create sessions for admin users
+    if (this.isAdmin) {
+      return 'admin-no-tracking'
+    }
+
     const stored = localStorage.getItem(SESSION_KEY)
     const timeout = localStorage.getItem(SESSION_TIMEOUT_KEY)
 
@@ -184,7 +212,7 @@ class AnalyticsClient {
    * Track a page view
    */
   trackPageView(path: string, title: string): void {
-    if (!this.isInitialized || !this.sessionId) return
+    if (!this.isInitialized || !this.sessionId || this.isAdmin) return
 
     // End previous page view if exists
     if (this.currentPagePath && this.currentPagePath !== path) {
@@ -248,7 +276,7 @@ class AnalyticsClient {
    * Track a custom event
    */
   trackEvent(event: AnalyticsEvent): void {
-    if (!this.isInitialized || !this.sessionId) return
+    if (!this.isInitialized || !this.sessionId || this.isAdmin) return
 
     const batchEvent: BatchEvent = {
       name: event.name,
@@ -313,7 +341,7 @@ class AnalyticsClient {
    * Track an error
    */
   trackError(error: AnalyticsError): void {
-    if (!this.isInitialized) return
+    if (!this.isInitialized || this.isAdmin) return
 
     const batchError: BatchError = {
       type: error.type,
@@ -342,7 +370,7 @@ class AnalyticsClient {
    * Track a funnel step completion
    */
   trackFunnelStep(step: FunnelStep): void {
-    if (!this.isInitialized || !this.sessionId) return
+    if (!this.isInitialized || !this.sessionId || this.isAdmin) return
 
     // Prevent duplicate tracking of same step
     const stepKey = `${step.funnelName}:${step.stepName}`
