@@ -1,10 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { Step, HelpContext } from '@/types'
 import { generateHint, HintContext as HintCtx, Hint } from '@/lib/adaptive/hints'
 import HintBubble, { HintButton } from './HintBubble'
 import HelpModal from '@/components/help/HelpModal'
+
+// Lazy load PracticeMore since it's only shown after wrong answers
+const PracticeMore = dynamic(() => import('@/components/practice/PracticeMore').then(mod => ({ default: mod.PracticeMore })), {
+  ssr: false,
+})
 
 interface QuestionStepProps {
   question: string
@@ -44,6 +50,7 @@ export default function QuestionStep({
   const [wrongAttempts, setWrongAttempts] = useState(0)
   const [timeOnStep, setTimeOnStep] = useState(0)
   const [showHelp, setShowHelp] = useState(false)
+  const [showPracticeMore, setShowPracticeMore] = useState(false)
 
   // Hint state
   const [currentHint, setCurrentHint] = useState<Hint | null>(null)
@@ -335,18 +342,28 @@ export default function QuestionStep({
             </p>
           )}
 
-          {/* Help button for wrong answers */}
+          {/* Help and Practice buttons for wrong answers */}
           {!isCorrect && courseId && (
-            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Still confused?</p>
-              <button
-                onClick={() => setShowHelp(true)}
-                type="button"
-                className="w-full py-2 px-4 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg font-medium hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition flex items-center justify-center gap-2"
-              >
-                <span>🤔</span>
-                <span>Help me understand</span>
-              </button>
+            <div className="mt-4 space-y-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Need more practice?</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowHelp(true)}
+                  type="button"
+                  className="flex-1 py-2 px-4 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg font-medium hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition flex items-center justify-center gap-2"
+                >
+                  <span>🤔</span>
+                  <span>Explain</span>
+                </button>
+                <button
+                  onClick={() => setShowPracticeMore(true)}
+                  type="button"
+                  className="flex-1 py-2 px-4 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg font-medium hover:bg-purple-200 dark:hover:bg-purple-900/50 transition flex items-center justify-center gap-2"
+                >
+                  <span>📝</span>
+                  <span>Practice More</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -388,6 +405,16 @@ export default function QuestionStep({
         onClose={() => setShowHelp(false)}
         context={helpContext}
       />
+
+      {/* Practice More Modal */}
+      {showPracticeMore && courseId && (
+        <PracticeMore
+          courseId={courseId}
+          lessonIndex={lessonIndex}
+          wrongQuestion={question}
+          onClose={() => setShowPracticeMore(false)}
+        />
+      )}
     </div>
   )
 }

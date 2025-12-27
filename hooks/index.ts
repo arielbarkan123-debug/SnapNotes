@@ -40,3 +40,6 @@ export {
   type ProgressData,
   type UseProgressReturn,
 } from './useProgress'
+
+// PWA / Service Worker
+export { useServiceWorker } from './useServiceWorker'

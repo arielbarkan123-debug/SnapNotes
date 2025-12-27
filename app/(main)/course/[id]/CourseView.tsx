@@ -1,8 +1,9 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Course, UserProgress, GeneratedCourse, Lesson } from '@/types'
+import { ChatTutor } from '@/components/chat/ChatTutor'
 
 interface CourseViewProps {
   course: Course
@@ -12,6 +13,7 @@ interface CourseViewProps {
 type LessonStatus = 'completed' | 'current' | 'locked'
 
 export default function CourseView({ course, progress }: CourseViewProps) {
+  const [isChatOpen, setIsChatOpen] = useState(false)
   const generatedCourse = course.generated_course as GeneratedCourse & { sections?: Lesson[] }
   // Handle both "lessons" and legacy "sections" from AI response
   const lessons = generatedCourse.lessons || generatedCourse.sections || []
@@ -126,6 +128,28 @@ export default function CourseView({ course, progress }: CourseViewProps) {
           )}
         </div>
       </main>
+
+      {/* AI Chat Tutor Button */}
+      {!isChatOpen && (
+        <button
+          onClick={() => setIsChatOpen(true)}
+          className="fixed bottom-4 right-4 z-50 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 transition-all hover:scale-105 flex items-center gap-2"
+          aria-label="Ask AI Tutor"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+          </svg>
+          <span className="hidden sm:inline font-medium">Ask AI</span>
+        </button>
+      )}
+
+      {/* Chat Tutor Modal */}
+      <ChatTutor
+        courseId={course.id}
+        courseName={generatedCourse.title || course.title}
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+      />
     </div>
   )
 }
