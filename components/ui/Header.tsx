@@ -19,6 +19,14 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
 
   const displayName = userName || userEmail?.split('@')[0] || 'User'
 
+  // Prefetch all navigation routes on mount for instant navigation
+  useEffect(() => {
+    const routes = ['/dashboard', '/review', '/practice', '/progress', '/exams', '/profile']
+    routes.forEach(route => {
+      router.prefetch(route)
+    })
+  }, [router])
+
   // Close mobile menu on route change
   useEffect(() => {
     setIsMobileMenuOpen(false)

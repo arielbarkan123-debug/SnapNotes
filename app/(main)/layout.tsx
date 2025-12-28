@@ -1,5 +1,7 @@
+import { Suspense } from 'react'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import Header from '@/components/ui/Header'
+import NavigationProgress from '@/components/ui/NavigationProgress'
 
 export default async function MainLayout({
   children,
@@ -23,6 +25,9 @@ export default async function MainLayout({
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+      <Suspense fallback={null}>
+        <NavigationProgress />
+      </Suspense>
       <Header
         userEmail={user?.email}
         userName={user?.user_metadata?.name}
