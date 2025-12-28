@@ -400,9 +400,9 @@ export default function PracticePage() {
     stepType: currentCard.card_type || 'flashcard',
   } : null
 
-  // Check if card is an interactive type
+  // Check if card is an interactive type (handled by its own component)
   const isInteractiveCard = (card: PracticeCard): boolean => {
-    return ['multiple_choice', 'true_false', 'fill_blank', 'matching', 'sequence'].includes(card.card_type)
+    return ['multiple_choice', 'true_false', 'fill_blank', 'matching', 'sequence', 'short_answer'].includes(card.card_type)
   }
 
   const courseStatsArray = useMemo(() => {

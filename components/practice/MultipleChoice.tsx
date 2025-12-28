@@ -63,7 +63,8 @@ export default function MultipleChoice({
     []
   )
 
-  // Shuffle options on mount (preserving original indices)
+  // Shuffle options once on mount - use question as stable key to prevent reshuffling
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const shuffledOptions = useMemo<ShuffledOption[]>(() => {
     const indexed = options.map((text, originalIndex) => ({ text, originalIndex }))
     // Fisher-Yates shuffle
@@ -72,7 +73,7 @@ export default function MultipleChoice({
       ;[indexed[i], indexed[j]] = [indexed[j], indexed[i]]
     }
     return indexed
-  }, [options])
+  }, [question]) // Use question as key - options should stay fixed for same question
 
   // Find the shuffled index of the correct answer
   const correctShuffledIndex = useMemo(() => {
@@ -296,8 +297,9 @@ export default function MultipleChoice({
         </div>
       )}
 
-      {/* Action Button */}
-      {!hasChecked ? (
+      {/* Action Button - only show Check Answer before checking */}
+      {/* After answer is checked, parent component shows the navigation button */}
+      {!hasChecked && (
         <button
           onClick={handleCheck}
           disabled={selectedIndex === null}
@@ -309,20 +311,7 @@ export default function MultipleChoice({
         >
           Check Answer
         </button>
-      ) : showFinalFeedback ? (
-        <button
-          onClick={() => {
-            // Parent handles advancing to next question via onAnswer callback already called
-          }}
-          className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all ${
-            isCorrect
-              ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white'
-              : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white'
-          }`}
-        >
-          {isCorrect ? 'Continue' : 'Got it, continue'}
-        </button>
-      ) : null /* Try Again / Show Answer buttons are shown inline above */}
+      )}
     </div>
   )
 }

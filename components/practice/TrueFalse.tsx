@@ -182,17 +182,7 @@ export default function TrueFalse({
         </div>
       )}
 
-      {/* Continue Button */}
-      {hasAnswered && (
-        <button
-          onClick={() => {
-            // Parent handles navigation via onAnswer callback
-          }}
-          className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all"
-        >
-          Continue
-        </button>
-      )}
+      {/* Parent component handles the Continue/Next Card button */}
     </div>
   )
 }
