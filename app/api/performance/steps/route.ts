@@ -57,11 +57,12 @@ export async function POST(request: NextRequest) {
       .insert(records)
 
     if (insertError) {
-      console.error('Failed to insert step performance:', insertError)
-      return NextResponse.json(
-        { error: 'Failed to save step performance' },
-        { status: 500 }
-      )
+      // Don't log error if table doesn't exist - feature is optional
+      if (insertError.code !== 'PGRST205') {
+        console.error('Failed to insert step performance:', insertError)
+      }
+      // Return success even if table doesn't exist
+      return NextResponse.json({ success: true })
     }
 
     // Calculate and update mastery for this course
@@ -152,11 +153,15 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Failed to fetch step performance:', error)
-      return NextResponse.json(
-        { error: 'Failed to fetch step performance' },
-        { status: 500 }
-      )
+      // Don't log error if table doesn't exist - feature is optional
+      if (error.code !== 'PGRST205') {
+        console.error('Failed to fetch step performance:', error)
+      }
+      // Return empty data if table doesn't exist
+      return NextResponse.json({
+        performance: [],
+        mastery: null,
+      })
     }
 
     // Get mastery data

@@ -42,9 +42,10 @@ export async function POST(request: NextRequest) {
       })
 
     if (insertError) {
-      // If table doesn't exist, just log and continue
-      // Practice logging is optional/supplementary
-      console.error('Failed to log practice:', insertError)
+      // Don't log error if table doesn't exist - feature is optional
+      if (insertError.code !== 'PGRST205') {
+        console.error('Failed to log practice:', insertError)
+      }
     }
 
     return NextResponse.json({ success: true })

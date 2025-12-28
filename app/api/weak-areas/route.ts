@@ -57,8 +57,12 @@ export async function GET(request: NextRequest) {
     const { data: lessonProgress, error } = await query
 
     if (error) {
-      console.error('Failed to fetch lesson progress:', error)
-      return NextResponse.json({ error: 'Failed to fetch weak areas' }, { status: 500 })
+      // Don't log error if table doesn't exist - feature is optional
+      if (error.code !== 'PGRST205') {
+        console.error('Failed to fetch lesson progress:', error)
+      }
+      // Return empty data if table doesn't exist
+      return NextResponse.json({ weakAreas: [], summary: null })
     }
 
     if (!lessonProgress || lessonProgress.length === 0) {

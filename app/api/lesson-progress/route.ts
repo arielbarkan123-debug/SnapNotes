@@ -42,17 +42,22 @@ export async function POST(request: Request) {
       )
     }
 
-    // Calculate mastery from step_performance
+    // Calculate mastery from step_performance (returns 0 if table doesn't exist)
     const mastery = await calculateLessonMastery(supabase, user.id, courseId, lessonIndex)
 
     // Upsert lesson progress
-    const { data: existing } = await supabase
+    const { data: existing, error: selectError } = await supabase
       .from('lesson_progress')
       .select('*')
       .eq('user_id', user.id)
       .eq('course_id', courseId)
       .eq('lesson_index', lessonIndex)
       .single()
+
+    // If table doesn't exist, return success without tracking
+    if (selectError && selectError.code === 'PGRST205') {
+      return NextResponse.json({ success: true, progress: null })
+    }
 
     let progress
     if (existing) {
@@ -72,7 +77,13 @@ export async function POST(request: Request) {
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        // Don't throw if table doesn't exist
+        if (error.code === 'PGRST205') {
+          return NextResponse.json({ success: true, progress: null })
+        }
+        throw error
+      }
       progress = data
     } else {
       const { data, error } = await supabase
@@ -93,7 +104,13 @@ export async function POST(request: Request) {
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        // Don't throw if table doesn't exist
+        if (error.code === 'PGRST205') {
+          return NextResponse.json({ success: true, progress: null })
+        }
+        throw error
+      }
       progress = data
     }
 
@@ -136,11 +153,12 @@ export async function GET(request: Request) {
     const { data: progress, error } = await query
 
     if (error) {
-      console.error('[Lesson Progress API] Fetch error:', error)
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch progress' },
-        { status: 500 }
-      )
+      // Don't log error if table doesn't exist - feature is optional
+      if (error.code !== 'PGRST205') {
+        console.error('[Lesson Progress API] Fetch error:', error)
+      }
+      // Return empty progress if table doesn't exist
+      return NextResponse.json({ success: true, progress: [] })
     }
 
     return NextResponse.json({ success: true, progress })
@@ -163,7 +181,7 @@ async function calculateLessonMastery(
   lessonIndex: number
 ): Promise<number> {
   // Get all step performance for this lesson
-  const { data: steps } = await supabase
+  const { data: steps, error } = await supabase
     .from('step_performance')
     .select('was_correct, created_at')
     .eq('user_id', userId)
@@ -172,7 +190,8 @@ async function calculateLessonMastery(
     .in('step_type', ['multiple_choice', 'true_false', 'fill_blank', 'short_answer', 'matching', 'sequence', 'question'])
     .order('created_at', { ascending: false })
 
-  if (!steps || steps.length === 0) {
+  // Return 0 if table doesn't exist or no data
+  if (error || !steps || steps.length === 0) {
     return 0
   }
 

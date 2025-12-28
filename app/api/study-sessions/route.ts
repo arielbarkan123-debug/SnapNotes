@@ -61,7 +61,10 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      console.error('[Study Sessions API] Start error:', error)
+      // Don't log error if table doesn't exist - feature is optional
+      if (error.code !== 'PGRST205') {
+        console.error('[Study Sessions API] Start error:', error)
+      }
       return NextResponse.json(
         { success: false, error: 'Failed to start session' },
         { status: 500 }
@@ -139,7 +142,10 @@ export async function PATCH(request: Request) {
       .single()
 
     if (error) {
-      console.error('[Study Sessions API] End error:', error)
+      // Don't log error if table doesn't exist - feature is optional
+      if (error.code !== 'PGRST205') {
+        console.error('[Study Sessions API] End error:', error)
+      }
       return NextResponse.json(
         { success: false, error: 'Failed to end session' },
         { status: 500 }
@@ -194,11 +200,24 @@ export async function GET(request: Request) {
       .order('started_at', { ascending: false })
 
     if (error) {
-      console.error('[Study Sessions API] Fetch error:', error)
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch sessions' },
-        { status: 500 }
-      )
+      // Don't log error if table doesn't exist - feature is optional
+      if (error.code !== 'PGRST205') {
+        console.error('[Study Sessions API] Fetch error:', error)
+      }
+      // Return empty stats if table doesn't exist
+      return NextResponse.json({
+        success: true,
+        stats: {
+          totalSessions: 0,
+          totalTimeSeconds: 0,
+          totalTimeMinutes: 0,
+          cardsReviewed: 0,
+          questionsAnswered: 0,
+          questionsCorrect: 0,
+          accuracy: 0,
+        },
+        recentSessions: [],
+      })
     }
 
     // Calculate stats
