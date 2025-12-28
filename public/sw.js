@@ -210,8 +210,13 @@ async function networkFirstWithOffline(request) {
 
 // Check if URL is a static asset
 function isStaticAsset(pathname) {
-  const staticExtensions = ['.js', '.css', '.png', '.jpg', '.jpeg', '.svg', '.ico', '.woff', '.woff2'];
-  return staticExtensions.some(ext => pathname.endsWith(ext)) || pathname.startsWith('/_next/static/');
+  // Don't cache Next.js chunks in development - they change constantly
+  // Only cache actual static files like images and fonts
+  if (pathname.startsWith('/_next/')) {
+    return false; // Let Next.js handle its own caching
+  }
+  const staticExtensions = ['.png', '.jpg', '.jpeg', '.svg', '.ico', '.woff', '.woff2'];
+  return staticExtensions.some(ext => pathname.endsWith(ext));
 }
 
 // Listen for messages from the app
