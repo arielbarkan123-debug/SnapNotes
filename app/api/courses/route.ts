@@ -20,9 +20,11 @@ export async function GET(): Promise<NextResponse> {
     }
 
     // Only select fields needed for list view (exclude large generated_course JSONB)
+    // IMPORTANT: Filter by user_id to only show the current user's courses
     const { data: courses, error } = await supabase
       .from('courses')
       .select('id, user_id, title, original_image_url, image_urls, source_type, created_at, updated_at')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(50)
 

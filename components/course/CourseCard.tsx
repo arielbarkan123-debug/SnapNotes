@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Course, GeneratedCourse } from '@/types'
@@ -12,42 +12,42 @@ interface CourseCardProps {
   onDelete?: (courseId: string) => void
 }
 
-// Subject detection and cover image generation
-const SUBJECT_PATTERNS: { pattern: RegExp; icon: string; gradient: string }[] = [
-  { pattern: /math|algebra|calcul|geometry|trigonometry|equation|fraction/i, icon: '📐', gradient: 'from-blue-500 to-indigo-600' },
-  { pattern: /physic|force|motion|energy|wave|electric|magnet/i, icon: '⚛️', gradient: 'from-purple-500 to-pink-600' },
-  { pattern: /chemistry|chem|molecule|atom|element|reaction|compound/i, icon: '🧪', gradient: 'from-green-500 to-teal-600' },
-  { pattern: /biology|bio|cell|dna|organism|plant|animal|anatomy/i, icon: '🧬', gradient: 'from-emerald-500 to-green-600' },
-  { pattern: /history|war|ancient|civilization|revolution|empire/i, icon: '🏛️', gradient: 'from-amber-500 to-orange-600' },
-  { pattern: /geography|geo|map|country|continent|climate|earth/i, icon: '🌍', gradient: 'from-cyan-500 to-blue-600' },
-  { pattern: /english|grammar|literature|writing|essay|poem|novel/i, icon: '📝', gradient: 'from-rose-500 to-red-600' },
-  { pattern: /language|spanish|french|german|hebrew|arabic|chinese/i, icon: '🗣️', gradient: 'from-violet-500 to-purple-600' },
-  { pattern: /computer|programming|code|software|algorithm|data/i, icon: '💻', gradient: 'from-slate-500 to-gray-700' },
-  { pattern: /art|paint|draw|design|creative|music|sculpture/i, icon: '🎨', gradient: 'from-pink-500 to-rose-600' },
-  { pattern: /economics|economy|market|business|finance|money/i, icon: '📊', gradient: 'from-green-600 to-emerald-700' },
-  { pattern: /psychology|psych|mind|behavior|mental|cognitive/i, icon: '🧠', gradient: 'from-fuchsia-500 to-pink-600' },
-  { pattern: /philosophy|ethics|logic|socrates|plato|aristotle/i, icon: '🤔', gradient: 'from-indigo-500 to-violet-600' },
-  { pattern: /medicine|health|disease|treatment|diagnosis|anatomy/i, icon: '🏥', gradient: 'from-red-500 to-rose-600' },
-  { pattern: /law|legal|constitution|court|rights|justice/i, icon: '⚖️', gradient: 'from-gray-600 to-slate-700' },
-  { pattern: /sociology|social|society|culture|community/i, icon: '👥', gradient: 'from-orange-500 to-amber-600' },
+// Subject detection for gradient colors (no icons)
+const SUBJECT_PATTERNS: { pattern: RegExp; gradient: string }[] = [
+  { pattern: /math|algebra|calcul|geometry|trigonometry|equation|fraction/i, gradient: 'from-blue-500 to-indigo-600' },
+  { pattern: /physic|force|motion|energy|wave|electric|magnet/i, gradient: 'from-purple-500 to-pink-600' },
+  { pattern: /chemistry|chem|molecule|atom|element|reaction|compound/i, gradient: 'from-green-500 to-teal-600' },
+  { pattern: /biology|bio|cell|dna|organism|plant|animal|anatomy/i, gradient: 'from-emerald-500 to-green-600' },
+  { pattern: /history|war|ancient|civilization|revolution|empire/i, gradient: 'from-amber-500 to-orange-600' },
+  { pattern: /geography|geo|map|country|continent|climate|earth/i, gradient: 'from-cyan-500 to-blue-600' },
+  { pattern: /english|grammar|literature|writing|essay|poem|novel/i, gradient: 'from-rose-500 to-red-600' },
+  { pattern: /language|spanish|french|german|hebrew|arabic|chinese/i, gradient: 'from-violet-500 to-purple-600' },
+  { pattern: /computer|programming|code|software|algorithm|data/i, gradient: 'from-slate-500 to-gray-700' },
+  { pattern: /art|paint|draw|design|creative|music|sculpture/i, gradient: 'from-pink-500 to-rose-600' },
+  { pattern: /economics|economy|market|business|finance|money/i, gradient: 'from-green-600 to-emerald-700' },
+  { pattern: /psychology|psych|mind|behavior|mental|cognitive/i, gradient: 'from-fuchsia-500 to-pink-600' },
+  { pattern: /philosophy|ethics|logic|socrates|plato|aristotle/i, gradient: 'from-indigo-500 to-violet-600' },
+  { pattern: /medicine|health|disease|treatment|diagnosis|anatomy/i, gradient: 'from-red-500 to-rose-600' },
+  { pattern: /law|legal|constitution|court|rights|justice/i, gradient: 'from-gray-600 to-slate-700' },
+  { pattern: /sociology|social|society|culture|community/i, gradient: 'from-orange-500 to-amber-600' },
 ]
 
-function detectSubject(title: string): { icon: string; gradient: string } {
+function detectSubject(title: string): { gradient: string } {
   for (const subject of SUBJECT_PATTERNS) {
     if (subject.pattern.test(title)) {
-      return { icon: subject.icon, gradient: subject.gradient }
+      return { gradient: subject.gradient }
     }
   }
   // Default gradient based on title hash for variety
   const hash = title.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
   const defaultGradients = [
-    { icon: '📚', gradient: 'from-indigo-500 to-purple-600' },
-    { icon: '📖', gradient: 'from-blue-500 to-cyan-600' },
-    { icon: '✏️', gradient: 'from-amber-500 to-yellow-600' },
-    { icon: '🎯', gradient: 'from-red-500 to-orange-600' },
-    { icon: '💡', gradient: 'from-yellow-500 to-amber-600' },
+    'from-indigo-500 to-purple-600',
+    'from-blue-500 to-cyan-600',
+    'from-amber-500 to-yellow-600',
+    'from-red-500 to-orange-600',
+    'from-yellow-500 to-amber-600',
   ]
-  return defaultGradients[hash % defaultGradients.length]
+  return { gradient: defaultGradients[hash % defaultGradients.length] }
 }
 
 // Difficulty levels with styling
@@ -149,26 +149,10 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
   const { success, error: showError } = useToast()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
-  const imgRef = useRef<HTMLImageElement>(null)
 
-  // Check if image is already cached on mount (runs synchronously before paint)
-  useEffect(() => {
-    if (course.cover_image_url && !imageLoaded && !imageError) {
-      const img = new Image()
-      img.src = course.cover_image_url
-      // If image is already in browser cache, it will be complete immediately
-      if (img.complete && img.naturalWidth > 0) {
-        setImageLoaded(true)
-      } else {
-        // Also check the actual img element if it exists
-        if (imgRef.current?.complete && imgRef.current?.naturalWidth > 0) {
-          setImageLoaded(true)
-        }
-      }
-    }
-  }, [course.cover_image_url, imageLoaded, imageError])
+  // Determine if we should show the fallback (only when no URL or image failed)
+  const showFallback = !course.cover_image_url || imageError
 
   // Calculate difficulty from course content
   const difficulty = useMemo(
@@ -245,30 +229,25 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
         </button>
 
         <Link href={`/course/${course.id}`} className="block">
-          {/* Cover Image - External URL or Gradient Fallback */}
-          <div className={`relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br ${subject.gradient}`}>
-            {/* Always show gradient background with icon as base layer */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-4 left-4 w-20 h-20 rounded-full bg-white/20" />
-              <div className="absolute bottom-8 right-8 w-32 h-32 rounded-full bg-white/10" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full bg-white/5" />
-            </div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-7xl drop-shadow-lg group-hover:scale-110 transition-transform duration-300">
-                {subject.icon}
-              </span>
-            </div>
+          {/* Cover Image - AI generated or Gradient Fallback */}
+          <div className={`relative aspect-[4/3] w-full overflow-hidden ${showFallback ? `bg-gradient-to-br ${subject.gradient}` : 'bg-gray-200 dark:bg-gray-700'}`}>
+            {/* Fallback: Only show gradient with decorative elements when no image URL or image failed */}
+            {showFallback && (
+              <div className="absolute inset-0 opacity-20">
+                <div className="absolute top-4 left-4 w-20 h-20 rounded-full bg-white/30" />
+                <div className="absolute bottom-8 right-8 w-32 h-32 rounded-full bg-white/20" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full bg-white/10" />
+              </div>
+            )}
 
-            {/* Cover image overlay - only show when loaded successfully */}
+            {/* AI-generated cover image - show directly without opacity transition */}
             {course.cover_image_url && !imageError && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                ref={imgRef}
                 src={course.cover_image_url}
                 alt={course.title}
-                className={`absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-all duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 loading="eager"
-                onLoad={() => setImageLoaded(true)}
                 onError={() => setImageError(true)}
               />
             )}

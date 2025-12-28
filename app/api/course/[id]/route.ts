@@ -30,10 +30,12 @@ export async function GET(
       return createErrorResponse(ErrorCodes.UNAUTHORIZED, 'Please log in to view courses')
     }
 
+    // IMPORTANT: Filter by user_id to ensure user can only access their own courses
     const { data: course, error } = await supabase
       .from('courses')
       .select('*')
       .eq('id', params.id)
+      .eq('user_id', user.id)
       .single()
 
     if (error) {
@@ -97,11 +99,12 @@ export async function PATCH(
       updates.title = trimmedTitle
     }
 
-    // Update the course (RLS will ensure user owns it)
+    // IMPORTANT: Filter by user_id to ensure user can only update their own courses
     const { data: course, error } = await supabase
       .from('courses')
       .update(updates)
       .eq('id', params.id)
+      .eq('user_id', user.id)
       .select('id')
       .single()
 
@@ -144,10 +147,12 @@ export async function DELETE(
     }
 
     // First, get the course to find the image path (for cleanup)
+    // IMPORTANT: Filter by user_id to ensure user can only delete their own courses
     const { data: course, error: fetchError } = await supabase
       .from('courses')
       .select('original_image_url')
       .eq('id', params.id)
+      .eq('user_id', user.id)
       .single()
 
     if (fetchError) {
@@ -162,11 +167,12 @@ export async function DELETE(
       return createErrorResponse(ErrorCodes.NOT_FOUND, 'Course not found')
     }
 
-    // Delete the course (RLS will ensure user owns it)
+    // IMPORTANT: Filter by user_id to ensure user can only delete their own courses
     const { error: deleteError } = await supabase
       .from('courses')
       .delete()
       .eq('id', params.id)
+      .eq('user_id', user.id)
 
     if (deleteError) {
       logError('Course:delete', deleteError)

@@ -19,11 +19,12 @@ async function getLessonData(courseId: string, lessonIndex: number) {
     return null
   }
 
-  // Fetch course
+  // Fetch course - IMPORTANT: Filter by user_id to ensure user owns this course
   const { data: course, error: courseError } = await supabase
     .from('courses')
     .select('*')
     .eq('id', courseId)
+    .eq('user_id', user.id)
     .single()
 
   if (courseError || !course) {

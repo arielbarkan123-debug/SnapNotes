@@ -13,19 +13,21 @@ async function getCourseWithProgress(id: string): Promise<{ course: Course; prog
   console.time('course-page-load')
   const supabase = await createClient()
 
-  // Fetch user and course in parallel for better performance
-  const [userResult, courseResult] = await Promise.all([
-    supabase.auth.getUser(),
-    supabase.from('courses').select('*').eq('id', id).single()
-  ])
-
-  const user = userResult.data?.user
+  // First get the user
+  const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     console.timeEnd('course-page-load')
     return null
   }
 
-  const { data: course, error: courseError } = courseResult
+  // Fetch course - IMPORTANT: Filter by user_id to ensure user owns this course
+  const { data: course, error: courseError } = await supabase
+    .from('courses')
+    .select('*')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single()
+
   if (courseError || !course) {
     console.timeEnd('course-page-load')
     return null
