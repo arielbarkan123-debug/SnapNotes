@@ -149,6 +149,8 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
   const { success, error: showError } = useToast()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [imageLoaded, setImageLoaded] = useState(false)
+  const [imageError, setImageError] = useState(false)
 
   // Calculate difficulty from course content
   const difficulty = useMemo(
@@ -226,30 +228,30 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
 
         <Link href={`/course/${course.id}`} className="block">
           {/* Cover Image - External URL or Gradient Fallback */}
-          <div className={`relative aspect-[4/3] w-full overflow-hidden ${!course.cover_image_url ? `bg-gradient-to-br ${subject.gradient}` : 'bg-gray-200 dark:bg-gray-700'}`}>
-            {course.cover_image_url ? (
-              /* External cover image - use img tag for any domain */
+          <div className={`relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br ${subject.gradient}`}>
+            {/* Always show gradient background with icon as base layer */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute top-4 left-4 w-20 h-20 rounded-full bg-white/20" />
+              <div className="absolute bottom-8 right-8 w-32 h-32 rounded-full bg-white/10" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full bg-white/5" />
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-7xl drop-shadow-lg group-hover:scale-110 transition-transform duration-300">
+                {subject.icon}
+              </span>
+            </div>
+
+            {/* Cover image overlay - only show when loaded successfully */}
+            {course.cover_image_url && !imageError && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={course.cover_image_url}
                 alt={course.title}
-                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                loading="lazy"
+                className={`absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-all duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                loading="eager"
+                onLoad={() => setImageLoaded(true)}
+                onError={() => setImageError(true)}
               />
-            ) : (
-              /* Gradient fallback with decorative elements */
-              <>
-                <div className="absolute inset-0 opacity-10">
-                  <div className="absolute top-4 left-4 w-20 h-20 rounded-full bg-white/20" />
-                  <div className="absolute bottom-8 right-8 w-32 h-32 rounded-full bg-white/10" />
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full bg-white/5" />
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-7xl drop-shadow-lg group-hover:scale-110 transition-transform duration-300">
-                    {subject.icon}
-                  </span>
-                </div>
-              </>
             )}
             {/* Lesson count badge */}
             {lessonCount > 0 && (
