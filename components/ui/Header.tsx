@@ -21,7 +21,7 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
 
   // Prefetch all navigation routes on mount for instant navigation
   useEffect(() => {
-    const routes = ['/dashboard', '/review', '/practice', '/progress', '/exams', '/profile']
+    const routes = ['/dashboard', '/review', '/practice', '/progress', '/exams', '/profile', '/settings']
     routes.forEach(route => {
       router.prefetch(route)
     })
