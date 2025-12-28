@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Course, GeneratedCourse } from '@/types'
@@ -151,6 +151,24 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
+  const imgRef = useRef<HTMLImageElement>(null)
+
+  // Check if image is already cached on mount (runs synchronously before paint)
+  useEffect(() => {
+    if (course.cover_image_url && !imageLoaded && !imageError) {
+      const img = new Image()
+      img.src = course.cover_image_url
+      // If image is already in browser cache, it will be complete immediately
+      if (img.complete && img.naturalWidth > 0) {
+        setImageLoaded(true)
+      } else {
+        // Also check the actual img element if it exists
+        if (imgRef.current?.complete && imgRef.current?.naturalWidth > 0) {
+          setImageLoaded(true)
+        }
+      }
+    }
+  }, [course.cover_image_url, imageLoaded, imageError])
 
   // Calculate difficulty from course content
   const difficulty = useMemo(
@@ -245,6 +263,7 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
             {course.cover_image_url && !imageError && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
+                ref={imgRef}
                 src={course.cover_image_url}
                 alt={course.title}
                 className={`absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-all duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
