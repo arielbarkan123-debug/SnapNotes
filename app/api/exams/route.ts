@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { CreateExamRequest } from '@/types'
 import Anthropic from '@anthropic-ai/sdk'
+import { buildExamContext, formatContextForPrompt } from '@/lib/curriculum'
+import type { StudySystem, ExamFormat } from '@/lib/curriculum'
 
 const AI_MODEL = 'claude-sonnet-4-20250514'
 
@@ -89,6 +91,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Course has no content' }, { status: 400 })
     }
 
+    // Fetch user learning profile for curriculum context
+    const { data: userProfile } = await supabase
+      .from('user_learning_profile')
+      .select('study_system, subjects, subject_levels, exam_format')
+      .eq('user_id', user.id)
+      .single()
+
+    const studySystem = (userProfile?.study_system || 'general') as StudySystem
+    const subjects = (userProfile?.subjects || []) as string[]
+    const subjectLevels = (userProfile?.subject_levels || {}) as Record<string, string>
+    const examFormat = ((body as any).examFormat || userProfile?.exam_format || 'match_real') as ExamFormat
+
     let courseContent = ''
     const lessonList: { index: number; title: string }[] = []
 
@@ -106,6 +120,16 @@ export async function POST(request: Request) {
 
     courseContent = courseContent.slice(0, 6000)
 
+    // Build curriculum context for exam generation
+    const curriculumContext = await buildExamContext(
+      studySystem,
+      subjects,
+      subjectLevels,
+      examFormat,
+      courseContent
+    )
+    const curriculumSection = formatContextForPrompt(curriculumContext)
+
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
     // Calculate question type distribution
@@ -120,9 +144,21 @@ export async function POST(request: Request) {
     // Build list of lesson titles for validation
     const lessonTitles = lessonList.map(l => l.title.toLowerCase())
 
+    // Build exam format instruction
+    const examFormatInstruction = examFormat === 'match_real' && curriculumContext.tier2
+      ? `\n=== EXAM FORMAT (Match Real Format) ===
+Use the exam structure and question styles from the curriculum context below.
+Apply the command terms and assessment objectives specified in the curriculum.
+Generate questions that would appear in actual exams for this curriculum.`
+      : `\n=== EXAM FORMAT (Flexible) ===
+Use question styles inspired by the curriculum but with flexible structure.
+Focus on testing understanding rather than matching exact exam format.`
+
     const prompt = `Generate exactly ${questionCount} exam questions based on this course content.
 
 COURSE: ${course.title}
+${curriculumSection ? `\n${curriculumSection}` : ''}
+${examFormatInstruction}
 
 CONTENT:
 ${courseContent}

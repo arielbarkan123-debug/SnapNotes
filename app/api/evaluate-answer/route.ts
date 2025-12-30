@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { createClient } from '@/lib/supabase/server'
+import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
+import type { StudySystem } from '@/lib/curriculum/types'
 
 // =============================================================================
 // Types
@@ -11,9 +14,11 @@ interface EvaluateAnswerRequest {
   userAnswer: string
   acceptableAnswers?: string[]
   context?: string // Optional lesson/topic context for better evaluation
+  courseId?: string // Optional course ID for curriculum detection
 }
 
-interface EvaluationResult {
+// Note: Interface for documentation purposes; response object follows this structure
+interface _EvaluationResult {
   isCorrect: boolean
   score: number // 0-100
   feedback: string
@@ -123,7 +128,8 @@ async function evaluateWithAI(
   question: string,
   expectedAnswer: string,
   userAnswer: string,
-  context?: string
+  context?: string,
+  curriculumContext?: string
 ): Promise<{ isCorrect: boolean; score: number; feedback: string }> {
   const apiKey = process.env.ANTHROPIC_API_KEY
 
@@ -133,9 +139,21 @@ async function evaluateWithAI(
 
   const client = new Anthropic({ apiKey })
 
-  // Minimal prompt for speed
-  const prompt = `You are grading a student's answer. Be generous with partial credit.
+  // Build curriculum-aware grading prompt
+  const curriculumInstructions = curriculumContext
+    ? `
+${curriculumContext}
 
+Use the curriculum context above to:
+- Apply appropriate command terms and assessment criteria
+- Grade according to the curriculum's standards
+- Consider assessment objectives when evaluating depth of understanding
+`
+    : ''
+
+  // Minimal prompt for speed with optional curriculum context
+  const prompt = `You are grading a student's answer.${curriculumContext ? ' Apply curriculum-specific grading criteria.' : ' Be generous with partial credit.'}
+${curriculumInstructions}
 Question: ${question}
 Expected Answer: ${expectedAnswer}
 Student's Answer: ${userAnswer}
@@ -146,6 +164,7 @@ Evaluate if the student's answer is correct. Consider:
 - Key concepts present = PARTIAL CREDIT
 - Minor typos/spelling = IGNORE
 - Empty or completely wrong = INCORRECT
+${curriculumContext ? '- Apply curriculum command terms and assessment objectives' : ''}
 
 Respond with ONLY valid JSON (no markdown):
 {"correct":true/false,"score":0-100,"feedback":"one brief sentence"}`
@@ -190,7 +209,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   try {
     const body: EvaluateAnswerRequest = await request.json()
-    const { question, expectedAnswer, userAnswer, acceptableAnswers = [], context } = body
+    const { question, expectedAnswer, userAnswer, acceptableAnswers = [], context, courseId } = body
 
     // Validate input
     if (!question || !expectedAnswer) {
@@ -209,6 +228,40 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         evaluationMethod: 'exact',
         evaluationTimeMs: Date.now() - startTime
       })
+    }
+
+    // Fetch curriculum context for the user (optional - gracefully degrade if not authenticated)
+    let curriculumContextString = ''
+    try {
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (user) {
+        // Fetch user learning profile
+        const { data: userProfile } = await supabase
+          .from('user_learning_profile')
+          .select('study_system, subjects, subject_levels')
+          .eq('user_id', user.id)
+          .single()
+
+        if (userProfile?.study_system && userProfile.study_system !== 'general' && userProfile.study_system !== 'other') {
+          // Build curriculum context for evaluation
+          const curriculumContext = await buildCurriculumContext({
+            userProfile: {
+              studySystem: userProfile.study_system as StudySystem,
+              subjects: userProfile.subjects || [],
+              subjectLevels: userProfile.subject_levels || {},
+            },
+            contentSample: context || question, // Use question/context to detect subject
+            purpose: 'evaluation',
+          })
+
+          curriculumContextString = formatContextForPrompt(curriculumContext)
+        }
+      }
+    } catch (authError) {
+      // Silently continue without curriculum context if auth fails
+      console.log('[EvaluateAnswer] No curriculum context available:', authError)
     }
 
     // Layer 1: Exact match (fastest)
@@ -253,7 +306,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Layer 3: AI evaluation for semantic matching
     try {
-      const aiResult = await evaluateWithAI(question, expectedAnswer, userAnswer, context)
+      const aiResult = await evaluateWithAI(question, expectedAnswer, userAnswer, context, curriculumContextString)
 
       return NextResponse.json({
         isCorrect: aiResult.isCorrect,

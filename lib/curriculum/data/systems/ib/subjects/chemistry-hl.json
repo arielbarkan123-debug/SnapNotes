@@ -1,0 +1,94 @@
+{
+  "systemId": "ib",
+  "subjectId": "chemistry-hl",
+  "name": "Chemistry HL",
+  "code": "Group 4",
+  "levels": ["SL", "HL"],
+  "description": "IB Chemistry covers the fundamental concepts of chemistry from atomic structure to organic chemistry. HL students study additional topics including advanced organic chemistry, more detailed energetics, and electrochemistry.",
+  "assessmentComponents": [
+    {
+      "name": "Paper 1",
+      "weight": 20,
+      "duration": "1 hour",
+      "description": "Multiple choice questions on core and AHL material",
+      "structure": "40 multiple choice questions. Calculator allowed. Data booklet provided.",
+      "markingCriteria": ["1 mark per correct answer", "No negative marking"]
+    },
+    {
+      "name": "Paper 2",
+      "weight": 36,
+      "duration": "2 hours 15 minutes",
+      "description": "Short-answer and extended response questions",
+      "structure": "Section A: Short-answer and data-based questions (all compulsory). Section B: Extended response - choose 2 from 3. Section C: Extended response - choose 1 from 2.",
+      "markingCriteria": ["Show working for calculations", "Use correct units and significant figures", "Extended responses require structured arguments"]
+    },
+    {
+      "name": "Paper 3",
+      "weight": 24,
+      "duration": "1 hour 15 minutes",
+      "description": "Data-based questions on experimental work plus Option questions",
+      "structure": "Section A: Data-based and practical questions (compulsory). Section B: Questions on ONE chosen Option.",
+      "markingCriteria": ["Analyse experimental data", "Demonstrate understanding of laboratory techniques"]
+    },
+    {
+      "name": "Internal Assessment",
+      "weight": 20,
+      "description": "Individual Investigation - scientific investigation report (6-12 pages)",
+      "structure": "Criteria: Personal engagement (8%), Exploration (25%), Analysis (25%), Evaluation (25%), Communication (17%)",
+      "markingCriteria": ["Original research question", "Appropriate methodology", "Quantitative data with uncertainties", "Critical evaluation"]
+    }
+  ],
+  "assessmentObjectives": [
+    {
+      "id": "AO1",
+      "description": "Demonstrate knowledge and understanding of facts and concepts",
+      "verbs": ["state", "define", "list", "outline", "label"],
+      "weight": 25,
+      "cognitiveLevel": 1
+    },
+    {
+      "id": "AO2",
+      "description": "Apply knowledge and understanding",
+      "verbs": ["describe", "distinguish", "explain", "apply", "calculate", "determine"],
+      "weight": 35,
+      "cognitiveLevel": 2
+    },
+    {
+      "id": "AO3",
+      "description": "Analyse, evaluate and synthesize",
+      "verbs": ["analyse", "compare", "discuss", "evaluate", "suggest", "deduce", "predict"],
+      "weight": 40,
+      "cognitiveLevel": 3
+    }
+  ],
+  "topicList": [
+    { "id": "1", "name": "Stoichiometric Relationships", "hours": 13.5 },
+    { "id": "2", "name": "Atomic Structure", "hours": 6 },
+    { "id": "3", "name": "Periodicity", "hours": 6 },
+    { "id": "4", "name": "Chemical Bonding and Structure", "hours": 13.5 },
+    { "id": "5", "name": "Energetics/Thermochemistry", "hours": 9 },
+    { "id": "6", "name": "Chemical Kinetics", "hours": 7 },
+    { "id": "7", "name": "Equilibrium", "hours": 4.5 },
+    { "id": "8", "name": "Acids and Bases", "hours": 6.5 },
+    { "id": "9", "name": "Redox Processes", "hours": 8 },
+    { "id": "10", "name": "Organic Chemistry", "hours": 11 },
+    { "id": "11", "name": "Measurement and Data Processing", "hours": 10 },
+    { "id": "12", "name": "Atomic Structure (AHL)", "hours": 2, "hlOnly": true },
+    { "id": "13", "name": "The Periodic Table - Transition Metals", "hours": 4, "hlOnly": true },
+    { "id": "14", "name": "Chemical Bonding and Structure (AHL)", "hours": 7, "hlOnly": true },
+    { "id": "15", "name": "Energetics/Thermochemistry (AHL)", "hours": 7, "hlOnly": true },
+    { "id": "16", "name": "Chemical Kinetics (AHL)", "hours": 6, "hlOnly": true },
+    { "id": "17", "name": "Equilibrium (AHL)", "hours": 4, "hlOnly": true },
+    { "id": "18", "name": "Acids and Bases (AHL)", "hours": 10, "hlOnly": true },
+    { "id": "19", "name": "Redox Processes (AHL)", "hours": 6, "hlOnly": true },
+    { "id": "20", "name": "Organic Chemistry (AHL)", "hours": 12, "hlOnly": true },
+    { "id": "21", "name": "Measurement and Analysis (AHL)", "hours": 2, "hlOnly": true }
+  ],
+  "commandTermsSubset": [
+    "State", "Define", "Calculate", "Determine", "Explain", "Describe",
+    "Compare", "Analyse", "Evaluate", "Deduce", "Suggest"
+  ],
+  "mathsRequirements": "Students should be comfortable with: algebraic manipulation, logarithms (for pH calculations), graphical analysis, significant figures, scientific notation, and basic calculus concepts (for rate equations at HL).",
+  "practicalRequirements": "Minimum 40 hours of practical work including titrations, calorimetry, electrochemical cells, organic synthesis, and qualitative analysis.",
+  "iaGuidelines": "The IA should demonstrate experimental skills and understanding of chemistry concepts. Topics should allow for collection of sufficient quantitative data and meaningful analysis."
+}

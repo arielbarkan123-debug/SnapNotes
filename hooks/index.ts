@@ -43,3 +43,6 @@ export {
 
 // PWA / Service Worker
 export { useServiceWorker } from './useServiceWorker'
+
+// Curriculum
+export { useCurriculumStatus } from './useCurriculumStatus'

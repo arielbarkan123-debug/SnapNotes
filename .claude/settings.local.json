@@ -35,7 +35,8 @@
       "Bash(find:*)",
       "WebSearch",
       "WebFetch(domain:ai.google.dev)",
-      "Bash(source /Users/curvalux/NoteSnap/.env.local)"
+      "Bash(source /Users/curvalux/NoteSnap/.env.local)",
+      "Skill(ralph-wiggum:ralph-loop)"
     ],
     "deny": [],
     "ask": []

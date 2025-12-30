@@ -1,0 +1,142 @@
+{
+  "systemId": "ib",
+  "subjectId": "biology-hl",
+  "topicId": "2",
+  "name": "Molecular Biology",
+  "understandings": [
+    "Molecular biology explains living processes in terms of the chemical substances involved",
+    "Carbon atoms can form four covalent bonds allowing for a diversity of stable compounds to exist",
+    "Life is based on carbon compounds including carbohydrates, lipids, proteins and nucleic acids",
+    "Metabolism is the web of all the enzyme-catalysed reactions in a cell or organism",
+    "Anabolism is the synthesis of complex molecules from simpler molecules including formation of macromolecules from monomers by condensation",
+    "Catabolism is the breakdown of complex molecules into simpler molecules including hydrolysis of macromolecules",
+    "Water molecules are polar and form hydrogen bonds",
+    "Hydrogen bonding and dipolarity explain the cohesive, adhesive, thermal and solvent properties of water"
+  ],
+  "applications": [
+    "Structure and function of cellulose and starch in plants and glycogen in humans",
+    "Use of molecular visualization software to compare cellulose, starch and glycogen",
+    "Scientific evidence for health risks of trans fats and saturated fatty acids",
+    "Lipids are more suitable for long-term energy storage than carbohydrates",
+    "Evaluation of evidence and the methods used in obtaining it",
+    "Denaturation of proteins by heat or pH change"
+  ],
+  "keyConcepts": [
+    {
+      "term": "Condensation reaction",
+      "definition": "A chemical reaction that joins two molecules together by removing water",
+      "importance": "Forms polymers from monomers; creates peptide bonds, glycosidic bonds, and ester bonds",
+      "relatedTerms": ["dehydration synthesis", "polymerization", "anabolism"]
+    },
+    {
+      "term": "Hydrolysis",
+      "definition": "A chemical reaction that breaks bonds between monomers by adding water",
+      "importance": "Breaks down polymers for digestion and metabolism",
+      "relatedTerms": ["catabolism", "digestion", "decomposition"]
+    },
+    {
+      "term": "Enzyme",
+      "definition": "A biological catalyst, usually a protein, that speeds up metabolic reactions without being permanently changed",
+      "importance": "Essential for all metabolic processes; highly specific and regulated",
+      "relatedTerms": ["catalyst", "active site", "substrate", "product"]
+    },
+    {
+      "term": "Hydrogen bond",
+      "definition": "A weak attraction between a slightly positive hydrogen atom and a slightly negative atom (usually O or N)",
+      "importance": "Gives water its unique properties; maintains protein and DNA structure",
+      "relatedTerms": ["polarity", "dipole", "cohesion", "adhesion"]
+    },
+    {
+      "term": "Denaturation",
+      "definition": "The loss of a protein's three-dimensional structure due to disruption of bonds, causing loss of function",
+      "importance": "Explains why enzymes stop working at extreme temperatures or pH",
+      "relatedTerms": ["protein structure", "enzyme activity", "tertiary structure"]
+    },
+    {
+      "term": "Active site",
+      "definition": "The region on an enzyme where substrate molecules bind and the reaction is catalyzed",
+      "importance": "Determines enzyme specificity; shape complementary to substrate",
+      "relatedTerms": ["induced fit", "lock and key", "substrate specificity"]
+    }
+  ],
+  "commonMisconceptions": [
+    {
+      "misconception": "Enzymes are used up in reactions",
+      "correction": "Enzymes are catalysts and are not consumed. They can be reused many times for the same reaction."
+    },
+    {
+      "misconception": "High temperature destroys enzymes permanently",
+      "correction": "Denaturation changes protein shape and is often irreversible, but some proteins can refold if conditions return to normal."
+    },
+    {
+      "misconception": "All lipids are bad for health",
+      "correction": "Unsaturated fats are generally beneficial. Only trans fats and excessive saturated fats are linked to health risks."
+    },
+    {
+      "misconception": "Carbohydrates are the best energy storage",
+      "correction": "Lipids store more energy per gram (38 kJ/g vs 17 kJ/g) and are better for long-term storage."
+    },
+    {
+      "misconception": "Water is just a simple molecule with no special properties",
+      "correction": "Water's polarity and hydrogen bonding give it unique properties essential for life (high specific heat, cohesion, solvent properties)."
+    }
+  ],
+  "examFocus": {
+    "frequentlyTested": [
+      "Properties of water and their biological significance",
+      "Comparison of carbohydrates, lipids, and proteins",
+      "Enzyme activity and factors affecting it",
+      "Structure-function relationships in macromolecules"
+    ],
+    "typicalQuestions": [
+      "Explain how hydrogen bonding contributes to the properties of water",
+      "Compare the structure and function of starch and cellulose",
+      "Outline the effect of temperature on enzyme activity",
+      "Distinguish between saturated and unsaturated fatty acids"
+    ],
+    "markingNotes": [
+      "Water properties questions require linking molecular structure to macroscopic properties",
+      "Enzyme questions need reference to active site and substrate",
+      "Macromolecule comparisons should include specific structural features",
+      "Data-based questions often involve interpreting enzyme kinetics graphs"
+    ],
+    "highScoringTips": [
+      "Always link structure to function in molecular questions",
+      "Use specific examples (e.g., amylose vs amylopectin for starch)",
+      "For enzyme questions, mention the induced fit model",
+      "Reference hydrogen bonding when discussing any macromolecule structure"
+    ]
+  },
+  "connections": [
+    { "topicId": "1", "relationship": "Cells are composed of the molecules described in this topic" },
+    { "topicId": "3", "relationship": "DNA and genes are nucleic acids covered in molecular biology" },
+    { "topicId": "6", "relationship": "Human physiology involves enzyme-catalyzed metabolic reactions" },
+    { "topicId": "8", "relationship": "AHL: Metabolism expands on enzyme kinetics and metabolic pathways" }
+  ],
+  "hlExtensions": {
+    "understandings": [
+      "Most enzymes are proteins but some are RNA molecules",
+      "Activation energy is needed for a reaction to occur",
+      "Enzymes lower activation energy",
+      "Enzyme inhibitors can be competitive or non-competitive",
+      "Metabolic pathways consist of chains and cycles of enzyme-catalysed reactions"
+    ],
+    "applications": [
+      "Methods of production of lactose-free milk and its advantages",
+      "Use of databases to identify proteins from their primary structure",
+      "Determination of Vmax and the Michaelis-Menten constant (Km)"
+    ]
+  },
+  "resources": {
+    "diagrams": [
+      "Structure of monosaccharides, disaccharides, polysaccharides",
+      "Triglyceride structure and formation",
+      "Amino acid structure and peptide bond formation",
+      "Enzyme-substrate complex and induced fit",
+      "Effect of temperature/pH on enzyme activity graphs"
+    ],
+    "formulas": [
+      "Energy value: Lipids = 38 kJ/g, Carbohydrates/Proteins = 17 kJ/g"
+    ]
+  }
+}

@@ -31,6 +31,8 @@ const WeakAreas = dynamic(
 import { Course } from '@/types'
 import { useCourses } from '@/hooks'
 import { useToast } from '@/contexts/ToastContext'
+import { useCurriculumStatus } from '@/hooks/useCurriculumStatus'
+import { CurriculumSetupPrompt } from '@/components/curriculum'
 
 interface DashboardContentProps {
   initialCourses: Course[]
@@ -41,6 +43,7 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
   const { error: showError, success: showSuccess } = useToast()
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [isGeneratingCovers, setIsGeneratingCovers] = useState(false)
+  const { status: curriculumStatus } = useCurriculumStatus()
 
   // Check if any courses are missing covers
   const coursesWithoutCovers = initialCourses.filter(c => !c.cover_image_url).length
@@ -152,6 +155,14 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
             </Button>
           </div>
         </div>
+
+        {/* Curriculum Setup Prompt - show if setup incomplete */}
+        {curriculumStatus && !curriculumStatus.isComplete && (
+          <CurriculumSetupPrompt
+            status={curriculumStatus}
+            className="mb-6"
+          />
+        )}
 
         {/* Generate Covers Banner - show if courses are missing covers */}
         {coursesWithoutCovers > 0 && (

@@ -1,0 +1,116 @@
+{
+  "systemId": "ib",
+  "subjectId": "mathematics-aa-hl",
+  "name": "Mathematics: Analysis and Approaches HL",
+  "code": "Group 5",
+  "levels": ["SL", "HL"],
+  "description": "Mathematics: Analysis and Approaches emphasizes algebraic methods and mathematical abstraction. HL is designed for students who enjoy developing mathematical arguments and solving problems, particularly those planning to study mathematics, physics, or engineering.",
+  "assessmentComponents": [
+    {
+      "name": "Paper 1",
+      "weight": 30,
+      "duration": "2 hours",
+      "description": "Short and extended response questions (no calculator)",
+      "structure": "Section A: Short-response questions. Section B: Extended-response questions. Total 110 marks.",
+      "markingCriteria": ["Show all working", "Exact answers unless otherwise stated", "Method marks even if final answer incorrect"]
+    },
+    {
+      "name": "Paper 2",
+      "weight": 30,
+      "duration": "2 hours",
+      "description": "Short and extended response questions (calculator required)",
+      "structure": "Section A: Short-response questions. Section B: Extended-response questions. Total 110 marks.",
+      "markingCriteria": ["GDC may be used throughout", "Show mathematical reasoning", "Round appropriately"]
+    },
+    {
+      "name": "Paper 3",
+      "weight": 20,
+      "duration": "1 hour",
+      "description": "Two extended-response problem-solving questions",
+      "structure": "Two questions each worth approximately 30 marks. Tests problem-solving and mathematical reasoning.",
+      "markingCriteria": ["Extended reasoning required", "Novel problem-solving", "Mathematical communication"]
+    },
+    {
+      "name": "Internal Assessment",
+      "weight": 20,
+      "description": "Mathematical Exploration - investigating an area of mathematics (12-20 pages)",
+      "structure": "Criteria: Presentation (4), Mathematical communication (4), Personal engagement (3), Reflection (3), Use of mathematics (6). Total 20 marks.",
+      "markingCriteria": ["Original exploration", "Appropriate mathematical content for HL", "Personal engagement and reflection"]
+    }
+  ],
+  "assessmentObjectives": [
+    {
+      "id": "AO1",
+      "description": "Knowledge and understanding - recall and use of facts, techniques and methods",
+      "verbs": ["find", "state", "calculate", "determine"],
+      "weight": 20,
+      "cognitiveLevel": 1
+    },
+    {
+      "id": "AO2",
+      "description": "Problem solving - investigate unfamiliar situations using mathematics",
+      "verbs": ["solve", "show", "verify", "hence find"],
+      "weight": 35,
+      "cognitiveLevel": 2
+    },
+    {
+      "id": "AO3",
+      "description": "Communication and interpretation - mathematical language and forms",
+      "verbs": ["sketch", "draw", "express", "interpret"],
+      "weight": 25,
+      "cognitiveLevel": 2
+    },
+    {
+      "id": "AO4",
+      "description": "Technology - appropriate use of technology",
+      "verbs": ["use GDC to", "verify using technology"],
+      "weight": 10,
+      "cognitiveLevel": 2
+    },
+    {
+      "id": "AO5",
+      "description": "Reasoning - construct mathematical arguments and proofs",
+      "verbs": ["prove", "justify", "deduce", "explain why"],
+      "weight": 10,
+      "cognitiveLevel": 3
+    }
+  ],
+  "topicList": [
+    { "id": "1", "name": "Number and Algebra", "hours": 39, "subtopics": [
+      { "id": "1.1", "name": "Sequences and series" },
+      { "id": "1.2", "name": "Exponents and logarithms" },
+      { "id": "1.3", "name": "Binomial theorem" },
+      { "id": "1.4", "name": "Counting principles and proof" }
+    ]},
+    { "id": "2", "name": "Functions", "hours": 32, "subtopics": [
+      { "id": "2.1", "name": "Properties of functions" },
+      { "id": "2.2", "name": "Quadratics" },
+      { "id": "2.3", "name": "Rational functions" },
+      { "id": "2.4", "name": "Exponential and logarithmic functions" },
+      { "id": "2.5", "name": "Transformations" }
+    ]},
+    { "id": "3", "name": "Geometry and Trigonometry", "hours": 51, "subtopics": [
+      { "id": "3.1", "name": "3D geometry" },
+      { "id": "3.2", "name": "Trigonometric identities" },
+      { "id": "3.3", "name": "Trigonometric functions" },
+      { "id": "3.4", "name": "Vectors" }
+    ]},
+    { "id": "4", "name": "Statistics and Probability", "hours": 33, "subtopics": [
+      { "id": "4.1", "name": "Descriptive statistics" },
+      { "id": "4.2", "name": "Probability" },
+      { "id": "4.3", "name": "Distributions" },
+      { "id": "4.4", "name": "Statistical tests" }
+    ]},
+    { "id": "5", "name": "Calculus", "hours": 55, "subtopics": [
+      { "id": "5.1", "name": "Limits and derivatives" },
+      { "id": "5.2", "name": "Integration" },
+      { "id": "5.3", "name": "Differential equations" },
+      { "id": "5.4", "name": "Maclaurin series" }
+    ]}
+  ],
+  "commandTermsSubset": [
+    "Find", "Calculate", "Determine", "Solve", "Show", "Prove",
+    "Sketch", "Hence", "Verify", "Deduce", "Justify"
+  ],
+  "iaGuidelines": "The Mathematical Exploration should be on a topic that genuinely interests the student. It should go beyond the syllabus in depth rather than breadth. Topics should allow for personal engagement and mathematical analysis at an appropriate level for HL."
+}

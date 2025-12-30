@@ -46,7 +46,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="container mx-auto px-4 py-4 max-w-2xl">
+        <div className="container mx-auto px-4 py-4 max-w-4xl">
           {/* Back link */}
           <Link
             href="/dashboard"
@@ -85,7 +85,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
       </header>
 
       {/* Main content */}
-      <main className="container mx-auto px-4 py-6 max-w-2xl">
+      <main className="container mx-auto px-4 py-6 max-w-4xl">
         {/* Overview card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl p-5 mb-6 border border-gray-200 dark:border-gray-700 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">

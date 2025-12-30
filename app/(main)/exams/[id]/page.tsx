@@ -345,7 +345,7 @@ export default function TakeExamPage() {
     })
 
     return (
-      <div className="max-w-3xl mx-auto p-4">
+      <div className="max-w-5xl mx-auto p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{exam.title}</h1>
           <p className="text-gray-500 dark:text-gray-400 mb-6">Results</p>
@@ -458,7 +458,7 @@ export default function TakeExamPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header with timer */}
       <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-10">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex justify-between items-center">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
           <button onClick={() => setShowNav(!showNav)} className="text-sm text-gray-600 dark:text-gray-400">
             Q{currentQuestion + 1}/{questions.length}
           </button>
@@ -474,7 +474,7 @@ export default function TakeExamPage() {
           </button>
         </div>
         {error && (
-          <div className="max-w-3xl mx-auto px-4 pb-2">
+          <div className="max-w-5xl mx-auto px-4 pb-2">
             <div className="p-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded text-sm">{error}</div>
           </div>
         )}
@@ -483,7 +483,7 @@ export default function TakeExamPage() {
       {/* Question navigation panel */}
       {showNav && (
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-5xl mx-auto">
             <div className="flex flex-wrap gap-2">
               {questions.map((q, i) => {
                 const qAnswer = answers[q.id]
@@ -516,7 +516,7 @@ export default function TakeExamPage() {
       )}
 
       {/* Question content */}
-      <div className="max-w-3xl mx-auto p-4">
+      <div className="max-w-5xl mx-auto p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-6">
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-2">

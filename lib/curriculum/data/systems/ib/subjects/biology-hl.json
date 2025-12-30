@@ -1,0 +1,89 @@
+{
+  "systemId": "ib",
+  "subjectId": "biology-hl",
+  "name": "Biology HL",
+  "code": "Group 4",
+  "levels": ["SL", "HL"],
+  "description": "IB Biology explores living organisms at multiple levels from molecules to ecosystems. HL students study additional depth in molecular biology, biochemistry, plant biology, genetics, and animal physiology.",
+  "assessmentComponents": [
+    {
+      "name": "Paper 1",
+      "weight": 20,
+      "duration": "1 hour",
+      "description": "Multiple choice questions on core and AHL material",
+      "structure": "40 multiple choice questions covering all topics. No calculator allowed. Questions test knowledge, comprehension, and application.",
+      "markingCriteria": ["1 mark per correct answer", "No negative marking", "Answer all questions"]
+    },
+    {
+      "name": "Paper 2",
+      "weight": 36,
+      "duration": "2 hours 15 minutes",
+      "description": "Data-based questions, short answer questions, and extended response",
+      "structure": "Section A: One data-based question and several short-answer questions (all compulsory, 40 marks). Section B: Extended response - choose 2 from 3 questions (2 x 15 marks). Section C: Extended response - choose 1 from 2 questions (20 marks).",
+      "markingCriteria": ["Data-based: analyze and interpret unfamiliar data", "Short answer: demonstrate knowledge and application", "Extended response: construct coherent arguments with evidence"]
+    },
+    {
+      "name": "Paper 3",
+      "weight": 24,
+      "duration": "1 hour 15 minutes",
+      "description": "Section A: Data-based and short-answer on experimental work. Section B: Short-answer and extended response on ONE Option",
+      "structure": "Section A (all compulsory, 35 marks): Questions on core practical skills and scientific methodology. Section B (choose one option, ~25 marks): Extended questions on chosen Option topic.",
+      "markingCriteria": ["Section A tests practical skills and scientific thinking", "Section B requires in-depth knowledge of Option"]
+    },
+    {
+      "name": "Internal Assessment",
+      "weight": 20,
+      "description": "Individual investigation - a scientific report (6-12 pages) on a topic of student's choice",
+      "structure": "Personal engagement (8%), Exploration (25%), Analysis (25%), Evaluation (25%), Communication (17%). Total 24 marks.",
+      "markingCriteria": [
+        "Personal engagement: genuine interest, independent thinking",
+        "Exploration: clear focus, relevant and sufficient methodology",
+        "Analysis: appropriate analysis with uncertainties and errors",
+        "Evaluation: critical evaluation of methodology and results",
+        "Communication: clear, focused, structured presentation"
+      ]
+    }
+  ],
+  "assessmentObjectives": [
+    {
+      "id": "AO1",
+      "description": "Knowledge and understanding of facts, concepts, terminology, methodologies, techniques and procedures",
+      "verbs": ["state", "define", "list", "outline", "draw", "label", "identify", "name"],
+      "weight": 25,
+      "cognitiveLevel": 1
+    },
+    {
+      "id": "AO2",
+      "description": "Application and analysis of knowledge and understanding to new and familiar situations",
+      "verbs": ["describe", "distinguish", "explain", "apply", "calculate", "determine", "estimate", "annotate"],
+      "weight": 35,
+      "cognitiveLevel": 2
+    },
+    {
+      "id": "AO3",
+      "description": "Synthesis and evaluation of knowledge and evidence to construct arguments, draw conclusions and make judgments",
+      "verbs": ["analyse", "compare", "compare and contrast", "discuss", "evaluate", "suggest", "deduce", "justify", "predict"],
+      "weight": 40,
+      "cognitiveLevel": 3
+    }
+  ],
+  "topicList": [
+    { "id": "1", "name": "Cell Biology", "hours": 15 },
+    { "id": "2", "name": "Molecular Biology", "hours": 21 },
+    { "id": "3", "name": "Genetics", "hours": 15 },
+    { "id": "4", "name": "Ecology", "hours": 12 },
+    { "id": "5", "name": "Evolution and Biodiversity", "hours": 12 },
+    { "id": "6", "name": "Human Physiology", "hours": 20 },
+    { "id": "7", "name": "Nucleic Acids", "hours": 9, "hlOnly": true },
+    { "id": "8", "name": "Metabolism, Cell Respiration and Photosynthesis", "hours": 14, "hlOnly": true },
+    { "id": "9", "name": "Plant Biology", "hours": 13, "hlOnly": true },
+    { "id": "10", "name": "Genetics and Evolution", "hours": 8, "hlOnly": true },
+    { "id": "11", "name": "Animal Physiology", "hours": 16, "hlOnly": true }
+  ],
+  "commandTermsSubset": [
+    "State", "Define", "Outline", "Describe", "Explain", "Distinguish",
+    "Apply", "Calculate", "Analyse", "Compare", "Evaluate", "Discuss", "Suggest"
+  ],
+  "practicalRequirements": "Students must complete a minimum of 40 hours of practical work (HL), including hands-on laboratory activities, use of databases, simulations, and fieldwork. The practical scheme of work should cover a range of techniques and promote development of experimental skills.",
+  "iaGuidelines": "The Individual Investigation (IA) is a student-designed scientific investigation worth 20% of the final grade. Students should select a topic that allows for personal engagement and original research. The investigation should demonstrate understanding of the scientific method, proper data analysis with uncertainties, and critical evaluation of methodology and results."
+}

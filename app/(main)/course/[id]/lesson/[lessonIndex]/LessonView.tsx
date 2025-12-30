@@ -414,7 +414,7 @@ export default function LessonView({
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="container mx-auto px-4 py-3 max-w-2xl">
+        <div className="container mx-auto px-4 py-3 max-w-4xl">
           <div className="flex items-center gap-4 mb-3">
             {/* Exit button */}
             <button
@@ -446,7 +446,7 @@ export default function LessonView({
       </header>
 
       {/* Main content */}
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-2xl flex flex-col">
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl flex flex-col">
         <div className="flex-1 flex items-center justify-center">
           <div className="w-full max-w-xl">
             {isQuestion ? (
@@ -479,7 +479,7 @@ export default function LessonView({
       {/* Footer with continue button - only show for non-question steps */}
       {!isQuestion && (
         <footer className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg">
-          <div className="container mx-auto px-4 py-4 max-w-2xl">
+          <div className="container mx-auto px-4 py-4 max-w-4xl">
             <button
               onClick={() => handleAdvance()}
               disabled={isSaving}

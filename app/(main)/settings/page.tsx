@@ -5,14 +5,15 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/contexts/ToastContext'
+import { GradeSelector, SubjectPicker, type SelectedSubject } from '@/components/curriculum'
+import { getDefaultGrade, hasCurriculumData, CURRICULUM_SYSTEMS } from '@/lib/curriculum/grades'
+import type { ExamFormat, StudySystem } from '@/lib/curriculum'
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type Theme = 'light' | 'dark' | 'system'
-type EducationLevel = 'elementary' | 'middle_school' | 'high_school' | 'university' | 'graduate' | 'professional'
-type StudySystem = 'general' | 'us' | 'uk' | 'israeli_bagrut' | 'ib' | 'ap' | 'other'
 type TimeAvailability = 'short' | 'medium' | 'long'
 type PreferredTime = 'morning' | 'afternoon' | 'evening' | 'varies'
 
@@ -20,33 +21,26 @@ interface UserSettings {
   displayName: string
   email: string
   createdAt: string
-  educationLevel: EducationLevel | null
   studySystem: StudySystem | null
+  grade: string | null
   timeAvailability: TimeAvailability | null
   preferredTime: PreferredTime | null
+  // Curriculum settings
+  subjects: SelectedSubject[]
+  examFormat: ExamFormat
 }
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-const EDUCATION_LEVELS: { id: EducationLevel; icon: string; label: string }[] = [
-  { id: 'elementary', icon: '🎒', label: 'Elementary School' },
-  { id: 'middle_school', icon: '📓', label: 'Middle School' },
-  { id: 'high_school', icon: '🎓', label: 'High School' },
-  { id: 'university', icon: '🏛️', label: 'University' },
-  { id: 'graduate', icon: '📜', label: 'Graduate' },
-  { id: 'professional', icon: '💼', label: 'Professional' },
-]
-
 const STUDY_SYSTEMS: { id: StudySystem; icon: string; label: string }[] = [
-  { id: 'general', icon: '🌍', label: 'General' },
-  { id: 'us', icon: '🇺🇸', label: 'US System' },
-  { id: 'uk', icon: '🇬🇧', label: 'UK System' },
-  { id: 'israeli_bagrut', icon: '🇮🇱', label: 'Israeli Bagrut' },
   { id: 'ib', icon: '🌐', label: 'IB' },
+  { id: 'uk', icon: '🇬🇧', label: 'UK A-Levels' },
   { id: 'ap', icon: '📚', label: 'AP' },
-  { id: 'other', icon: '📋', label: 'Other' },
+  { id: 'israeli_bagrut', icon: '🇮🇱', label: 'Israeli Bagrut' },
+  { id: 'us', icon: '🇺🇸', label: 'US System' },
+  { id: 'general', icon: '🌍', label: 'General' },
 ]
 
 const TIME_OPTIONS: { id: TimeAvailability; icon: string; label: string; description: string }[] = [
@@ -83,10 +77,12 @@ export default function SettingsPage() {
     displayName: '',
     email: '',
     createdAt: '',
-    educationLevel: null,
     studySystem: null,
+    grade: null,
     timeAvailability: null,
     preferredTime: null,
+    subjects: [],
+    examFormat: 'match_real',
   })
 
   // Load user data
@@ -102,14 +98,40 @@ export default function SettingsPage() {
 
         const metadata = user.user_metadata || {}
 
+        // Load from profiles table for curriculum data
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('study_system, grade, subjects, subject_levels, exam_format')
+          .eq('id', user.id)
+          .single()
+
+        // Also load from user_learning_profile for legacy data
+        const { data: learningProfile } = await supabase
+          .from('user_learning_profile')
+          .select('preferred_study_time')
+          .eq('user_id', user.id)
+          .single()
+
+        const studySystem = (profile?.study_system || metadata.study_system || null) as StudySystem | null
+        const subjectIds = (profile?.subjects || []) as string[]
+        const subjectLevels = (profile?.subject_levels || {}) as Record<string, string>
+
+        // Convert to SelectedSubject format
+        const selectedSubjects: SelectedSubject[] = subjectIds.map(id => ({
+          id,
+          level: subjectLevels[id] || null,
+        }))
+
         setSettings({
           displayName: metadata.name || user.email?.split('@')[0] || '',
           email: user.email || '',
           createdAt: user.created_at,
-          educationLevel: metadata.education_level || null,
-          studySystem: metadata.study_system || null,
+          studySystem,
+          grade: profile?.grade || null,
           timeAvailability: metadata.time_availability || null,
-          preferredTime: metadata.preferred_time || null,
+          preferredTime: learningProfile?.preferred_study_time || metadata.preferred_time || null,
+          subjects: selectedSubjects,
+          examFormat: profile?.exam_format || 'match_real',
         })
 
         // Load theme preference
@@ -156,7 +178,26 @@ export default function SettingsPage() {
 
   // Update setting helper
   const updateSetting = useCallback(<K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
-    setSettings(prev => ({ ...prev, [key]: value }))
+    setSettings(prev => {
+      // When changing study system, update grade to default and clear subjects
+      if (key === 'studySystem') {
+        const newSystem = value as StudySystem
+        const defaultGrade = getDefaultGrade(newSystem) || null
+        return {
+          ...prev,
+          [key]: value,
+          grade: defaultGrade,
+          subjects: [],
+        }
+      }
+      return { ...prev, [key]: value }
+    })
+    setHasChanges(true)
+  }, [])
+
+  // Handle subjects change from SubjectPicker
+  const handleSubjectsChange = useCallback((subjects: SelectedSubject[]) => {
+    setSettings(prev => ({ ...prev, subjects }))
     setHasChanges(true)
   }, [])
 
@@ -164,19 +205,60 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      const { error } = await supabase.auth.updateUser({
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      // Convert subjects to arrays for storage
+      const subjectIds = settings.subjects.map(s => s.id)
+      const subjectLevels = settings.subjects.reduce<Record<string, string>>((acc, s) => {
+        if (s.level) {
+          acc[s.id] = s.level
+        }
+        return acc
+      }, {})
+
+      // Update user metadata
+      const { error: authError } = await supabase.auth.updateUser({
         data: {
           name: settings.displayName,
-          education_level: settings.educationLevel,
           study_system: settings.studySystem,
           time_availability: settings.timeAvailability,
           preferred_time: settings.preferredTime,
         }
       })
 
-      if (error) throw error
+      if (authError) throw authError
 
-      toast.success('Settings saved successfully')
+      // Update profiles table with curriculum data
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          study_system: settings.studySystem,
+          grade: settings.grade,
+          subjects: subjectIds,
+          subject_levels: subjectLevels,
+          exam_format: settings.examFormat,
+        })
+        .eq('id', user.id)
+
+      // Also update user_learning_profile for consistency
+      await supabase
+        .from('user_learning_profile')
+        .update({
+          study_system: settings.studySystem,
+          preferred_study_time: settings.preferredTime,
+          subjects: subjectIds,
+          subject_levels: subjectLevels,
+          exam_format: settings.examFormat,
+        })
+        .eq('user_id', user.id)
+
+      if (profileError) {
+        console.error('Error updating profile:', profileError)
+        toast.warning('Profile partially saved. Some settings may not have been saved.')
+      } else {
+        toast.success('Settings saved successfully')
+      }
       setHasChanges(false)
     } catch (err) {
       console.error('Error saving settings:', err)
@@ -244,7 +326,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
-      <div className="mx-auto max-w-2xl px-4 py-8">
+      <div className="mx-auto max-w-5xl px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <Link
@@ -323,33 +405,6 @@ export default function SettingsPage() {
             description="Customize your study experience"
           >
             <div className="space-y-6">
-              {/* Education Level */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  Education Level
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {EDUCATION_LEVELS.map((level) => (
-                    <button
-                      key={level.id}
-                      onClick={() => updateSetting('educationLevel', level.id)}
-                      className={`
-                        flex flex-col items-center gap-1 rounded-xl border-2 p-3 transition-all
-                        ${settings.educationLevel === level.id
-                          ? 'border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-500/10'
-                          : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
-                        }
-                      `}
-                    >
-                      <span className="text-xl">{level.icon}</span>
-                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300 text-center leading-tight">
-                        {level.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* Study System */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
@@ -374,6 +429,20 @@ export default function SettingsPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Grade - only show if a study system is selected */}
+              {settings.studySystem && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Grade
+                  </label>
+                  <GradeSelector
+                    system={settings.studySystem}
+                    value={settings.grade}
+                    onChange={(grade) => updateSetting('grade', grade)}
+                  />
+                </div>
+              )}
 
               {/* Time Availability */}
               <div>
@@ -428,6 +497,81 @@ export default function SettingsPage() {
             </div>
           </SettingsCard>
         </section>
+
+        {/* Curriculum Settings Section - Only show for curriculum systems */}
+        {settings.studySystem && hasCurriculumData(settings.studySystem) && (
+          <section className="mb-6">
+            <SettingsCard
+              icon={
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-white">
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  </svg>
+                </div>
+              }
+              title="Curriculum Settings"
+              description="Subjects and exam preferences"
+            >
+              <div className="space-y-6">
+                {/* Subjects */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Your Subjects
+                  </label>
+                  <div className="max-h-80 overflow-y-auto">
+                    <SubjectPicker
+                      system={settings.studySystem}
+                      selectedSubjects={settings.subjects}
+                      onChange={handleSubjectsChange}
+                      compact
+                    />
+                  </div>
+                </div>
+
+                {/* Exam Format */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Exam Format Preference
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => updateSetting('examFormat', 'match_real')}
+                      className={`
+                        flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all
+                        ${settings.examFormat === 'match_real'
+                          ? 'border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-500/10'
+                          : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
+                        }
+                      `}
+                    >
+                      <span className="text-2xl">📝</span>
+                      <span className="font-medium text-gray-900 dark:text-white">Match Real Format</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                        Exams follow your curriculum&apos;s exact structure
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => updateSetting('examFormat', 'inspired_by')}
+                      className={`
+                        flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all
+                        ${settings.examFormat === 'inspired_by'
+                          ? 'border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-500/10'
+                          : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
+                        }
+                      `}
+                    >
+                      <span className="text-2xl">✨</span>
+                      <span className="font-medium text-gray-900 dark:text-white">Inspired By</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                        Flexible format with similar question styles
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </SettingsCard>
+          </section>
+        )}
 
         {/* App Settings Section */}
         <section className="mb-6">
@@ -579,7 +723,7 @@ export default function SettingsPage() {
         {/* Save Button - Fixed at bottom when changes exist */}
         {hasChanges && (
           <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white/80 px-4 py-4 backdrop-blur-lg dark:border-gray-800 dark:bg-gray-900/80">
-            <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
+            <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
               <p className="text-sm text-gray-500 dark:text-gray-400">You have unsaved changes</p>
               <div className="flex gap-3">
                 <button
@@ -679,7 +823,7 @@ function ThemeButton({ active, onClick, icon, label }: ThemeButtonProps) {
 function SettingsLoadingSkeleton() {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
-      <div className="mx-auto max-w-2xl px-4 py-8">
+      <div className="mx-auto max-w-5xl px-4 py-8">
         {/* Header skeleton */}
         <div className="mb-8">
           <div className="mb-4 h-5 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />

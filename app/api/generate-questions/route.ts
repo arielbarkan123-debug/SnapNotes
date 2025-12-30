@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
+import type { StudySystem } from '@/lib/curriculum/types'
 
 // Validate API key exists
 if (!process.env.ANTHROPIC_API_KEY) {
@@ -75,19 +77,51 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build prompt for question generation
+    // Fetch curriculum context for curriculum-aligned questions
+    let curriculumSection = ''
+    const { data: userProfile } = await supabase
+      .from('user_learning_profile')
+      .select('study_system, subjects, subject_levels, exam_format')
+      .eq('user_id', user.id)
+      .single()
+
+    if (userProfile?.study_system && userProfile.study_system !== 'general' && userProfile.study_system !== 'other') {
+      const curriculumContext = await buildCurriculumContext({
+        userProfile: {
+          studySystem: userProfile.study_system as StudySystem,
+          subjects: userProfile.subjects || [],
+          subjectLevels: userProfile.subject_levels || {},
+          examFormat: userProfile.exam_format as 'match_real' | 'inspired_by' | undefined,
+        },
+        contentSample: lessonContent || courseContext || topic, // Use content to detect subject
+        purpose: 'practice',
+      })
+      curriculumSection = formatContextForPrompt(curriculumContext)
+    }
+
+    // Build prompt for question generation with curriculum awareness
     const systemPrompt = `You are an educational AI that generates practice questions. Generate questions that test understanding, not just memorization.
 
+${curriculumSection ? `## Curriculum Context
+${curriculumSection}
+
+Use this curriculum context to:
+- Apply appropriate command terms (e.g., "Describe", "Explain", "Evaluate", "Compare")
+- Align questions with assessment objectives
+- Match the difficulty level to the student's curriculum level
+- Use question styles typical of this curriculum's exams
+` : ''}
 ${courseContext}
 ${lessonContent}
 
 Rules:
 1. Generate ${validCount} questions related to the topic
-2. Questions should be diverse in difficulty
+2. Questions should be diverse in difficulty${curriculumSection ? ' - aligned with curriculum assessment objectives' : ''}
 3. For multiple choice, provide 4 options with one correct answer
 4. Include clear explanations for the correct answer
 5. If a wrong question is provided, generate related questions that reinforce the concept
-6. Questions should be appropriate for the education level implied by the content
+6. Questions should be appropriate for the education level${curriculumSection ? ' and curriculum standards' : ''}
+${curriculumSection ? '7. Use curriculum-specific command terms in question stems where appropriate' : ''}
 
 Return JSON in this exact format:
 {

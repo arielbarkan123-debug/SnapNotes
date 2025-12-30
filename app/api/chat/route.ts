@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { buildChatContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
+import type { StudySystem } from '@/lib/curriculum/types'
 
 // Validate API key exists
 if (!process.env.ANTHROPIC_API_KEY) {
@@ -77,6 +79,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Fetch curriculum context for personalized tutoring
+    let curriculumSection = ''
+    const { data: userProfile } = await supabase
+      .from('user_learning_profile')
+      .select('study_system, subjects, subject_levels, education_level')
+      .eq('user_id', user.id)
+      .single()
+
+    if (userProfile?.study_system && userProfile.study_system !== 'general' && userProfile.study_system !== 'other') {
+      const curriculumContext = await buildChatContext(
+        userProfile.study_system as StudySystem,
+        userProfile.subjects || [],
+        courseContext // Use course content to detect subject
+      )
+      curriculumSection = formatContextForPrompt(curriculumContext)
+    }
+
+    // Get education level for explanation depth
+    const educationLevel = userProfile?.education_level || 'high_school'
+
     // Build conversation history for Claude - validate each message
     const conversationHistory: ChatMessage[] = (Array.isArray(history) ? history : [])
       .slice(-MAX_HISTORY_LENGTH)
@@ -89,22 +111,46 @@ export async function POST(request: NextRequest) {
         content: msg.content.slice(0, MAX_MESSAGE_LENGTH),
       }))
 
-    // Create system prompt
+    // Map education level to explanation depth guidance
+    const depthGuidance: Record<string, string> = {
+      elementary: 'Use simple language and basic analogies. Avoid jargon.',
+      middle_school: 'Use clear explanations with relatable examples. Introduce terminology gradually.',
+      high_school: 'Use appropriate academic language. Connect concepts to exam requirements.',
+      university: 'Use technical language freely. Focus on deeper understanding and connections.',
+      graduate: 'Assume strong foundation. Discuss nuances and advanced applications.',
+      professional: 'Focus on practical applications and efficiency.',
+    }
+
+    // Create system prompt with curriculum awareness
     const systemPrompt = `You are a helpful AI tutor for NoteSnap, a study app. You're helping a student understand their study material.
 
-${courseContext ? `The student is studying "${courseName}". Here's the course content for context:
+${curriculumSection ? `## Student's Curriculum
+${curriculumSection}
+
+Use this curriculum context to:
+- Reference curriculum-specific terminology and command terms
+- Align explanations with assessment objectives
+- Prepare the student for the specific exam format they'll face
+- Use appropriate depth and complexity for their level
+
+` : ''}${courseContext ? `The student is studying "${courseName}". Here's the course content for context:
 
 ${courseContext}
 
-` : ''}Rules:
+` : ''}## Explanation Style
+Education Level: ${educationLevel}
+${depthGuidance[educationLevel] || depthGuidance.high_school}
+
+## Rules:
 1. Be encouraging and supportive
-2. Explain concepts clearly and simply
-3. Use examples when helpful
+2. Explain concepts clearly at the appropriate level for the student
+3. Use examples when helpful${curriculumSection ? ' - use curriculum-relevant examples' : ''}
 4. If asked about something not in the course material, provide accurate information but note it's supplementary
 5. Keep responses concise but thorough (2-4 paragraphs max unless more detail is requested)
 6. Use bullet points or numbered lists for clarity when appropriate
 7. If the student seems confused, break down the concept into smaller parts
 8. Encourage the student to practice and review
+${curriculumSection ? '9. When relevant, mention how topics connect to exam expectations and assessment criteria' : ''}
 
 Remember: You're a tutor, not just an answer machine. Help them understand, don't just give answers.`
 

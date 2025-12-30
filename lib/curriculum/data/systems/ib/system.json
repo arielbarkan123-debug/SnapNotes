@@ -1,0 +1,146 @@
+{
+  "id": "ib",
+  "name": "International Baccalaureate (IB)",
+  "description": "The IB Diploma Programme is a rigorous, academically challenging and balanced pre-university curriculum for students aged 16-19. It emphasizes critical thinking, intercultural understanding, and exposure to a variety of viewpoints.",
+  "grading": {
+    "scale": "1-7 per subject, 45 points maximum (6 subjects + 3 core points)",
+    "passingGrade": "24 points minimum with specific conditions",
+    "descriptions": [
+      { "grade": "7", "description": "Excellent", "percentageRange": "80-100%" },
+      { "grade": "6", "description": "Very Good", "percentageRange": "70-79%" },
+      { "grade": "5", "description": "Good", "percentageRange": "60-69%" },
+      { "grade": "4", "description": "Satisfactory", "percentageRange": "50-59%" },
+      { "grade": "3", "description": "Mediocre", "percentageRange": "40-49%" },
+      { "grade": "2", "description": "Poor", "percentageRange": "20-39%" },
+      { "grade": "1", "description": "Very Poor", "percentageRange": "0-19%" }
+    ]
+  },
+  "assessmentPhilosophy": "IB assessment is criterion-referenced, meaning students are evaluated against fixed standards rather than against each other. Assessment combines external examinations (typically 70-80% of final grade) with internally assessed coursework (20-30%). The IB emphasizes developing students who can think critically, apply knowledge to new situations, and communicate ideas effectively. Questions often require extended responses demonstrating deep understanding rather than memorization.",
+  "keyTerminology": {
+    "DP": "Diploma Programme - the 2-year pre-university course",
+    "TOK": "Theory of Knowledge - a core course exploring the nature of knowledge",
+    "EE": "Extended Essay - a 4000-word independent research paper",
+    "CAS": "Creativity, Activity, Service - core requirement for experiential learning",
+    "IA": "Internal Assessment - coursework marked by teachers and moderated by IB",
+    "SL": "Standard Level - 150 teaching hours over 2 years",
+    "HL": "Higher Level - 240 teaching hours over 2 years, greater depth",
+    "AHL": "Additional Higher Level - extra content for HL students",
+    "IBO": "International Baccalaureate Organization - the governing body",
+    "Markband": "Descriptor-based criteria for awarding marks",
+    "Rubric": "Detailed marking criteria for specific assessments"
+  },
+  "commandTerms": [
+    {
+      "term": "State",
+      "definition": "Give a specific name, value or other brief answer without explanation or calculation",
+      "cognitiveLevel": 1,
+      "examples": ["State the function of mitochondria", "State the formula for velocity"]
+    },
+    {
+      "term": "Define",
+      "definition": "Give the precise meaning of a word, phrase, concept or physical quantity",
+      "cognitiveLevel": 1,
+      "examples": ["Define activation energy", "Define natural selection"]
+    },
+    {
+      "term": "List",
+      "definition": "Give a sequence of brief answers with no explanation",
+      "cognitiveLevel": 1,
+      "examples": ["List three factors affecting enzyme activity"]
+    },
+    {
+      "term": "Outline",
+      "definition": "Give a brief account or summary",
+      "cognitiveLevel": 1,
+      "examples": ["Outline the process of DNA replication"]
+    },
+    {
+      "term": "Describe",
+      "definition": "Give a detailed account including characteristics and main features",
+      "cognitiveLevel": 2,
+      "examples": ["Describe the structure of a cell membrane"]
+    },
+    {
+      "term": "Distinguish",
+      "definition": "Make clear the differences between two or more concepts or items",
+      "cognitiveLevel": 2,
+      "examples": ["Distinguish between mitosis and meiosis"]
+    },
+    {
+      "term": "Explain",
+      "definition": "Give a detailed account including reasons or causes",
+      "cognitiveLevel": 2,
+      "examples": ["Explain how enzymes catalyze reactions"]
+    },
+    {
+      "term": "Apply",
+      "definition": "Use knowledge and understanding in response to a given situation or real circumstances",
+      "cognitiveLevel": 2,
+      "examples": ["Apply the concept of natural selection to antibiotic resistance"]
+    },
+    {
+      "term": "Calculate",
+      "definition": "Obtain a numerical answer showing the relevant stages in the working",
+      "cognitiveLevel": 2,
+      "examples": ["Calculate the magnification of the microscope"]
+    },
+    {
+      "term": "Analyse",
+      "definition": "Break down in order to bring out the essential elements or structure",
+      "cognitiveLevel": 3,
+      "examples": ["Analyse the data in the graph to identify trends"]
+    },
+    {
+      "term": "Compare",
+      "definition": "Give an account of the similarities between two or more items, referring to both throughout",
+      "cognitiveLevel": 3,
+      "examples": ["Compare aerobic and anaerobic respiration"]
+    },
+    {
+      "term": "Compare and contrast",
+      "definition": "Give an account of similarities and differences between two or more items, referring to both throughout",
+      "cognitiveLevel": 3,
+      "examples": ["Compare and contrast DNA and RNA structure"]
+    },
+    {
+      "term": "Discuss",
+      "definition": "Offer a considered and balanced review that includes a range of arguments, factors or hypotheses. Conclusions should be presented clearly and supported by appropriate evidence",
+      "cognitiveLevel": 3,
+      "examples": ["Discuss the ethical implications of genetic engineering"]
+    },
+    {
+      "term": "Evaluate",
+      "definition": "Make an appraisal by weighing up the strengths and limitations",
+      "cognitiveLevel": 3,
+      "examples": ["Evaluate the effectiveness of vaccination programs"]
+    },
+    {
+      "term": "Suggest",
+      "definition": "Propose a solution, hypothesis or other possible answer",
+      "cognitiveLevel": 3,
+      "examples": ["Suggest reasons for the unexpected results"]
+    },
+    {
+      "term": "Deduce",
+      "definition": "Reach a conclusion from the information given",
+      "cognitiveLevel": 3,
+      "examples": ["Deduce the genotype of the parent from the offspring ratios"]
+    },
+    {
+      "term": "Justify",
+      "definition": "Give valid reasons or evidence to support an answer or conclusion",
+      "cognitiveLevel": 3,
+      "examples": ["Justify your conclusion with reference to the data"]
+    },
+    {
+      "term": "To what extent",
+      "definition": "Consider the merits or otherwise of an argument or concept. Opinions and conclusions should be presented clearly and supported with appropriate evidence and sound argument",
+      "cognitiveLevel": 3,
+      "examples": ["To what extent does climate change affect biodiversity?"]
+    }
+  ],
+  "academicYear": {
+    "start": "August/September",
+    "examPeriod": "May (Northern Hemisphere) / November (Southern Hemisphere)"
+  }
+}

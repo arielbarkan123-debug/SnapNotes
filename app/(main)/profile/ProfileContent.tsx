@@ -113,7 +113,7 @@ export default function ProfileContent({
   }, [activityByDate])
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-5xl px-4 py-8">
       {/* Header Section */}
       <div className="mb-8 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-6 text-white shadow-xl">
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">

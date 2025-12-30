@@ -1,0 +1,144 @@
+{
+  "systemId": "ib",
+  "subjectId": "biology-hl",
+  "topicId": "1",
+  "name": "Cell Biology",
+  "understandings": [
+    "According to cell theory, living organisms are composed of cells",
+    "Organisms consisting of only one cell carry out all functions of life in that cell",
+    "Surface area to volume ratio is important in the limitation of cell size",
+    "Multicellular organisms have properties that emerge from the interaction of their cellular components",
+    "Specialized tissues can develop by cell differentiation in multicellular organisms",
+    "Differentiation involves the expression of some genes and not others in a cell's genome",
+    "The capacity of stem cells to divide and differentiate makes them suitable for therapeutic uses"
+  ],
+  "applications": [
+    "Questioning the cell theory using atypical examples including striated muscle, giant algae and aseptate fungal hyphae",
+    "Investigation of functions of life in Paramecium and one named photosynthetic unicellular organism",
+    "Use of stem cells to treat Stargardt's disease and one other named condition",
+    "Ethics of the therapeutic use of stem cells from specially created embryos, umbilical cord blood and adult tissues"
+  ],
+  "keyConcepts": [
+    {
+      "term": "Cell theory",
+      "definition": "The theory that all living organisms are made up of cells, all cells come from pre-existing cells, and the cell is the basic unit of life",
+      "importance": "Foundation of modern biology - explains how all life is organized",
+      "relatedTerms": ["prokaryote", "eukaryote", "unicellular", "multicellular"]
+    },
+    {
+      "term": "Surface area to volume ratio",
+      "definition": "The ratio between the surface area and volume of a cell, which decreases as cell size increases",
+      "importance": "Limits cell size because exchange of materials becomes insufficient as volume increases faster than surface area",
+      "relatedTerms": ["diffusion", "membrane", "exchange"]
+    },
+    {
+      "term": "Stem cells",
+      "definition": "Undifferentiated cells capable of self-renewal and differentiation into specialized cell types",
+      "importance": "Have therapeutic potential for treating diseases and repairing damaged tissues",
+      "relatedTerms": ["differentiation", "totipotent", "pluripotent", "multipotent"]
+    },
+    {
+      "term": "Cell differentiation",
+      "definition": "The process by which a cell becomes specialized for a particular function",
+      "importance": "Allows multicellular organisms to have specialized tissues and organs with specific functions",
+      "relatedTerms": ["gene expression", "stem cells", "specialized cells"]
+    },
+    {
+      "term": "Emergent properties",
+      "definition": "Properties that arise from the interaction of components that are not present in the individual components",
+      "importance": "Explains how multicellular organisms can have functions that individual cells cannot perform",
+      "relatedTerms": ["systems", "organization", "complexity"]
+    }
+  ],
+  "commonMisconceptions": [
+    {
+      "misconception": "All cells have a nucleus",
+      "correction": "Prokaryotic cells (bacteria and archaea) do not have a membrane-bound nucleus. Red blood cells in mammals also lack nuclei."
+    },
+    {
+      "misconception": "Larger organisms have larger cells",
+      "correction": "Cell size is relatively constant across organisms. Larger organisms have more cells, not larger cells."
+    },
+    {
+      "misconception": "Stem cells only come from embryos",
+      "correction": "Stem cells can be obtained from embryos, umbilical cord blood, and adult tissues. Adult stem cells are found in bone marrow and other tissues."
+    },
+    {
+      "misconception": "Cell theory applies perfectly to all living things",
+      "correction": "There are exceptions like striated muscle fibers (multinucleate), giant algae (Acetabularia), and aseptate fungal hyphae that challenge the theory."
+    }
+  ],
+  "examFocus": {
+    "frequentlyTested": [
+      "Limitations of cell theory with specific examples",
+      "Therapeutic applications of stem cells",
+      "Surface area to volume ratio calculations and implications",
+      "Ethical considerations of stem cell research"
+    ],
+    "typicalQuestions": [
+      "Outline the cell theory and discuss one exception to it",
+      "Explain why cells cannot grow beyond a certain size",
+      "Discuss the ethical issues surrounding the use of embryonic stem cells",
+      "Compare and contrast prokaryotic and eukaryotic cells"
+    ],
+    "markingNotes": [
+      "Award marks for specific named examples, not generic statements",
+      "Cell theory questions require all three principles to be stated for full marks",
+      "SA:V ratio questions often require mathematical reasoning",
+      "Ethics questions need balanced arguments with specific points"
+    ],
+    "commonMistakes": [
+      "Confusing prokaryotic and eukaryotic cell features",
+      "Not providing specific examples when required",
+      "Forgetting to mention all three principles of cell theory"
+    ]
+  },
+  "connections": [
+    { "topicId": "2", "relationship": "Molecular biology explains the chemical basis of cell structure and function" },
+    { "topicId": "3", "relationship": "Genetics explains how cell differentiation is controlled by gene expression" },
+    { "topicId": "6", "relationship": "Human physiology examines specialized cells in tissues and organs" }
+  ],
+  "hlExtensions": {
+    "understandings": [
+      "Prokaryotes divide by binary fission",
+      "The cell cycle and its phases including interphase and mitosis",
+      "Cyclins are involved in the control of the cell cycle",
+      "Mitosis is division of the nucleus into two genetically identical daughter nuclei",
+      "Chromosomes condense by supercoiling during mitosis"
+    ],
+    "applications": [
+      "The correlation between smoking and incidence of cancers",
+      "Identification of phases of mitosis in cells viewed with a microscope or in a micrograph"
+    ],
+    "keyConcepts": [
+      {
+        "term": "Binary fission",
+        "definition": "Asexual reproduction in prokaryotes where one cell divides into two identical daughter cells",
+        "importance": "Allows rapid reproduction of bacteria"
+      },
+      {
+        "term": "Cell cycle",
+        "definition": "The sequence of events from one cell division to the next, including interphase (G1, S, G2) and mitosis",
+        "importance": "Controls cell growth and reproduction"
+      },
+      {
+        "term": "Cyclins",
+        "definition": "Regulatory proteins that control the cell cycle by activating cyclin-dependent kinases",
+        "importance": "Ensure proper progression through cell cycle; mutations can lead to cancer"
+      }
+    ]
+  },
+  "resources": {
+    "diagrams": [
+      "Comparison of prokaryotic and eukaryotic cell structure",
+      "Cell cycle diagram showing all phases",
+      "Stages of mitosis with chromosome behavior",
+      "Surface area to volume ratio graph"
+    ],
+    "formulas": [
+      "Surface area of sphere = 4πr²",
+      "Volume of sphere = (4/3)πr³",
+      "SA:V ratio = Surface area / Volume"
+    ]
+  }
+}

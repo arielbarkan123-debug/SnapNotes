@@ -1,0 +1,85 @@
+{
+  "systemId": "ib",
+  "subjectId": "physics-hl",
+  "name": "Physics HL",
+  "code": "Group 4",
+  "levels": ["SL", "HL"],
+  "description": "IB Physics develops conceptual understanding and problem-solving skills in mechanics, waves, electricity, magnetism, and modern physics. HL extends into fields, electromagnetism, quantum physics, and astrophysics.",
+  "assessmentComponents": [
+    {
+      "name": "Paper 1",
+      "weight": 20,
+      "duration": "1 hour",
+      "description": "Multiple choice questions on core and AHL material",
+      "structure": "40 multiple choice questions. Calculator allowed. Data booklet provided.",
+      "markingCriteria": ["1 mark per correct answer", "Cover all topics proportionally"]
+    },
+    {
+      "name": "Paper 2",
+      "weight": 36,
+      "duration": "2 hours 15 minutes",
+      "description": "Short-answer and extended response questions",
+      "structure": "Section A: Short-answer questions (all compulsory). Section B: Extended response - choose 2 from 3. Section C: Extended response - choose 1 from 2.",
+      "markingCriteria": ["Show all working", "Include units in final answers", "Use data booklet values where appropriate"]
+    },
+    {
+      "name": "Paper 3",
+      "weight": 24,
+      "duration": "1 hour 15 minutes",
+      "description": "Data-based questions and Option questions",
+      "structure": "Section A: Data-based questions testing practical skills. Section B: ONE Option topic with extended questions.",
+      "markingCriteria": ["Analyse experimental data with uncertainties", "Apply concepts to unfamiliar contexts"]
+    },
+    {
+      "name": "Internal Assessment",
+      "weight": 20,
+      "description": "Individual Investigation - scientific investigation report (6-12 pages)",
+      "structure": "Criteria: Personal engagement (8%), Exploration (25%), Analysis (25%), Evaluation (25%), Communication (17%)",
+      "markingCriteria": ["Original research question", "Appropriate experimental design", "Analysis with uncertainties", "Critical evaluation"]
+    }
+  ],
+  "assessmentObjectives": [
+    {
+      "id": "AO1",
+      "description": "Demonstrate knowledge and understanding",
+      "verbs": ["state", "define", "list", "outline", "draw", "label"],
+      "weight": 25,
+      "cognitiveLevel": 1
+    },
+    {
+      "id": "AO2",
+      "description": "Apply knowledge and understanding",
+      "verbs": ["describe", "explain", "apply", "calculate", "determine", "estimate", "derive"],
+      "weight": 35,
+      "cognitiveLevel": 2
+    },
+    {
+      "id": "AO3",
+      "description": "Analyse, evaluate and synthesize",
+      "verbs": ["analyse", "compare", "discuss", "evaluate", "suggest", "deduce", "predict", "justify"],
+      "weight": 40,
+      "cognitiveLevel": 3
+    }
+  ],
+  "topicList": [
+    { "id": "1", "name": "Measurements and Uncertainties", "hours": 5 },
+    { "id": "2", "name": "Mechanics", "hours": 22 },
+    { "id": "3", "name": "Thermal Physics", "hours": 11 },
+    { "id": "4", "name": "Waves", "hours": 15 },
+    { "id": "5", "name": "Electricity and Magnetism", "hours": 15 },
+    { "id": "6", "name": "Circular Motion and Gravitation", "hours": 5 },
+    { "id": "7", "name": "Atomic, Nuclear and Particle Physics", "hours": 14 },
+    { "id": "8", "name": "Energy Production", "hours": 8 },
+    { "id": "9", "name": "Wave Phenomena", "hours": 17, "hlOnly": true },
+    { "id": "10", "name": "Fields", "hours": 11, "hlOnly": true },
+    { "id": "11", "name": "Electromagnetic Induction", "hours": 16, "hlOnly": true },
+    { "id": "12", "name": "Quantum and Nuclear Physics", "hours": 16, "hlOnly": true }
+  ],
+  "commandTermsSubset": [
+    "State", "Define", "Calculate", "Derive", "Explain", "Describe",
+    "Sketch", "Analyse", "Evaluate", "Deduce", "Estimate"
+  ],
+  "mathsRequirements": "Students need proficiency in: algebra, trigonometry, vectors, graphical analysis, differentiation and integration (HL), logarithms, and handling significant figures and uncertainties.",
+  "practicalRequirements": "Minimum 40 hours of practical work including mechanics experiments, electrical circuits, wave demonstrations, and data analysis with error propagation.",
+  "iaGuidelines": "The IA should focus on a physics concept with clear measurement and analysis. Topics should allow for good data with calculable uncertainties. Avoid topics that are too complex or lack quantitative analysis."
+}

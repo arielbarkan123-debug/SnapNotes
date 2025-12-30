@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useFunnelTracking, useEventTracking } from '@/lib/analytics'
+import { GradeSelector, SubjectPicker, type SelectedSubject } from '@/components/curriculum'
+import { getDefaultGrade, hasCurriculumData, CURRICULUM_SYSTEMS } from '@/lib/curriculum/grades'
+import type { StudySystem } from '@/lib/curriculum/types'
 
 // =============================================================================
 // Types
@@ -13,12 +16,11 @@ type StudyGoal = 'exam_prep' | 'general_learning' | 'skill_improvement'
 type TimeAvailability = 'short' | 'medium' | 'long'
 type PreferredTime = 'morning' | 'afternoon' | 'evening' | 'varies'
 type LearningStyle = 'reading' | 'visual' | 'practice'
-type EducationLevel = 'elementary' | 'middle_school' | 'high_school' | 'university' | 'graduate' | 'professional'
-type StudySystem = 'general' | 'us' | 'uk' | 'israeli_bagrut' | 'ib' | 'ap' | 'other'
 
 interface OnboardingData {
-  educationLevel: EducationLevel | null
   studySystem: StudySystem | null
+  grade: string | null
+  subjects: SelectedSubject[]
   studyGoal: StudyGoal | null
   timeAvailability: TimeAvailability | null
   preferredTime: PreferredTime | null
@@ -29,63 +31,24 @@ interface OnboardingData {
 // Constants
 // =============================================================================
 
-const EDUCATION_LEVELS = [
-  {
-    id: 'elementary' as EducationLevel,
-    icon: '🎒',
-    title: 'Elementary School',
-    description: 'Grades 1-5 (ages 6-11)',
-  },
-  {
-    id: 'middle_school' as EducationLevel,
-    icon: '📓',
-    title: 'Middle School',
-    description: 'Grades 6-8 (ages 11-14)',
-  },
-  {
-    id: 'high_school' as EducationLevel,
-    icon: '🎓',
-    title: 'High School',
-    description: 'Grades 9-12 (ages 14-18)',
-  },
-  {
-    id: 'university' as EducationLevel,
-    icon: '🏛️',
-    title: 'University / College',
-    description: 'Undergraduate studies',
-  },
-  {
-    id: 'graduate' as EducationLevel,
-    icon: '📜',
-    title: 'Graduate School',
-    description: "Master's or PhD studies",
-  },
-  {
-    id: 'professional' as EducationLevel,
-    icon: '💼',
-    title: 'Professional',
-    description: 'Work-related learning or certifications',
-  },
-]
-
 const STUDY_SYSTEMS = [
   {
-    id: 'general' as StudySystem,
-    icon: '🌍',
-    title: 'General',
-    description: 'Standard curriculum or self-study',
-  },
-  {
-    id: 'us' as StudySystem,
-    icon: '🇺🇸',
-    title: 'US System',
-    description: 'American curriculum (Common Core, SAT, ACT)',
+    id: 'ib' as StudySystem,
+    icon: '🌐',
+    title: 'IB (International Baccalaureate)',
+    description: 'International Baccalaureate Diploma Programme',
   },
   {
     id: 'uk' as StudySystem,
     icon: '🇬🇧',
-    title: 'UK System',
+    title: 'UK A-Levels',
     description: 'British curriculum (GCSE, A-Levels)',
+  },
+  {
+    id: 'ap' as StudySystem,
+    icon: '📚',
+    title: 'AP (Advanced Placement)',
+    description: 'College-level courses in high school',
   },
   {
     id: 'israeli_bagrut' as StudySystem,
@@ -94,16 +57,16 @@ const STUDY_SYSTEMS = [
     description: 'Israeli matriculation exams',
   },
   {
-    id: 'ib' as StudySystem,
-    icon: '🌐',
-    title: 'IB (International Baccalaureate)',
-    description: 'International Baccalaureate program',
+    id: 'us' as StudySystem,
+    icon: '🇺🇸',
+    title: 'US System',
+    description: 'American curriculum (Common Core)',
   },
   {
-    id: 'ap' as StudySystem,
-    icon: '📚',
-    title: 'AP (Advanced Placement)',
-    description: 'College-level courses in high school',
+    id: 'general' as StudySystem,
+    icon: '🌍',
+    title: 'General',
+    description: 'Standard curriculum or self-study',
   },
 ]
 
@@ -197,8 +160,6 @@ const LEARNING_STYLES = [
   },
 ]
 
-const TOTAL_STEPS = 6
-
 // =============================================================================
 // Main Component
 // =============================================================================
@@ -211,13 +172,22 @@ export default function OnboardingPage() {
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward')
 
   const [data, setData] = useState<OnboardingData>({
-    educationLevel: null,
     studySystem: null,
+    grade: null,
+    subjects: [],
     studyGoal: null,
     timeAvailability: null,
     preferredTime: null,
     learningStyles: [],
   })
+
+  // Determine if we should show subject selection step
+  const showSubjectStep = data.studySystem && hasCurriculumData(data.studySystem)
+
+  // Step flow: 1=system, 2=grade, 3=subjects (if curriculum), 4=goal, 5=time, 6=preferred, 7=learning
+  const BASE_STEPS = 6 // system, grade, goal, time, preferred, learning
+  const EXTENDED_STEPS = 7 // +subjects
+  const totalSteps = showSubjectStep ? EXTENDED_STEPS : BASE_STEPS
 
   // Analytics tracking
   const { trackStep } = useFunnelTracking('onboarding')
@@ -225,19 +195,13 @@ export default function OnboardingPage() {
 
   // Track step changes
   const trackOnboardingStep = useCallback((step: number) => {
-    const stepNames = [
-      'start',
-      'education_level',
-      'study_system',
-      'study_goal',
-      'time_availability',
-      'preferred_time',
-      'learning_style',
-    ]
+    const stepNames = showSubjectStep
+      ? ['start', 'study_system', 'grade', 'subjects', 'study_goal', 'time_availability', 'preferred_time', 'learning_style']
+      : ['start', 'study_system', 'grade', 'study_goal', 'time_availability', 'preferred_time', 'learning_style']
     if (step >= 1 && step <= stepNames.length) {
       trackStep(stepNames[step - 1], step)
     }
-  }, [trackStep])
+  }, [trackStep, showSubjectStep])
 
   // Check if user already has a profile
   useEffect(() => {
@@ -270,30 +234,61 @@ export default function OnboardingPage() {
     checkProfile()
   }, [router, trackOnboardingStep])
 
+  // Get the actual step content based on current step and whether subjects are shown
+  const getStepContent = (step: number): string => {
+    if (showSubjectStep) {
+      // With subject selection: 1=system, 2=grade, 3=subjects, 4=goal, 5=time, 6=preferred, 7=learning
+      const steps = ['system', 'grade', 'subjects', 'goal', 'time', 'preferred', 'learning']
+      return steps[step - 1] || ''
+    } else {
+      // Without subject selection: 1=system, 2=grade, 3=goal, 4=time, 5=preferred, 6=learning
+      const steps = ['system', 'grade', 'goal', 'time', 'preferred', 'learning']
+      return steps[step - 1] || ''
+    }
+  }
+
   // Handle option selection
   const handleSelect = (value: string) => {
-    switch (currentStep) {
-      case 1:
-        setData(prev => ({ ...prev, educationLevel: value as EducationLevel }))
+    const stepContent = getStepContent(currentStep)
+
+    switch (stepContent) {
+      case 'system':
+        const newSystem = value as StudySystem
+        const defaultGrade = getDefaultGrade(newSystem) || null
+        setData(prev => ({
+          ...prev,
+          studySystem: newSystem,
+          grade: defaultGrade,
+          // Clear subjects if switching systems
+          subjects: [],
+        }))
         nextStep()
         break
-      case 2:
-        setData(prev => ({ ...prev, studySystem: value as StudySystem }))
-        nextStep()
-        break
-      case 3:
+      case 'goal':
         setData(prev => ({ ...prev, studyGoal: value as StudyGoal }))
         nextStep()
         break
-      case 4:
+      case 'time':
         setData(prev => ({ ...prev, timeAvailability: value as TimeAvailability }))
         nextStep()
         break
-      case 5:
+      case 'preferred':
         setData(prev => ({ ...prev, preferredTime: value as PreferredTime }))
         nextStep()
         break
     }
+  }
+
+  // Handle grade selection
+  const handleGradeChange = (grade: string) => {
+    setData(prev => ({ ...prev, grade }))
+    // Auto-advance after a short delay for better UX
+    setTimeout(() => nextStep(), 200)
+  }
+
+  // Handle subject changes
+  const handleSubjectsChange = (subjects: SelectedSubject[]) => {
+    setData(prev => ({ ...prev, subjects }))
   }
 
   // Handle learning style toggle (multi-select)
@@ -307,7 +302,7 @@ export default function OnboardingPage() {
   }
 
   const nextStep = () => {
-    if (currentStep < TOTAL_STEPS) {
+    if (currentStep < totalSteps) {
       setDirection('forward')
       const newStep = currentStep + 1
       setCurrentStep(newStep)
@@ -323,7 +318,7 @@ export default function OnboardingPage() {
   }
 
   const skip = () => {
-    if (currentStep < TOTAL_STEPS) {
+    if (currentStep < totalSteps) {
       setDirection('forward')
       setCurrentStep(prev => prev + 1)
     } else {
@@ -336,11 +331,12 @@ export default function OnboardingPage() {
     setIsSaving(true)
 
     // Track completion
-    trackStep('complete', 8)
+    trackStep('complete', totalSteps + 1)
     trackFeature('onboarding_complete', {
-      educationLevel: data.educationLevel,
       studySystem: data.studySystem,
+      grade: data.grade,
       studyGoal: data.studyGoal,
+      subjectCount: data.subjects.length,
       learningStyles: data.learningStyles,
     })
 
@@ -364,10 +360,19 @@ export default function OnboardingPage() {
         ? sessionLengthMap[data.timeAvailability]
         : 15
 
+      // Convert subjects to arrays for storage
+      const subjectIds = data.subjects.map(s => s.id)
+      const subjectLevels = data.subjects.reduce<Record<string, string>>((acc, s) => {
+        if (s.level) {
+          acc[s.id] = s.level
+        }
+        return acc
+      }, {})
+
       // Create learning profile
       const profileData = {
         user_id: user.id,
-        education_level: data.educationLevel || 'high_school',
+        education_level: 'high_school', // Legacy field, keep for backward compat
         study_system: data.studySystem || 'general',
         study_goal: data.studyGoal || 'general_learning',
         preferred_study_time: data.preferredTime || 'varies',
@@ -378,6 +383,10 @@ export default function OnboardingPage() {
         optimal_session_length: sessionLength,
         strong_subjects: [],
         weak_subjects: [],
+        // Curriculum context fields
+        subjects: subjectIds,
+        subject_levels: subjectLevels,
+        exam_format: 'match_real',
       }
 
       const { error } = await supabase
@@ -385,8 +394,23 @@ export default function OnboardingPage() {
         .insert(profileData)
 
       if (error) {
-        console.error('Failed to save profile:', error)
-        // Continue anyway - they can update later
+        console.error('Failed to save learning profile:', error)
+      }
+
+      // Also update the profiles table with grade and subjects
+      const { error: profileUpdateError } = await supabase
+        .from('profiles')
+        .update({
+          study_system: data.studySystem || 'general',
+          grade: data.grade,
+          subjects: subjectIds,
+          subject_levels: subjectLevels,
+          exam_format: 'match_real',
+        })
+        .eq('id', user.id)
+
+      if (profileUpdateError) {
+        console.error('Failed to update profile:', profileUpdateError)
       }
 
       // Initialize gamification stats
@@ -430,7 +454,7 @@ export default function OnboardingPage() {
         <div className="max-w-md mx-auto">
           {/* Progress Dots */}
           <div className="flex justify-center gap-2 mb-2">
-            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+            {Array.from({ length: totalSteps }).map((_, i) => (
               <div
                 key={i}
                 className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
@@ -444,7 +468,7 @@ export default function OnboardingPage() {
             ))}
           </div>
           <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-            Step {currentStep} of {TOTAL_STEPS}
+            Step {currentStep} of {totalSteps}
           </p>
         </div>
       </div>
@@ -458,27 +482,62 @@ export default function OnboardingPage() {
               direction === 'forward' ? 'slide-in-from-right-8' : 'slide-in-from-left-8'
             } fade-in duration-300`}
           >
-            {currentStep === 1 && (
-              <StepContent
-                title="What's your education level?"
-                subtitle="We'll adjust content complexity to match your level"
-                options={EDUCATION_LEVELS}
-                selected={data.educationLevel}
-                onSelect={handleSelect}
-              />
-            )}
-
-            {currentStep === 2 && (
+            {getStepContent(currentStep) === 'system' && (
               <StepContent
                 title="What study system are you in?"
-                subtitle="This helps us tailor content to your curriculum (optional)"
+                subtitle="This helps us tailor content to your curriculum"
                 options={STUDY_SYSTEMS}
                 selected={data.studySystem}
                 onSelect={handleSelect}
               />
             )}
 
-            {currentStep === 3 && (
+            {getStepContent(currentStep) === 'grade' && data.studySystem && (
+              <div className="text-center">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                  What grade are you in?
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 mb-8">
+                  Select your current grade level
+                </p>
+
+                <GradeSelector
+                  system={data.studySystem}
+                  value={data.grade}
+                  onChange={handleGradeChange}
+                  className="justify-center"
+                />
+              </div>
+            )}
+
+            {getStepContent(currentStep) === 'subjects' && data.studySystem && (
+              <div className="text-center">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                  Which subjects are you studying?
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  Select the subjects you want to focus on
+                </p>
+
+                <div className="max-h-[50vh] overflow-y-auto text-left mb-6">
+                  <SubjectPicker
+                    system={data.studySystem}
+                    selectedSubjects={data.subjects}
+                    onChange={handleSubjectsChange}
+                    compact
+                  />
+                </div>
+
+                <button
+                  onClick={nextStep}
+                  className="w-full py-4 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors"
+                >
+                  {data.subjects.length > 0 ? `Continue with ${data.subjects.length} subject${data.subjects.length > 1 ? 's' : ''}` : 'Skip for now'}
+                </button>
+              </div>
+            )}
+
+            {getStepContent(currentStep) === 'goal' && (
               <StepContent
                 title="What's your main study goal?"
                 subtitle="This helps us personalize your learning experience"
@@ -488,7 +547,7 @@ export default function OnboardingPage() {
               />
             )}
 
-            {currentStep === 4 && (
+            {getStepContent(currentStep) === 'time' && (
               <StepContent
                 title="How much time can you study daily?"
                 subtitle="We'll optimize session lengths for your schedule"
@@ -498,7 +557,7 @@ export default function OnboardingPage() {
               />
             )}
 
-            {currentStep === 5 && (
+            {getStepContent(currentStep) === 'preferred' && (
               <StepContent
                 title="When do you prefer to study?"
                 subtitle="We'll remind you at the best times"
@@ -508,7 +567,7 @@ export default function OnboardingPage() {
               />
             )}
 
-            {currentStep === 6 && (
+            {getStepContent(currentStep) === 'learning' && (
               <div className="text-center">
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
                   How do you learn best?
@@ -598,7 +657,7 @@ export default function OnboardingPage() {
             onClick={skip}
             className="px-4 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors text-sm"
           >
-            Skip {currentStep === TOTAL_STEPS ? '& Finish' : ''}
+            Skip {currentStep === totalSteps ? '& Finish' : ''}
           </button>
         </div>
       </div>
