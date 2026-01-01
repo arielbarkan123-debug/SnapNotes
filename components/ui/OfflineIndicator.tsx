@@ -10,6 +10,12 @@ import { WifiOff, Wifi } from 'lucide-react'
 export function OfflineIndicator() {
   const { isOnline, wasOffline, clearReconnectionFlag } = useOnlineStatus()
   const [showReconnected, setShowReconnected] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Prevent hydration mismatch - only render after client mount
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Show "reconnected" message briefly when coming back online
   useEffect(() => {
@@ -22,6 +28,11 @@ export function OfflineIndicator() {
       return () => clearTimeout(timer)
     }
   }, [wasOffline, isOnline, clearReconnectionFlag])
+
+  // Don't render anything until mounted (prevents hydration mismatch)
+  if (!mounted) {
+    return null
+  }
 
   // Show offline banner
   if (!isOnline) {
