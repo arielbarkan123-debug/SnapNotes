@@ -332,7 +332,7 @@ export default function HomeworkCheckPage() {
       ]
 
       const formData = new FormData()
-      allImages.forEach(({ file }, index) => {
+      allImages.forEach(({ file }) => {
         formData.append('files', file)
       })
 
@@ -551,7 +551,7 @@ export default function HomeworkCheckPage() {
               )}
             </Button>
             <Link href="/homework" className="sm:w-auto">
-              <Button variant="outline" size="lg" className="w-full">
+              <Button variant="secondary" size="lg" className="w-full">
                 Cancel
               </Button>
             </Link>

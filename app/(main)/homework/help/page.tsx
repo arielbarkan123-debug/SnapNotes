@@ -421,7 +421,7 @@ export default function HomeworkHelpPage() {
             <span>🎓</span> Socratic Tutoring
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Instead of giving you the answer, I'll guide you with questions and hints to help you discover the solution yourself. This builds real understanding!
+            Instead of giving you the answer, I&apos;ll guide you with questions and hints to help you discover the solution yourself. This builds real understanding!
           </p>
           <div className="grid sm:grid-cols-4 gap-3">
             <div className="flex items-center gap-2 text-sm">
@@ -534,7 +534,7 @@ export default function HomeworkHelpPage() {
               )}
             </Button>
             <Link href="/homework" className="sm:w-auto">
-              <Button variant="outline" size="lg" className="w-full">
+              <Button variant="secondary" size="lg" className="w-full">
                 Cancel
               </Button>
             </Link>
@@ -542,7 +542,7 @@ export default function HomeworkHelpPage() {
 
           {/* Privacy Note */}
           <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-            Your tutor won't give you the answer directly - they'll help you figure it out!
+            Your tutor won&apos;t give you the answer directly - they&apos;ll help you figure it out!
           </p>
         </div>
       </main>

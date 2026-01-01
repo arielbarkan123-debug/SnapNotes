@@ -85,6 +85,20 @@ export interface AnalyzeCheckResponse {
   feedback: HomeworkFeedback
 }
 
+// Session management request types
+export interface CreateSessionRequest {
+  questionImageUrl: string
+  comfortLevel?: ComfortLevel
+  initialAttempt?: string
+  referenceImageUrls?: string[]
+}
+
+export interface UpdateSessionRequest {
+  comfortLevel?: ComfortLevel
+  status?: SessionStatus
+  studentFinalAnswer?: string
+}
+
 // ============================================================================
 // Analysis Context Types
 // ============================================================================

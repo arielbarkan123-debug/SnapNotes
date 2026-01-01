@@ -55,7 +55,7 @@ export default function QuestionStep({
   conceptIds,
   difficulty = 3,
   questionId,
-  isRetry = false,
+  isRetry: _isRetry = false,
 }: QuestionStepProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [hasChecked, setHasChecked] = useState(false)

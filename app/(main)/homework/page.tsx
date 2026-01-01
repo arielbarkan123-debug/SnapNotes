@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import Button from '@/components/ui/Button'
 import { useEventTracking } from '@/lib/analytics/hooks'
 
@@ -143,7 +141,6 @@ function StatsCard({ value, label, icon }: { value: string; label: string; icon:
 // ============================================================================
 
 export default function HomeworkHubPage() {
-  const router = useRouter()
   const [recentItems, setRecentItems] = useState<RecentItem[]>([])
   const [stats, setStats] = useState({ checksCount: 0, helpSessions: 0, avgGrade: '-' })
   const [isLoading, setIsLoading] = useState(true)

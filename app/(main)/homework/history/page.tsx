@@ -171,7 +171,7 @@ export default function HomeworkHistoryPage() {
                 </Button>
               </Link>
               <Link href="/homework/help">
-                <Button variant="outline" size="md">
+                <Button variant="secondary" size="md">
                   Get Help
                 </Button>
               </Link>

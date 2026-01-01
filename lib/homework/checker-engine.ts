@@ -8,7 +8,6 @@ import type {
   HomeworkFeedback,
   FeedbackPoint,
   GradeLevel,
-  TeacherStyleAnalysis,
 } from './types'
 
 // ============================================================================

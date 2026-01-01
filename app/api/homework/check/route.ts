@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzeHomework } from '@/lib/homework/checker-engine'
-import type { CreateCheckRequest, HomeworkCheck } from '@/lib/homework/types'
+import type { CreateCheckRequest } from '@/lib/homework/types'
 
 // ============================================================================
 // POST - Create and analyze homework check
