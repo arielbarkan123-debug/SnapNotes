@@ -736,10 +736,12 @@ export function getCardTypeSummary(
 // Export
 // =============================================================================
 
-export default {
+const cardGenerator = {
   generateCardsFromCourse,
   generateQuestionFromContent,
   estimateCardCount,
   getCardTypeSummary,
   buildConceptMapping,
 }
+
+export default cardGenerator

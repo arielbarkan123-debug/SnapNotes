@@ -327,7 +327,7 @@ export async function getWeakConceptIds(
 // Export
 // =============================================================================
 
-export default {
+const questionSelector = {
   calculateTargetDifficulty,
   scoreQuestion,
   selectQuestions,
@@ -335,3 +335,5 @@ export default {
   selectAdaptiveQuestions,
   getWeakConceptIds,
 }
+
+export default questionSelector

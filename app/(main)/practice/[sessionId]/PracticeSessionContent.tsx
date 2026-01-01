@@ -468,7 +468,7 @@ export default function PracticeSessionContent({
       setLastResult(null)
       startTimeRef.current = Date.now()
     }
-  }, [currentIndex, questions.length, session.id, answeredCount, correctCount, trackStep, trackFeature])
+  }, [currentIndex, questions.length, session.id, session.session_type, answeredCount, correctCount, trackStep, trackFeature])
 
   // Handle abandon
   const handleAbandon = useCallback(async () => {
@@ -496,7 +496,7 @@ export default function PracticeSessionContent({
       // Abandon failed - redirect anyway
       router.push('/practice')
     }
-  }, [session.id, router, answeredCount, correctCount, currentIndex, questions.length, trackFeature])
+  }, [session.id, session.session_type, router, answeredCount, correctCount, currentIndex, questions.length, trackFeature])
 
   // Render complete view
   if (view === 'complete') {

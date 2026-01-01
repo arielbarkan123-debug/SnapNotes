@@ -498,7 +498,7 @@ export async function getSessionStats(userId: string, days: number = 7) {
 // Export
 // =============================================================================
 
-export default {
+const dailySession = {
   generateDailySession,
   generateTargetedSession,
   generateGapFixSession,
@@ -507,3 +507,5 @@ export default {
   abandonSession,
   getSessionStats,
 }
+
+export default dailySession

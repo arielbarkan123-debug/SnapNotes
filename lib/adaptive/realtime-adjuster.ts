@@ -440,9 +440,11 @@ export async function savePerformanceSnapshot(
 // Export
 // =============================================================================
 
-export default {
+const realtimeAdjuster = {
   recordAnswer,
   getPerformanceSummary,
   resetSessionState,
   savePerformanceSnapshot,
 }
+
+export default realtimeAdjuster

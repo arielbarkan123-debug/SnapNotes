@@ -200,7 +200,7 @@ export function validateEnv(): void {
 // Default Export
 // =============================================================================
 
-export default {
+const envUtils = {
   getServerEnv,
   getClientEnv,
   getEnv,
@@ -209,3 +209,5 @@ export default {
   getSupabaseAnonKey,
   getAnthropicApiKey,
 }
+
+export default envUtils

@@ -296,6 +296,7 @@ export function useTrackedAction<T extends (...args: unknown[]) => unknown>(
   eventName: string,
   category: EventCategory = 'feature'
 ): T {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   return useCallback(
     ((...args: unknown[]) => {
       analytics.trackEvent({

@@ -63,7 +63,7 @@ export default function MultipleChoice({
     []
   )
 
-  // Shuffle options once on mount - use question as stable key to prevent reshuffling
+  // Shuffle options once per question - intentionally only depends on question
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const shuffledOptions = useMemo<ShuffledOption[]>(() => {
     const indexed = options.map((text, originalIndex) => ({ text, originalIndex }))

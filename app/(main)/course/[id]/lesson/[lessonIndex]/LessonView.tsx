@@ -51,7 +51,8 @@ export default function LessonView({
   const router = useRouter()
   const supabase = createClient()
 
-  const steps = lesson.steps || []
+  // Memoize steps to prevent useMemo dependency changes on every render
+  const steps = useMemo(() => lesson.steps || [], [lesson.steps])
   const totalSteps = steps.length
 
   // Lesson completion funnel tracking

@@ -501,7 +501,8 @@ function MatchingRenderer({
   onAnswer,
   showResults,
 }: QuestionRendererProps) {
-  const correctPairs = question.matching_pairs || []
+  // Memoize correctPairs to prevent useMemo dependency changes
+  const correctPairs = useMemo(() => question.matching_pairs || [], [question.matching_pairs])
 
   // Shuffle definitions on mount
   const shuffledDefinitions = useMemo(() => {
@@ -518,7 +519,8 @@ function MatchingRenderer({
   const [selectedTerm, setSelectedTerm] = useState<number | null>(null)
   const [matches, setMatches] = useState<Map<number, number>>(new Map())
 
-  // Initialize matches from answer if available
+  // Initialize matches from answer if available (only on mount)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (answer?.matchingAnswers && answer.matchingAnswers.length > 0) {
       const newMatches = new Map<number, number>()
@@ -779,9 +781,11 @@ function OrderingRenderer({
   onAnswer,
   showResults,
 }: QuestionRendererProps) {
-  const correctOrder = question.ordering_items || []
+  // Memoize correctOrder to prevent dependency changes
+  const correctOrder = useMemo(() => question.ordering_items || [], [question.ordering_items])
 
-  // Shuffle items on mount
+  // Shuffle items on mount (intentionally only on mount)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const initialOrder = useMemo(() => {
     const items = [...correctOrder]
     for (let i = items.length - 1; i > 0; i--) {
@@ -795,6 +799,8 @@ function OrderingRenderer({
     answer?.orderingAnswer || initialOrder
   )
 
+  // Initialize from answer (only on mount)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (answer?.orderingAnswer) {
       setCurrentOrder(answer.orderingAnswer)
@@ -957,6 +963,8 @@ function PassageBasedRenderer({
 
   const [subAnswers, setSubAnswers] = useState<Map<string, string>>(new Map())
 
+  // Initialize from answer (only on mount)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (answer?.subAnswers) {
       const map = new Map<string, string>()

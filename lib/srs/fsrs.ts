@@ -508,7 +508,7 @@ export function isCardDue(dueDate: string | Date): boolean {
 // Export
 // =============================================================================
 
-export default {
+const fsrs = {
   FSRS_PARAMS,
   calculateInitialDifficulty,
   calculateInitialStability,
@@ -522,3 +522,5 @@ export default {
   calculateRetrievability,
   isCardDue,
 }
+
+export default fsrs
