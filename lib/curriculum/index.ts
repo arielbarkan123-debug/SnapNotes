@@ -87,3 +87,19 @@ export {
   getAvailableSubjectsForSystem,
   isValidSubject,
 } from './subject-detector'
+
+// =============================================================================
+// Grade Configuration Exports
+// =============================================================================
+
+export {
+  getGradesForSystem,
+  getDefaultGrade,
+  getLevelConfig,
+  hasSubjectLevels,
+  getDefaultLevel,
+  hasCurriculumData,
+  getGradeLabel,
+  getLevelLabel,
+  isYoungGrade,
+} from './grades'

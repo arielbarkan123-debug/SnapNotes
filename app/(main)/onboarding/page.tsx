@@ -521,6 +521,7 @@ export default function OnboardingPage() {
                 <div className="max-h-[50vh] overflow-y-auto text-left mb-6">
                   <SubjectPicker
                     system={data.studySystem}
+                    grade={data.grade}
                     selectedSubjects={data.subjects}
                     onChange={handleSubjectsChange}
                     compact

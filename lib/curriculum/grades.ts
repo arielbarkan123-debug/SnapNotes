@@ -200,12 +200,46 @@ export function getLevelConfig(system: StudySystem): LevelConfig {
   return LEVEL_CONFIGS[system] || { systemId: system, type: 'none', options: [] }
 }
 
+// Israeli Bagrut grades that require subject levels (high school: grades 10-12)
+const BAGRUT_GRADES_WITH_LEVELS = ['י', 'יא', 'יב']
+
 /**
  * Check if a study system has subject levels (SL/HL, units, etc.)
+ * For Israeli Bagrut, only grades י-יב (10-12) have subject levels
+ * Younger grades (א-ט) don't need to choose יחידות
+ *
+ * @param system - The study system
+ * @param grade - Optional grade to check (for grade-specific level requirements)
  */
-export function hasSubjectLevels(system: StudySystem): boolean {
+export function hasSubjectLevels(system: StudySystem, grade?: string | null): boolean {
   const config = LEVEL_CONFIGS[system]
-  return config?.type !== 'none' && config?.options.length > 0
+
+  // System doesn't support levels at all
+  if (config?.type === 'none' || !config?.options.length) {
+    return false
+  }
+
+  // For Israeli Bagrut, check if the grade requires levels
+  if (system === 'israeli_bagrut' && grade) {
+    return BAGRUT_GRADES_WITH_LEVELS.includes(grade)
+  }
+
+  // For other systems or if no grade specified, use default behavior
+  return true
+}
+
+/**
+ * Check if a grade is considered "young" (doesn't need subject levels)
+ * For Israeli Bagrut: grades א-ט are young, י-יב are high school
+ */
+export function isYoungGrade(system: StudySystem, grade: string | null): boolean {
+  if (!grade) return false
+
+  if (system === 'israeli_bagrut') {
+    return !BAGRUT_GRADES_WITH_LEVELS.includes(grade)
+  }
+
+  return false
 }
 
 /**

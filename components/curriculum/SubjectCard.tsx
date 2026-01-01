@@ -8,6 +8,7 @@ import type { StudySystem, AvailableSubject } from '@/lib/curriculum/types'
 interface SubjectCardProps {
   subject: AvailableSubject
   system: StudySystem
+  grade?: string | null
   selected: boolean
   level: string | null
   onToggle: () => void
@@ -19,6 +20,7 @@ interface SubjectCardProps {
 export function SubjectCard({
   subject,
   system,
+  grade,
   selected,
   level,
   onToggle,
@@ -26,7 +28,9 @@ export function SubjectCard({
   compact = false,
   className,
 }: SubjectCardProps) {
-  const showLevels = hasSubjectLevels(system) && subject.levels && subject.levels.length > 0
+  // Only show levels if the system supports it AND the grade requires it
+  // For Israeli Bagrut, younger grades (א-ט) don't choose יחידות
+  const showLevels = hasSubjectLevels(system, grade) && subject.levels && subject.levels.length > 0
 
   return (
     <div

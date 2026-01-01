@@ -551,6 +551,7 @@ export default function SettingsPage() {
                   <div className="max-h-80 overflow-y-auto">
                     <SubjectPicker
                       system={settings.studySystem}
+                      grade={settings.grade}
                       selectedSubjects={settings.subjects}
                       onChange={handleSubjectsChange}
                       compact

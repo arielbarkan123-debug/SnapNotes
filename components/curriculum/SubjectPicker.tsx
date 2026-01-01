@@ -14,6 +14,7 @@ export interface SelectedSubject {
 
 interface SubjectPickerProps {
   system: StudySystem
+  grade?: string | null
   selectedSubjects: SelectedSubject[]
   onChange: (subjects: SelectedSubject[]) => void
   maxSubjects?: number
@@ -23,6 +24,7 @@ interface SubjectPickerProps {
 
 export function SubjectPicker({
   system,
+  grade,
   selectedSubjects,
   onChange,
   maxSubjects,
@@ -154,6 +156,7 @@ export function SubjectPicker({
                   key={subject.id}
                   subject={subject}
                   system={system}
+                  grade={grade}
                   selected={isSelected(subject.id)}
                   level={getSelectedLevel(subject.id)}
                   onToggle={() => handleToggleSubject(subject)}
@@ -185,6 +188,7 @@ export function SubjectPicker({
                 key={subject.id}
                 subject={subject}
                 system={system}
+                grade={grade}
                 selected={isSelected(subject.id)}
                 level={getSelectedLevel(subject.id)}
                 onToggle={() => handleToggleSubject(subject)}
