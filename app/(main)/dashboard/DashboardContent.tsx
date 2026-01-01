@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import Button from '@/components/ui/Button'
@@ -77,6 +77,34 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
 
   // Check if any courses are missing covers
   const coursesWithoutCovers = initialCourses.filter(c => !c.cover_image_url).length
+
+  // Track if auto-generation has been attempted this session
+  const autoGenerationAttempted = useRef(false)
+
+  // Auto-generate covers on mount if there are courses without covers
+  useEffect(() => {
+    // Only attempt once per session, and only if there are courses without covers
+    if (autoGenerationAttempted.current || coursesWithoutCovers === 0) return
+    autoGenerationAttempted.current = true
+
+    // Silent background generation - no loading indicator, no toast on success
+    const generateCoversInBackground = async () => {
+      try {
+        const response = await fetch('/api/generate-all-covers', { method: 'POST' })
+        const data = await response.json()
+        if (data.success && data.updated > 0) {
+          // Silently refresh to show new covers
+          router.refresh()
+        }
+      } catch {
+        // Silent failure - user can use the button if needed
+      }
+    }
+
+    // Small delay to not block initial render
+    const timer = setTimeout(generateCoversInBackground, 2000)
+    return () => clearTimeout(timer)
+  }, [coursesWithoutCovers, router])
 
   // Generate covers for all courses without them
   const handleGenerateCovers = async () => {
