@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Course, UserProgress, GeneratedCourse, Lesson } from '@/types'
 import { ChatTutor } from '@/components/chat/ChatTutor'
+import { useCourseMastery } from '@/hooks'
 
 interface CourseViewProps {
   course: Course
@@ -17,6 +18,11 @@ export default function CourseView({ course, progress }: CourseViewProps) {
   const generatedCourse = course.generated_course as GeneratedCourse & { sections?: Lesson[] }
   // Handle both "lessons" and legacy "sections" from AI response
   const lessons = generatedCourse.lessons || generatedCourse.sections || []
+
+  // Fetch course mastery data
+  const { lessonMastery, isLoading: isMasteryLoading } = useCourseMastery({
+    courseId: course.id,
+  })
 
   // Calculate overall progress percentage
   const progressPercentage = useMemo(() => {
@@ -94,6 +100,52 @@ export default function CourseView({ course, progress }: CourseViewProps) {
           <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
             {generatedCourse.overview}
           </p>
+
+          {/* Course Mastery Summary */}
+          {!isMasteryLoading && lessonMastery.size > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  {/* Average Mastery */}
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                      {Math.round(
+                        Array.from(lessonMastery.values()).reduce(
+                          (sum, m) => sum + (m.averageMastery || 0),
+                          0
+                        ) / lessonMastery.size * 100
+                      )}%
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Concept Mastery</p>
+                  </div>
+
+                  {/* Gaps Count */}
+                  {Array.from(lessonMastery.values()).some(m => m.hasGaps) && (
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                        {Array.from(lessonMastery.values()).reduce(
+                          (sum, m) => sum + (m.criticalGaps || 0),
+                          0
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Gaps</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Knowledge Map Link */}
+                <Link
+                  href="/knowledge-map"
+                  className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                >
+                  View Knowledge Map
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Lessons list */}
@@ -106,6 +158,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
             const status = getLessonStatus(index)
             const stepCount = getLessonStepCount(index)
             const isClickable = status !== 'locked'
+            const mastery = lessonMastery.get(index)
 
             return (
               <LessonCard
@@ -117,6 +170,10 @@ export default function CourseView({ course, progress }: CourseViewProps) {
                 courseId={course.id}
                 lessonIndex={index}
                 isClickable={isClickable}
+                masteryLevel={mastery?.averageMastery}
+                hasGaps={mastery?.hasGaps}
+                criticalGaps={mastery?.criticalGaps}
+                isMasteryLoading={isMasteryLoading}
               />
             )
           })}
@@ -162,6 +219,10 @@ interface LessonCardProps {
   courseId: string
   lessonIndex: number
   isClickable: boolean
+  masteryLevel?: number
+  hasGaps?: boolean
+  criticalGaps?: number
+  isMasteryLoading?: boolean
 }
 
 function LessonCard({
@@ -172,7 +233,24 @@ function LessonCard({
   courseId,
   lessonIndex,
   isClickable,
+  masteryLevel,
+  hasGaps,
+  criticalGaps,
+  isMasteryLoading,
 }: LessonCardProps) {
+  // Get mastery color
+  const getMasteryColor = (level: number) => {
+    if (level >= 0.7) return 'text-green-600 dark:text-green-400'
+    if (level >= 0.4) return 'text-amber-600 dark:text-amber-400'
+    return 'text-red-600 dark:text-red-400'
+  }
+
+  const getMasteryBgColor = (level: number) => {
+    if (level >= 0.7) return 'bg-green-500'
+    if (level >= 0.4) return 'bg-amber-500'
+    return 'bg-red-500'
+  }
+
   const content = (
     <div
       className={`
@@ -239,17 +317,44 @@ function LessonCard({
         >
           {title}
         </h3>
-        <p
-          className={`
-            text-sm mt-1
-            ${status === 'locked'
-              ? 'text-gray-400 dark:text-gray-600'
-              : 'text-gray-500 dark:text-gray-400'
-            }
-          `}
-        >
-          {stepCount} steps
-        </p>
+        <div className="flex items-center gap-3 mt-1">
+          <p
+            className={`
+              text-sm
+              ${status === 'locked'
+                ? 'text-gray-400 dark:text-gray-600'
+                : 'text-gray-500 dark:text-gray-400'
+              }
+            `}
+          >
+            {stepCount} steps
+          </p>
+
+          {/* Mastery indicator */}
+          {!isMasteryLoading && masteryLevel !== undefined && masteryLevel > 0 && status !== 'locked' && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-16 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${getMasteryBgColor(masteryLevel)}`}
+                  style={{ width: `${Math.round(masteryLevel * 100)}%` }}
+                />
+              </div>
+              <span className={`text-xs font-medium ${getMasteryColor(masteryLevel)}`}>
+                {Math.round(masteryLevel * 100)}%
+              </span>
+            </div>
+          )}
+
+          {/* Gap warning badge */}
+          {!isMasteryLoading && hasGaps && criticalGaps && criticalGaps > 0 && status !== 'locked' && (
+            <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Gap
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Arrow indicator for clickable cards */}

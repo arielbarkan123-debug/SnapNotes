@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useFunnelTracking, useEventTracking } from '@/lib/analytics'
 import { GradeSelector, SubjectPicker, type SelectedSubject } from '@/components/curriculum'
-import { getDefaultGrade, hasCurriculumData, CURRICULUM_SYSTEMS } from '@/lib/curriculum/grades'
+import { getDefaultGrade, hasCurriculumData } from '@/lib/curriculum/grades'
 import type { StudySystem } from '@/lib/curriculum/types'
 
 // =============================================================================

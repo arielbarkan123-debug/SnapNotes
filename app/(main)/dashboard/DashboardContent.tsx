@@ -28,6 +28,36 @@ const WeakAreas = dynamic(
     </div>
   )}
 )
+// Lazy load GapAlert component
+const GapAlert = dynamic(
+  () => import('@/components/gaps/GapAlert').then(mod => ({ default: mod.GapAlert })),
+  { ssr: false, loading: () => (
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm mb-6">
+      <div className="animate-pulse">
+        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-4"></div>
+        <div className="space-y-2">
+          <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+        </div>
+      </div>
+    </div>
+  )}
+)
+// Lazy load PracticeWidget component
+const PracticeWidget = dynamic(
+  () => import('@/components/dashboard/PracticeWidget'),
+  { ssr: false, loading: () => (
+    <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl p-6 border border-indigo-200 dark:border-indigo-800/50 shadow-sm mb-6">
+      <div className="animate-pulse">
+        <div className="h-6 bg-indigo-200 dark:bg-indigo-700 rounded w-1/3 mb-4"></div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="h-24 bg-indigo-200 dark:bg-indigo-700 rounded-lg"></div>
+          <div className="h-24 bg-indigo-200 dark:bg-indigo-700 rounded-lg"></div>
+        </div>
+      </div>
+    </div>
+  )}
+)
 import { Course } from '@/types'
 import { useCourses } from '@/hooks'
 import { useToast } from '@/contexts/ToastContext'
@@ -210,6 +240,12 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
         >
           <DashboardWidget />
         </LazySection>
+
+        {/* Knowledge Gaps Alert - shows identified knowledge gaps */}
+        <GapAlert className="mb-6" />
+
+        {/* Practice Widget - quick practice actions */}
+        <PracticeWidget />
 
         {/* Weak Areas Widget - shows lessons needing review */}
         {totalCount > 0 && (

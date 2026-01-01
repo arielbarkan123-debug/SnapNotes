@@ -15,6 +15,9 @@ interface EvaluateAnswerRequest {
   acceptableAnswers?: string[]
   context?: string // Optional lesson/topic context for better evaluation
   courseId?: string // Optional course ID for curriculum detection
+  conceptIds?: string[] // Optional concept IDs for gap detection
+  lessonIndex?: number // Optional lesson index for context
+  responseTimeMs?: number // Optional response time for mastery calculation
 }
 
 // Note: Interface for documentation purposes; response object follows this structure
@@ -209,7 +212,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   try {
     const body: EvaluateAnswerRequest = await request.json()
-    const { question, expectedAnswer, userAnswer, acceptableAnswers = [], context, courseId } = body
+    const {
+      question,
+      expectedAnswer,
+      userAnswer,
+      acceptableAnswers = [],
+      context,
+      courseId,
+      conceptIds = [],
+      lessonIndex,
+      responseTimeMs
+    } = body
 
     // Validate input
     if (!question || !expectedAnswer) {
@@ -230,11 +243,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       })
     }
 
-    // Fetch curriculum context for the user (optional - gracefully degrade if not authenticated)
+    // Get user for curriculum context and gap detection
     let curriculumContextString = ''
+    let userId: string | null = null
+
     try {
       const supabase = await createClient()
       const { data: { user } } = await supabase.auth.getUser()
+      userId = user?.id ?? null
 
       if (user) {
         // Fetch user learning profile
@@ -269,6 +285,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const normalizedExpected = normalizeText(expectedAnswer)
 
     if (normalizedUser === normalizedExpected) {
+      // Record performance for gap detection (fire and forget)
+      if (userId && conceptIds.length > 0) {
+        recordPerformanceForGapDetection(userId, conceptIds, true, 100, courseId, lessonIndex, responseTimeMs).catch(() => {})
+      }
       return NextResponse.json({
         isCorrect: true,
         score: 100,
@@ -281,6 +301,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Check acceptable answers for exact match
     for (const alt of acceptableAnswers) {
       if (normalizeText(alt) === normalizedUser) {
+        // Record performance for gap detection (fire and forget)
+        if (userId && conceptIds.length > 0) {
+          recordPerformanceForGapDetection(userId, conceptIds, true, 100, courseId, lessonIndex, responseTimeMs).catch(() => {})
+        }
         return NextResponse.json({
           isCorrect: true,
           score: 100,
@@ -295,9 +319,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const fuzzyResult = fuzzyMatch(userAnswer, expectedAnswer, acceptableAnswers, 0.85)
 
     if (fuzzyResult.matches) {
+      const fuzzyScore = Math.round(fuzzyResult.similarity * 100)
+      // Record performance for gap detection (fire and forget)
+      if (userId && conceptIds.length > 0) {
+        recordPerformanceForGapDetection(userId, conceptIds, true, fuzzyScore, courseId, lessonIndex, responseTimeMs).catch(() => {})
+      }
       return NextResponse.json({
         isCorrect: true,
-        score: Math.round(fuzzyResult.similarity * 100),
+        score: fuzzyScore,
         feedback: 'Correct! (minor spelling differences accepted)',
         evaluationMethod: 'fuzzy',
         evaluationTimeMs: Date.now() - startTime
@@ -307,6 +336,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Layer 3: AI evaluation for semantic matching
     try {
       const aiResult = await evaluateWithAI(question, expectedAnswer, userAnswer, context, curriculumContextString)
+
+      // Record performance for gap detection (fire and forget)
+      if (userId && conceptIds.length > 0) {
+        recordPerformanceForGapDetection(
+          userId,
+          conceptIds,
+          aiResult.isCorrect,
+          aiResult.score,
+          courseId,
+          lessonIndex,
+          responseTimeMs
+        ).catch(() => {}) // Ignore errors
+      }
 
       return NextResponse.json({
         isCorrect: aiResult.isCorrect,
@@ -320,10 +362,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       console.error('[EvaluateAnswer] AI failed, using fuzzy fallback:', aiError)
 
       // Use a lower threshold for "partial" credit
-      if (fuzzyResult.similarity >= 0.6) {
+      const partialScore = Math.round(fuzzyResult.similarity * 100)
+      const isPartial = fuzzyResult.similarity >= 0.6
+
+      // Record performance for gap detection (fire and forget)
+      if (userId && conceptIds.length > 0) {
+        recordPerformanceForGapDetection(
+          userId,
+          conceptIds,
+          false,
+          isPartial ? partialScore : Math.round(fuzzyResult.similarity * 50),
+          courseId,
+          lessonIndex,
+          responseTimeMs
+        ).catch(() => {}) // Ignore errors
+      }
+
+      if (isPartial) {
         return NextResponse.json({
           isCorrect: false,
-          score: Math.round(fuzzyResult.similarity * 100),
+          score: partialScore,
           feedback: 'Partially correct. Review the expected answer.',
           evaluationMethod: 'fuzzy',
           evaluationTimeMs: Date.now() - startTime
@@ -344,5 +402,106 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { error: 'Failed to evaluate answer' },
       { status: 500 }
     )
+  }
+}
+
+/**
+ * Record performance data for gap detection (fire and forget)
+ * This updates user_concept_mastery and potentially detects gaps
+ */
+async function recordPerformanceForGapDetection(
+  userId: string,
+  conceptIds: string[],
+  isCorrect: boolean,
+  score: number,
+  courseId?: string,
+  lessonIndex?: number,
+  responseTimeMs?: number
+): Promise<void> {
+  if (conceptIds.length === 0) return
+
+  try {
+    const supabase = await createClient()
+    const now = new Date().toISOString()
+
+    for (const conceptId of conceptIds) {
+      // Get current mastery
+      const { data: existing } = await supabase
+        .from('user_concept_mastery')
+        .select('mastery_level, total_exposures, successful_recalls, failed_recalls, stability')
+        .eq('user_id', userId)
+        .eq('concept_id', conceptId)
+        .single()
+
+      const currentMastery = existing?.mastery_level ?? 0
+      const totalExposures = (existing?.total_exposures ?? 0) + 1
+      const successfulRecalls = (existing?.successful_recalls ?? 0) + (isCorrect ? 1 : 0)
+      const failedRecalls = (existing?.failed_recalls ?? 0) + (isCorrect ? 0 : 1)
+
+      // Calculate mastery delta based on score (0-100)
+      const scoreRatio = score / 100
+      let masteryDelta = 0
+      if (isCorrect) {
+        // Good answer: increase mastery based on score
+        masteryDelta = 0.05 + scoreRatio * 0.1
+        // Bonus for fast response (if provided)
+        if (responseTimeMs && responseTimeMs < 10000) {
+          masteryDelta += 0.02
+        }
+      } else {
+        // Wrong answer: decrease mastery
+        masteryDelta = -0.1 - (1 - scoreRatio) * 0.1
+      }
+
+      const newMastery = Math.max(0, Math.min(1, currentMastery + masteryDelta))
+
+      // Update stability for SRS
+      const baseStability = existing?.stability ?? 1
+      const newStability = isCorrect ? baseStability * 1.3 : Math.max(1, baseStability * 0.7)
+
+      // Calculate next review date
+      const daysUntilReview = Math.round(newStability)
+      const nextReviewDate = new Date()
+      nextReviewDate.setDate(nextReviewDate.getDate() + daysUntilReview)
+
+      // Upsert mastery record
+      await supabase
+        .from('user_concept_mastery')
+        .upsert({
+          user_id: userId,
+          concept_id: conceptId,
+          mastery_level: newMastery,
+          total_exposures: totalExposures,
+          successful_recalls: successfulRecalls,
+          failed_recalls: failedRecalls,
+          stability: newStability,
+          next_review_date: nextReviewDate.toISOString(),
+          last_reviewed_at: now,
+        }, {
+          onConflict: 'user_id,concept_id'
+        })
+
+      // Check for weak foundation gap (consecutive failures)
+      if (failedRecalls >= 2 && newMastery < 0.4) {
+        // Insert or update gap record
+        await supabase
+          .from('user_knowledge_gaps')
+          .upsert({
+            user_id: userId,
+            concept_id: conceptId,
+            gap_type: 'weak_foundation',
+            severity: newMastery < 0.2 ? 'critical' : 'moderate',
+            confidence: Math.min(0.9, 0.5 + failedRecalls * 0.1),
+            detected_from_course_id: courseId,
+            detected_from_lesson_index: lessonIndex,
+            resolved: false,
+          }, {
+            onConflict: 'user_id,concept_id,gap_type'
+          })
+      }
+    }
+  } catch (error) {
+    // Log but don't fail - gap detection is optional
+    console.error('[EvaluateAnswer] Gap detection error:', error)
   }
 }

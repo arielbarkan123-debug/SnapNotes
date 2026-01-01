@@ -6,6 +6,7 @@ import { Step, HelpContext } from '@/types'
 import { generateHint, HintContext as HintCtx, Hint } from '@/lib/adaptive/hints'
 import HintBubble, { HintButton } from './HintBubble'
 import HelpModal from '@/components/help/HelpModal'
+import { useConceptMastery, useAdaptiveDifficulty, useResponseTimer } from '@/hooks'
 
 // Lazy load PracticeMore since it's only shown after wrong answers
 const PracticeMore = dynamic(() => import('@/components/practice/PracticeMore').then(mod => ({ default: mod.PracticeMore })), {
@@ -28,6 +29,12 @@ interface QuestionStepProps {
   lessonIndex?: number
   lessonTitle?: string
   stepIndex?: number
+  /** Concept IDs this question tests (for mastery tracking) */
+  conceptIds?: string[]
+  /** Question difficulty level (1-5, for adaptive system) */
+  difficulty?: number
+  /** Unique question ID for adaptive tracking */
+  questionId?: string
 }
 
 export default function QuestionStep({
@@ -43,6 +50,9 @@ export default function QuestionStep({
   lessonIndex,
   lessonTitle,
   stepIndex,
+  conceptIds,
+  difficulty = 3,
+  questionId,
 }: QuestionStepProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [hasChecked, setHasChecked] = useState(false)
@@ -51,6 +61,21 @@ export default function QuestionStep({
   const [timeOnStep, setTimeOnStep] = useState(0)
   const [showHelp, setShowHelp] = useState(false)
   const [showPracticeMore, setShowPracticeMore] = useState(false)
+  const [adaptiveFeedback, setAdaptiveFeedback] = useState<string | null>(null)
+
+  // Concept mastery tracking
+  const { recordPerformance } = useConceptMastery()
+  const stepStartTime = useState(() => Date.now())[0]
+
+  // Adaptive difficulty tracking
+  const { recordAnswer, state: adaptiveState } = useAdaptiveDifficulty({ courseId })
+  const { startTimer, stopTimer } = useResponseTimer()
+
+  // Start timer when component mounts
+  useEffect(() => {
+    startTimer()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Hint state
   const [currentHint, setCurrentHint] = useState<Hint | null>(null)
@@ -106,7 +131,7 @@ export default function QuestionStep({
   }
 
   // Handle check answer
-  const handleCheck = () => {
+  const handleCheck = async () => {
     if (selectedAnswer === null) return
 
     const correct = selectedAnswer === correct_answer
@@ -115,6 +140,42 @@ export default function QuestionStep({
 
     if (!correct) {
       setWrongAttempts((prev) => prev + 1)
+    }
+
+    // Get response time
+    const responseTimeMs = stopTimer() ?? (Date.now() - stepStartTime)
+
+    // Record concept mastery (non-blocking)
+    if (conceptIds && conceptIds.length > 0) {
+      const performances = conceptIds.map(conceptId => ({
+        conceptId,
+        isCorrect: correct,
+        responseTimeMs,
+        usedHint: hintUsed,
+      }))
+      // Fire and forget - don't block the UI
+      recordPerformance(performances).catch(err => {
+        console.error('Failed to record concept performance:', err)
+      })
+    }
+
+    // Record answer for adaptive difficulty tracking (non-blocking)
+    if (questionId) {
+      recordAnswer({
+        questionId,
+        questionSource: 'lesson',
+        isCorrect: correct,
+        responseTimeMs,
+        questionDifficulty: difficulty,
+        conceptId: conceptIds?.[0],
+      }).then(() => {
+        // Show feedback if we got one from adaptive system
+        if (adaptiveState.lastFeedback) {
+          setAdaptiveFeedback(adaptiveState.lastFeedback)
+        }
+      }).catch(err => {
+        console.error('Failed to record adaptive answer:', err)
+      })
     }
   }
 
@@ -317,6 +378,20 @@ export default function QuestionStep({
           {hintUsed && (
             <p className={`text-xs mb-2 ${isCorrect ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
               💡 Hint was used
+            </p>
+          )}
+
+          {/* Adaptive difficulty feedback */}
+          {adaptiveFeedback && (
+            <p className={`text-xs mb-2 ${isCorrect ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
+              ⚡ {adaptiveFeedback}
+            </p>
+          )}
+
+          {/* Streak indicator */}
+          {adaptiveState.streak >= 3 && adaptiveState.streakType === 'correct' && (
+            <p className="text-xs mb-2 text-amber-600 dark:text-amber-400">
+              🔥 {adaptiveState.streak} correct in a row!
             </p>
           )}
 

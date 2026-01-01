@@ -34,5 +34,24 @@ export {
   generateQuestionFromContent,
   estimateCardCount,
   getCardTypeSummary,
+  buildConceptMapping,
+  type ConceptMapping,
+  type ContentConceptRow,
   default as cardGenerator,
 } from './card-generator'
+
+// Daily Session Generator (gap-aware)
+export {
+  generateDailySession,
+  generateTargetedSession,
+  generateGapFixSession,
+  updateSessionProgress,
+  completeSession,
+  abandonSession,
+  getSessionStats,
+  type DailySession,
+  type SessionCard,
+  type CardSource,
+  type SessionGenerationOptions,
+  default as dailySession,
+} from './daily-session'

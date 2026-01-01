@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <rect fill="#f0f0f0" width="400" height="300"/>
+  <text x="200" y="50" font-family="Arial" font-size="24" text-anchor="middle" fill="#333">Math Problem</text>
+  <text x="200" y="120" font-family="Arial" font-size="18" text-anchor="middle" fill="#666">Solve: 2x + 5 = 15</text>
+  <text x="200" y="160" font-family="Arial" font-size="18" text-anchor="middle" fill="#666">Find the value of x</text>
+  <text x="200" y="220" font-family="Arial" font-size="14" text-anchor="middle" fill="#999">Show your work</text>
+</svg>

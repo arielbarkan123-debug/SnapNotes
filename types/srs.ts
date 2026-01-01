@@ -123,6 +123,8 @@ export interface ReviewCard {
   // Scheduling
   due_date: string
   last_review: string | null
+  // Concept tracking - links card to knowledge graph
+  concept_ids: string[] | null
   // Timestamps
   created_at: string
   updated_at: string
@@ -138,6 +140,8 @@ export interface ReviewCardInsert {
   card_type: CardType
   front: string
   back: string
+  /** Concept IDs this card tests (for mastery tracking) */
+  concept_ids?: string[]
 }
 
 /**

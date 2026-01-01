@@ -31,12 +31,13 @@ export function useCurriculumStatus(): UseCurriculumStatusResult {
       }
 
       const { data: profile, error: profileError } = await supabase
-        .from('profiles')
+        .from('user_learning_profile')
         .select('study_system, grade, subjects, subject_levels')
-        .eq('id', user.id)
+        .eq('user_id', user.id)
         .single()
 
-      if (profileError) {
+      if (profileError && profileError.code !== 'PGRST116') {
+        // PGRST116 = no rows returned, which is fine for new users
         throw profileError
       }
 

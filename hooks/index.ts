@@ -46,3 +46,35 @@ export { useServiceWorker } from './useServiceWorker'
 
 // Curriculum
 export { useCurriculumStatus } from './useCurriculumStatus'
+
+// Knowledge Gaps
+export { usePrerequisiteCheck } from './usePrerequisiteCheck'
+export {
+  useKnowledgeGaps,
+  GAPS_CACHE_KEY,
+  type UseKnowledgeGapsOptions,
+  type UseKnowledgeGapsReturn,
+} from './useKnowledgeGaps'
+export { useConceptMastery } from './useConceptMastery'
+export {
+  useCourseMastery,
+  type UseCourseMasteryOptions,
+  type UseCourseMasteryReturn,
+} from './useCourseMastery'
+
+// Adaptive Difficulty
+export {
+  useAdaptiveDifficulty,
+  useResponseTimer,
+} from './useAdaptiveDifficulty'
+
+// Practice Sessions
+export {
+  usePracticeSession,
+  usePracticeStats,
+  PRACTICE_SESSION_KEY,
+  PRACTICE_STATS_KEY,
+  type CreateSessionOptions,
+  type UsePracticeSessionReturn,
+  type UsePracticeStatsReturn,
+} from './usePracticeSession'

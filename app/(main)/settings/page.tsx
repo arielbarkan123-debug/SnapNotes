@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/contexts/ToastContext'
+import { useEventTracking } from '@/lib/analytics/hooks'
 import { GradeSelector, SubjectPicker, type SelectedSubject } from '@/components/curriculum'
-import { getDefaultGrade, hasCurriculumData, CURRICULUM_SYSTEMS } from '@/lib/curriculum/grades'
+import { getDefaultGrade, hasCurriculumData } from '@/lib/curriculum/grades'
 import type { ExamFormat, StudySystem } from '@/lib/curriculum'
 
 // =============================================================================
@@ -64,9 +65,11 @@ export default function SettingsPage() {
   const router = useRouter()
   const toast = useToast()
   const supabase = createClient()
+  const { trackFeature } = useEventTracking()
 
   // State
   const [isLoading, setIsLoading] = useState(true)
+  const [hasTrackedView, setHasTrackedView] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [theme, setTheme] = useState<Theme>('system')
@@ -98,23 +101,17 @@ export default function SettingsPage() {
 
         const metadata = user.user_metadata || {}
 
-        // Load from profiles table for curriculum data
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('study_system, grade, subjects, subject_levels, exam_format')
-          .eq('id', user.id)
-          .single()
-
-        // Also load from user_learning_profile for legacy data
+        // Load from user_learning_profile table for curriculum data
+        // Only select columns that exist from migrations
         const { data: learningProfile } = await supabase
           .from('user_learning_profile')
-          .select('preferred_study_time')
+          .select('study_system, grade, subjects, subject_levels, exam_format')
           .eq('user_id', user.id)
           .single()
 
-        const studySystem = (profile?.study_system || metadata.study_system || null) as StudySystem | null
-        const subjectIds = (profile?.subjects || []) as string[]
-        const subjectLevels = (profile?.subject_levels || {}) as Record<string, string>
+        const studySystem = (learningProfile?.study_system || metadata.study_system || null) as StudySystem | null
+        const subjectIds = (learningProfile?.subjects || []) as string[]
+        const subjectLevels = (learningProfile?.subject_levels || {}) as Record<string, string>
 
         // Convert to SelectedSubject format
         const selectedSubjects: SelectedSubject[] = subjectIds.map(id => ({
@@ -127,11 +124,11 @@ export default function SettingsPage() {
           email: user.email || '',
           createdAt: user.created_at,
           studySystem,
-          grade: profile?.grade || null,
+          grade: learningProfile?.grade || null,
           timeAvailability: metadata.time_availability || null,
-          preferredTime: learningProfile?.preferred_study_time || metadata.preferred_time || null,
+          preferredTime: metadata.preferred_time || null,
           subjects: selectedSubjects,
-          examFormat: profile?.exam_format || 'match_real',
+          examFormat: learningProfile?.exam_format || 'match_real',
         })
 
         // Load theme preference
@@ -149,6 +146,20 @@ export default function SettingsPage() {
 
     loadUser()
   }, [router, supabase, toast])
+
+  // Track page view when settings load
+  useEffect(() => {
+    if (!isLoading && !hasTrackedView && settings.email) {
+      trackFeature('settings_page_view', {
+        studySystem: settings.studySystem,
+        grade: settings.grade,
+        subjectsCount: settings.subjects.length,
+        hasTimeAvailability: !!settings.timeAvailability,
+        hasPreferredTime: !!settings.preferredTime,
+      })
+      setHasTrackedView(true)
+    }
+  }, [isLoading, hasTrackedView, settings, trackFeature])
 
   // Apply theme
   useEffect(() => {
@@ -229,40 +240,65 @@ export default function SettingsPage() {
 
       if (authError) throw authError
 
-      // Update profiles table with curriculum data
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          study_system: settings.studySystem,
-          grade: settings.grade,
-          subjects: subjectIds,
-          subject_levels: subjectLevels,
-          exam_format: settings.examFormat,
-        })
-        .eq('id', user.id)
-
-      // Also update user_learning_profile for consistency
-      await supabase
+      // Update user_learning_profile with curriculum data
+      // First check if profile exists
+      const { data: existingProfile } = await supabase
         .from('user_learning_profile')
-        .update({
-          study_system: settings.studySystem,
-          preferred_study_time: settings.preferredTime,
-          subjects: subjectIds,
-          subject_levels: subjectLevels,
-          exam_format: settings.examFormat,
-        })
+        .select('id')
         .eq('user_id', user.id)
+        .single()
+
+      let profileError = null
+
+      // Upsert curriculum data - only use columns added by migrations
+      // From 20241217_education_level.sql: education_level, grade, study_system
+      // From 20241229_curriculum_profile.sql: subjects, subject_levels, exam_format
+      const profileData = {
+        user_id: user.id,
+        study_system: settings.studySystem || 'general',
+        grade: settings.grade,
+        subjects: subjectIds,
+        subject_levels: subjectLevels,
+        exam_format: settings.examFormat || 'match_real',
+      }
+
+      if (existingProfile) {
+        // Update existing profile
+        const { error } = await supabase
+          .from('user_learning_profile')
+          .update(profileData)
+          .eq('user_id', user.id)
+        profileError = error
+      } else {
+        // Insert new profile - only include columns that exist from migrations
+        const { error } = await supabase
+          .from('user_learning_profile')
+          .insert(profileData)
+        profileError = error
+      }
 
       if (profileError) {
-        console.error('Error updating profile:', profileError)
+        console.error('Error updating profile:', profileError.message, profileError.details, profileError.hint)
         toast.warning('Profile partially saved. Some settings may not have been saved.')
       } else {
         toast.success('Settings saved successfully')
+        // Track successful settings save
+        trackFeature('settings_saved', {
+          studySystem: settings.studySystem,
+          grade: settings.grade,
+          subjectsCount: settings.subjects.length,
+          timeAvailability: settings.timeAvailability,
+          preferredTime: settings.preferredTime,
+          examFormat: settings.examFormat,
+        })
       }
       setHasChanges(false)
     } catch (err) {
       console.error('Error saving settings:', err)
       toast.error('Failed to save settings')
+      trackFeature('settings_save_error', {
+        error: err instanceof Error ? err.message : 'Unknown error',
+      })
     } finally {
       setIsSaving(false)
     }

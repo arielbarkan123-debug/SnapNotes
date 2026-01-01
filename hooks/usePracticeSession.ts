@@ -1,0 +1,353 @@
+'use client'
+
+// =============================================================================
+// Practice Session Hook
+// Client-side state management for practice sessions
+// =============================================================================
+
+import { useState, useCallback, useEffect } from 'react'
+import useSWR, { mutate } from 'swr'
+import type {
+  PracticeSession,
+  PracticeQuestion,
+  SessionProgress,
+  SessionResult,
+  SessionType,
+  AnswerQuestionResponse,
+} from '@/lib/practice/types'
+import type { DifficultyLevel } from '@/lib/adaptive/types'
+
+// -----------------------------------------------------------------------------
+// Cache Keys
+// -----------------------------------------------------------------------------
+
+export const PRACTICE_SESSION_KEY = (id: string) => `/api/practice/session/${id}`
+export const PRACTICE_STATS_KEY = '/api/practice/session?include=stats,active,recent'
+
+// -----------------------------------------------------------------------------
+// Fetcher
+// -----------------------------------------------------------------------------
+
+const fetcher = async (url: string) => {
+  const res = await fetch(url)
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.message || 'Failed to fetch')
+  }
+  return res.json()
+}
+
+// -----------------------------------------------------------------------------
+// Types
+// -----------------------------------------------------------------------------
+
+export interface CreateSessionOptions {
+  sessionType: SessionType
+  courseId?: string
+  targetConceptIds?: string[]
+  targetDifficulty?: DifficultyLevel
+  questionCount?: number
+  timeLimitMinutes?: number
+}
+
+export interface UsePracticeSessionReturn {
+  // Session data
+  session: PracticeSession | null
+  currentQuestion: PracticeQuestion | null
+  progress: SessionProgress | null
+  result: SessionResult | null
+
+  // State
+  isLoading: boolean
+  isSubmitting: boolean
+  error: Error | null
+
+  // Actions
+  startSession: (options: CreateSessionOptions) => Promise<string>
+  submitAnswer: (
+    questionId: string,
+    questionIndex: number,
+    answer: string,
+    responseTimeMs?: number
+  ) => Promise<AnswerQuestionResponse>
+  nextQuestion: () => void
+  previousQuestion: () => void
+  completeSession: () => Promise<SessionResult>
+  pauseSession: () => Promise<void>
+  resumeSession: () => Promise<void>
+  abandonSession: () => Promise<void>
+  refresh: () => void
+}
+
+export interface UsePracticeStatsReturn {
+  stats: {
+    totalSessions: number
+    totalQuestions: number
+    totalCorrect: number
+    overallAccuracy: number
+    lastPracticeDate: string | null
+  } | null
+  activeSessions: PracticeSession[]
+  recentSessions: PracticeSession[]
+  isLoading: boolean
+  error: Error | null
+  refresh: () => void
+}
+
+// -----------------------------------------------------------------------------
+// usePracticeSession Hook
+// -----------------------------------------------------------------------------
+
+export function usePracticeSession(sessionId?: string): UsePracticeSessionReturn {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [result, setResult] = useState<SessionResult | null>(null)
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+
+  // Fetch session data
+  const {
+    data,
+    error,
+    isLoading,
+    mutate: mutateSession,
+  } = useSWR(
+    sessionId
+      ? `${PRACTICE_SESSION_KEY(sessionId)}?include=progress,currentQuestion,questions`
+      : null,
+    fetcher,
+    {
+      refreshInterval: 0, // Don't auto-refresh
+      revalidateOnFocus: false,
+    }
+  )
+
+  const session = data?.session as PracticeSession | null
+  const questions = (data?.questions as PracticeQuestion[]) || []
+  const progress = data?.progress as SessionProgress | null
+
+  // Get current question
+  const currentQuestion = questions[currentQuestionIndex] || null
+
+  // Sync current question index with session
+  useEffect(() => {
+    if (session) {
+      setCurrentQuestionIndex(session.current_question_index)
+    }
+  }, [session?.current_question_index])
+
+  // Start a new session
+  const startSession = useCallback(
+    async (options: CreateSessionOptions): Promise<string> => {
+      setIsSubmitting(true)
+      try {
+        const res = await fetch('/api/practice/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(options),
+        })
+
+        if (!res.ok) {
+          const error = await res.json()
+          throw new Error(error.message || 'Failed to create session')
+        }
+
+        const { sessionId } = await res.json()
+        return sessionId
+      } finally {
+        setIsSubmitting(false)
+      }
+    },
+    []
+  )
+
+  // Submit an answer
+  const submitAnswer = useCallback(
+    async (
+      questionId: string,
+      questionIndex: number,
+      answer: string,
+      responseTimeMs?: number
+    ): Promise<AnswerQuestionResponse> => {
+      if (!sessionId) throw new Error('No session')
+
+      setIsSubmitting(true)
+      try {
+        const res = await fetch(`/api/practice/session/${sessionId}/answer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            questionId,
+            questionIndex,
+            userAnswer: answer,
+            responseTimeMs,
+          }),
+        })
+
+        if (!res.ok) {
+          const error = await res.json()
+          throw new Error(error.message || 'Failed to submit answer')
+        }
+
+        const result = await res.json()
+
+        // Refresh session data
+        mutateSession()
+
+        return result
+      } finally {
+        setIsSubmitting(false)
+      }
+    },
+    [sessionId, mutateSession]
+  )
+
+  // Navigation
+  const nextQuestion = useCallback(() => {
+    setCurrentQuestionIndex((prev) => Math.min(prev + 1, questions.length - 1))
+  }, [questions.length])
+
+  const previousQuestion = useCallback(() => {
+    setCurrentQuestionIndex((prev) => Math.max(prev - 1, 0))
+  }, [])
+
+  // Complete session
+  const completeSession = useCallback(async (): Promise<SessionResult> => {
+    if (!sessionId) throw new Error('No session')
+
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(`/api/practice/session/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete' }),
+      })
+
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.message || 'Failed to complete session')
+      }
+
+      const sessionResult = await res.json()
+      setResult(sessionResult)
+
+      // Invalidate stats cache
+      mutate(PRACTICE_STATS_KEY)
+
+      return sessionResult
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [sessionId])
+
+  // Pause session
+  const pauseSession = useCallback(async (): Promise<void> => {
+    if (!sessionId) throw new Error('No session')
+
+    const res = await fetch(`/api/practice/session/${sessionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'pause' }),
+    })
+
+    if (!res.ok) {
+      const error = await res.json()
+      throw new Error(error.message || 'Failed to pause session')
+    }
+
+    mutateSession()
+  }, [sessionId, mutateSession])
+
+  // Resume session
+  const resumeSession = useCallback(async (): Promise<void> => {
+    if (!sessionId) throw new Error('No session')
+
+    const res = await fetch(`/api/practice/session/${sessionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'resume' }),
+    })
+
+    if (!res.ok) {
+      const error = await res.json()
+      throw new Error(error.message || 'Failed to resume session')
+    }
+
+    mutateSession()
+  }, [sessionId, mutateSession])
+
+  // Abandon session
+  const abandonSession = useCallback(async (): Promise<void> => {
+    if (!sessionId) throw new Error('No session')
+
+    const res = await fetch(`/api/practice/session/${sessionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'abandon' }),
+    })
+
+    if (!res.ok) {
+      const error = await res.json()
+      throw new Error(error.message || 'Failed to abandon session')
+    }
+
+    // Invalidate stats cache
+    mutate(PRACTICE_STATS_KEY)
+  }, [sessionId])
+
+  // Refresh
+  const refresh = useCallback(() => {
+    mutateSession()
+  }, [mutateSession])
+
+  return {
+    session,
+    currentQuestion,
+    progress,
+    result,
+    isLoading,
+    isSubmitting,
+    error,
+    startSession,
+    submitAnswer,
+    nextQuestion,
+    previousQuestion,
+    completeSession,
+    pauseSession,
+    resumeSession,
+    abandonSession,
+    refresh,
+  }
+}
+
+// -----------------------------------------------------------------------------
+// usePracticeStats Hook
+// -----------------------------------------------------------------------------
+
+export function usePracticeStats(): UsePracticeStatsReturn {
+  const { data, error, isLoading, mutate: mutateStats } = useSWR(
+    PRACTICE_STATS_KEY,
+    fetcher,
+    {
+      refreshInterval: 60000, // Refresh every minute
+      revalidateOnFocus: true,
+    }
+  )
+
+  const refresh = useCallback(() => {
+    mutateStats()
+  }, [mutateStats])
+
+  return {
+    stats: data?.stats || null,
+    activeSessions: data?.activeSessions || [],
+    recentSessions: data?.recentSessions || [],
+    isLoading,
+    error,
+    refresh,
+  }
+}
+
+// -----------------------------------------------------------------------------
+// useResponseTimer Hook (re-export from adaptive)
+// -----------------------------------------------------------------------------
+
+export { useResponseTimer } from './useAdaptiveDifficulty'

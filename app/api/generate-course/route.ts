@@ -20,6 +20,9 @@ import {
 import { generateCardsFromCourse } from '@/lib/srs'
 import { uploadExtractedImages, searchEducationalImages } from '@/lib/images'
 import { generateCourseImage } from '@/lib/ai/image-generation'
+import { extractAndStoreConcepts } from '@/lib/concepts'
+import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
+import type { StudySystem } from '@/lib/curriculum/types'
 
 // ============================================================================
 // Types
@@ -320,7 +323,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       logError('GenerateCourse:coverImage', err)
     })
 
-    // 9. Return success
+    // 9. Extract concepts for knowledge graph (non-blocking)
+    // This builds the concept map for gap detection and adaptive learning
+    extractConcepts(user.id, course.id, generatedCourse.title, generatedCourse, userContext).catch((err) => {
+      logError('GenerateCourse:conceptExtraction', err)
+    })
+
+    // 10. Return success
     const response: GenerateCourseSuccessResponse = {
       success: true,
       courseId: course.id,
@@ -432,4 +441,74 @@ async function generateCoverImage(supabase: any, userId: string, courseId: strin
 
 export async function GET() {
   return createErrorResponse(ErrorCodes.VALIDATION_ERROR, 'Method not allowed', 405)
+}
+
+// ============================================================================
+// Concept Extraction Helper
+// ============================================================================
+
+async function extractConcepts(
+  userId: string,
+  courseId: string,
+  courseTitle: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  generatedCourse: any,
+  userContext?: UserLearningContext
+) {
+  try {
+    // Skip if API key not configured
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.log('[GenerateCourse] Skipping concept extraction - API key not configured')
+      return
+    }
+
+    // Build curriculum context if user has a study system
+    let curriculumContext = ''
+    let studySystem: string | undefined
+
+    if (userContext?.studySystem && userContext.studySystem !== 'general') {
+      studySystem = userContext.studySystem
+
+      // Get a sample of content for subject detection
+      const lessons = generatedCourse.lessons || []
+      const contentSample = lessons
+        .slice(0, 3)
+        .map((l: { title: string; steps?: { content?: string }[] }) =>
+          `${l.title}: ${l.steps?.map((s) => s.content || '').join(' ').slice(0, 500)}`
+        )
+        .join('\n')
+
+      const context = await buildCurriculumContext({
+        userProfile: {
+          studySystem: userContext.studySystem as StudySystem,
+          subjects: [],
+          subjectLevels: {},
+        },
+        contentSample,
+        purpose: 'course',
+      })
+
+      curriculumContext = formatContextForPrompt(context)
+    }
+
+    // Extract and store concepts
+    const result = await extractAndStoreConcepts(
+      {
+        ...generatedCourse,
+        id: courseId,
+        title: courseTitle,
+      },
+      curriculumContext,
+      studySystem
+    )
+
+    console.log('[GenerateCourse] Concept extraction complete:', {
+      courseId,
+      concepts: result.concepts.length,
+      mappings: result.mappings.length,
+    })
+  } catch (error) {
+    console.error('[GenerateCourse] Concept extraction error:', error)
+    // Don't throw - this is a background task
+  }
 }

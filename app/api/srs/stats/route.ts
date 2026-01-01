@@ -18,6 +18,9 @@ interface SRSStats {
     review: number
     relearning: number
   }
+  // Gap-related stats
+  unresolved_gaps: number
+  gap_targeted_cards: number
 }
 
 // =============================================================================
@@ -100,6 +103,38 @@ export async function GET(): Promise<NextResponse> {
     // Calculate streak (consecutive days with at least one review)
     const streak = await calculateStreak(supabase, user.id)
 
+    // Get unresolved knowledge gaps count
+    const { count: unresolvedGaps } = await supabase
+      .from('user_knowledge_gaps')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('resolved', false)
+
+    // Get gap-targeted cards count (cards linked to gap concepts)
+    let gapTargetedCards = 0
+    if (unresolvedGaps && unresolvedGaps > 0) {
+      // Get gap concept IDs
+      const { data: gaps } = await supabase
+        .from('user_knowledge_gaps')
+        .select('concept_id')
+        .eq('user_id', user.id)
+        .eq('resolved', false)
+        .in('severity', ['critical', 'moderate'])
+
+      if (gaps && gaps.length > 0) {
+        const gapConceptIds = gaps.map(g => g.concept_id)
+
+        // Count cards that target these concepts
+        const { count: targetedCount } = await supabase
+          .from('review_cards')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .overlaps('concept_ids', gapConceptIds)
+
+        gapTargetedCards = targetedCount || 0
+      }
+    }
+
     const response: SRSStats = {
       total_cards: totalCards || 0,
       cards_due_today: cardsDueToday || 0,
@@ -107,6 +142,8 @@ export async function GET(): Promise<NextResponse> {
       streak,
       retention_rate: retentionRate,
       cards_by_state: stateCount,
+      unresolved_gaps: unresolvedGaps || 0,
+      gap_targeted_cards: gapTargetedCards,
     }
 
     return NextResponse.json(response)

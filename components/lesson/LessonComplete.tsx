@@ -10,6 +10,14 @@ import LessonRecap from './LessonRecap'
 // Types
 // =============================================================================
 
+interface ConceptMasteryGain {
+  conceptId: string
+  conceptName: string
+  previousMastery: number
+  newMastery: number
+  change: number
+}
+
 interface LessonCompleteProps {
   lessonTitle: string
   lessonIndex: number
@@ -19,6 +27,7 @@ interface LessonCompleteProps {
   questionsTotal: number
   lessonSteps?: LessonStep[]
   onNextLesson?: () => void
+  conceptsGained?: ConceptMasteryGain[]
 }
 
 // =============================================================================
@@ -34,6 +43,7 @@ export default function LessonComplete({
   questionsTotal,
   lessonSteps = [],
   onNextLesson,
+  conceptsGained = [],
 }: LessonCompleteProps) {
   const [animationStage, setAnimationStage] = useState(0)
   const [xpAwarded, setXpAwarded] = useState(0)
@@ -210,6 +220,59 @@ export default function LessonComplete({
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {/* Concept Mastery Gained */}
+        {conceptsGained.length > 0 && (
+          <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6 transition-all duration-500 ${animationStage >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+            <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4 flex items-center gap-2">
+              <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+              Concept Mastery
+            </h3>
+            <div className="space-y-3">
+              {conceptsGained.slice(0, 5).map((concept) => (
+                <div key={concept.conceptId} className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {concept.conceptName}
+                      </span>
+                      <span className={`text-xs font-medium ${concept.change > 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                        {concept.change > 0 && '+'}
+                        {Math.round(concept.change * 100)}%
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000"
+                        style={{ width: `${Math.round(concept.newMastery * 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+                      <span>{Math.round(concept.previousMastery * 100)}%</span>
+                      <span>{Math.round(concept.newMastery * 100)}%</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {conceptsGained.length > 5 && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-3">
+                +{conceptsGained.length - 5} more concepts practiced
+              </p>
+            )}
+            <Link
+              href="/knowledge-map"
+              className="flex items-center justify-center gap-1 text-sm text-indigo-600 dark:text-indigo-400 hover:underline mt-4"
+            >
+              View Knowledge Map
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
           </div>
         )}
 

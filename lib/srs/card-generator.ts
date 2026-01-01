@@ -25,6 +25,25 @@ import {
 } from '@/types/srs'
 
 // =============================================================================
+// Concept Mapping Types
+// =============================================================================
+
+/**
+ * Maps content (lesson/step) to concepts
+ * Key format: "lessonIndex" or "lessonIndex:stepIndex"
+ */
+export type ConceptMapping = Map<string, string[]>
+
+/**
+ * Content-to-concept relationship from database
+ */
+export interface ContentConceptRow {
+  lesson_index: number
+  step_index: number | null
+  concept_id: string
+}
+
+// =============================================================================
 // Constants
 // =============================================================================
 
@@ -54,11 +73,13 @@ const MAX_BACK_WORDS = 200
  *
  * @param course - The generated course content
  * @param courseId - The course's database ID
+ * @param conceptMappings - Optional concept mappings from content_concepts table
  * @returns Array of ReviewCardInsert objects ready for database insertion
  */
 export function generateCardsFromCourse(
   course: GeneratedCourse & { sections?: any[]; lessons?: any[]; keyConcepts?: string[] },
-  courseId: string
+  courseId: string,
+  conceptMappings?: ConceptMapping
 ): ReviewCardInsert[] {
   const cards: ReviewCardInsert[] = []
 
@@ -84,7 +105,8 @@ export function generateCardsFromCourse(
         section.steps,
         sectionTitle,
         courseId,
-        lessonIndex
+        lessonIndex,
+        conceptMappings
       )
       cards.push(...stepsCards)
       stepIndex += stepsCards.length
@@ -98,7 +120,8 @@ export function generateCardsFromCourse(
         sectionTitle,
         courseId,
         lessonIndex,
-        stepIndex
+        stepIndex,
+        conceptMappings
       )
       cards.push(...keyPointCards)
       stepIndex += keyPointCards.length
@@ -111,7 +134,8 @@ export function generateCardsFromCourse(
         sectionTitle,
         courseId,
         lessonIndex,
-        stepIndex
+        stepIndex,
+        conceptMappings
       )
       if (explanationCard) {
         cards.push(explanationCard)
@@ -126,7 +150,8 @@ export function generateCardsFromCourse(
         sectionTitle,
         courseId,
         lessonIndex,
-        stepIndex
+        stepIndex,
+        conceptMappings
       )
       cards.push(...formulaCards)
       stepIndex += formulaCards.length
@@ -149,6 +174,57 @@ export function generateCardsFromCourse(
   return cards
 }
 
+/**
+ * Build a concept mapping from database rows
+ * Used to link generated cards to their concepts
+ */
+export function buildConceptMapping(rows: ContentConceptRow[]): ConceptMapping {
+  const mapping: ConceptMapping = new Map()
+
+  for (const row of rows) {
+    // Create key for this content location
+    const key = row.step_index !== null
+      ? `${row.lesson_index}:${row.step_index}`
+      : `${row.lesson_index}`
+
+    // Add concept to the mapping
+    const existing = mapping.get(key) || []
+    if (!existing.includes(row.concept_id)) {
+      existing.push(row.concept_id)
+      mapping.set(key, existing)
+    }
+  }
+
+  return mapping
+}
+
+/**
+ * Get concept IDs for a specific lesson/step from the mapping
+ */
+function getConceptIds(
+  lessonIndex: number,
+  stepIndex: number,
+  conceptMappings?: ConceptMapping
+): string[] | undefined {
+  if (!conceptMappings) return undefined
+
+  // Try exact match first (lesson:step)
+  const exactKey = `${lessonIndex}:${stepIndex}`
+  const exactMatch = conceptMappings.get(exactKey)
+  if (exactMatch && exactMatch.length > 0) {
+    return exactMatch
+  }
+
+  // Fall back to lesson-level concepts
+  const lessonKey = `${lessonIndex}`
+  const lessonMatch = conceptMappings.get(lessonKey)
+  if (lessonMatch && lessonMatch.length > 0) {
+    return lessonMatch
+  }
+
+  return undefined
+}
+
 // =============================================================================
 // New Format: Steps-based Card Generation
 // =============================================================================
@@ -162,12 +238,14 @@ function generateCardsFromSteps(
   steps: LessonStep[],
   sectionTitle: string,
   courseId: string,
-  lessonIndex: number
+  lessonIndex: number,
+  conceptMappings?: ConceptMapping
 ): ReviewCardInsert[] {
   const cards: ReviewCardInsert[] = []
 
   steps.forEach((step: any, index: number) => {
     const stepType = step.type || 'explanation'
+    const conceptIds = getConceptIds(lessonIndex, index, conceptMappings)
 
     if (stepType === 'question') {
       // Embedded questions become interactive cards
@@ -194,6 +272,7 @@ function generateCardsFromSteps(
             card_type: 'true_false' as CardType,
             front: questionText,
             back: createTrueFalseBack(trueFalseData),
+            concept_ids: conceptIds,
           })
         } else {
           // Multiple choice question (default)
@@ -209,6 +288,7 @@ function generateCardsFromSteps(
             card_type: 'multiple_choice' as CardType,
             front: questionText,
             back: createMultipleChoiceBack(mcData),
+            concept_ids: conceptIds,
           })
         }
       }
@@ -223,6 +303,7 @@ function generateCardsFromSteps(
           card_type: 'flashcard' as CardType,
           front: generateQuestionFromKeyPoint(content, sectionTitle),
           back: content,
+          concept_ids: conceptIds,
         })
       }
     } else if (stepType === 'explanation' || stepType === 'summary') {
@@ -236,6 +317,7 @@ function generateCardsFromSteps(
           card_type: 'short_answer' as CardType,
           front: generateQuestionFromContent(content, sectionTitle),
           back: truncateText(content, MAX_BACK_WORDS),
+          concept_ids: conceptIds,
         })
       }
     }
@@ -305,16 +387,22 @@ function generateKeyPointCardsLegacy(
   sectionTitle: string,
   courseId: string,
   lessonIndex: number,
-  startStepIndex: number
+  startStepIndex: number,
+  conceptMappings?: ConceptMapping
 ): ReviewCardInsert[] {
-  return keyPoints.map((keyPoint, index) => ({
-    course_id: courseId,
-    lesson_index: lessonIndex,
-    step_index: startStepIndex + index,
-    card_type: 'flashcard' as CardType,
-    front: generateQuestionFromKeyPoint(keyPoint, sectionTitle),
-    back: keyPoint,
-  }))
+  return keyPoints.map((keyPoint, index) => {
+    const stepIndex = startStepIndex + index
+    const conceptIds = getConceptIds(lessonIndex, stepIndex, conceptMappings)
+    return {
+      course_id: courseId,
+      lesson_index: lessonIndex,
+      step_index: stepIndex,
+      card_type: 'flashcard' as CardType,
+      front: generateQuestionFromKeyPoint(keyPoint, sectionTitle),
+      back: keyPoint,
+      concept_ids: conceptIds,
+    }
+  })
 }
 
 /**
@@ -325,16 +413,22 @@ function generateFormulaCards(
   sectionTitle: string,
   courseId: string,
   lessonIndex: number,
-  startStepIndex: number
+  startStepIndex: number,
+  conceptMappings?: ConceptMapping
 ): ReviewCardInsert[] {
-  return formulas.map((formula, index) => ({
-    course_id: courseId,
-    lesson_index: lessonIndex,
-    step_index: startStepIndex + index,
-    card_type: 'formula' as CardType,
-    front: generateFormulaQuestion(formula, sectionTitle),
-    back: formatFormulaAnswer(formula),
-  }))
+  return formulas.map((formula, index) => {
+    const stepIndex = startStepIndex + index
+    const conceptIds = getConceptIds(lessonIndex, stepIndex, conceptMappings)
+    return {
+      course_id: courseId,
+      lesson_index: lessonIndex,
+      step_index: stepIndex,
+      card_type: 'formula' as CardType,
+      front: generateFormulaQuestion(formula, sectionTitle),
+      back: formatFormulaAnswer(formula),
+      concept_ids: conceptIds,
+    }
+  })
 }
 
 /**
@@ -347,7 +441,8 @@ function generateExplanationCardLegacy(
   sectionTitle: string,
   courseId: string,
   lessonIndex: number,
-  stepIndex: number
+  stepIndex: number,
+  conceptMappings?: ConceptMapping
 ): ReviewCardInsert | null {
   const wordCount = explanation.split(/\s+/).length
 
@@ -356,6 +451,8 @@ function generateExplanationCardLegacy(
     return null
   }
 
+  const conceptIds = getConceptIds(lessonIndex, stepIndex, conceptMappings)
+
   return {
     course_id: courseId,
     lesson_index: lessonIndex,
@@ -363,6 +460,7 @@ function generateExplanationCardLegacy(
     card_type: 'short_answer' as CardType,
     front: generateQuestionFromContent(explanation, sectionTitle),
     back: truncateText(explanation, MAX_BACK_WORDS),
+    concept_ids: conceptIds,
   }
 }
 
@@ -643,4 +741,5 @@ export default {
   generateQuestionFromContent,
   estimateCardCount,
   getCardTypeSummary,
+  buildConceptMapping,
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 export interface UpdateLessonProgressRequest {
   courseId: string
@@ -114,6 +115,22 @@ export async function POST(request: Request) {
       progress = data
     }
 
+    // Update concept mastery when lesson is completed
+    if (completed) {
+      try {
+        await updateConceptMasteryForLesson(
+          supabase,
+          user.id,
+          courseId,
+          lessonIndex,
+          questionsAnswered > 0 ? questionsCorrect / questionsAnswered : 0
+        )
+      } catch (err) {
+        // Log but don't fail the request - concept mastery is optional
+        console.error('[Lesson Progress API] Concept mastery update error:', err)
+      }
+    }
+
     return NextResponse.json({ success: true, progress })
   } catch (error) {
     console.error('[Lesson Progress API] Error:', error)
@@ -216,4 +233,91 @@ async function calculateLessonMastery(
 
   // Final mastery
   return Math.min(baseAccuracy * recencyWeight, 1.0)
+}
+
+/**
+ * Update concept mastery for all concepts taught in a lesson
+ */
+async function updateConceptMasteryForLesson(
+  supabase: SupabaseClient,
+  userId: string,
+  courseId: string,
+  lessonIndex: number,
+  accuracy: number
+): Promise<void> {
+  // Get concepts associated with this lesson
+  const { data: contentConcepts, error: conceptsError } = await supabase
+    .from('content_concepts')
+    .select('concept_id, relationship_type, relevance_score')
+    .eq('course_id', courseId)
+    .eq('lesson_index', lessonIndex)
+
+  if (conceptsError || !contentConcepts || contentConcepts.length === 0) {
+    // No concepts mapped to this lesson - skip silently
+    return
+  }
+
+  // Calculate mastery delta based on accuracy and relationship type
+  const now = new Date().toISOString()
+
+  for (const mapping of contentConcepts) {
+    // Get current mastery
+    const { data: existing } = await supabase
+      .from('user_concept_mastery')
+      .select('mastery_level, total_exposures, successful_recalls, failed_recalls, stability')
+      .eq('user_id', userId)
+      .eq('concept_id', mapping.concept_id)
+      .single()
+
+    const currentMastery = existing?.mastery_level ?? 0
+    const totalExposures = (existing?.total_exposures ?? 0) + 1
+    const relevance = mapping.relevance_score ?? 1
+
+    // Calculate mastery delta based on relationship and accuracy
+    let masteryDelta = 0
+    switch (mapping.relationship_type) {
+      case 'teaches':
+        // Main content - larger impact
+        masteryDelta = (accuracy - 0.5) * 0.2 * relevance
+        break
+      case 'reinforces':
+        // Practice content - moderate impact
+        masteryDelta = (accuracy - 0.5) * 0.15 * relevance
+        break
+      case 'requires':
+        // Prerequisites shouldn't increase much from later lessons
+        masteryDelta = accuracy >= 0.7 ? 0.05 * relevance : 0
+        break
+    }
+
+    const newMastery = Math.max(0, Math.min(1, currentMastery + masteryDelta))
+    const successfulRecalls = (existing?.successful_recalls ?? 0) + (accuracy >= 0.6 ? 1 : 0)
+    const failedRecalls = (existing?.failed_recalls ?? 0) + (accuracy < 0.4 ? 1 : 0)
+
+    // Update stability for SRS
+    const baseStability = existing?.stability ?? 1
+    const newStability = accuracy >= 0.6 ? baseStability * 1.2 : Math.max(1, baseStability * 0.8)
+
+    // Calculate next review date
+    const daysUntilReview = Math.round(newStability)
+    const nextReviewDate = new Date()
+    nextReviewDate.setDate(nextReviewDate.getDate() + daysUntilReview)
+
+    // Upsert mastery record
+    await supabase
+      .from('user_concept_mastery')
+      .upsert({
+        user_id: userId,
+        concept_id: mapping.concept_id,
+        mastery_level: newMastery,
+        total_exposures: totalExposures,
+        successful_recalls: successfulRecalls,
+        failed_recalls: failedRecalls,
+        stability: newStability,
+        next_review_date: nextReviewDate.toISOString(),
+        last_reviewed_at: now,
+      }, {
+        onConflict: 'user_id,concept_id'
+      })
+  }
 }

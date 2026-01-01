@@ -124,6 +124,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       console.error('SRS:review:log', reviewLogError)
     }
 
+    // Update concept mastery if card has linked concepts
+    if (card.concept_ids && card.concept_ids.length > 0) {
+      const isCorrect = rating >= 3 // Good or Easy
+      await updateConceptMastery(supabase, user.id, card.concept_ids, isCorrect, now)
+    }
+
     const response: SubmitReviewResponse = {
       success: true,
       next_due: fsrsOutput.due_date.toISOString(),
@@ -136,5 +142,96 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   } catch (error) {
     logError('SRS:review:unhandled', error)
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to submit review')
+  }
+}
+
+// =============================================================================
+// Concept Mastery Update Helper
+// =============================================================================
+
+/**
+ * Update concept mastery based on card review result
+ *
+ * Mastery calculation:
+ * - Correct (rating >= 3): +0.05 mastery, capped at 1.0
+ * - Incorrect (rating < 3): -0.1 mastery, floored at 0
+ *
+ * Also tracks peak mastery for decay detection
+ */
+async function updateConceptMastery(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  conceptIds: string[],
+  isCorrect: boolean,
+  reviewedAt: Date
+): Promise<void> {
+  try {
+    // Process each concept
+    for (const conceptId of conceptIds) {
+      // Get current mastery record
+      const { data: existing } = await supabase
+        .from('user_concept_mastery')
+        .select('mastery_level, peak_mastery, total_exposures, successful_recalls')
+        .eq('user_id', userId)
+        .eq('concept_id', conceptId)
+        .single()
+
+      if (existing) {
+        // Update existing mastery
+        const masteryChange = isCorrect ? 0.05 : -0.1
+        const newMastery = Math.min(1.0, Math.max(0, existing.mastery_level + masteryChange))
+        const newPeakMastery = Math.max(existing.peak_mastery || 0, newMastery)
+
+        await supabase
+          .from('user_concept_mastery')
+          .update({
+            mastery_level: newMastery,
+            peak_mastery: newPeakMastery,
+            total_exposures: existing.total_exposures + 1,
+            successful_recalls: existing.successful_recalls + (isCorrect ? 1 : 0),
+            last_reviewed_at: reviewedAt.toISOString(),
+          })
+          .eq('user_id', userId)
+          .eq('concept_id', conceptId)
+      } else {
+        // Create new mastery record
+        const initialMastery = isCorrect ? 0.3 : 0.1
+        await supabase
+          .from('user_concept_mastery')
+          .insert({
+            user_id: userId,
+            concept_id: conceptId,
+            mastery_level: initialMastery,
+            peak_mastery: initialMastery,
+            total_exposures: 1,
+            successful_recalls: isCorrect ? 1 : 0,
+            last_reviewed_at: reviewedAt.toISOString(),
+          })
+      }
+
+      // Check if this resolves any knowledge gaps
+      if (isCorrect) {
+        // Get current mastery after update
+        const { data: updatedMastery } = await supabase
+          .from('user_concept_mastery')
+          .select('mastery_level')
+          .eq('user_id', userId)
+          .eq('concept_id', conceptId)
+          .single()
+
+        // If mastery is now above 0.5, mark related gaps as resolved
+        if (updatedMastery && updatedMastery.mastery_level >= 0.5) {
+          await supabase
+            .from('user_knowledge_gaps')
+            .update({ resolved: true })
+            .eq('user_id', userId)
+            .eq('concept_id', conceptId)
+            .eq('resolved', false)
+        }
+      }
+    }
+  } catch (error) {
+    // Log but don't fail the review
+    console.error('Failed to update concept mastery:', error)
   }
 }

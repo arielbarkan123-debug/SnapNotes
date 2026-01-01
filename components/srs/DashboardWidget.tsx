@@ -19,6 +19,9 @@ interface SRSStats {
     review: number
     relearning: number
   }
+  // Gap-related stats
+  unresolved_gaps: number
+  gap_targeted_cards: number
 }
 
 // =============================================================================
@@ -73,6 +76,7 @@ export default function DashboardWidget() {
   const newCards = stats.cards_by_state.new
   const totalDue = cardsDue + Math.min(newCards, 20) // Include new cards up to daily limit
   const allDone = totalDue === 0
+  const hasGaps = stats.unresolved_gaps > 0
 
   return (
     <div className={`
@@ -133,6 +137,18 @@ export default function DashboardWidget() {
                 </div>
               )}
 
+              {/* Gap-targeted indicator */}
+              {hasGaps && stats.gap_targeted_cards > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold">
+                    {stats.unresolved_gaps > 99 ? '99+' : stats.unresolved_gaps}
+                  </span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    gaps to fix
+                  </span>
+                </div>
+              )}
+
               {/* Streak */}
               {stats.streak > 0 && (
                 <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
@@ -144,8 +160,22 @@ export default function DashboardWidget() {
           )}
         </div>
 
-        {/* Right side - Button */}
-        <div className="flex-shrink-0">
+        {/* Right side - Buttons */}
+        <div className="flex-shrink-0 flex flex-col sm:flex-row gap-2">
+          {/* Fix Gaps button - show when there are gaps and gap-targeted cards */}
+          {hasGaps && stats.gap_targeted_cards > 0 && (
+            <Link
+              href="/review?mode=gaps"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Fix Gaps
+            </Link>
+          )}
+
+          {/* Main review button */}
           <Link
             href="/review"
             className={`

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useProgress } from '@/hooks'
+import { useEventTracking } from '@/lib/analytics/hooks'
 import {
   LazySection,
   ChartSectionSkeleton,
@@ -19,6 +20,22 @@ export default function ProgressPage() {
   // SWR hook for data fetching with caching
   const { data, isLoading, error } = useProgress()
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null)
+
+  // Analytics
+  const { trackFeature } = useEventTracking()
+
+  // Track page view when data loads
+  useEffect(() => {
+    if (data) {
+      trackFeature('progress_page_view', {
+        studyTimeWeek: data.overview.studyTime.week,
+        cardsReviewed: data.overview.cardsReviewed.count,
+        accuracy: data.overview.accuracy.percent,
+        mastery: data.overview.mastery.percent,
+        coursesCount: data.masteryMap.length,
+      })
+    }
+  }, [data, trackFeature])
 
   // Log performance
   useEffect(() => {

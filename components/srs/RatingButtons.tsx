@@ -2,7 +2,7 @@
 
 import type { Rating, ReviewCard } from '@/types'
 import { RATING_LABELS } from '@/types'
-import { getIntervalPreview } from '@/lib/srs'
+import { getIntervalPreview } from '@/lib/srs/fsrs'
 
 // =============================================================================
 // Types
