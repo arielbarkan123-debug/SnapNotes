@@ -175,8 +175,8 @@ export default function HomeworkHubPage() {
           setRecentItems(recentChecks)
           setStats(prev => ({ ...prev, checksCount: checks?.length || 0 }))
         }
-      } catch (error) {
-        console.error('Failed to fetch recent:', error)
+      } catch {
+        // Error handled silently - UI shows empty state
       } finally {
         setIsLoading(false)
       }

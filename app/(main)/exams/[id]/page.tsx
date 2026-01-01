@@ -110,8 +110,7 @@ export default function TakeExamPage() {
       } else {
         setError(data.error || 'Failed to load exam')
       }
-    } catch (err) {
-      console.error('Failed to fetch exam:', err)
+    } catch {
       setError('Connection error. Please refresh.')
     } finally {
       setLoading(false)
@@ -164,8 +163,7 @@ export default function TakeExamPage() {
       } else {
         setError(data.error || 'Failed to submit')
       }
-    } catch (err) {
-      console.error('Failed to submit exam:', err)
+    } catch {
       setError('Connection error. Please try again.')
     } finally {
       setSubmitting(false)
@@ -210,8 +208,7 @@ export default function TakeExamPage() {
       } else {
         setError(data.error || 'Failed to start exam')
       }
-    } catch (err) {
-      console.error('Failed to start exam:', err)
+    } catch {
       setError('Connection error. Please try again.')
     }
   }
@@ -240,8 +237,7 @@ export default function TakeExamPage() {
         setError(data.error || 'Failed to create new exam')
         setRetaking(false)
       }
-    } catch (err) {
-      console.error('Failed to retake exam:', err)
+    } catch {
       setError('Connection error. Please try again.')
       setRetaking(false)
     }

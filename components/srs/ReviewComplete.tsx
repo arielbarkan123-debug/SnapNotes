@@ -112,8 +112,8 @@ export default function ReviewComplete({
             setShowReflection(true)
           }, 2500)
         }
-      } catch (error) {
-        console.error('Failed to award XP:', error)
+      } catch {
+        // XP award failed silently - not critical
       }
     }
 

@@ -114,8 +114,7 @@ export default function HomeworkResultsPage() {
           gradeLevel: fetchedCheck.feedback?.gradeLevel,
           gradeEstimate: fetchedCheck.feedback?.gradeEstimate,
         })
-      } catch (error) {
-        console.error('Fetch error:', error)
+      } catch {
         toast.error('Failed to load results')
       } finally {
         setIsLoading(false)

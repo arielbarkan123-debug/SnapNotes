@@ -98,8 +98,7 @@ export default function SessionReflection({
       })
 
       onComplete()
-    } catch (error) {
-      console.error('Failed to save reflection:', error)
+    } catch {
       onComplete() // Still close on error
     } finally {
       setIsSaving(false)
@@ -473,8 +472,8 @@ export function useReflectionTrigger() {
             })
           }
         }
-      } catch (error) {
-        console.error('Failed to check weekly reflection:', error)
+      } catch {
+        // Weekly check failed silently
       }
     }
 

@@ -48,8 +48,7 @@ export function WeakAreas() {
       } else {
         setError(true)
       }
-    } catch (err) {
-      console.error('Failed to fetch weak areas:', err)
+    } catch {
       setError(true)
     } finally {
       setLoading(false)

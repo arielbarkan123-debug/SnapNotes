@@ -45,8 +45,8 @@ export default function HomeworkHistoryPage() {
           }))
           setItems(formattedChecks)
         }
-      } catch (error) {
-        console.error('Failed to fetch history:', error)
+      } catch {
+        // Error handled silently - UI shows empty state
       } finally {
         setIsLoading(false)
       }

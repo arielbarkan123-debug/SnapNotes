@@ -23,8 +23,8 @@ export function SWRProvider({ children }: SWRProviderProps) {
         // Users can manually refresh if needed
         revalidateOnFocus: false,
 
-        // Don't refetch when network reconnects
-        revalidateOnReconnect: false,
+        // Refetch when network reconnects (works with OfflineIndicator)
+        revalidateOnReconnect: true,
 
         // Deduplicate requests within 5 seconds
         // Prevents duplicate API calls from multiple components

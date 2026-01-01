@@ -97,8 +97,8 @@ export default function LessonComplete({
 
         await fetch('/api/gamification/streak', { method: 'POST' })
         await fetch('/api/gamification/check', { method: 'POST' })
-      } catch (error) {
-        console.error('Failed to award XP:', error)
+      } catch {
+        // XP award failed silently - not critical
       }
     }
 

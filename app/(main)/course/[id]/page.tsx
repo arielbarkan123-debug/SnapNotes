@@ -56,7 +56,6 @@ async function getCourseWithProgress(id: string): Promise<{ course: Course; prog
       .single()
 
     if (insertError) {
-      console.error('Failed to create progress:', insertError)
       // Return with default progress if insert fails
       progress = {
         id: '',

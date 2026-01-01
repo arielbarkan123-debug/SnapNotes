@@ -21,15 +21,10 @@ export default async function DashboardPage() {
     .order('created_at', { ascending: false })
     .limit(50)
 
+  // Silently handle errors - courses will just be empty
   if (error) {
-    console.error('Error fetching courses:', error)
+    return <DashboardContent initialCourses={[]} />
   }
-
-  // Debug: log cover_image_url for each course
-  console.log('[Dashboard] Courses with covers:', courses?.map(c => ({
-    title: c.title?.substring(0, 30),
-    cover_image_url: c.cover_image_url
-  })))
 
   return <DashboardContent initialCourses={(courses as Course[]) || []} />
 }

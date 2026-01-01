@@ -51,8 +51,7 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
       await supabase.auth.signOut()
       router.push('/')
       router.refresh()
-    } catch (error) {
-      console.error('Error logging out:', error)
+    } catch {
       setIsLoggingOut(false)
     }
   }

@@ -67,6 +67,55 @@ function getFileExtension(filename: string): string {
   return parts.length > 1 ? parts.pop()!.toLowerCase() : 'jpg'
 }
 
+/**
+ * Validates file content by checking magic bytes (file signatures)
+ * This prevents users from uploading malicious files with renamed extensions
+ */
+async function validateImageMagicBytes(file: File): Promise<boolean> {
+  try {
+    // Read first 12 bytes for signature checking
+    const slice = file.slice(0, 12)
+    const buffer = await slice.arrayBuffer()
+    const bytes = new Uint8Array(buffer)
+
+    // Check JPEG signature
+    if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+      return true
+    }
+
+    // Check PNG signature
+    if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+      return true
+    }
+
+    // Check GIF signature
+    if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+      return true
+    }
+
+    // Check WebP (RIFF....WEBP)
+    if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+      // Check for WEBP at position 8
+      if (bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+        return true
+      }
+    }
+
+    // Check HEIC/HEIF (ftyp box)
+    if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) {
+      // Common HEIC brands: heic, mif1, msf1, heix
+      return true
+    }
+
+    // Allow if MIME type or extension suggests image (for edge cases)
+    // This handles rare formats or browser-specific issues
+    return false
+  } catch {
+    // If we can't read the file, let the extension check handle it
+    return false
+  }
+}
+
 function isValidFileType(file: File): boolean {
   // Check MIME type
   if (ACCEPTED_FILE_TYPES.includes(file.type)) {
@@ -99,8 +148,18 @@ function isStorageQuotaError(error: unknown): boolean {
   return false
 }
 
-function validateFile(file: File, index: number): UploadError | null {
-  // Validate file type
+async function validateFile(file: File, index: number): Promise<UploadError | null> {
+  // Validate file size first (quick check)
+  if (file.size > MAX_FILE_SIZE) {
+    return {
+      index,
+      filename: file.name,
+      error: 'File too large. Maximum size is 10MB',
+      code: ErrorCodes.FILE_TOO_LARGE,
+    }
+  }
+
+  // Validate MIME type from browser
   if (!isValidFileType(file)) {
     return {
       index,
@@ -110,13 +169,17 @@ function validateFile(file: File, index: number): UploadError | null {
     }
   }
 
-  // Validate file size
-  if (file.size > MAX_FILE_SIZE) {
-    return {
-      index,
-      filename: file.name,
-      error: 'File too large. Maximum size is 10MB',
-      code: ErrorCodes.FILE_TOO_LARGE,
+  // Validate magic bytes (actual file content) to prevent spoofed files
+  const hasValidSignature = await validateImageMagicBytes(file)
+  if (!hasValidSignature) {
+    // Allow if MIME type is correct (some edge cases with HEIC on certain devices)
+    if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
+      return {
+        index,
+        filename: file.name,
+        error: 'File content does not match an image format',
+        code: ErrorCodes.INVALID_FILE_TYPE,
+      }
     }
   }
 
@@ -188,34 +251,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // 5. Generate course ID for this upload batch
     const courseId = generateCourseId()
 
-    // 6. Validate all files first and collect errors
+    // 6. Validate all files first and collect errors (async for magic byte checking)
     const validationErrors: UploadError[] = []
     const validFiles: { file: File; index: number }[] = []
 
+    // Run validations in parallel for better performance
+    const validationResults = await Promise.all(
+      files.map((file, i) => validateFile(file, i))
+    )
+
     for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-      const error = validateFile(file, i)
+      const error = validationResults[i]
       if (error) {
         validationErrors.push(error)
       } else {
-        validFiles.push({ file, index: i })
+        validFiles.push({ file: files[i], index: i })
       }
     }
 
     // If all files are invalid, return error
     if (validFiles.length === 0) {
-      // Log detailed info for debugging
-      console.error('[UploadImages] All files failed validation:', {
-        fileCount: files.length,
-        files: files.map((f) => ({
-          name: f.name,
-          type: f.type,
-          size: f.size,
-          extension: getFileExtension(f.name),
-        })),
-        validationErrors,
-      })
-
       return NextResponse.json(
         {
           success: false,

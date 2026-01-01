@@ -175,8 +175,7 @@ export default function ReviewPage() {
         })
         setSessionState('complete')
       }
-    } catch (err) {
-      console.error('Review error:', err)
+    } catch {
       // Still move to next card even on error
       if (currentIndex < session.cards.length - 1) {
         setCurrentIndex((prev) => prev + 1)

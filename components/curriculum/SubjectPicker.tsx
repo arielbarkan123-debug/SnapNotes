@@ -40,8 +40,7 @@ export function SubjectPicker({
       try {
         const data = await loadAvailableSubjects(system)
         setSubjectsData(data)
-      } catch (err) {
-        console.error('Error loading subjects:', err)
+      } catch {
         setError('Failed to load subjects')
       } finally {
         setLoading(false)
