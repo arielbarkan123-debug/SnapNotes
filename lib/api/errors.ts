@@ -37,6 +37,7 @@ export const ErrorCodes = {
   // AI/Processing errors
   AI_SERVICE_UNAVAILABLE: 'AI_SERVICE_UNAVAILABLE',
   AI_PROCESSING_FAILED: 'AI_PROCESSING_FAILED',
+  AI_TIMEOUT: 'AI_TIMEOUT',
   IMAGE_UNREADABLE: 'IMAGE_UNREADABLE',
   RATE_LIMITED: 'RATE_LIMITED',
   PROCESSING_TIMEOUT: 'PROCESSING_TIMEOUT',
@@ -72,44 +73,45 @@ export interface APISuccessResponse<T = unknown> {
 const defaultErrorMessages: Record<ErrorCode, string> = {
   // Auth
   [ErrorCodes.UNAUTHORIZED]: 'Please log in to continue',
-  [ErrorCodes.SESSION_EXPIRED]: 'Your session has expired. Please log in again',
-  [ErrorCodes.INVALID_CREDENTIALS]: 'Invalid email or password',
-  [ErrorCodes.EMAIL_NOT_VERIFIED]: 'Please verify your email before continuing',
-  [ErrorCodes.ACCOUNT_DISABLED]: 'Your account has been disabled',
+  [ErrorCodes.SESSION_EXPIRED]: 'Your session has expired. Please log in again to continue',
+  [ErrorCodes.INVALID_CREDENTIALS]: 'Email or password is incorrect. Please check and try again',
+  [ErrorCodes.EMAIL_NOT_VERIFIED]: 'Please check your inbox and verify your email to continue',
+  [ErrorCodes.ACCOUNT_DISABLED]: 'Your account has been disabled. Please contact support',
 
   // Validation
-  [ErrorCodes.VALIDATION_ERROR]: 'Please check your input and try again',
-  [ErrorCodes.INVALID_INPUT]: 'Invalid input provided',
-  [ErrorCodes.MISSING_FIELD]: 'Required field is missing',
+  [ErrorCodes.VALIDATION_ERROR]: 'Some information is missing or incorrect. Please check and try again',
+  [ErrorCodes.INVALID_INPUT]: 'The information provided is not valid. Please check and try again',
+  [ErrorCodes.MISSING_FIELD]: 'Please fill in all required fields',
 
   // Resource
-  [ErrorCodes.NOT_FOUND]: 'The requested resource was not found',
-  [ErrorCodes.FORBIDDEN]: 'You do not have permission to access this resource',
-  [ErrorCodes.CONFLICT]: 'This action conflicts with an existing resource',
+  [ErrorCodes.NOT_FOUND]: 'This content could not be found. It may have been deleted',
+  [ErrorCodes.FORBIDDEN]: 'You don\'t have access to this content',
+  [ErrorCodes.CONFLICT]: 'This already exists. Please use a different name or check your courses',
 
   // Upload
-  [ErrorCodes.FILE_TOO_LARGE]: 'File is too large. Maximum size is 10MB',
-  [ErrorCodes.INVALID_FILE_TYPE]: 'Invalid file type. Please upload an image',
-  [ErrorCodes.UPLOAD_FAILED]: 'Failed to upload file. Please try again',
-  [ErrorCodes.STORAGE_QUOTA_EXCEEDED]: 'Storage quota exceeded',
+  [ErrorCodes.FILE_TOO_LARGE]: 'File is too large (max 10MB). Try a smaller file or compress it',
+  [ErrorCodes.INVALID_FILE_TYPE]: 'Please upload an image (JPEG, PNG) or PDF file',
+  [ErrorCodes.UPLOAD_FAILED]: 'Upload failed. Please check your connection and try again',
+  [ErrorCodes.STORAGE_QUOTA_EXCEEDED]: 'Storage is full. Please delete some old courses to free up space',
 
   // Document processing
-  [ErrorCodes.DOCUMENT_PROCESSING_FAILED]: 'Failed to process document. Please try again',
-  [ErrorCodes.DOCUMENT_PASSWORD_PROTECTED]: 'Password-protected documents are not supported',
-  [ErrorCodes.DOCUMENT_EMPTY]: 'Document appears to be empty or contains no readable text',
-  [ErrorCodes.DOCUMENT_SCANNED]: 'This document appears to be scanned. Please upload images instead',
+  [ErrorCodes.DOCUMENT_PROCESSING_FAILED]: 'Could not read this document. Please try a different file or take photos instead',
+  [ErrorCodes.DOCUMENT_PASSWORD_PROTECTED]: 'This PDF is password-protected. Please remove the password and try again',
+  [ErrorCodes.DOCUMENT_EMPTY]: 'This document appears empty. Please upload a file with visible text or images',
+  [ErrorCodes.DOCUMENT_SCANNED]: 'This looks like a scanned document. For best results, take photos of each page instead',
 
   // AI
-  [ErrorCodes.AI_SERVICE_UNAVAILABLE]: 'AI service is temporarily unavailable. Please try again later',
-  [ErrorCodes.AI_PROCESSING_FAILED]: 'Failed to process your notes. Please try again',
-  [ErrorCodes.IMAGE_UNREADABLE]: 'Could not read the image. Please upload a clearer photo',
-  [ErrorCodes.RATE_LIMITED]: 'Too many requests. Please wait a moment and try again',
-  [ErrorCodes.PROCESSING_TIMEOUT]: 'Processing took too long. Please try again',
+  [ErrorCodes.AI_SERVICE_UNAVAILABLE]: 'Our AI is temporarily busy. Please wait a minute and try again',
+  [ErrorCodes.AI_PROCESSING_FAILED]: 'Could not process your notes. Please try again or upload different images',
+  [ErrorCodes.AI_TIMEOUT]: 'This is taking longer than expected. Please try again with fewer images',
+  [ErrorCodes.IMAGE_UNREADABLE]: 'Could not read this image clearly. Please take a clearer photo with good lighting',
+  [ErrorCodes.RATE_LIMITED]: 'You\'re going too fast! Please wait a moment and try again',
+  [ErrorCodes.PROCESSING_TIMEOUT]: 'Processing took too long. Try uploading fewer images at once',
 
   // Server
-  [ErrorCodes.INTERNAL_ERROR]: 'An unexpected error occurred. Please try again',
-  [ErrorCodes.DATABASE_ERROR]: 'Database error. Please try again',
-  [ErrorCodes.NETWORK_ERROR]: 'Network error. Please check your connection',
+  [ErrorCodes.INTERNAL_ERROR]: 'Something went wrong on our end. Please try again in a moment',
+  [ErrorCodes.DATABASE_ERROR]: 'Could not save your data. Please try again',
+  [ErrorCodes.NETWORK_ERROR]: 'Connection lost. Please check your internet and try again',
 }
 
 // ============================================================================
@@ -198,6 +200,7 @@ function getStatusCodeForError(code: ErrorCode): number {
 
     // 504 Gateway Timeout
     case ErrorCodes.PROCESSING_TIMEOUT:
+    case ErrorCodes.AI_TIMEOUT:
       return 504
 
     // 500 Internal Server Error (default)
@@ -284,21 +287,25 @@ export function mapClaudeAPIError(error: unknown): { code: ErrorCode; message: s
     const message = error.message.toLowerCase()
 
     if (message.includes('rate limit') || message.includes('429')) {
-      return { code: ErrorCodes.RATE_LIMITED, message: 'AI service is busy. Please try again in a moment' }
+      return { code: ErrorCodes.RATE_LIMITED, message: 'Our AI is receiving many requests. Please wait a moment and try again' }
     }
 
     if (message.includes('timeout') || message.includes('timed out')) {
-      return { code: ErrorCodes.PROCESSING_TIMEOUT, message: 'Processing took too long. Please try again' }
+      return { code: ErrorCodes.AI_TIMEOUT, message: 'This is taking longer than expected. Please try again with fewer images' }
     }
 
     if (message.includes('unavailable') || message.includes('503') || message.includes('500')) {
-      return { code: ErrorCodes.AI_SERVICE_UNAVAILABLE, message: 'AI service is temporarily unavailable' }
+      return { code: ErrorCodes.AI_SERVICE_UNAVAILABLE, message: 'Our AI is temporarily unavailable. Please try again in a few minutes' }
     }
 
     if (message.includes('invalid') && message.includes('image')) {
-      return { code: ErrorCodes.IMAGE_UNREADABLE, message: 'Could not read the image. Please upload a clearer photo' }
+      return { code: ErrorCodes.IMAGE_UNREADABLE, message: 'Could not read this image. Please take a clearer photo with good lighting' }
+    }
+
+    if (message.includes('overloaded') || message.includes('capacity')) {
+      return { code: ErrorCodes.AI_SERVICE_UNAVAILABLE, message: 'Our AI is experiencing high demand. Please try again in a few minutes' }
     }
   }
 
-  return { code: ErrorCodes.AI_PROCESSING_FAILED, message: 'Failed to process your notes. Please try again' }
+  return { code: ErrorCodes.AI_PROCESSING_FAILED, message: 'Could not process your notes. Please try again or upload different images' }
 }

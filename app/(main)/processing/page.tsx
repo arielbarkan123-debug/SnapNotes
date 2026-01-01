@@ -576,11 +576,20 @@ function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPrevie
         </p>
       </div>
 
-      {/* Tips */}
+      {/* Tips with time estimate */}
       <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 text-sm text-indigo-700 dark:text-indigo-300">
-        <p className="font-medium mb-1">Did you know?</p>
+        <p className="font-medium mb-1 flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {isText ? 'Usually takes 30-60 seconds' : isDocument ? 'Usually takes 1-2 minutes' : 'Usually takes 30-90 seconds'}
+        </p>
         <p className="text-indigo-600 dark:text-indigo-400">
-          Our AI reads handwritten notes, identifies formulas, and creates structured study materials automatically.
+          {isText
+            ? 'Your text is being expanded into a complete learning course with interactive lessons.'
+            : isDocument
+              ? 'Larger documents may take longer to process. Please be patient.'
+              : 'Our AI reads handwritten notes, identifies formulas, and creates structured study materials.'}
         </p>
       </div>
 

@@ -44,6 +44,9 @@ export {
 // PWA / Service Worker
 export { useServiceWorker } from './useServiceWorker'
 
+// Network Status
+export { useOnlineStatus } from './useOnlineStatus'
+
 // Curriculum
 export { useCurriculumStatus } from './useCurriculumStatus'
 

@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import Header from '@/components/ui/Header'
 import NavigationProgress from '@/components/ui/NavigationProgress'
+import OfflineIndicator from '@/components/ui/OfflineIndicator'
 
 export default async function MainLayout({
   children,
@@ -36,6 +37,7 @@ export default async function MainLayout({
       <main className="flex-1 overflow-auto">
         {children}
       </main>
+      <OfflineIndicator />
     </div>
   )
 }

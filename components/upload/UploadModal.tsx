@@ -1245,13 +1245,23 @@ Statistics: Mean, Median, Mode, Range."
                   {uploadProgress.status === 'uploading' && (
                     <>{getUploadingText(selectedFiles)}</>
                   )}
+                  {uploadProgress.status === 'processing' && (
+                    <>Processing your content...</>
+                  )}
                   {uploadProgress.status === 'complete' && (
                     <>Upload complete! Redirecting...</>
                   )}
                 </p>
                 {uploadProgress.status === 'uploading' && (
                   <p className="text-xs text-indigo-600 dark:text-indigo-400">
-                    Please wait while your files are being uploaded
+                    {selectedFiles.reduce((acc, f) => acc + f.file.size, 0) > 5 * 1024 * 1024
+                      ? 'Large files may take a minute to upload...'
+                      : 'Please wait while your files are being uploaded'}
+                  </p>
+                )}
+                {uploadProgress.status === 'processing' && (
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400">
+                    This may take a moment...
                   </p>
                 )}
               </div>
@@ -1260,13 +1270,19 @@ Statistics: Mean, Median, Mode, Range."
             <div className="mt-2 h-1.5 bg-indigo-200 dark:bg-indigo-800 rounded-full overflow-hidden">
               <div
                 className={`h-full bg-indigo-600 dark:bg-indigo-400 rounded-full transition-all duration-500 ${
-                  uploadProgress.status === 'uploading' ? 'animate-pulse' : ''
+                  uploadProgress.status === 'uploading' || uploadProgress.status === 'processing' ? 'animate-pulse' : ''
                 }`}
                 style={{
-                  width: uploadProgress.status === 'complete' ? '100%' : '60%'
+                  width: uploadProgress.status === 'complete' ? '100%' : uploadProgress.status === 'processing' ? '80%' : '60%'
                 }}
               />
             </div>
+            {/* File count indicator */}
+            {uploadProgress.status === 'uploading' && selectedFiles.length > 1 && (
+              <p className="mt-1.5 text-xs text-indigo-500 dark:text-indigo-400 text-center">
+                {selectedFiles.length} files &bull; {formatFileSize(selectedFiles.reduce((acc, f) => acc + f.file.size, 0))} total
+              </p>
+            )}
           </div>
         )}
 
