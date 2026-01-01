@@ -234,7 +234,6 @@ export default function PracticeHubContent({
 
         router.push(`/practice/${sessionId}`)
       } catch (error) {
-        console.error('Failed to create session:', error)
         trackFeature('practice_session_error', {
           sessionType,
           error: error instanceof Error ? error.message : 'Unknown error',
@@ -291,7 +290,6 @@ export default function PracticeHubContent({
 
       router.push(`/practice/${sessionId}`)
     } catch (error) {
-      console.error('Failed to create session:', error)
       trackFeature('practice_session_error', {
         sessionType: 'custom',
         error: error instanceof Error ? error.message : 'Unknown error',

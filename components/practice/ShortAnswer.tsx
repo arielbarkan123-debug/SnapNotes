@@ -70,8 +70,7 @@ export default function ShortAnswer({
       const result: EvaluationResult = await response.json()
       setEvaluationResult(result)
       onAnswer(result.isCorrect, result.score)
-    } catch (error) {
-      console.error('Evaluation error:', error)
+    } catch {
       // Fallback: Show manual grading option
       setEvaluationResult({
         isCorrect: false,

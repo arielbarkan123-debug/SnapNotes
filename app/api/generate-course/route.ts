@@ -193,16 +193,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Document-based generation - check for extracted images
         let imageUrls: string[] = []
 
-        console.log('[GenerateCourse] Document content received:', {
-          title: documentContent.title,
-          type: documentContent.type,
-          hasImages: !!documentContent.images,
-          imageCount: documentContent.images?.length || 0,
-        })
 
         // If document has extracted images, upload them to storage
         if (documentContent.images && documentContent.images.length > 0) {
-          console.log('[GenerateCourse] Uploading extracted images...')
           try {
             const uploadResults = await uploadExtractedImages(
               documentContent.images,
@@ -214,21 +207,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               .filter((r) => r.success)
               .map((r) => (r as { url: string }).url)
             _courseImageUrls = imageUrls
-            console.log('[GenerateCourse] Images uploaded:', {
-              totalImages: documentContent.images.length,
-              successfulUploads: imageUrls.length,
-            })
           } catch (uploadError) {
             logError('GenerateCourse:imageUpload', uploadError)
-            console.error('[GenerateCourse] Image upload failed:', uploadError)
             // Continue without images if upload fails
           }
-        } else {
-          console.log('[GenerateCourse] No images to upload from document')
         }
 
         // Generate course with image information
-        console.log('[GenerateCourse] Generating course with', imageUrls.length, 'images')
         const result = await generateCourseFromDocument(documentContent, title, imageUrls, userContext)
         generatedCourse = result.generatedCourse
         extractedContent = documentContent.content // Use the already extracted content
@@ -381,7 +366,6 @@ async function generateCoverImage(supabase: any, userId: string, courseId: strin
     const result = await generateCourseImage(title)
 
     if (!result.success) {
-      console.log('[GenerateCourse] Cover image generation failed:', result.error)
       return
     }
 
@@ -400,7 +384,6 @@ async function generateCoverImage(supabase: any, userId: string, courseId: strin
         })
 
       if (uploadError) {
-        console.error('[GenerateCourse] Cover upload failed:', uploadError)
         // Use data URL as fallback
         coverUrl = `data:${result.mimeType || 'image/png'};base64,${result.imageBase64}`
       } else {
@@ -414,7 +397,6 @@ async function generateCoverImage(supabase: any, userId: string, courseId: strin
       // Direct URL (from fallback services)
       coverUrl = result.imageUrl
     } else {
-      console.log('[GenerateCourse] No image data in result')
       return
     }
 
@@ -426,12 +408,10 @@ async function generateCoverImage(supabase: any, userId: string, courseId: strin
       .eq('user_id', userId)
 
     if (updateError) {
-      console.error('[GenerateCourse] Cover update failed:', updateError)
-    } else {
-      console.log('[GenerateCourse] Cover image saved successfully')
+      logError('GenerateCourse:coverUpdate', updateError)
     }
   } catch (error) {
-    console.error('[GenerateCourse] Cover generation error:', error)
+    logError('GenerateCourse:coverGeneration', error)
   }
 }
 
@@ -458,7 +438,6 @@ async function extractConcepts(
   try {
     // Skip if API key not configured
     if (!process.env.ANTHROPIC_API_KEY) {
-      console.log('[GenerateCourse] Skipping concept extraction - API key not configured')
       return
     }
 
@@ -492,7 +471,7 @@ async function extractConcepts(
     }
 
     // Extract and store concepts
-    const result = await extractAndStoreConcepts(
+    await extractAndStoreConcepts(
       {
         ...generatedCourse,
         id: courseId,
@@ -501,14 +480,8 @@ async function extractConcepts(
       curriculumContext,
       studySystem
     )
-
-    console.log('[GenerateCourse] Concept extraction complete:', {
-      courseId,
-      concepts: result.concepts.length,
-      mappings: result.mappings.length,
-    })
   } catch (error) {
-    console.error('[GenerateCourse] Concept extraction error:', error)
+    logError('GenerateCourse:conceptExtraction', error)
     // Don't throw - this is a background task
   }
 }

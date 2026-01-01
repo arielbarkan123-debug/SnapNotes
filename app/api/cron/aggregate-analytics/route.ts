@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 
-// Secret key for cron authentication (set in environment variables)
+// Secret key for cron authentication (REQUIRED in environment variables)
 const CRON_SECRET = process.env.CRON_SECRET
 
 /**
@@ -17,11 +17,17 @@ const CRON_SECRET = process.env.CRON_SECRET
  *     "schedule": "0 2 * * *"  // Run at 2 AM UTC daily
  *   }]
  * }
+ *
+ * IMPORTANT: Set CRON_SECRET in environment variables for security
  */
 export async function POST(request: NextRequest) {
-  // Verify cron secret for security
+  // Verify cron secret for security (REQUIRED)
+  if (!CRON_SECRET) {
+    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 })
+  }
+
   const authHeader = request.headers.get('authorization')
-  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -72,17 +78,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log('[Cron] Analytics aggregation complete:', results)
-
     return NextResponse.json({
       success: true,
       results,
       aggregatedAt: new Date().toISOString(),
     })
   } catch (error) {
-    console.error('[Cron] Analytics aggregation failed:', error)
     return NextResponse.json(
-      { error: 'Aggregation failed', details: String(error) },
+      { error: 'Aggregation failed', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }

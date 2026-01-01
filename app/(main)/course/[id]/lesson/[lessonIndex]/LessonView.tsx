@@ -188,8 +188,8 @@ export default function LessonView({
         if (data.success && data.session?.id) {
           sessionIdRef.current = data.session.id
         }
-      } catch (error) {
-        console.error('Failed to start study session:', error)
+      } catch {
+        // Session start failed - continue anyway
       }
     }
 
@@ -241,8 +241,8 @@ export default function LessonView({
           completed_lessons: completedLessons,
         })
         .eq('id', initialProgress.id)
-    } catch (error) {
-      console.error('Failed to save progress:', error)
+    } catch {
+      // Progress save failed - will retry on next action
     } finally {
       setIsSaving(false)
     }
@@ -270,8 +270,8 @@ export default function LessonView({
           questions_correct: currentCorrect + correct,
         })
         .eq('id', initialProgress.id)
-    } catch (error) {
-      console.error('Failed to save question stats:', error)
+    } catch {
+      // Stats save failed - continue anyway
     }
   }, [supabase, initialProgress.id])
 
@@ -289,8 +289,8 @@ export default function LessonView({
           steps: timings,
         }),
       })
-    } catch (error) {
-      console.error('Failed to save step performance:', error)
+    } catch {
+      // Performance save failed - continue anyway
     }
   }, [course.id, lessonIndex])
 
@@ -309,8 +309,8 @@ export default function LessonView({
           }),
         })
         sessionIdRef.current = null // Clear so cleanup doesn't re-end
-      } catch (error) {
-        console.error('Failed to end study session:', error)
+      } catch {
+        // Session end failed - continue anyway
       }
     }
 
@@ -331,8 +331,8 @@ export default function LessonView({
             completed: true,
           }),
         })
-      } catch (error) {
-        console.error('Failed to update lesson progress:', error)
+      } catch {
+        // Lesson progress update failed - continue anyway
       }
     }
   }, [course.id, lessonIndex, lesson.title])

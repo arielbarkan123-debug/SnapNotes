@@ -81,8 +81,8 @@ async function endStudySession(sessionId: string, cardsReviewed: number, correct
         questionsCorrect: correct,
       }),
     })
-  } catch (error) {
-    console.error('Failed to end study session:', error)
+  } catch {
+    // Session end failed - continue anyway
   }
 }
 
@@ -206,13 +206,7 @@ export default function PracticePage() {
         return
       }
 
-      // Check if we got fewer questions than requested
-      const requested = data.requested || questionCount
-      const delivered = data.delivered || data.cards.length
-      if (delivered < requested) {
-        console.log(`[Practice] Requested ${requested} questions, got ${delivered} (${data.available || 'unknown'} available)`)
-        // Don't error, just proceed with what we have
-      }
+      // Proceed with available questions (may be fewer than requested)
 
       // Map course info to cards
       const courseMap = new Map(courses.map(c => [c.id, c]))
@@ -353,7 +347,7 @@ export default function PracticePage() {
           was_correct: wasCorrect,
           duration_ms: durationMs,
         }),
-      }).catch(console.error)
+      }).catch(() => { /* SRS update failed - continue anyway */ })
 
       // Move to next card or complete
       if (currentIndex < cards.length - 1) {

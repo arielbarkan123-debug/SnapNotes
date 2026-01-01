@@ -136,8 +136,7 @@ export default function SettingsPage() {
         if (savedTheme) {
           setTheme(savedTheme)
         }
-      } catch (err) {
-        console.error('Error loading user:', err)
+      } catch {
         toast.error('Failed to load settings')
       } finally {
         setIsLoading(false)
@@ -278,7 +277,6 @@ export default function SettingsPage() {
       }
 
       if (profileError) {
-        console.error('Error updating profile:', profileError.message, profileError.details, profileError.hint)
         toast.warning('Profile partially saved. Some settings may not have been saved.')
       } else {
         toast.success('Settings saved successfully')
@@ -294,7 +292,6 @@ export default function SettingsPage() {
       }
       setHasChanges(false)
     } catch (err) {
-      console.error('Error saving settings:', err)
       toast.error('Failed to save settings')
       trackFeature('settings_save_error', {
         error: err instanceof Error ? err.message : 'Unknown error',
@@ -309,8 +306,7 @@ export default function SettingsPage() {
     try {
       await supabase.auth.signOut()
       router.push('/login')
-    } catch (err) {
-      console.error('Error signing out:', err)
+    } catch {
       toast.error('Failed to sign out')
     }
   }
@@ -334,8 +330,7 @@ export default function SettingsPage() {
 
       toast.success('Onboarding reset! Redirecting...')
       setTimeout(() => router.push('/onboarding'), 1000)
-    } catch (err) {
-      console.error('Error resetting onboarding:', err)
+    } catch {
       toast.error('Failed to reset onboarding')
     }
   }
@@ -350,8 +345,7 @@ export default function SettingsPage() {
       toast.info('Account deletion request submitted. Contact support to complete.')
       await supabase.auth.signOut()
       router.push('/')
-    } catch (err) {
-      console.error('Error deleting account:', err)
+    } catch {
       toast.error('Failed to process deletion request')
     }
   }

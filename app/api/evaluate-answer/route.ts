@@ -197,7 +197,6 @@ Respond with ONLY valid JSON (no markdown):
       feedback: result.feedback || (result.correct ? 'Correct!' : 'Not quite right.')
     }
   } catch (error) {
-    console.error('[EvaluateAnswer] AI evaluation failed:', error)
     // Fallback to fuzzy matching if AI fails
     throw error
   }
@@ -275,9 +274,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           curriculumContextString = formatContextForPrompt(curriculumContext)
         }
       }
-    } catch (authError) {
+    } catch {
       // Silently continue without curriculum context if auth fails
-      console.log('[EvaluateAnswer] No curriculum context available:', authError)
     }
 
     // Layer 1: Exact match (fastest)
@@ -357,9 +355,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         evaluationMethod: 'ai',
         evaluationTimeMs: Date.now() - startTime
       })
-    } catch (aiError) {
+    } catch {
       // If AI fails, fall back to fuzzy result
-      console.error('[EvaluateAnswer] AI failed, using fuzzy fallback:', aiError)
 
       // Use a lower threshold for "partial" credit
       const partialScore = Math.round(fuzzyResult.similarity * 100)
@@ -396,8 +393,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         evaluationTimeMs: Date.now() - startTime
       })
     }
-  } catch (error) {
-    console.error('[EvaluateAnswer] Error:', error)
+  } catch {
     return NextResponse.json(
       { error: 'Failed to evaluate answer' },
       { status: 500 }
@@ -500,8 +496,7 @@ async function recordPerformanceForGapDetection(
           })
       }
     }
-  } catch (error) {
-    // Log but don't fail - gap detection is optional
-    console.error('[EvaluateAnswer] Gap detection error:', error)
+  } catch {
+    // Gap detection is optional - silently continue
   }
 }

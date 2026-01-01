@@ -394,7 +394,7 @@ export default function OnboardingPage() {
         .insert(profileData)
 
       if (error) {
-        console.error('Failed to save learning profile:', error)
+        // Learning profile save failed - continue anyway
       }
 
       // Also update the profiles table with grade and subjects
@@ -410,7 +410,7 @@ export default function OnboardingPage() {
         .eq('id', user.id)
 
       if (profileUpdateError) {
-        console.error('Failed to update profile:', profileUpdateError)
+        // Profile update failed - continue anyway
       }
 
       // Initialize gamification stats
@@ -428,13 +428,12 @@ export default function OnboardingPage() {
         })
 
       if (gamError) {
-        console.error('Failed to init gamification:', gamError)
+        // Gamification init failed - continue anyway
       }
 
       // Redirect to dashboard
       router.push('/dashboard?welcome=true')
-    } catch (error) {
-      console.error('Onboarding error:', error)
+    } catch {
       router.push('/dashboard')
     }
   }

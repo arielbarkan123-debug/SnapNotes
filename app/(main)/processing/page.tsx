@@ -185,7 +185,6 @@ function ProcessingContent() {
     try {
       const stored = sessionStorage.getItem(documentId)
       if (!stored) {
-        console.error('Document content not found in sessionStorage')
         return
       }
       const parsed = JSON.parse(stored)
@@ -193,7 +192,7 @@ function ProcessingContent() {
       // Clean up sessionStorage after successful read
       sessionStorage.removeItem(documentId)
     } catch {
-      console.error('Failed to parse document content from sessionStorage')
+      // Failed to parse document content
     }
   }, [documentId])
 
@@ -203,7 +202,6 @@ function ProcessingContent() {
     try {
       return JSON.parse(imageUrlsParam)
     } catch {
-      console.error('Failed to parse image URLs')
       return null
     }
   }, [imageUrlsParam])
@@ -284,7 +282,6 @@ function ProcessingContent() {
     // Check if we're already processing (prevents duplicates on remount)
     const isAlreadyProcessing = sessionStorage.getItem(processingKey)
     if (isAlreadyProcessing === 'started') {
-      console.log('Course generation already in progress')
       return
     }
 
@@ -316,14 +313,6 @@ function ProcessingContent() {
       if (title) {
         requestBody.title = title
       }
-
-      console.log('[Processing] Calling generate-course API with:', {
-        hasTextContent: !!textContent,
-        hasDocumentContent: !!documentContent,
-        hasImageUrls: !!(imageUrls && imageUrls.length > 0),
-        hasImageUrl: !!imageUrl,
-        sourceType,
-      })
 
       const response = await fetch('/api/generate-course', {
         method: 'POST',
@@ -389,16 +378,15 @@ function ProcessingContent() {
 
         // Check for achievements (first_course, etc.)
         await fetch('/api/gamification/check', { method: 'POST' })
-      } catch (error) {
-        console.error('Failed to award XP:', error)
+      } catch {
+        // XP award failed - continue anyway
       }
 
       // Redirect to the new course after a brief delay to show success
       setTimeout(() => {
         router.push(`/course/${data.courseId}`)
       }, 2500)
-    } catch (error) {
-      console.error('Generation error:', error)
+    } catch {
       // Clear the processing flag so retry can work
       if (processingKey) {
         sessionStorage.removeItem(processingKey)

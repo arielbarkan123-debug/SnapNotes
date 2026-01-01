@@ -427,8 +427,7 @@ export default function PracticeSessionContent({
           isCorrect: result.isCorrect,
           responseTimeMs: responseTime,
         })
-      } catch (error) {
-        console.error('Failed to submit answer:', error)
+      } catch {
         alert('Failed to submit answer. Please try again.')
       } finally {
         setIsSubmitting(false)
@@ -459,8 +458,8 @@ export default function PracticeSessionContent({
           questionsCorrect: correctCount,
           accuracy: Math.round((correctCount / (answeredCount + 1)) * 100),
         })
-      } catch (error) {
-        console.error('Failed to complete session:', error)
+      } catch {
+        // Session completion failed - continue anyway
       }
       setView('complete')
     } else {
@@ -493,8 +492,9 @@ export default function PracticeSessionContent({
       })
 
       router.push('/practice')
-    } catch (error) {
-      console.error('Failed to abandon session:', error)
+    } catch {
+      // Abandon failed - redirect anyway
+      router.push('/practice')
     }
   }, [session.id, router, answeredCount, correctCount, currentIndex, questions.length, trackFeature])
 

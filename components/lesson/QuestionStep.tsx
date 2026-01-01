@@ -154,8 +154,8 @@ export default function QuestionStep({
         usedHint: hintUsed,
       }))
       // Fire and forget - don't block the UI
-      recordPerformance(performances).catch(err => {
-        console.error('Failed to record concept performance:', err)
+      recordPerformance(performances).catch(() => {
+        // Concept performance recording failed - continue anyway
       })
     }
 
@@ -173,8 +173,8 @@ export default function QuestionStep({
         if (adaptiveState.lastFeedback) {
           setAdaptiveFeedback(adaptiveState.lastFeedback)
         }
-      }).catch(err => {
-        console.error('Failed to record adaptive answer:', err)
+      }).catch(() => {
+        // Adaptive answer recording failed - continue anyway
       })
     }
   }
