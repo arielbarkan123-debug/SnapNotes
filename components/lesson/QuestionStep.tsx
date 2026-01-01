@@ -35,6 +35,8 @@ interface QuestionStepProps {
   difficulty?: number
   /** Unique question ID for adaptive tracking */
   questionId?: string
+  /** Whether this is a retry attempt (shows encouraging UI) */
+  isRetry?: boolean
 }
 
 export default function QuestionStep({
@@ -53,6 +55,7 @@ export default function QuestionStep({
   conceptIds,
   difficulty = 3,
   questionId,
+  isRetry = false,
 }: QuestionStepProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [hasChecked, setHasChecked] = useState(false)

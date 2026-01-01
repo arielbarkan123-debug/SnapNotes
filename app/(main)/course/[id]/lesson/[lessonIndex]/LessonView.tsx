@@ -18,6 +18,7 @@ const LessonComplete = dynamic(() => import('@/components/lesson/LessonComplete'
 })
 const HelpModal = dynamic(() => import('@/components/help/HelpModal'))
 const ChatTutor = dynamic(() => import('@/components/chat/ChatTutor').then(mod => ({ default: mod.ChatTutor })))
+const ReviewBeforeRetry = dynamic(() => import('@/components/lesson/ReviewBeforeRetry'))
 
 interface QuestionAnswer {
   stepIndex: number
@@ -84,6 +85,13 @@ export default function LessonView({
   const [answers, setAnswers] = useState<QuestionAnswer[]>([])
   const questionsAnswered = answers.length
   const questionsCorrect = answers.filter(a => a.correct).length
+
+  // Retry mode state for failed questions
+  const [failedQuestions, setFailedQuestions] = useState<number[]>([]) // Step indices of wrong answers
+  const [retryMode, setRetryMode] = useState(false)
+  const [currentRetryIndex, setCurrentRetryIndex] = useState(0)
+  const [showReviewPage, setShowReviewPage] = useState(false)
+  const [retryAttempts, setRetryAttempts] = useState<Record<number, number>>({}) // Track attempts per question
 
   // Track consecutive wrong answers for hint system
   const consecutiveWrong = useMemo(() => {
@@ -364,10 +372,29 @@ export default function LessonView({
     // Track answer for questions
     if (typeof wasCorrect === 'boolean') {
       setAnswers(prev => [...prev, { stepIndex: currentStep, correct: wasCorrect }])
+
+      // If wrong answer during main lesson, add to failed questions queue
+      if (!wasCorrect && !retryMode) {
+        setFailedQuestions(prev => [...prev, currentStep])
+        setRetryAttempts(prev => ({ ...prev, [currentStep]: 1 }))
+      }
     }
 
     if (isLastStep) {
-      // Complete lesson
+      // Check if there are failed questions that need retry
+      if (failedQuestions.length > 0 || (wasCorrect === false && !retryMode)) {
+        // Enter retry mode - show review for first failed question
+        const questionsToRetry = wasCorrect === false && !retryMode
+          ? [...failedQuestions, currentStep]
+          : failedQuestions
+        setFailedQuestions(questionsToRetry)
+        setRetryMode(true)
+        setCurrentRetryIndex(0)
+        setShowReviewPage(true)
+        return
+      }
+
+      // No failed questions - complete lesson
       await saveProgress(currentStep, true)
 
       // Save question stats (need to include current answer if it's a question)
@@ -397,7 +424,65 @@ export default function LessonView({
       // Go to next step
       setCurrentStep(prev => prev + 1)
     }
-  }, [isLastStep, currentStep, saveProgress, saveQuestionStats, questionsAnswered, questionsCorrect, recordStepTiming, stepTimings, saveStepPerformance, endStudySession, trackFunnelStep, lessonIndex])
+  }, [isLastStep, currentStep, saveProgress, saveQuestionStats, questionsAnswered, questionsCorrect, recordStepTiming, stepTimings, saveStepPerformance, endStudySession, trackFunnelStep, lessonIndex, failedQuestions, retryMode])
+
+  // Handle retry answer
+  const handleRetryAnswer = useCallback(async (wasCorrect: boolean) => {
+    const currentFailedStepIndex = failedQuestions[currentRetryIndex]
+
+    if (wasCorrect) {
+      // Correct! Remove from failed questions
+      const newFailedQuestions = failedQuestions.filter((_, idx) => idx !== currentRetryIndex)
+      setFailedQuestions(newFailedQuestions)
+
+      if (newFailedQuestions.length === 0) {
+        // All questions answered correctly! Complete lesson
+        await saveProgress(currentStep, true)
+        await saveQuestionStats(questionsAnswered, questionsCorrect)
+        await saveStepPerformance(stepTimings)
+        await endStudySession(questionsAnswered, questionsCorrect, true)
+
+        trackFunnelStep('lesson_completed', 5, {
+          questionsAnswered,
+          questionsCorrect,
+          lessonIndex,
+          hadRetries: true,
+        })
+
+        setRetryMode(false)
+        setShowCompletion(true)
+      } else {
+        // More questions to retry - show review for next one
+        // Keep currentRetryIndex the same since we removed current item
+        setShowReviewPage(true)
+      }
+    } else {
+      // Wrong again - increment attempts and move to end of queue
+      setRetryAttempts(prev => ({
+        ...prev,
+        [currentFailedStepIndex]: (prev[currentFailedStepIndex] || 1) + 1
+      }))
+
+      // Move current question to end of queue
+      const newFailedQuestions = [
+        ...failedQuestions.slice(0, currentRetryIndex),
+        ...failedQuestions.slice(currentRetryIndex + 1),
+        currentFailedStepIndex
+      ]
+      setFailedQuestions(newFailedQuestions)
+
+      // Show review for next question (or same if it was moved to end and is only one)
+      if (newFailedQuestions.length === 1) {
+        setCurrentRetryIndex(0)
+      }
+      setShowReviewPage(true)
+    }
+  }, [failedQuestions, currentRetryIndex, currentStep, saveProgress, saveQuestionStats, questionsAnswered, questionsCorrect, stepTimings, saveStepPerformance, endStudySession, trackFunnelStep, lessonIndex])
+
+  // Handle ready button from review page
+  const handleReviewComplete = useCallback(() => {
+    setShowReviewPage(false)
+  }, [])
 
   // Handle exit
   const handleExit = useCallback(() => {
@@ -421,6 +506,87 @@ export default function LessonView({
         questionsTotal={totalQuestions}
         lessonSteps={steps}
       />
+    )
+  }
+
+  // Show retry mode - review page before retrying failed question
+  if (retryMode && showReviewPage && failedQuestions.length > 0) {
+    const failedStepIndex = failedQuestions[currentRetryIndex]
+    const failedStep = steps[failedStepIndex]
+    const attemptNumber = retryAttempts[failedStepIndex] || 1
+
+    return (
+      <ReviewBeforeRetry
+        questionStep={failedStep}
+        lessonSteps={steps}
+        questionIndex={failedStepIndex}
+        attemptNumber={attemptNumber}
+        onReady={handleReviewComplete}
+      />
+    )
+  }
+
+  // Show retry mode - retry the failed question
+  if (retryMode && !showReviewPage && failedQuestions.length > 0) {
+    const failedStepIndex = failedQuestions[currentRetryIndex]
+    const failedStep = steps[failedStepIndex]
+    const attemptNumber = retryAttempts[failedStepIndex] || 1
+
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+        {/* Retry Header */}
+        <header className="sticky top-0 z-30 bg-amber-500 text-white shadow-sm">
+          <div className="container mx-auto px-4 py-3 max-w-4xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-400 rounded-full flex items-center justify-center">
+                  <span className="text-xl">🔄</span>
+                </div>
+                <div>
+                  <p className="font-semibold">Let&apos;s Try Again!</p>
+                  <p className="text-amber-100 text-sm">
+                    {failedQuestions.length} question{failedQuestions.length !== 1 ? 's' : ''} remaining
+                    {attemptNumber > 1 && ` • Attempt ${attemptNumber}`}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleExit}
+                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-amber-400 transition-colors"
+                aria-label="Exit lesson"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Retry Question */}
+        <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl flex flex-col">
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-full max-w-xl">
+              <QuestionStep
+                key={`retry-${failedStepIndex}-${attemptNumber}`}
+                question={failedStep.content || (failedStep as unknown as { question?: string }).question || ''}
+                options={failedStep.options || []}
+                correct_answer={failedStep.correct_answer ?? (failedStep as unknown as { correctIndex?: number }).correctIndex ?? 0}
+                explanation={failedStep.explanation}
+                onComplete={(wasCorrect) => handleRetryAnswer(wasCorrect)}
+                step={failedStep}
+                consecutiveWrong={attemptNumber - 1}
+                courseId={course.id}
+                courseTitle={course.generated_course?.title || course.title}
+                lessonIndex={lessonIndex}
+                lessonTitle={lesson.title}
+                stepIndex={failedStepIndex}
+                isRetry={true}
+              />
+            </div>
+          </div>
+        </main>
+      </div>
     )
   }
 
