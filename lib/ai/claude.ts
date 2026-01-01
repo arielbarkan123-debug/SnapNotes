@@ -32,6 +32,7 @@ const AI_MODEL = 'claude-sonnet-4-20250514'
 const MAX_TOKENS_EXTRACTION = 4096
 const MAX_TOKENS_GENERATION = 8192
 const MAX_IMAGES_PER_REQUEST = 5 // Claude's recommended limit for optimal performance
+const API_TIMEOUT_MS = 120000 // 2 minute timeout for AI operations
 
 // Initialize Anthropic client (singleton)
 let anthropicClient: Anthropic | null = null
@@ -45,7 +46,10 @@ function getAnthropicClient(): Anthropic {
         'CONFIG_ERROR'
       )
     }
-    anthropicClient = new Anthropic({ apiKey })
+    anthropicClient = new Anthropic({
+      apiKey,
+      timeout: API_TIMEOUT_MS,
+    })
   }
   return anthropicClient
 }
@@ -86,6 +90,7 @@ export type ClaudeErrorCode =
   | 'API_ERROR'
   | 'CONFIG_ERROR'
   | 'EMPTY_CONTENT'
+  | 'TIMEOUT'
 
 // ============================================================================
 // Custom Error Class
@@ -139,6 +144,12 @@ export class ClaudeAPIError extends Error {
         return new ClaudeAPIError(
           'Network error. Please check your connection and try again.',
           'NETWORK_ERROR'
+        )
+      }
+      if (error.message.includes('timeout') || error.name === 'AbortError') {
+        return new ClaudeAPIError(
+          'The request took too long. Please try again with a smaller file.',
+          'TIMEOUT'
         )
       }
       return new ClaudeAPIError(error.message, 'API_ERROR')
@@ -875,24 +886,12 @@ export async function generateCourseFromDocument(
       course.title = userTitle.trim()
     }
 
-    // Log raw steps to see if AI included imageIndex or webImageQuery
-    const rawSteps = (course.lessons || (course as any).sections || []).flatMap((l: any) => l.steps || [])
-    const stepsWithImageIndex = rawSteps.filter((s: any) => typeof s.imageIndex === 'number')
-    const stepsWithWebQuery = rawSteps.filter((s: any) => typeof s.webImageQuery === 'string')
-    console.log('[generateCourseFromDocument] AI response stats:', {
-      totalSteps: rawSteps.length,
-      stepsWithImageIndex: stepsWithImageIndex.length,
-      stepsWithWebQuery: stepsWithWebQuery.length,
-      imageUrlsProvided: imageUrls?.length || 0,
-    })
-
     // Ensure optional arrays exist and map image URLs
     const { normalizedCourse, webImageQueries } = normalizeGeneratedCourse(course, imageUrls)
     course = normalizedCourse
 
     // Fetch web images for any webImageQuery requests
     if (webImageQueries.length > 0) {
-      console.log('[generateCourseFromDocument] Fetching', webImageQueries.length, 'web images...')
       const { searchEducationalImages } = await import('@/lib/images')
 
       // Use course title as subject context for better searches
@@ -915,21 +914,12 @@ export async function generateCourseFromDocument(
               step.imageCredit = webImage.credit
               step.imageCreditUrl = webImage.creditUrl
             }
-          } else {
-            console.warn('[generateCourseFromDocument] No images found for:', query.query)
           }
-        } catch (err) {
-          console.warn('[generateCourseFromDocument] Failed to fetch web image for:', query.query, err)
+        } catch {
+          // Continue without this image
         }
       }
     }
-
-    // Log final course steps with images
-    const finalStepsWithImages = course.lessons.flatMap(l => l.steps).filter(s => s.imageUrl)
-    console.log('[generateCourseFromDocument] Final course:', {
-      stepsWithImages: finalStepsWithImages.length,
-      webImagesAdded: webImageQueries.length,
-    })
 
     return {
       generatedCourse: course,
@@ -1041,7 +1031,6 @@ export async function generateCourseFromText(
 
     // Fetch web images if requested (text courses often need web images)
     if (webImageQueries.length > 0) {
-      console.log('[generateCourseFromText] Fetching', webImageQueries.length, 'web images...')
       const { searchEducationalImages } = await import('@/lib/images')
       const subject = course.title.split(':')[0].trim()
 
@@ -1184,6 +1173,8 @@ export function getUserFriendlyError(error: unknown): string {
         return 'No readable content found. Please upload a clearer photo with visible notes.'
       case 'CONFIG_ERROR':
         return 'Service configuration error. Please contact support.'
+      case 'TIMEOUT':
+        return 'The request took too long. Please try again with a smaller file.'
       default:
         return error.message
     }
