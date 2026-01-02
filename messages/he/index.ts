@@ -13,6 +13,7 @@ import review from './review.json'
 import profile from './profile.json'
 import subjects from './subjects.json'
 import processing from './processing.json'
+import chat from './chat.json'
 
 const messages = {
   common,
@@ -30,6 +31,7 @@ const messages = {
   profile,
   subjects,
   processing,
+  chat,
 }
 
 export default messages

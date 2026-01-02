@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 
 interface Message {
   id: string
@@ -17,6 +18,7 @@ interface ChatTutorProps {
 }
 
 export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorProps) {
+  const t = useTranslations('chat')
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -47,12 +49,12 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
         id: 'welcome',
         role: 'assistant',
         content: courseName
-          ? `Hi! I'm your AI tutor for "${courseName}". Ask me anything about this course - I can explain concepts, clarify confusing topics, or help you understand the material better. What would you like to know?`
-          : `Hi! I'm your AI study tutor. I can help you understand concepts, explain topics, and answer questions about your studies. What would you like to learn about?`,
+          ? t('welcomeWithCourse', { courseName })
+          : t('welcomeGeneral'),
         timestamp: new Date(),
       }])
     }
-  }, [isOpen, courseName, messages.length])
+  }, [isOpen, courseName, messages.length, t])
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return
@@ -97,7 +99,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
         setMessages(prev => [...prev, {
           id: `error-${Date.now()}`,
           role: 'assistant',
-          content: 'Sorry, I encountered an error. Please try again.',
+          content: t('errorOccurred'),
           timestamp: new Date(),
         }])
       }
@@ -105,7 +107,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
       setMessages(prev => [...prev, {
         id: `error-${Date.now()}`,
         role: 'assistant',
-        content: 'Sorry, I couldn\'t connect. Please check your internet connection.',
+        content: t('connectionError'),
         timestamp: new Date(),
       }])
     } finally {
@@ -124,7 +126,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
     setMessages([{
       id: 'welcome-new',
       role: 'assistant',
-      content: 'Chat cleared! How can I help you?',
+      content: t('chatCleared'),
       timestamp: new Date(),
     }])
   }
@@ -161,9 +163,9 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
             </svg>
           </div>
           <div>
-            <h3 className="font-semibold">AI Tutor</h3>
+            <h3 className="font-semibold">{t('aiTutor')}</h3>
             <p className="text-xs text-white/80 truncate max-w-[180px]">
-              {courseName || 'General Help'}
+              {courseName || t('generalHelp')}
             </p>
           </div>
         </div>
@@ -171,7 +173,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
           <button
             onClick={clearChat}
             className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            title="Clear chat"
+            title={t('clearChat')}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -180,7 +182,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
           <button
             onClick={() => setIsMinimized(true)}
             className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            title="Minimize"
+            title={t('minimize')}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
@@ -190,7 +192,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
             <button
               onClick={onClose}
               className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              title="Close"
+              title={t('close')}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -240,7 +242,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask a question..."
+            placeholder={t('askQuestion')}
             rows={1}
             className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
             disabled={isLoading}
@@ -256,7 +258,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
           </button>
         </div>
         <p className="text-xs text-gray-400 mt-2 text-center">
-          Press Enter to send, Shift+Enter for new line
+          {t('enterToSend')}
         </p>
       </div>
     </div>

@@ -1,0 +1,27 @@
+{
+  "aiTutor": "AI Tutor",
+  "generalHelp": "General Help",
+  "clearChat": "Clear chat",
+  "minimize": "Minimize",
+  "close": "Close",
+  "askQuestion": "Ask a question...",
+  "enterToSend": "Press Enter to send, Shift+Enter for new line",
+  "chatCleared": "Chat cleared! How can I help you?",
+  "errorOccurred": "Sorry, I encountered an error. Please try again.",
+  "connectionError": "Sorry, I couldn't connect. Please check your internet connection.",
+  "welcomeWithCourse": "Hi! I'm your AI tutor for \"{courseName}\". Ask me anything about this course - I can explain concepts, clarify confusing topics, or help you understand the material better. What would you like to know?",
+  "welcomeGeneral": "Hi! I'm your AI study tutor. I can help you understand concepts, explain topics, and answer questions about your studies. What would you like to learn about?",
+
+  "tutor": "Tutor",
+  "hint": "Hint {level}",
+  "needHelp": "Need help? ({count} hints used)",
+  "hintConcept": "Concept",
+  "hintStrategy": "Strategy",
+  "hintExample": "Example",
+  "hintGuide": "Guide",
+  "hintAnswer": "Answer",
+  "progress": "Progress",
+  "stepOf": "Step {current} of ~{total}",
+  "typeAnswer": "Type your answer or question...",
+  "markComplete": "Mark as Complete"
+}

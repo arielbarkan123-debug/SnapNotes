@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import type { HomeworkSession, ConversationMessage, HintLevel } from '@/lib/homework/types'
 
 // ============================================================================
@@ -19,7 +20,7 @@ interface TutoringChatProps {
 // Sub-components
 // ============================================================================
 
-function MessageBubble({ message }: { message: ConversationMessage }) {
+function MessageBubble({ message, t }: { message: ConversationMessage; t: ReturnType<typeof useTranslations<'chat'>> }) {
   const isTutor = message.role === 'tutor'
 
   return (
@@ -30,10 +31,10 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
             <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-sm">
               🎓
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Tutor</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('tutor')}</span>
             {message.hintLevel && (
               <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full">
-                Hint {message.hintLevel}
+                {t('hint', { level: message.hintLevel })}
               </span>
             )}
           </div>
@@ -58,27 +59,29 @@ function HintButtons({
   hintsUsed,
   onRequestHint,
   disabled,
+  t,
 }: {
   hintsUsed: number
   onRequestHint: (level: HintLevel) => void
   disabled: boolean
+  t: ReturnType<typeof useTranslations<'chat'>>
 }) {
-  const hints: { level: HintLevel; label: string; icon: string }[] = [
-    { level: 1, label: 'Concept', icon: '💡' },
-    { level: 2, label: 'Strategy', icon: '🧭' },
-    { level: 3, label: 'Example', icon: '📝' },
-    { level: 4, label: 'Guide', icon: '🤝' },
-    { level: 5, label: 'Answer', icon: '✅' },
+  const hints: { level: HintLevel; labelKey: string; icon: string }[] = [
+    { level: 1, labelKey: 'hintConcept', icon: '💡' },
+    { level: 2, labelKey: 'hintStrategy', icon: '🧭' },
+    { level: 3, labelKey: 'hintExample', icon: '📝' },
+    { level: 4, labelKey: 'hintGuide', icon: '🤝' },
+    { level: 5, labelKey: 'hintAnswer', icon: '✅' },
   ]
 
   return (
     <div className="bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 px-4 py-3">
       <p className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 mb-2">
         <span>💡</span>
-        <span>Need help? ({hintsUsed} hints used)</span>
+        <span>{t('needHelp', { count: hintsUsed })}</span>
       </p>
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {hints.map(({ level, label, icon }) => (
+        {hints.map(({ level, labelKey, icon }) => (
           <button
             key={level}
             onClick={() => onRequestHint(level)}
@@ -93,7 +96,7 @@ function HintButtons({
             `}
           >
             <span>{icon}</span>
-            <span>{label}</span>
+            <span>{t(labelKey)}</span>
           </button>
         ))}
       </div>
@@ -104,9 +107,11 @@ function HintButtons({
 function ProgressBar({
   currentStep,
   totalSteps,
+  t,
 }: {
   currentStep: number
   totalSteps: number
+  t: ReturnType<typeof useTranslations<'chat'>>
 }) {
   const progress = Math.min(100, (currentStep / totalSteps) * 100)
 
@@ -119,8 +124,8 @@ function ProgressBar({
         />
       </div>
       <div className="flex justify-between items-center mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-        <span>Progress</span>
-        <span>Step {currentStep} of ~{totalSteps}</span>
+        <span>{t('progress')}</span>
+        <span>{t('stepOf', { current: currentStep, total: totalSteps })}</span>
       </div>
     </div>
   )
@@ -137,6 +142,7 @@ export default function TutoringChat({
   onComplete,
   isLoading = false,
 }: TutoringChatProps) {
+  const t = useTranslations('chat')
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -187,12 +193,13 @@ export default function TutoringChat({
       <ProgressBar
         currentStep={session.current_step}
         totalSteps={session.total_estimated_steps || 5}
+        t={t}
       />
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {session.conversation.map((msg, idx) => (
-          <MessageBubble key={idx} message={msg} />
+          <MessageBubble key={idx} message={msg} t={t} />
         ))}
 
         {isLoading && (
@@ -202,7 +209,7 @@ export default function TutoringChat({
                 <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-sm">
                   🎓
                 </div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Tutor</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('tutor')}</span>
               </div>
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-tl-md px-4 py-3">
                 <div className="flex gap-1">
@@ -223,6 +230,7 @@ export default function TutoringChat({
         hintsUsed={session.hints_used}
         onRequestHint={handleHintRequest}
         disabled={isLoading}
+        t={t}
       />
 
       {/* Input Area */}
@@ -233,7 +241,7 @@ export default function TutoringChat({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type your answer or question..."
+            placeholder={t('typeAnswer')}
             disabled={isLoading}
             rows={1}
             className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
@@ -266,7 +274,7 @@ export default function TutoringChat({
             disabled={isLoading}
             className="text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors disabled:opacity-50"
           >
-            Mark as Complete
+            {t('markComplete')}
           </button>
         </div>
       </div>
