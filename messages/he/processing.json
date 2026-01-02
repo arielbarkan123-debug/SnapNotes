@@ -1,0 +1,117 @@
+{
+  "loading": "טוען...",
+  "loadingDocument": "טוען מסמך...",
+  "yourTextContent": "תוכן הטקסט שלך",
+  "generatingCourse": "יוצר את הקורס שלך",
+  "percentComplete": "{percent}% הושלם",
+  "cancelAndReturn": "בטל וחזור ללוח הבקרה",
+
+  "stages": {
+    "image": {
+      "analyzing": {
+        "message": "מנתח את עמוד המחברת שלך...",
+        "submessage": "סורק טקסט, תרשימים ונוסחאות"
+      },
+      "reading": {
+        "message": "קורא טקסט ותרשימים...",
+        "submessage": "מחלץ את כל התוכן הנראה"
+      },
+      "understanding": {
+        "message": "מבין את המבנה...",
+        "submessage": "מזהה נושאים וקשרים"
+      },
+      "generating": {
+        "message": "יוצר את קורס הלימוד שלך...",
+        "submessage": "יוצר הסברים ודוגמאות"
+      },
+      "finishing": {
+        "message": "מוסיף נגיעות אחרונות...",
+        "submessage": "מארגן חלקים ונקודות מפתח"
+      },
+      "almostDone": {
+        "message": "כמעט סיימנו...",
+        "submessage": "מסיים את הקורס שלך"
+      }
+    },
+    "document": {
+      "processing": {
+        "message": "מעבד את המסמך שלך...",
+        "submessage": "מכין תוכן לניתוח"
+      },
+      "analyzing": {
+        "message": "מנתח מבנה מסמך...",
+        "submessage": "מזהה חלקים ונושאים"
+      },
+      "generating": {
+        "message": "יוצר את קורס הלימוד שלך...",
+        "submessage": "יוצר הסברים ודוגמאות"
+      },
+      "finishing": {
+        "message": "מוסיף נגיעות אחרונות...",
+        "submessage": "מארגן חלקים ונקודות מפתח"
+      },
+      "almostDone": {
+        "message": "כמעט סיימנו...",
+        "submessage": "מסיים את הקורס שלך"
+      }
+    },
+    "text": {
+      "analyzing": {
+        "message": "מנתח את התוכן שלך...",
+        "submessage": "מבין נושאים ומבנה"
+      },
+      "expanding": {
+        "message": "מרחיב את הנושאים שלך...",
+        "submessage": "מוסיף תוכן לימודי והסברים"
+      },
+      "creating": {
+        "message": "יוצר שיעורים...",
+        "submessage": "מארגן תוכן לצעדים קטנים"
+      },
+      "questions": {
+        "message": "יוצר שאלות...",
+        "submessage": "יוצר חידונים אינטראקטיביים"
+      },
+      "finishing": {
+        "message": "מוסיף נגיעות אחרונות...",
+        "submessage": "מארגן חלקים ונקודות מפתח"
+      },
+      "almostDone": {
+        "message": "כמעט סיימנו...",
+        "submessage": "מסיים את הקורס שלך"
+      }
+    }
+  },
+
+  "sourceTypes": {
+    "image": "תמונה",
+    "pdf": "PDF",
+    "pptx": "מצגת",
+    "docx": "מסמך",
+    "text": "טקסט"
+  },
+
+  "tips": {
+    "textTime": "בדרך כלל לוקח 30-60 שניות",
+    "documentTime": "בדרך כלל לוקח 1-2 דקות",
+    "imageTime": "בדרך כלל לוקח 30-90 שניות",
+    "textDescription": "הטקסט שלך מורחב לקורס למידה מלא עם שיעורים אינטראקטיביים.",
+    "documentDescription": "מסמכים גדולים יותר עשויים לקחת יותר זמן לעיבוד. אנא המתן.",
+    "imageDescription": "הבינה המלאכותית שלנו קוראת הערות בכתב יד, מזהה נוסחאות ויוצרת חומרי לימוד מובנים."
+  },
+
+  "success": {
+    "title": "הקורס נוצר!",
+    "xpAwarded": "+{xp} XP",
+    "flashcardsReady": "כרטיסיית למידה אחת מוכנה לסקירה",
+    "flashcardsReadyPlural": "{count} כרטיסיות למידה מוכנות לסקירה",
+    "redirecting": "מעביר אותך לקורס הלימוד החדש שלך..."
+  },
+
+  "error": {
+    "title": "משהו השתבש",
+    "tryAgain": "נסה שוב",
+    "uploadDifferent": "העלה תמונה אחרת",
+    "helpText": "אם הבעיה נמשכת, נסה להעלות תמונה ברורה יותר או פנה לתמיכה."
+  }
+}

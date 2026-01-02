@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense, useRef, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useXP } from '@/contexts/XPContext'
@@ -160,6 +161,7 @@ const STAGE_INTERVALS = [
 function ProcessingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const t = useTranslations('processing')
   const { showXP, showLevelUp } = useXP()
   const { trackStep: trackFunnelStep } = useFunnelTracking('course_creation')
 
@@ -425,7 +427,7 @@ function ProcessingContent() {
           <div className="mb-6 flex justify-center">
             <div className="w-16 h-16 border-4 border-indigo-100 dark:border-indigo-900/50 rounded-full border-t-indigo-600 dark:border-t-indigo-400 animate-spin" />
           </div>
-          <p className="text-gray-500 dark:text-gray-400">Loading document...</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('loadingDocument')}</p>
         </div>
       </div>
     )
@@ -444,11 +446,12 @@ function ProcessingContent() {
             documentTitle={documentContent?.title}
             textPreview={textContent?.slice(0, 100)}
             isWaitingOnFinalStage={isWaitingOnFinalStage}
+            t={t}
           />
         )}
 
         {state.status === 'success' && (
-          <SuccessView cardsGenerated={state.cardsGenerated || 0} xpAwarded={xpAwarded} />
+          <SuccessView cardsGenerated={state.cardsGenerated || 0} xpAwarded={xpAwarded} t={t} />
         )}
 
         {state.status === 'error' && (
@@ -456,6 +459,7 @@ function ProcessingContent() {
             error={state.error || 'An error occurred'}
             retryable={state.retryable}
             onRetry={handleRetry}
+            t={t}
           />
         )}
       </div>
@@ -474,9 +478,10 @@ interface ProcessingViewProps {
   documentTitle?: string
   textPreview?: string
   isWaitingOnFinalStage?: boolean
+  t: ReturnType<typeof useTranslations<'processing'>>
 }
 
-function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPreview, isWaitingOnFinalStage }: ProcessingViewProps) {
+function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPreview, isWaitingOnFinalStage, t }: ProcessingViewProps) {
   const isDocument = sourceType !== 'image' && sourceType !== 'text'
   const isText = sourceType === 'text'
 
@@ -489,7 +494,7 @@ function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPrevie
           <div className="relative w-40 h-40 rounded-lg overflow-hidden shadow-lg bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 ring-4 ring-indigo-100 dark:ring-indigo-900/50 flex flex-col items-center justify-center p-4">
             <span className="text-4xl mb-2">{SOURCE_TYPE_ICONS[sourceType]}</span>
             <span className="text-xs text-gray-600 dark:text-gray-300 text-center line-clamp-3 leading-tight">
-              {textPreview ? `"${textPreview}..."` : 'Your text content'}
+              {textPreview ? `"${textPreview}..."` : t('yourTextContent')}
             </span>
             {/* Pulse animation overlay */}
             <div className="absolute inset-0 bg-indigo-500/10 animate-pulse" />
@@ -567,11 +572,11 @@ function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPrevie
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
           {isWaitingOnFinalStage ? (
             <span className="flex items-center justify-center gap-2">
-              <span>Generating your course</span>
+              <span>{t('generatingCourse')}</span>
               <span className="animate-pulse">...</span>
             </span>
           ) : (
-            `${stage.percent}% complete`
+            t('percentComplete', { percent: stage.percent })
           )}
         </p>
       </div>
@@ -582,14 +587,14 @@ function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPrevie
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          {isText ? 'Usually takes 30-60 seconds' : isDocument ? 'Usually takes 1-2 minutes' : 'Usually takes 30-90 seconds'}
+          {isText ? t('tips.textTime') : isDocument ? t('tips.documentTime') : t('tips.imageTime')}
         </p>
         <p className="text-indigo-600 dark:text-indigo-400">
           {isText
-            ? 'Your text is being expanded into a complete learning course with interactive lessons.'
+            ? t('tips.textDescription')
             : isDocument
-              ? 'Larger documents may take longer to process. Please be patient.'
-              : 'Our AI reads handwritten notes, identifies formulas, and creates structured study materials.'}
+              ? t('tips.documentDescription')
+              : t('tips.imageDescription')}
         </p>
       </div>
 
@@ -599,7 +604,7 @@ function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPrevie
           href="/dashboard"
           className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
         >
-          Cancel and return to dashboard
+          {t('cancelAndReturn')}
         </Link>
       </div>
     </div>
@@ -613,9 +618,10 @@ function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPrevie
 interface SuccessViewProps {
   cardsGenerated: number
   xpAwarded: number
+  t: ReturnType<typeof useTranslations<'processing'>>
 }
 
-function SuccessView({ cardsGenerated, xpAwarded }: SuccessViewProps) {
+function SuccessView({ cardsGenerated, xpAwarded, t }: SuccessViewProps) {
   return (
     <div className="text-center">
       {/* Success Icon */}
@@ -638,7 +644,7 @@ function SuccessView({ cardsGenerated, xpAwarded }: SuccessViewProps) {
       </div>
 
       <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
-        Course Created!
+        {t('success.title')}
       </h2>
 
       {/* XP Badge */}
@@ -646,7 +652,7 @@ function SuccessView({ cardsGenerated, xpAwarded }: SuccessViewProps) {
         <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/30 dark:to-yellow-900/30 rounded-full border border-amber-200 dark:border-amber-800/50">
           <span className="text-2xl">⭐</span>
           <span className="text-amber-700 dark:text-amber-300 font-bold">
-            +{xpAwarded} XP
+            {t('success.xpAwarded', { xp: xpAwarded })}
           </span>
         </div>
       )}
@@ -656,13 +662,15 @@ function SuccessView({ cardsGenerated, xpAwarded }: SuccessViewProps) {
         <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-full">
           <span className="text-2xl">📚</span>
           <span className="text-indigo-700 dark:text-indigo-300 font-medium">
-            {cardsGenerated} flashcard{cardsGenerated !== 1 ? 's' : ''} ready for review
+            {cardsGenerated === 1
+              ? t('success.flashcardsReady', { count: cardsGenerated })
+              : t('success.flashcardsReadyPlural', { count: cardsGenerated })}
           </span>
         </div>
       )}
 
       <p className="text-gray-500 dark:text-gray-400 mb-4">
-        Redirecting you to your new study course...
+        {t('success.redirecting')}
       </p>
 
       {/* Loading dots */}
@@ -683,9 +691,10 @@ interface ErrorViewProps {
   error: string
   retryable?: boolean
   onRetry: () => void
+  t: ReturnType<typeof useTranslations<'processing'>>
 }
 
-function ErrorView({ error, retryable, onRetry }: ErrorViewProps) {
+function ErrorView({ error, retryable, onRetry, t }: ErrorViewProps) {
   return (
     <div className="text-center">
       {/* Error Icon */}
@@ -708,7 +717,7 @@ function ErrorView({ error, retryable, onRetry }: ErrorViewProps) {
       </div>
 
       <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
-        Something went wrong
+        {t('error.title')}
       </h2>
       <p className="text-gray-600 dark:text-gray-400 mb-6">
         {error}
@@ -734,7 +743,7 @@ function ErrorView({ error, retryable, onRetry }: ErrorViewProps) {
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            Try Again
+            {t('error.tryAgain')}
           </button>
         )}
 
@@ -742,13 +751,13 @@ function ErrorView({ error, retryable, onRetry }: ErrorViewProps) {
           href="/dashboard"
           className="block w-full px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition-colors"
         >
-          Upload Different Image
+          {t('error.uploadDifferent')}
         </Link>
       </div>
 
       {/* Help Text */}
       <p className="mt-6 text-sm text-gray-500 dark:text-gray-400">
-        If the problem persists, try uploading a clearer image or contact support.
+        {t('error.helpText')}
       </p>
     </div>
   )
@@ -767,13 +776,14 @@ export default function ProcessingPage() {
 }
 
 function ProcessingFallback() {
+  const t = useTranslations('processing')
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
       <div className="text-center">
         <div className="mb-6 flex justify-center">
           <div className="w-16 h-16 border-4 border-indigo-100 dark:border-indigo-900/50 rounded-full border-t-indigo-600 dark:border-t-indigo-400 animate-spin" />
         </div>
-        <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+        <p className="text-gray-500 dark:text-gray-400">{t('loading')}</p>
       </div>
     </div>
   )

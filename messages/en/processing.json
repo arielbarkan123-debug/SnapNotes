@@ -1,0 +1,117 @@
+{
+  "loading": "Loading...",
+  "loadingDocument": "Loading document...",
+  "yourTextContent": "Your text content",
+  "generatingCourse": "Generating your course",
+  "percentComplete": "{percent}% complete",
+  "cancelAndReturn": "Cancel and return to dashboard",
+
+  "stages": {
+    "image": {
+      "analyzing": {
+        "message": "Analyzing your notebook page...",
+        "submessage": "Scanning for text, diagrams, and formulas"
+      },
+      "reading": {
+        "message": "Reading text and diagrams...",
+        "submessage": "Extracting all visible content"
+      },
+      "understanding": {
+        "message": "Understanding the structure...",
+        "submessage": "Identifying topics and relationships"
+      },
+      "generating": {
+        "message": "Generating your study course...",
+        "submessage": "Creating explanations and examples"
+      },
+      "finishing": {
+        "message": "Adding finishing touches...",
+        "submessage": "Organizing sections and key points"
+      },
+      "almostDone": {
+        "message": "Almost done...",
+        "submessage": "Finalizing your course"
+      }
+    },
+    "document": {
+      "processing": {
+        "message": "Processing your document...",
+        "submessage": "Preparing content for analysis"
+      },
+      "analyzing": {
+        "message": "Analyzing document structure...",
+        "submessage": "Identifying sections and topics"
+      },
+      "generating": {
+        "message": "Generating your study course...",
+        "submessage": "Creating explanations and examples"
+      },
+      "finishing": {
+        "message": "Adding finishing touches...",
+        "submessage": "Organizing sections and key points"
+      },
+      "almostDone": {
+        "message": "Almost done...",
+        "submessage": "Finalizing your course"
+      }
+    },
+    "text": {
+      "analyzing": {
+        "message": "Analyzing your content...",
+        "submessage": "Understanding topics and structure"
+      },
+      "expanding": {
+        "message": "Expanding your topics...",
+        "submessage": "Adding educational content and explanations"
+      },
+      "creating": {
+        "message": "Creating lessons...",
+        "submessage": "Organizing content into bite-sized steps"
+      },
+      "questions": {
+        "message": "Generating questions...",
+        "submessage": "Creating interactive quizzes"
+      },
+      "finishing": {
+        "message": "Adding finishing touches...",
+        "submessage": "Organizing sections and key points"
+      },
+      "almostDone": {
+        "message": "Almost done...",
+        "submessage": "Finalizing your course"
+      }
+    }
+  },
+
+  "sourceTypes": {
+    "image": "image",
+    "pdf": "PDF",
+    "pptx": "presentation",
+    "docx": "document",
+    "text": "text"
+  },
+
+  "tips": {
+    "textTime": "Usually takes 30-60 seconds",
+    "documentTime": "Usually takes 1-2 minutes",
+    "imageTime": "Usually takes 30-90 seconds",
+    "textDescription": "Your text is being expanded into a complete learning course with interactive lessons.",
+    "documentDescription": "Larger documents may take longer to process. Please be patient.",
+    "imageDescription": "Our AI reads handwritten notes, identifies formulas, and creates structured study materials."
+  },
+
+  "success": {
+    "title": "Course Created!",
+    "xpAwarded": "+{xp} XP",
+    "flashcardsReady": "{count} flashcard ready for review",
+    "flashcardsReadyPlural": "{count} flashcards ready for review",
+    "redirecting": "Redirecting you to your new study course..."
+  },
+
+  "error": {
+    "title": "Something went wrong",
+    "tryAgain": "Try Again",
+    "uploadDifferent": "Upload Different Image",
+    "helpText": "If the problem persists, try uploading a clearer image or contact support."
+  }
+}
