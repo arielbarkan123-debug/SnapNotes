@@ -39,26 +39,26 @@ interface UserSettings {
 // Constants
 // =============================================================================
 
-const STUDY_SYSTEMS: { id: StudySystem; icon: string; label: string }[] = [
-  { id: 'ib', icon: '🌐', label: 'IB' },
-  { id: 'uk', icon: '🇬🇧', label: 'UK A-Levels' },
-  { id: 'ap', icon: '📚', label: 'AP' },
-  { id: 'israeli_bagrut', icon: '🇮🇱', label: 'Israeli Bagrut' },
-  { id: 'us', icon: '🇺🇸', label: 'US System' },
-  { id: 'general', icon: '🌍', label: 'General' },
+const STUDY_SYSTEMS: { id: StudySystem; icon: string }[] = [
+  { id: 'ib', icon: '🌐' },
+  { id: 'uk', icon: '🇬🇧' },
+  { id: 'ap', icon: '📚' },
+  { id: 'israeli_bagrut', icon: '🇮🇱' },
+  { id: 'us', icon: '🇺🇸' },
+  { id: 'general', icon: '🌍' },
 ]
 
-const TIME_OPTIONS: { id: TimeAvailability; icon: string; label: string; description: string }[] = [
-  { id: 'short', icon: '⚡', label: 'Quick', description: '< 15 min' },
-  { id: 'medium', icon: '⏱️', label: 'Focused', description: '15-30 min' },
-  { id: 'long', icon: '📖', label: 'Deep', description: '30+ min' },
+const TIME_OPTIONS: { id: TimeAvailability; icon: string }[] = [
+  { id: 'short', icon: '⚡' },
+  { id: 'medium', icon: '⏱️' },
+  { id: 'long', icon: '📖' },
 ]
 
-const PREFERRED_TIMES: { id: PreferredTime; icon: string; label: string }[] = [
-  { id: 'morning', icon: '🌅', label: 'Morning' },
-  { id: 'afternoon', icon: '☀️', label: 'Afternoon' },
-  { id: 'evening', icon: '🌙', label: 'Evening' },
-  { id: 'varies', icon: '🔄', label: 'Varies' },
+const PREFERRED_TIMES: { id: PreferredTime; icon: string }[] = [
+  { id: 'morning', icon: '🌅' },
+  { id: 'afternoon', icon: '☀️' },
+  { id: 'evening', icon: '🌙' },
+  { id: 'varies', icon: '🔄' },
 ]
 
 // =============================================================================
@@ -439,7 +439,7 @@ export default function SettingsPage() {
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                Member since {new Date(settings.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                {t('profile.memberSince', { date: new Date(settings.createdAt).toLocaleDateString(settings.language === 'he' ? 'he-IL' : 'en-US', { month: 'long', year: 'numeric' }) })}
               </div>
             </div>
           </SettingsCard>
@@ -478,7 +478,7 @@ export default function SettingsPage() {
                       `}
                     >
                       <span>{system.icon}</span>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{system.label}</span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t(`studySystems.${system.id}`)}</span>
                     </button>
                   ))}
                 </div>
@@ -517,8 +517,8 @@ export default function SettingsPage() {
                       `}
                     >
                       <span className="text-2xl">{option.icon}</span>
-                      <span className="font-medium text-gray-900 dark:text-white">{option.label}</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">{option.description}</span>
+                      <span className="font-medium text-gray-900 dark:text-white">{t(`timeOptions.${option.id}`)}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{t(`timeOptions.${option.id}Desc`)}</span>
                     </button>
                   ))}
                 </div>
@@ -543,7 +543,7 @@ export default function SettingsPage() {
                       `}
                     >
                       <span className="text-xl">{time.icon}</span>
-                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{time.label}</span>
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{t(`preferredTimes.${time.id}`)}</span>
                     </button>
                   ))}
                 </div>
@@ -586,7 +586,7 @@ export default function SettingsPage() {
                 {/* Exam Format */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                    Exam Format Preference
+                    {t('curriculum.examFormatPreference')}
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     <button
@@ -600,9 +600,9 @@ export default function SettingsPage() {
                       `}
                     >
                       <span className="text-2xl">📝</span>
-                      <span className="font-medium text-gray-900 dark:text-white">Match Real Format</span>
+                      <span className="font-medium text-gray-900 dark:text-white">{t('curriculum.matchRealFormat')}</span>
                       <span className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                        Exams follow your curriculum&apos;s exact structure
+                        {t('curriculum.matchRealFormatDesc')}
                       </span>
                     </button>
                     <button
@@ -616,9 +616,9 @@ export default function SettingsPage() {
                       `}
                     >
                       <span className="text-2xl">✨</span>
-                      <span className="font-medium text-gray-900 dark:text-white">Inspired By</span>
+                      <span className="font-medium text-gray-900 dark:text-white">{t('curriculum.inspiredBy')}</span>
                       <span className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                        Flexible format with similar question styles
+                        {t('curriculum.inspiredByDesc')}
                       </span>
                     </button>
                   </div>
@@ -771,7 +771,7 @@ export default function SettingsPage() {
                 ) : (
                   <div className="space-y-3">
                     <p className="text-sm text-red-600 dark:text-red-400">
-                      Type <strong>DELETE</strong> to confirm:
+                      {t('account.typeDeleteToConfirm')}
                     </p>
                     <input
                       type="text"
@@ -788,14 +788,14 @@ export default function SettingsPage() {
                         }}
                         className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                       >
-                        Cancel
+                        {t('account.cancel')}
                       </button>
                       <button
                         onClick={handleDeleteAccount}
                         disabled={deleteConfirmText !== 'DELETE'}
                         className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        Delete Forever
+                        {t('account.deleteForever')}
                       </button>
                     </div>
                   </div>

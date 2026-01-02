@@ -10,6 +10,7 @@ import homework from './homework.json'
 import progress from './progress.json'
 import upload from './upload.json'
 import review from './review.json'
+import profile from './profile.json'
 
 const messages = {
   common,
@@ -24,6 +25,7 @@ const messages = {
   progress,
   upload,
   review,
+  profile,
 }
 
 export default messages

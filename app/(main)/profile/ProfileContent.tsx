@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import {
   getXPProgress,
   getLevelTitle,
@@ -74,6 +75,7 @@ export default function ProfileContent({
   activityByDate,
   courseCount,
 }: ProfileContentProps) {
+  const t = useTranslations('profile')
   const [selectedCategory, setSelectedCategory] = useState<AchievementCategory | 'all'>('all')
   const [selectedAchievement, setSelectedAchievement] = useState<string | null>(null)
 
@@ -131,13 +133,13 @@ export default function ProfileContent({
               <h1 className="text-2xl font-bold">{user.name}</h1>
               <div className="flex items-center gap-2 text-white/90">
                 <span className={`font-semibold`}>
-                  Level {xpProgress.level}
+                  {t('level', { level: xpProgress.level })}
                 </span>
                 <span className="text-white/60">•</span>
                 <span>{getLevelTitle(xpProgress.level)}</span>
               </div>
               <div className="mt-1 text-sm text-white/70">
-                Member since {new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                {t('memberSince', { date: new Date(user.createdAt).toLocaleDateString('he-IL', { month: 'long', year: 'numeric' }) })}
               </div>
             </div>
           </div>
@@ -151,16 +153,16 @@ export default function ProfileContent({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            Edit Profile
+            {t('editProfile')}
           </Link>
         </div>
 
         {/* XP Progress Bar */}
         <div className="mt-6">
           <div className="mb-2 flex items-center justify-between text-sm">
-            <span className="font-medium">XP Progress</span>
+            <span className="font-medium">{t('xpProgress')}</span>
             <span className="text-white/80">
-              {formatXP(xpProgress.xpInLevel)} / {formatXP(xpProgress.xpNeeded)} XP to Level {xpProgress.level + 1}
+              {formatXP(xpProgress.xpInLevel)} / {formatXP(xpProgress.xpNeeded)} {t('xpToLevel', { level: xpProgress.level + 1 })}
             </span>
           </div>
           <div className="h-3 overflow-hidden rounded-full bg-white/20">
@@ -170,7 +172,7 @@ export default function ProfileContent({
             />
           </div>
           <div className="mt-2 text-center text-sm text-white/70">
-            Total: {formatXP(gamification.total_xp)} XP
+            {t('totalXP', { xp: formatXP(gamification.total_xp) })}
           </div>
         </div>
       </div>
@@ -180,24 +182,24 @@ export default function ProfileContent({
         <StatCard
           icon="🔥"
           value={gamification.current_streak}
-          label="Day Streak"
-          sublabel={gamification.longest_streak > gamification.current_streak ? `Best: ${gamification.longest_streak}` : undefined}
+          label={t('dayStreak')}
+          sublabel={gamification.longest_streak > gamification.current_streak ? t('bestStreak', { streak: gamification.longest_streak }) : undefined}
           highlight={gamification.current_streak >= 7}
         />
         <StatCard
           icon="📚"
           value={courseCount}
-          label="Courses"
+          label={t('courses')}
         />
         <StatCard
           icon="✓"
           value={gamification.total_cards_reviewed}
-          label="Cards Reviewed"
+          label={t('cardsReviewed')}
         />
         <StatCard
           icon="🎯"
           value={gamification.perfect_lessons}
-          label="Perfect Lessons"
+          label={t('perfectLessons')}
         />
       </div>
 
@@ -208,7 +210,7 @@ export default function ProfileContent({
           {/* Streak Widget */}
           <div>
             <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-              Current Streak
+              {t('currentStreak')}
             </h2>
             <StreakWidget
               currentStreak={gamification.current_streak}
@@ -223,9 +225,9 @@ export default function ProfileContent({
           {/* Activity Calendar */}
           <div>
             <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-              Activity Calendar
+              {t('activityCalendar')}
             </h2>
-            <ActivityCalendar activityByDate={activityByDate} />
+            <ActivityCalendar activityByDate={activityByDate} t={t} />
           </div>
         </div>
 
@@ -235,7 +237,7 @@ export default function ProfileContent({
           <div>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Achievements ({earnedCodes.size}/{ACHIEVEMENTS.filter(a => !a.hidden || earnedCodes.has(a.code)).length})
+                {t('achievementsCount', { earned: earnedCodes.size, total: ACHIEVEMENTS.filter(a => !a.hidden || earnedCodes.has(a.code)).length })}
               </h2>
             </div>
 
@@ -253,7 +255,7 @@ export default function ProfileContent({
                     }
                   `}
                 >
-                  {cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                  {cat === 'all' ? t('categoryAll') : t(`category${cat.charAt(0).toUpperCase() + cat.slice(1)}` as 'categoryStreak' | 'categoryLearning' | 'categoryMastery')}
                 </button>
               ))}
             </div>
@@ -265,15 +267,16 @@ export default function ProfileContent({
               achievements={achievements}
               selectedAchievement={selectedAchievement}
               onSelect={setSelectedAchievement}
+              t={t}
             />
           </div>
 
           {/* Recent Activity */}
           <div>
             <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-              Recent Activity
+              {t('recentActivity')}
             </h2>
-            <RecentActivityList activityByDate={activityByDate} />
+            <RecentActivityList activityByDate={activityByDate} t={t} />
           </div>
         </div>
       </div>
@@ -322,9 +325,10 @@ function StatCard({ icon, value, label, sublabel, highlight }: StatCardProps) {
 
 interface ActivityCalendarProps {
   activityByDate: Record<string, ActivityData>
+  t: ReturnType<typeof useTranslations<'profile'>>
 }
 
-function ActivityCalendar({ activityByDate }: ActivityCalendarProps) {
+function ActivityCalendar({ activityByDate, t }: ActivityCalendarProps) {
   const [hoveredDate, setHoveredDate] = useState<string | null>(null)
 
   // Generate last 90 days
@@ -454,13 +458,13 @@ function ActivityCalendar({ activityByDate }: ActivityCalendarProps) {
 
       {/* Legend */}
       <div className="mt-4 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-        <span>Less</span>
+        <span>{t('less')}</span>
         <div className="flex gap-1">
           {[0, 1, 2, 3, 4].map((level) => (
             <div key={level} className={`h-3 w-3 rounded-sm ${getColorClass(level)}`} />
           ))}
         </div>
-        <span>More</span>
+        <span>{t('more')}</span>
       </div>
 
       {/* Tooltip */}
@@ -469,10 +473,10 @@ function ActivityCalendar({ activityByDate }: ActivityCalendarProps) {
           <span className="font-medium">{formatDate(hoveredDate)}: </span>
           {activityByDate[hoveredDate] ? (
             <span>
-              {activityByDate[hoveredDate].lessons} lesson steps, {activityByDate[hoveredDate].cards} cards
+              {t('lessonSteps', { count: activityByDate[hoveredDate].lessons })}, {t('cardsReviewedCount', { count: activityByDate[hoveredDate].cards })}
             </span>
           ) : (
-            <span className="text-gray-500">No activity</span>
+            <span className="text-gray-500">{t('noActivity')}</span>
           )}
         </div>
       )}
@@ -490,6 +494,7 @@ interface AchievementsGridProps {
   achievements: EarnedAchievement[]
   selectedAchievement: string | null
   onSelect: (code: string | null) => void
+  t: ReturnType<typeof useTranslations<'profile'>>
 }
 
 function AchievementsGrid({
@@ -498,6 +503,7 @@ function AchievementsGrid({
   achievements,
   selectedAchievement,
   onSelect,
+  t,
 }: AchievementsGridProps) {
   const filteredAchievements = ACHIEVEMENTS.filter((a) => {
     // Hide hidden achievements unless earned
@@ -584,12 +590,12 @@ function AchievementsGrid({
                     </span>
                     {isEarned && earnedDate && (
                       <span className="text-green-600 dark:text-green-400">
-                        Earned {new Date(earnedDate).toLocaleDateString()}
+                        {t('earned', { date: new Date(earnedDate).toLocaleDateString() })}
                       </span>
                     )}
                     {!isEarned && (
                       <span className="text-gray-500">
-                        Not yet earned
+                        {t('notYetEarned')}
                       </span>
                     )}
                   </div>
@@ -609,11 +615,12 @@ function AchievementsGrid({
 
 interface RecentActivityListProps {
   activityByDate: Record<string, ActivityData>
+  t: ReturnType<typeof useTranslations<'profile'>>
 }
 
-function RecentActivityList({ activityByDate }: RecentActivityListProps) {
+function RecentActivityList({ activityByDate, t }: RecentActivityListProps) {
   const recentDays = useMemo(() => {
-    const result: { date: string; label: string; data: ActivityData }[] = []
+    const result: { date: string; dayIndex: number; data: ActivityData }[] = []
     const today = new Date()
 
     for (let i = 0; i < 7; i++) {
@@ -623,17 +630,18 @@ function RecentActivityList({ activityByDate }: RecentActivityListProps) {
       const data = activityByDate[dateStr]
 
       if (data) {
-        let label: string
-        if (i === 0) label = 'Today'
-        else if (i === 1) label = 'Yesterday'
-        else label = date.toLocaleDateString('en-US', { weekday: 'long' })
-
-        result.push({ date: dateStr, label, data })
+        result.push({ date: dateStr, dayIndex: i, data })
       }
     }
 
     return result
   }, [activityByDate])
+
+  const getDayLabel = (dayIndex: number, dateStr: string) => {
+    if (dayIndex === 0) return t('today')
+    if (dayIndex === 1) return t('yesterday')
+    return new Date(dateStr).toLocaleDateString('he-IL', { weekday: 'long' })
+  }
 
   // Estimate XP (rough calculation)
   const estimateXP = (data: ActivityData) => {
@@ -645,7 +653,7 @@ function RecentActivityList({ activityByDate }: RecentActivityListProps) {
       <div className="rounded-xl border border-gray-200 bg-white p-6 text-center dark:border-gray-700 dark:bg-gray-800">
         <div className="text-4xl mb-2">📊</div>
         <p className="text-gray-500 dark:text-gray-400">
-          No recent activity. Start learning to see your progress here!
+          {t('noRecentActivity')}
         </p>
       </div>
     )
@@ -663,12 +671,12 @@ function RecentActivityList({ activityByDate }: RecentActivityListProps) {
         >
           <div>
             <div className="font-medium text-gray-900 dark:text-white">
-              {day.label}
+              {getDayLabel(day.dayIndex, day.date)}
             </div>
             <div className="text-sm text-gray-500 dark:text-gray-400">
-              {day.data.lessons > 0 && `${day.data.lessons} lesson steps`}
+              {day.data.lessons > 0 && t('lessonSteps', { count: day.data.lessons })}
               {day.data.lessons > 0 && day.data.cards > 0 && ', '}
-              {day.data.cards > 0 && `${day.data.cards} cards reviewed`}
+              {day.data.cards > 0 && t('cardsReviewedCount', { count: day.data.cards })}
             </div>
           </div>
           <div className="text-right">

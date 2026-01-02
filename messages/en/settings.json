@@ -7,7 +7,8 @@
     "description": "Your personal information",
     "displayName": "Display Name",
     "displayNamePlaceholder": "Your name",
-    "email": "Email"
+    "email": "Email",
+    "memberSince": "Member since {date}"
   },
   "learning": {
     "title": "Learning Preferences",
@@ -67,7 +68,9 @@
     "dangerZone": "Danger Zone",
     "dangerZoneDesc": "Once you delete your account, there is no going back.",
     "deleteAccount": "Delete Account",
-    "typeDeleteToConfirm": "Type DELETE to confirm:"
+    "typeDeleteToConfirm": "Type DELETE to confirm:",
+    "cancel": "Cancel",
+    "deleteForever": "Delete Forever"
   },
   "toast": {
     "loadError": "Failed to load settings",

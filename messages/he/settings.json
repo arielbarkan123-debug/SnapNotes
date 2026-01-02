@@ -7,7 +7,8 @@
     "description": "המידע האישי שלך",
     "displayName": "שם תצוגה",
     "displayNamePlaceholder": "השם שלך",
-    "email": "אימייל"
+    "email": "אימייל",
+    "memberSince": "חבר מאז {date}"
   },
   "learning": {
     "title": "העדפות למידה",
@@ -67,7 +68,9 @@
     "dangerZone": "אזור סכנה",
     "dangerZoneDesc": "ברגע שתמחק את החשבון שלך, אין דרך חזרה.",
     "deleteAccount": "מחק חשבון",
-    "typeDeleteToConfirm": "הקלד DELETE לאישור:"
+    "typeDeleteToConfirm": "הקלד DELETE לאישור:",
+    "cancel": "ביטול",
+    "deleteForever": "מחק לצמיתות"
   },
   "toast": {
     "loadError": "טעינת ההגדרות נכשלה",
