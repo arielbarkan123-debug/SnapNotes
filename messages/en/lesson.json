@@ -79,5 +79,12 @@
   "correctAnswerWas": "The correct answer was:",
   "explain": "Explain",
   "practiceMore": "Practice More",
-  "checkAnswer": "Check Answer"
+  "checkAnswer": "Check Answer",
+  "lessonOf": "Lesson {current} of {total}",
+  "saving": "Saving...",
+  "completeLesson": "Complete Lesson",
+  "stepsRemaining": "{count} steps remaining",
+  "stepRemaining": "{count} step remaining",
+  "getHelp": "Get help",
+  "needHelpPressH": "Need help? Press H"
 }

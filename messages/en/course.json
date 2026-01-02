@@ -1,0 +1,18 @@
+{
+  "backToDashboard": "Back to Dashboard",
+  "courseProgress": "Course Progress",
+  "lessonsCompleted": "{completed} of {total} lessons completed",
+  "overview": "Overview",
+  "conceptMastery": "Concept Mastery",
+  "gaps": "Gaps",
+  "gap": "Gap",
+  "viewKnowledgeMap": "View Knowledge Map",
+  "lessons": "Lessons",
+  "lesson": "Lesson {number}",
+  "stepsCount": "{count} steps",
+  "stepCount": "{count} step",
+  "noLessonsAvailable": "No lessons available yet.",
+  "lessonOf": "Lesson {current} of {total}",
+  "stepsRemaining": "{count} steps remaining",
+  "stepRemaining": "{count} step remaining"
+}

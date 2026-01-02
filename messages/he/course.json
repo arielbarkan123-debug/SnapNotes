@@ -1,0 +1,18 @@
+{
+  "backToDashboard": "חזרה ללוח הבקרה",
+  "courseProgress": "התקדמות בקורס",
+  "lessonsCompleted": "{completed} מתוך {total} שיעורים הושלמו",
+  "overview": "סקירה",
+  "conceptMastery": "שליטה במושגים",
+  "gaps": "פערים",
+  "gap": "פער",
+  "viewKnowledgeMap": "צפה במפת הידע",
+  "lessons": "שיעורים",
+  "lesson": "שיעור {number}",
+  "stepsCount": "{count} צעדים",
+  "stepCount": "צעד {count}",
+  "noLessonsAvailable": "אין שיעורים זמינים עדיין.",
+  "lessonOf": "שיעור {current} מתוך {total}",
+  "stepsRemaining": "{count} צעדים נותרו",
+  "stepRemaining": "צעד {count} נותר"
+}

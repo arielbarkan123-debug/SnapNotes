@@ -79,5 +79,12 @@
   "correctAnswerWas": "התשובה הנכונה הייתה:",
   "explain": "הסבר",
   "practiceMore": "תרגל עוד",
-  "checkAnswer": "בדוק תשובה"
+  "checkAnswer": "בדוק תשובה",
+  "lessonOf": "שיעור {current} מתוך {total}",
+  "saving": "שומר...",
+  "completeLesson": "סיים שיעור",
+  "stepsRemaining": "{count} צעדים נותרו",
+  "stepRemaining": "צעד {count} נותר",
+  "getHelp": "קבל עזרה",
+  "needHelpPressH": "צריך עזרה? לחץ H"
 }

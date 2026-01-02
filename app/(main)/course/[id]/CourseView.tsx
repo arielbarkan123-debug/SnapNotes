@@ -16,6 +16,7 @@ type LessonStatus = 'completed' | 'current' | 'locked'
 
 export default function CourseView({ course, progress }: CourseViewProps) {
   const t = useTranslations('lesson')
+  const tc = useTranslations('course')
   const [isChatOpen, setIsChatOpen] = useState(false)
   const generatedCourse = course.generated_course as GeneratedCourse & { sections?: Lesson[] }
   // Handle both "lessons" and legacy "sections" from AI response
@@ -63,7 +64,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            Back to Dashboard
+            {tc('backToDashboard')}
           </Link>
 
           {/* Title */}
@@ -74,7 +75,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
           {/* Progress bar */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400">Course Progress</span>
+              <span className="text-gray-600 dark:text-gray-400">{tc('courseProgress')}</span>
               <span className="font-semibold text-indigo-600 dark:text-indigo-400">
                 {progressPercentage}%
               </span>
@@ -86,7 +87,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
               />
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-500">
-              {progress.completed_lessons.length} of {lessons.length} lessons completed
+              {tc('lessonsCompleted', { completed: progress.completed_lessons.length, total: lessons.length })}
             </p>
           </div>
         </div>
@@ -97,7 +98,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
         {/* Overview card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl p-5 mb-6 border border-gray-200 dark:border-gray-700 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-            Overview
+            {tc('overview')}
           </h2>
           <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
             {generatedCourse.overview}
@@ -118,7 +119,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
                         ) / lessonMastery.size * 100
                       )}%
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Concept Mastery</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{tc('conceptMastery')}</p>
                   </div>
 
                   {/* Gaps Count */}
@@ -130,7 +131,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
                           0
                         )}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Gaps</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{tc('gaps')}</p>
                     </div>
                   )}
                 </div>
@@ -140,7 +141,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
                   href="/knowledge-map"
                   className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
                 >
-                  View Knowledge Map
+                  {tc('viewKnowledgeMap')}
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
@@ -153,7 +154,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
         {/* Lessons list */}
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
-            Lessons
+            {tc('lessons')}
           </h2>
 
           {lessons.map((lesson, index) => {
@@ -176,13 +177,14 @@ export default function CourseView({ course, progress }: CourseViewProps) {
                 hasGaps={mastery?.hasGaps}
                 criticalGaps={mastery?.criticalGaps}
                 isMasteryLoading={isMasteryLoading}
+                t={tc}
               />
             )
           })}
 
           {lessons.length === 0 && (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-              <p>No lessons available yet.</p>
+              <p>{tc('noLessonsAvailable')}</p>
             </div>
           )}
         </div>
@@ -225,6 +227,7 @@ interface LessonCardProps {
   hasGaps?: boolean
   criticalGaps?: number
   isMasteryLoading?: boolean
+  t: ReturnType<typeof useTranslations<'course'>>
 }
 
 function LessonCard({
@@ -239,6 +242,7 @@ function LessonCard({
   hasGaps,
   criticalGaps,
   isMasteryLoading,
+  t,
 }: LessonCardProps) {
   // Get mastery color
   const getMasteryColor = (level: number) => {
@@ -305,7 +309,7 @@ function LessonCard({
               }
             `}
           >
-            Lesson {lessonNumber}
+            {t('lesson', { number: lessonNumber })}
           </span>
         </div>
         <h3
@@ -329,7 +333,7 @@ function LessonCard({
               }
             `}
           >
-            {stepCount} steps
+            {stepCount === 1 ? t('stepCount', { count: stepCount }) : t('stepsCount', { count: stepCount })}
           </p>
 
           {/* Mastery indicator */}
@@ -353,7 +357,7 @@ function LessonCard({
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              Gap
+              {t('gap')}
             </span>
           )}
         </div>

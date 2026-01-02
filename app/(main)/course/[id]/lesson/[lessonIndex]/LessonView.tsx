@@ -619,7 +619,7 @@ export default function LessonView({
           {/* Lesson title */}
           <div className="text-center">
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              Lesson {lessonIndex + 1} of {totalLessons}
+              {t('lessonOf', { current: lessonIndex + 1, total: totalLessons })}
             </span>
             <h1 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
               {lesson.title}
@@ -682,19 +682,21 @@ export default function LessonView({
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Saving...
+                  {t('saving')}
                 </span>
               ) : isLastStep ? (
-                'Complete Lesson'
+                t('completeLesson')
               ) : (
-                'Continue'
+                t('continue')
               )}
             </button>
 
             {/* Step navigation hint */}
             {!isLastStep && (
               <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-2">
-                {totalSteps - currentStep - 1} step{totalSteps - currentStep - 1 !== 1 ? 's' : ''} remaining
+                {totalSteps - currentStep - 1 === 1
+                  ? t('stepRemaining', { count: totalSteps - currentStep - 1 })
+                  : t('stepsRemaining', { count: totalSteps - currentStep - 1 })}
               </p>
             )}
           </div>
@@ -706,8 +708,8 @@ export default function LessonView({
         <button
           onClick={() => setShowHelp(true)}
           className="fixed bottom-24 right-4 md:bottom-8 md:right-8 w-12 h-12 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-200 dark:hover:bg-indigo-900 transition-all hover:scale-110 z-40"
-          aria-label="Get help"
-          title="Need help? Press H"
+          aria-label={t('getHelp')}
+          title={t('needHelpPressH')}
           type="button"
         >
           <span className="text-xl">❓</span>
