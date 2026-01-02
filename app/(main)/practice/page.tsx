@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import type { HelpContext } from '@/types'
 import type { ReviewCard as ReviewCardType } from '@/types/srs'
 import { useCourses } from '@/hooks'
@@ -123,6 +123,8 @@ export default function PracticePage() {
 
   // Translations
   const t = useTranslations('practice.page')
+  const locale = useLocale()
+  const isRTL = locale === 'he'
 
   // Analytics tracking
   const { trackFeature } = useEventTracking()
@@ -681,7 +683,7 @@ export default function PracticePage() {
                     onChange={(e) => setQuestionCount(Number(e.target.value))}
                     className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider-thumb"
                     style={{
-                      background: `linear-gradient(to right, rgb(99, 102, 241) 0%, rgb(99, 102, 241) ${((questionCount - 5) / 45) * 100}%, rgb(229, 231, 235) ${((questionCount - 5) / 45) * 100}%, rgb(229, 231, 235) 100%)`,
+                      background: `linear-gradient(${isRTL ? 'to left' : 'to right'}, rgb(99, 102, 241) 0%, rgb(99, 102, 241) ${((questionCount - 5) / 45) * 100}%, rgb(229, 231, 235) ${((questionCount - 5) / 45) * 100}%, rgb(229, 231, 235) 100%)`,
                     }}
                   />
 
