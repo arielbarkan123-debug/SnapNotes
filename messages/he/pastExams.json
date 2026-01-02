@@ -1,6 +1,7 @@
 {
   "title": "תבניות מבחנים קודמים",
   "subtitle": "העלה מבחנים קודמים כדי לעזור ליצור שאלות בסגנון דומה",
+  "backToSettings": "חזרה להגדרות",
   "uploadButton": "העלה מבחן קודם",
   "uploadDisabled": "הגעת למקסימום 3 תבניות",
   "templateCount": "{count} מתוך {max} תבניות",

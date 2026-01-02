@@ -1,6 +1,7 @@
 {
   "title": "Past Exam Templates",
   "subtitle": "Upload past exams to help generate similar-style questions",
+  "backToSettings": "Back to Settings",
   "uploadButton": "Upload Past Exam",
   "uploadDisabled": "Maximum 3 templates reached",
   "templateCount": "{count} of {max} templates",

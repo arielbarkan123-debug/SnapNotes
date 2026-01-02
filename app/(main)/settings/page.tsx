@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/contexts/ToastContext'
 import { useEventTracking } from '@/lib/analytics/hooks'
 import { GradeSelector, SubjectPicker, type SelectedSubject } from '@/components/curriculum'
+import { usePastExamTemplates } from '@/hooks'
 import { getDefaultGrade, hasCurriculumData } from '@/lib/curriculum/grades'
 import type { ExamFormat, StudySystem } from '@/lib/curriculum'
 import { locales, localeNames, type Locale } from '@/i18n/config'
@@ -72,6 +73,7 @@ export default function SettingsPage() {
   const { trackFeature } = useEventTracking()
   const t = useTranslations('settings')
   const tc = useTranslations('common')
+  const { count: pastExamCount } = usePastExamTemplates()
 
   // State
   const [isLoading, setIsLoading] = useState(true)
@@ -627,6 +629,41 @@ export default function SettingsPage() {
             </SettingsCard>
           </section>
         )}
+
+        {/* Past Exam Templates Section */}
+        <section className="mb-6">
+          <SettingsCard
+            icon={
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+            }
+            title={t('pastExams.title')}
+            description={t('pastExams.description')}
+          >
+            <div className="space-y-4">
+              <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white">{t('pastExams.configure')}</h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('pastExams.configureDesc')}</p>
+                  {pastExamCount > 0 && (
+                    <p className="mt-1 text-xs text-indigo-600 dark:text-indigo-400">
+                      {t('pastExams.templateCount', { count: pastExamCount })}
+                    </p>
+                  )}
+                </div>
+                <Link
+                  href="/settings/past-exams"
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-indigo-700"
+                >
+                  {t('pastExams.configure')}
+                </Link>
+              </div>
+            </div>
+          </SettingsCard>
+        </section>
 
         {/* App Settings Section */}
         <section className="mb-6">

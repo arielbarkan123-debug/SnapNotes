@@ -462,7 +462,7 @@ export default function PastExamsPage() {
             className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4 transition-colors"
           >
             <ArrowLeftIcon className="w-4 h-4" />
-            <span>Settings</span>
+            <span>{t('backToSettings')}</span>
           </Link>
 
           <div className="flex items-center justify-between">

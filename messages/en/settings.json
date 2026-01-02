@@ -103,6 +103,13 @@
       }
     }
   },
+  "pastExams": {
+    "title": "Past Exam Templates",
+    "description": "Help the AI learn your exam style",
+    "configure": "Manage Templates",
+    "configureDesc": "Upload past exams to generate questions in a similar style",
+    "templateCount": "{count} template(s) uploaded"
+  },
   "appSettings": {
     "title": "App Settings",
     "description": "Appearance and preferences",
