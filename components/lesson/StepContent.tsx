@@ -3,6 +3,7 @@
 import { Step } from '@/types'
 import Image from 'next/image'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 interface StepContentProps {
   step: Step
@@ -10,6 +11,7 @@ interface StepContentProps {
 }
 
 export default function StepContent({ step, lessonTitle }: StepContentProps) {
+  const t = useTranslations('lesson')
   const imageProps = {
     imageUrl: step.imageUrl,
     imageAlt: step.imageAlt,
@@ -20,22 +22,22 @@ export default function StepContent({ step, lessonTitle }: StepContentProps) {
 
   switch (step.type) {
     case 'explanation':
-      return <ExplanationStep content={step.content} {...imageProps} />
+      return <ExplanationStep content={step.content} t={t} {...imageProps} />
     case 'key_point':
-      return <KeyPointStep content={step.content} />
+      return <KeyPointStep content={step.content} t={t} />
     case 'formula':
-      return <FormulaStep content={step.content} explanation={step.explanation} />
+      return <FormulaStep content={step.content} explanation={step.explanation} t={t} />
     case 'diagram':
-      return <DiagramStep content={step.content} {...imageProps} />
+      return <DiagramStep content={step.content} t={t} {...imageProps} />
     case 'example':
-      return <ExampleStep content={step.content} {...imageProps} />
+      return <ExampleStep content={step.content} t={t} {...imageProps} />
     case 'summary':
-      return <SummaryStep content={step.content} lessonTitle={lessonTitle} />
+      return <SummaryStep content={step.content} lessonTitle={lessonTitle} t={t} />
     case 'question':
       // Questions are handled separately in the parent component
       return null
     default:
-      return <ExplanationStep content={step.content} {...imageProps} />
+      return <ExplanationStep content={step.content} t={t} {...imageProps} />
   }
 }
 
@@ -45,12 +47,13 @@ interface StepImageProps {
   caption?: string
   credit?: string
   creditUrl?: string
+  t: ReturnType<typeof useTranslations<'lesson'>>
 }
 
 /**
  * Reusable image component for steps with caption and credit
  */
-function StepImage({ url, alt, caption, credit, creditUrl }: StepImageProps) {
+function StepImage({ url, alt, caption, credit, creditUrl, t }: StepImageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
 
@@ -68,7 +71,7 @@ function StepImage({ url, alt, caption, credit, creditUrl }: StepImageProps) {
         )}
         <Image
           src={url}
-          alt={alt || 'Course image'}
+          alt={alt || t('courseImage')}
           fill
           className={`object-contain transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
           onLoad={() => setIsLoading(false)}
@@ -86,7 +89,7 @@ function StepImage({ url, alt, caption, credit, creditUrl }: StepImageProps) {
           {caption && credit && <span> · </span>}
           {credit && (
             <span>
-              Photo by{' '}
+              {t('photoBy')}{' '}
               {creditUrl ? (
                 <a
                   href={creditUrl}
@@ -99,7 +102,7 @@ function StepImage({ url, alt, caption, credit, creditUrl }: StepImageProps) {
               ) : (
                 credit
               )}{' '}
-              on Unsplash
+              {t('onUnsplash')}
             </span>
           )}
         </figcaption>
@@ -115,20 +118,26 @@ interface ImageStepProps {
   imageCaption?: string
   imageCredit?: string
   imageCreditUrl?: string
+  t: ReturnType<typeof useTranslations<'lesson'>>
 }
 
-function ExplanationStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl }: ImageStepProps) {
+function ExplanationStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl, t }: ImageStepProps) {
   return (
     <div className="animate-fadeIn">
       <p className="text-lg sm:text-xl text-gray-800 dark:text-gray-200 leading-relaxed">
         {content}
       </p>
-      {imageUrl && <StepImage url={imageUrl} alt={imageAlt} caption={imageCaption} credit={imageCredit} creditUrl={imageCreditUrl} />}
+      {imageUrl && <StepImage url={imageUrl} alt={imageAlt} caption={imageCaption} credit={imageCredit} creditUrl={imageCreditUrl} t={t} />}
     </div>
   )
 }
 
-function KeyPointStep({ content }: { content: string }) {
+interface KeyPointStepProps {
+  content: string
+  t: ReturnType<typeof useTranslations<'lesson'>>
+}
+
+function KeyPointStep({ content, t }: KeyPointStepProps) {
   return (
     <div className="animate-fadeIn">
       <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6">
@@ -141,7 +150,7 @@ function KeyPointStep({ content }: { content: string }) {
           </div>
           <div className="flex-1">
             <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
-              Key Point
+              {t('keyPointType')}
             </span>
             <p className="mt-2 text-lg font-semibold text-gray-900 dark:text-white leading-relaxed">
               {content}
@@ -153,7 +162,13 @@ function KeyPointStep({ content }: { content: string }) {
   )
 }
 
-function FormulaStep({ content, explanation }: { content: string; explanation?: string }) {
+interface FormulaStepProps {
+  content: string
+  explanation?: string
+  t: ReturnType<typeof useTranslations<'lesson'>>
+}
+
+function FormulaStep({ content, explanation, t }: FormulaStepProps) {
   return (
     <div className="animate-fadeIn space-y-4">
       {/* Formula box */}
@@ -163,7 +178,7 @@ function FormulaStep({ content, explanation }: { content: string; explanation?: 
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
           </svg>
           <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
-            Formula
+            {t('formulaType')}
           </span>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 font-mono text-lg sm:text-xl text-center text-gray-900 dark:text-white border border-blue-100 dark:border-blue-900">
@@ -173,7 +188,7 @@ function FormulaStep({ content, explanation }: { content: string; explanation?: 
 
       {/* Explanation */}
       {explanation && (
-        <p className="text-gray-600 dark:text-gray-400 leading-relaxed pl-2 border-l-2 border-blue-300 dark:border-blue-700">
+        <p className="text-gray-600 dark:text-gray-400 leading-relaxed ps-2 border-s-2 border-blue-300 dark:border-blue-700">
           {explanation}
         </p>
       )}
@@ -181,7 +196,7 @@ function FormulaStep({ content, explanation }: { content: string; explanation?: 
   )
 }
 
-function DiagramStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl }: ImageStepProps) {
+function DiagramStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl, t }: ImageStepProps) {
   return (
     <div className="animate-fadeIn">
       <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800 rounded-2xl p-6">
@@ -190,17 +205,17 @@ function DiagramStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, i
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           <span className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
-            {imageUrl ? 'Diagram' : 'Diagram Reference'}
+            {imageUrl ? t('diagramType') : t('diagramReferenceType')}
           </span>
         </div>
         <p className="text-gray-800 dark:text-gray-200 leading-relaxed">
           {content}
         </p>
         {imageUrl ? (
-          <StepImage url={imageUrl} alt={imageAlt || 'Diagram'} caption={imageCaption} credit={imageCredit} creditUrl={imageCreditUrl} />
+          <StepImage url={imageUrl} alt={imageAlt || t('diagramType')} caption={imageCaption} credit={imageCredit} creditUrl={imageCreditUrl} t={t} />
         ) : (
           <p className="mt-4 text-sm text-purple-600 dark:text-purple-400 italic">
-            Refer to the original notes image for the visual diagram.
+            {t('referToOriginalImage')}
           </p>
         )}
       </div>
@@ -208,7 +223,7 @@ function DiagramStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, i
   )
 }
 
-function ExampleStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl }: ImageStepProps) {
+function ExampleStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl, t }: ImageStepProps) {
   return (
     <div className="animate-fadeIn">
       <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-6">
@@ -217,19 +232,25 @@ function ExampleStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, i
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
           <span className="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wider">
-            Example
+            {t('exampleLabel')}
           </span>
         </div>
         <p className="text-gray-800 dark:text-gray-200 leading-relaxed">
           {content}
         </p>
-        {imageUrl && <StepImage url={imageUrl} alt={imageAlt || 'Example illustration'} caption={imageCaption} credit={imageCredit} creditUrl={imageCreditUrl} />}
+        {imageUrl && <StepImage url={imageUrl} alt={imageAlt || t('exampleLabel')} caption={imageCaption} credit={imageCredit} creditUrl={imageCreditUrl} t={t} />}
       </div>
     </div>
   )
 }
 
-function SummaryStep({ content, lessonTitle }: { content: string; lessonTitle: string }) {
+interface SummaryStepProps {
+  content: string
+  lessonTitle: string
+  t: ReturnType<typeof useTranslations<'lesson'>>
+}
+
+function SummaryStep({ content, lessonTitle, t }: SummaryStepProps) {
   // Split content by newlines or periods for bullet points
   const points = content
     .split(/[.\n]/)
@@ -247,7 +268,7 @@ function SummaryStep({ content, lessonTitle }: { content: string; lessonTitle: s
           </div>
           <div>
             <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
-              Lesson Summary
+              {t('lessonSummary')}
             </span>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               {lessonTitle}

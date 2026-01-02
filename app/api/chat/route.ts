@@ -83,9 +83,12 @@ export async function POST(request: NextRequest) {
     let curriculumSection = ''
     const { data: userProfile } = await supabase
       .from('user_learning_profile')
-      .select('study_system, subjects, subject_levels, education_level')
+      .select('study_system, subjects, subject_levels, education_level, language')
       .eq('user_id', user.id)
       .single()
+
+    // Get user's language preference
+    const userLanguage = userProfile?.language || 'en'
 
     if (userProfile?.study_system && userProfile.study_system !== 'general' && userProfile.study_system !== 'other') {
       const curriculumContext = await buildChatContext(
@@ -121,9 +124,19 @@ export async function POST(request: NextRequest) {
       professional: 'Focus on practical applications and efficiency.',
     }
 
+    // Build Hebrew language instruction if needed
+    const hebrewInstruction = userLanguage === 'he' ? `
+## Language Requirement - CRITICAL
+Generate ALL responses in Hebrew (עברית).
+- All explanations and feedback must be in Hebrew
+- Use proper Hebrew educational terminology
+- Keep mathematical notation standard (numbers, symbols)
+- Maintain a supportive, encouraging tone in Hebrew
+` : ''
+
     // Create system prompt with curriculum awareness
     const systemPrompt = `You are a helpful AI tutor for NoteSnap, a study app. You're helping a student understand their study material.
-
+${hebrewInstruction}
 ${curriculumSection ? `## Student's Curriculum
 ${curriculumSection}
 

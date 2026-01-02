@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 
 // =============================================================================
 // Types
@@ -13,23 +14,6 @@ interface MultipleChoiceProps {
   explanation?: string
   onAnswer: (correct: boolean) => void
 }
-
-// Encouraging messages for wrong answers
-const ENCOURAGEMENT_MESSAGES = [
-  "Almost there! Let's see why this wasn't quite right.",
-  "Good try! Learning from mistakes is how we grow.",
-  "Don't worry, this is a tricky one. Let's review.",
-  "Close! Take a moment to understand the correct answer.",
-  "Keep going! Every attempt brings you closer to mastery.",
-]
-
-// Learning tips based on question patterns
-const LEARNING_TIPS = [
-  "Take your time to read all options before selecting.",
-  "Look for keywords that distinguish similar options.",
-  "Consider eliminating obviously wrong answers first.",
-  "Think about why the correct answer makes sense.",
-]
 
 interface ShuffledOption {
   text: string
@@ -47,6 +31,8 @@ export default function MultipleChoice({
   explanation,
   onAnswer,
 }: MultipleChoiceProps) {
+  const t = useTranslations('practice')
+
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [hasChecked, setHasChecked] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
@@ -54,12 +40,12 @@ export default function MultipleChoice({
   const [showFinalFeedback, setShowFinalFeedback] = useState(false)
 
   // Get random encouraging message and tip (stable per render)
-  const encouragementMessage = useMemo(() =>
-    ENCOURAGEMENT_MESSAGES[Math.floor(Math.random() * ENCOURAGEMENT_MESSAGES.length)],
+  const encouragementIndex = useMemo(() =>
+    Math.floor(Math.random() * 5) + 1,
     []
   )
-  const learningTip = useMemo(() =>
-    LEARNING_TIPS[Math.floor(Math.random() * LEARNING_TIPS.length)],
+  const learningTipIndex = useMemo(() =>
+    Math.floor(Math.random() * 4) + 1,
     []
   )
 
@@ -125,7 +111,7 @@ export default function MultipleChoice({
     const isCorrectOption = index === correctShuffledIndex
 
     let baseClass =
-      'w-full p-4 text-left rounded-xl border-2 transition-all duration-200 font-medium min-h-[56px] '
+      'w-full p-4 text-start rounded-xl border-2 transition-all duration-200 font-medium min-h-[56px] '
 
     if (hasChecked) {
       if (isCorrectOption) {
@@ -219,14 +205,13 @@ export default function MultipleChoice({
             // Correct answer feedback
             <>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xl">🎉</span>
                 <p className="font-bold text-lg text-green-700 dark:text-green-400">
-                  {attemptCount === 1 ? 'Correct! First try!' : 'Correct! Great perseverance!'}
+                  {attemptCount === 1 ? t('correctFirstTry') : t('correctGreatPerseverance')}
                 </p>
               </div>
               {attemptCount > 1 && (
                 <p className="text-sm text-green-600 dark:text-green-500">
-                  You got it on attempt #{attemptCount}. Practice makes perfect!
+                  {t('gotItOnAttempt', { attempt: attemptCount })}
                 </p>
               )}
             </>
@@ -234,17 +219,16 @@ export default function MultipleChoice({
             // Final wrong answer feedback (after all attempts)
             <>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xl">💡</span>
                 <p className="font-bold text-lg text-red-700 dark:text-red-400">
-                  Let&apos;s learn from this
+                  {t('letsLearnFromThis')}
                 </p>
               </div>
               <p className="text-gray-600 dark:text-gray-400 mb-2">
-                {encouragementMessage}
+                {t(`encouragement.${encouragementIndex}`)}
               </p>
               <div className="bg-white dark:bg-gray-800 rounded-lg p-3 mt-3">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                  The correct answer:
+                  {t('theCorrectAnswer')}
                 </p>
                 <p className="font-semibold text-green-600 dark:text-green-400">
                   {options[correctIndex]}
@@ -252,36 +236,32 @@ export default function MultipleChoice({
               </div>
               {/* Learning tip */}
               <div className="mt-3 flex items-start gap-2 text-sm text-gray-500 dark:text-gray-400">
-                <span>💭</span>
-                <p className="italic">{learningTip}</p>
+                <p className="italic">{t(`learningTips.${learningTipIndex}`)}</p>
               </div>
             </>
           ) : (
             // First wrong attempt - encourage retry
             <>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xl">🤔</span>
                 <p className="font-bold text-lg text-amber-700 dark:text-amber-400">
-                  Not quite - want to try again?
+                  {t('notQuiteTryAgain')}
                 </p>
               </div>
               <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
-                Take another look at the options. You&apos;ve got this!
+                {t('takeAnotherLook')}
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={handleTryAgain}
                   className="flex-1 py-2.5 px-4 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition flex items-center justify-center gap-2"
                 >
-                  <span>🔄</span>
-                  <span>Try Again</span>
+                  <span>{t('tryAgain')}</span>
                 </button>
                 <button
                   onClick={handleShowAnswer}
                   className="flex-1 py-2.5 px-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition flex items-center justify-center gap-2"
                 >
-                  <span>👁️</span>
-                  <span>Show Answer</span>
+                  <span>{t('showAnswer')}</span>
                 </button>
               </div>
             </>
@@ -292,7 +272,7 @@ export default function MultipleChoice({
       {/* Explanation - only show after final feedback */}
       {showFinalFeedback && explanation && (
         <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Why this is correct:</p>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('whyCorrect')}</p>
           <p className="text-gray-700 dark:text-gray-300">{explanation}</p>
         </div>
       )}
@@ -309,7 +289,7 @@ export default function MultipleChoice({
               : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-lg hover:shadow-xl'
           }`}
         >
-          Check Answer
+          {t('checkAnswer')}
         </button>
       )}
     </div>

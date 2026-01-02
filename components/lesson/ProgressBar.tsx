@@ -1,9 +1,14 @@
+'use client'
+
+import { useTranslations } from 'next-intl'
+
 interface ProgressBarProps {
   currentStep: number
   totalSteps: number
 }
 
 export default function ProgressBar({ currentStep, totalSteps }: ProgressBarProps) {
+  const t = useTranslations('lesson')
   const progressPercentage = totalSteps > 0 ? ((currentStep + 1) / totalSteps) * 100 : 0
 
   return (
@@ -11,7 +16,7 @@ export default function ProgressBar({ currentStep, totalSteps }: ProgressBarProp
       {/* Step indicator */}
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-          Step {currentStep + 1} of {totalSteps}
+          {t('stepProgress', { current: currentStep + 1, total: totalSteps })}
         </span>
         <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
           {Math.round(progressPercentage)}%

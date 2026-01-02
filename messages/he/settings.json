@@ -1,0 +1,83 @@
+{
+  "title": "הגדרות",
+  "subtitle": "נהל את החשבון וההעדפות שלך",
+  "backToProfile": "חזרה לפרופיל",
+  "profile": {
+    "title": "פרופיל",
+    "description": "המידע האישי שלך",
+    "displayName": "שם תצוגה",
+    "displayNamePlaceholder": "השם שלך",
+    "email": "אימייל"
+  },
+  "learning": {
+    "title": "העדפות למידה",
+    "description": "התאם אישית את חוויית הלמידה שלך",
+    "studySystem": "מערכת לימודים",
+    "grade": "כיתה",
+    "dailyStudyTime": "זמן למידה יומי",
+    "preferredStudyTime": "זמן למידה מועדף"
+  },
+  "studySystems": {
+    "ib": "IB",
+    "uk": "A-Levels בריטי",
+    "ap": "AP",
+    "israeli_bagrut": "בגרות ישראלית",
+    "us": "מערכת אמריקאית",
+    "general": "כללי"
+  },
+  "timeOptions": {
+    "short": "מהיר",
+    "shortDesc": "פחות מ-15 דקות",
+    "medium": "ממוקד",
+    "mediumDesc": "15-30 דקות",
+    "long": "מעמיק",
+    "longDesc": "יותר מ-30 דקות"
+  },
+  "preferredTimes": {
+    "morning": "בוקר",
+    "afternoon": "צהריים",
+    "evening": "ערב",
+    "varies": "משתנה"
+  },
+  "curriculum": {
+    "title": "הגדרות תוכנית לימודים",
+    "description": "מקצועות והעדפות מבחנים",
+    "yourSubjects": "המקצועות שלך",
+    "examFormatPreference": "העדפת פורמט מבחן",
+    "matchRealFormat": "פורמט מקורי",
+    "matchRealFormatDesc": "המבחנים עוקבים אחר המבנה המדויק של תוכנית הלימודים שלך",
+    "inspiredBy": "בהשראת",
+    "inspiredByDesc": "פורמט גמיש עם סגנונות שאלות דומים"
+  },
+  "appSettings": {
+    "title": "הגדרות אפליקציה",
+    "description": "מראה והעדפות",
+    "theme": "ערכת נושא",
+    "themeLight": "בהיר",
+    "themeDark": "כהה",
+    "themeSystem": "מערכת",
+    "resetOnboarding": "אפס הדרכה",
+    "resetOnboardingDesc": "התחל מחדש עם ההדרכה הראשונית",
+    "language": "שפה"
+  },
+  "saveChangesRefreshHint": "שמור שינויים ורענן את הדף כדי להחיל את השפה החדשה.",
+  "account": {
+    "title": "חשבון",
+    "description": "נהל את החשבון שלך",
+    "dangerZone": "אזור סכנה",
+    "dangerZoneDesc": "ברגע שתמחק את החשבון שלך, אין דרך חזרה.",
+    "deleteAccount": "מחק חשבון",
+    "typeDeleteToConfirm": "הקלד DELETE לאישור:"
+  },
+  "toast": {
+    "loadError": "טעינת ההגדרות נכשלה",
+    "saveSuccess": "ההגדרות נשמרו בהצלחה",
+    "savePartial": "הפרופיל נשמר חלקית. ייתכן שחלק מההגדרות לא נשמרו.",
+    "saveError": "שמירת ההגדרות נכשלה",
+    "signOutError": "ההתנתקות נכשלה",
+    "onboardingReset": "ההדרכה אופסה! מעביר...",
+    "onboardingResetError": "איפוס ההדרכה נכשל",
+    "deleteRequest": "בקשת מחיקת החשבון הוגשה. פנה לתמיכה להשלמה.",
+    "deleteError": "עיבוד בקשת המחיקה נכשל"
+  }
+}

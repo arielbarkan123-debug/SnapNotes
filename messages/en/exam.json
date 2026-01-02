@@ -1,0 +1,17 @@
+{
+  "title": "Exams",
+  "startExam": "Start Exam",
+  "continueExam": "Continue Exam",
+  "reviewExam": "Review Exam",
+  "timeRemaining": "Time remaining",
+  "question": "Question {current} of {total}",
+  "submitExam": "Submit Exam",
+  "confirmSubmit": "Are you sure you want to submit? You cannot change your answers after submission.",
+  "examComplete": "Exam Complete!",
+  "yourScore": "Your score",
+  "passed": "Passed",
+  "failed": "Needs improvement",
+  "reviewAnswers": "Review Answers",
+  "retakeExam": "Retake Exam",
+  "backToExams": "Back to Exams"
+}

@@ -1,0 +1,17 @@
+{
+  "title": "מבחנים",
+  "startExam": "התחל מבחן",
+  "continueExam": "המשך מבחן",
+  "reviewExam": "סקור מבחן",
+  "timeRemaining": "זמן נותר",
+  "question": "שאלה {current} מתוך {total}",
+  "submitExam": "הגש מבחן",
+  "confirmSubmit": "האם אתה בטוח שברצונך להגיש? לא תוכל לשנות את התשובות שלך לאחר ההגשה.",
+  "examComplete": "המבחן הושלם!",
+  "yourScore": "הציון שלך",
+  "passed": "עבר",
+  "failed": "דרוש שיפור",
+  "reviewAnswers": "סקור תשובות",
+  "retakeExam": "בחן מחדש",
+  "backToExams": "חזרה למבחנים"
+}

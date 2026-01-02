@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 interface GeneratedQuestion {
   type: 'multiple_choice' | 'true_false'
@@ -18,6 +19,7 @@ interface PracticeMoreProps {
 }
 
 export function PracticeMore({ courseId, lessonIndex, wrongQuestion, onClose }: PracticeMoreProps) {
+  const t = useTranslations('practice')
   const [questions, setQuestions] = useState<GeneratedQuestion[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -51,10 +53,10 @@ export function PracticeMore({ courseId, lessonIndex, wrongQuestion, onClose }: 
         setQuestions(data.questions)
         setStarted(true)
       } else {
-        setError(data.error || 'Failed to generate questions')
+        setError(data.error || t('failedToGenerate'))
       }
     } catch {
-      setError('Failed to generate questions. Please try again.')
+      setError(t('failedToGenerate'))
     } finally {
       setLoading(false)
     }
@@ -101,12 +103,12 @@ export function PracticeMore({ courseId, lessonIndex, wrongQuestion, onClose }: 
               </svg>
             </div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              Practice More
+              {t('letPracticeMoreTitle')}
             </h3>
             <p className="text-gray-600 dark:text-gray-400 text-sm">
               {wrongQuestion
-                ? "Let's reinforce this concept with some practice questions."
-                : 'Generate practice questions to test your understanding.'}
+                ? t('letPracticeMoreDescription')
+                : t('generatePracticeDescription')}
             </p>
           </div>
 
@@ -119,7 +121,7 @@ export function PracticeMore({ courseId, lessonIndex, wrongQuestion, onClose }: 
               onClick={onClose}
               className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
-              Skip
+              {t('skipQuestion')}
             </button>
             <button
               onClick={generateQuestions}
@@ -132,10 +134,10 @@ export function PracticeMore({ courseId, lessonIndex, wrongQuestion, onClose }: 
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Generating...
+                  {t('generating')}
                 </>
               ) : (
-                "Let's Practice"
+                t('letsPractice')
               )}
             </button>
           </div>
@@ -165,15 +167,15 @@ export function PracticeMore({ courseId, lessonIndex, wrongQuestion, onClose }: 
               )}
             </div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              {isGood ? 'Great Job!' : 'Keep Practicing!'}
+              {isGood ? t('greatJob') : t('keepPracticing')}
             </h3>
             <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">
               {score.correct}/{score.total}
             </p>
             <p className="text-gray-600 dark:text-gray-400 text-sm">
               {isGood
-                ? 'You\'re getting the hang of this!'
-                : 'Review the lesson and try again.'}
+                ? t('gettingHangOfThis')
+                : t('reviewAndTryAgain')}
             </p>
           </div>
 
@@ -181,7 +183,7 @@ export function PracticeMore({ courseId, lessonIndex, wrongQuestion, onClose }: 
             onClick={onClose}
             className="w-full py-3 px-4 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors"
           >
-            Continue
+            {t('continue')}
           </button>
         </div>
       </div>
@@ -197,7 +199,7 @@ export function PracticeMore({ courseId, lessonIndex, wrongQuestion, onClose }: 
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Question {currentIndex + 1} of {questions.length}
+            {t('questionOf', { current: currentIndex + 1, total: questions.length })}
           </span>
           <button
             onClick={onClose}
@@ -236,7 +238,7 @@ export function PracticeMore({ courseId, lessonIndex, wrongQuestion, onClose }: 
                 onClick={() => handleSelect(index)}
                 disabled={hasChecked}
                 className={`
-                  w-full p-4 rounded-xl border-2 text-left transition-all
+                  w-full p-4 rounded-xl border-2 text-start transition-all
                   ${hasChecked
                     ? showCorrect
                       ? 'bg-green-50 dark:bg-green-900/30 border-green-500'
@@ -296,7 +298,7 @@ export function PracticeMore({ courseId, lessonIndex, wrongQuestion, onClose }: 
               }
             `}
           >
-            Check Answer
+            {t('checkAnswer')}
           </button>
         ) : (
           <button
@@ -309,7 +311,7 @@ export function PracticeMore({ courseId, lessonIndex, wrongQuestion, onClose }: 
               }
             `}
           >
-            {currentIndex < questions.length - 1 ? 'Next Question' : 'Finish'}
+            {currentIndex < questions.length - 1 ? t('nextQuestion') : t('finish')}
           </button>
         )}
       </div>

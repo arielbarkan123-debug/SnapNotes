@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import { useTranslations } from 'next-intl'
 import Button from '@/components/ui/Button'
 import CourseCard from '@/components/course/CourseCard'
 import { DashboardWidget } from '@/components/srs'
@@ -70,6 +71,7 @@ interface DashboardContentProps {
 
 export default function DashboardContent({ initialCourses }: DashboardContentProps) {
   const router = useRouter()
+  const t = useTranslations('dashboard')
   const { error: showError, success: showSuccess } = useToast()
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [isGeneratingCovers, setIsGeneratingCovers] = useState(false)
@@ -113,7 +115,7 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
       const response = await fetch('/api/generate-all-covers', { method: 'POST' })
       const data = await response.json()
       if (data.success) {
-        showSuccess(`Generated ${data.updated} cover images!`)
+        showSuccess(t('coversGeneratedSuccess', { count: data.updated }))
         router.refresh()
       } else {
         showError(data.error || 'Failed to generate covers')
@@ -156,7 +158,7 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
     try {
       await refetch()
     } catch {
-      showError('Failed to refresh courses')
+      showError(t('refreshError'))
     }
   }
 
@@ -179,13 +181,15 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                Your Study Courses
+                {t('title')}
               </h1>
               {totalCount > 0 && (
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   {isSearching
-                    ? `${filteredCount} of ${totalCount} courses`
-                    : `${totalCount} course${totalCount !== 1 ? 's' : ''}`
+                    ? t('coursesFiltered', { filtered: filteredCount, total: totalCount })
+                    : totalCount !== 1
+                      ? t('coursesCount', { count: totalCount })
+                      : t('coursesCountSingular', { count: totalCount })
                   }
                 </p>
               )}
@@ -209,7 +213,7 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
                 />
               </svg>
-              Upload Notebook Page
+              {t('uploadNotebook')}
             </Button>
           </div>
         </div>
@@ -228,10 +232,13 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <p className="font-medium text-purple-900 dark:text-purple-100">
-                  {coursesWithoutCovers} course{coursesWithoutCovers !== 1 ? 's' : ''} missing cover images
+                  {coursesWithoutCovers !== 1
+                    ? t('coversMissing', { count: coursesWithoutCovers })
+                    : t('coversMissingSingular', { count: coursesWithoutCovers })
+                  }
                 </p>
                 <p className="text-sm text-purple-700 dark:text-purple-300">
-                  Generate beautiful cover images for your courses
+                  {t('coversGenerate')}
                 </p>
               </div>
               <button
@@ -245,14 +252,14 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Generating...
+                    {t('coversGenerating')}
                   </>
                 ) : (
                   <>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    Generate Covers
+                    {t('coversGenerateButton')}
                   </>
                 )}
               </button>
@@ -305,7 +312,7 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
               <input
                 type="search"
                 inputMode="search"
-                placeholder="Search courses..."
+                placeholder={t('searchCourses')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="block w-full pl-10 pr-10 py-3 sm:py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl sm:rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition text-base"
@@ -355,7 +362,7 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
                   />
                 </svg>
                 <span className="hidden sm:inline">
-                  {sortOrder === 'newest' ? 'Newest' : 'Oldest'}
+                  {sortOrder === 'newest' ? t('sortNewest') : t('sortOldest')}
                 </span>
               </button>
 
@@ -390,7 +397,7 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
             <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            Searching...
+            {t('searching')}
           </div>
         )}
 
@@ -465,6 +472,7 @@ interface EmptyStateProps {
 }
 
 function EmptyState({ onUploadClick }: EmptyStateProps) {
+  const t = useTranslations('dashboard')
   return (
     <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4">
       <div className="w-16 h-16 sm:w-20 sm:h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-4 sm:mb-6">
@@ -483,14 +491,14 @@ function EmptyState({ onUploadClick }: EmptyStateProps) {
         </svg>
       </div>
       <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mb-2 text-center">
-        No courses yet
+        {t('noCourses')}
       </h2>
       <p className="text-gray-600 dark:text-gray-400 text-center mb-6 max-w-sm sm:max-w-md text-sm sm:text-base">
-        Upload your first notebook page to get started. Our AI will transform your notes into an interactive study course.
+        {t('noCoursesDescription')}
       </p>
       <Button size="lg" onClick={onUploadClick} className="w-full sm:w-auto">
         <svg
-          className="w-5 h-5 mr-2"
+          className="w-5 h-5 me-2"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -502,7 +510,7 @@ function EmptyState({ onUploadClick }: EmptyStateProps) {
             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
           />
         </svg>
-        Upload Your First Notebook Page
+        {t('uploadFirstNotebook')}
       </Button>
     </div>
   )
@@ -514,6 +522,7 @@ interface NoSearchResultsProps {
 }
 
 function NoSearchResults({ query, onClear }: NoSearchResultsProps) {
+  const t = useTranslations('dashboard')
   return (
     <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4">
       <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4 sm:mb-6">
@@ -532,16 +541,16 @@ function NoSearchResults({ query, onClear }: NoSearchResultsProps) {
         </svg>
       </div>
       <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2 text-center">
-        No courses found
+        {t('noResults')}
       </h2>
       <p className="text-gray-600 dark:text-gray-400 text-center mb-2 text-sm sm:text-base">
-        No courses match your search
+        {t('noResultsMatch')}
       </p>
       <p className="text-gray-500 dark:text-gray-500 text-sm mb-6 font-medium text-center break-all max-w-xs">
         &ldquo;{query}&rdquo;
       </p>
       <Button variant="secondary" onClick={onClear} className="w-full sm:w-auto min-h-[44px]">
-        Clear search
+        {t('clearSearch')}
       </Button>
     </div>
   )

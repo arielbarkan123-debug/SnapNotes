@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useRef, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 
 // =============================================================================
 // Types
@@ -29,6 +30,8 @@ export default function Sequence({
   correctOrder,
   onAnswer,
 }: SequenceProps) {
+  const t = useTranslations('practice')
+
   // Shuffle items on mount
   const initialOrder = useMemo(() => {
     const indices = items.map((_, i) => i)
@@ -274,11 +277,11 @@ export default function Sequence({
           <>
             <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">
               {selectedForMove !== null
-                ? 'Use arrow keys to move item, Enter to place, Esc to cancel'
-                : 'Drag items or use arrows to reorder'}
+                ? t('useArrowsToMove')
+                : t('dragOrArrowsToReorder')}
             </p>
             <p className="text-gray-400 dark:text-gray-500 text-xs text-center mt-1">
-              Keyboard: Arrow keys to navigate, Enter/Space to select & move
+              {t('keyboardInstructions')}
             </p>
           </>
         )}
@@ -341,7 +344,7 @@ export default function Sequence({
                       ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
                       : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
                   }`}
-                  aria-label="Move up"
+                  aria-label={t('moveUp')}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -360,7 +363,7 @@ export default function Sequence({
                       ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
                       : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
                   }`}
-                  aria-label="Move down"
+                  aria-label={t('moveDown')}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -401,8 +404,8 @@ export default function Sequence({
             }`}
           >
             {correctCount === items.length
-              ? 'Perfect order! 🎉'
-              : `${correctCount}/${items.length} in correct position`}
+              ? t('perfectOrder')
+              : t('inCorrectPosition', { count: correctCount, total: items.length })}
           </p>
         </div>
       )}
@@ -411,7 +414,7 @@ export default function Sequence({
       {hasChecked && correctCount < items.length && (
         <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
-            Correct order:
+            {t('correctOrder')}
           </p>
           <ol className="space-y-2">
             {correctOrder.map((itemIndex, position) => (
@@ -432,7 +435,7 @@ export default function Sequence({
           onClick={handleCheck}
           className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all"
         >
-          Check Order
+          {t('checkOrder')}
         </button>
       ) : null /* Parent component handles Continue/Next Card button */}
     </div>

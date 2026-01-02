@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { LessonStep } from '@/types'
 
 // =============================================================================
@@ -30,6 +31,7 @@ export default function LessonRecap({
   onClose,
   onContinue,
 }: LessonRecapProps) {
+  const t = useTranslations('lesson')
   const [currentIndex, setCurrentIndex] = useState(0)
 
   // Extract content steps (exclude questions)
@@ -61,13 +63,13 @@ export default function LessonRecap({
       <div className="fixed inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center z-50">
         <div className="text-center px-6">
           <span className="text-6xl mb-4 block">📚</span>
-          <h2 className="text-2xl font-bold text-white mb-4">No Content to Review</h2>
-          <p className="text-indigo-200 mb-6">This lesson doesn&apos;t have any content to recap.</p>
+          <h2 className="text-2xl font-bold text-white mb-4">{t('noContentToReview')}</h2>
+          <p className="text-indigo-200 mb-6">{t('noContentDescription')}</p>
           <button
             onClick={onClose}
             className="px-6 py-3 bg-white text-indigo-600 font-semibold rounded-xl"
           >
-            Go Back
+            {t('goBack')}
           </button>
         </div>
       </div>
@@ -83,7 +85,7 @@ export default function LessonRecap({
             <button
               onClick={onClose}
               className="p-2 rounded-full hover:bg-white/20 transition-colors"
-              aria-label="Close recap"
+              aria-label={t('closeRecap')}
             >
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -91,7 +93,7 @@ export default function LessonRecap({
             </button>
             <div className="text-center">
               <span className="text-xs font-medium text-white/70 uppercase tracking-wide">
-                Reviewing
+                {t('reviewing')}
               </span>
               <h1 className="text-lg font-semibold text-white truncate max-w-[200px]">
                 {lessonTitle}
@@ -108,7 +110,7 @@ export default function LessonRecap({
             />
           </div>
           <p className="text-center text-xs text-white/60 mt-2">
-            {currentIndex + 1} of {recapItems.length} key points
+            {t('keyPointsProgress', { current: currentIndex + 1, total: recapItems.length })}
           </p>
         </div>
       </header>
@@ -116,7 +118,7 @@ export default function LessonRecap({
       {/* Main content */}
       <main className="flex-1 overflow-y-auto p-6">
         <div className="max-w-xl mx-auto">
-          <RecapCard item={currentItem} index={currentIndex} />
+          <RecapCard item={currentItem} index={currentIndex} t={t} />
         </div>
       </main>
 
@@ -134,10 +136,10 @@ export default function LessonRecap({
               }
             `}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Previous
+            {t('previous')}
           </button>
 
           <button
@@ -146,15 +148,15 @@ export default function LessonRecap({
           >
             {isLastItem ? (
               <>
-                Done Reviewing
+                {t('doneReviewing')}
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </>
             ) : (
               <>
-                Next
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {t('next')}
+                <svg className="w-5 h-5 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </>
@@ -173,25 +175,26 @@ export default function LessonRecap({
 interface RecapCardProps {
   item: RecapItem
   index: number
+  t: ReturnType<typeof useTranslations<'lesson'>>
 }
 
-function RecapCard({ item, index }: RecapCardProps) {
+function RecapCard({ item, index, t }: RecapCardProps) {
   const getTypeConfig = (type: RecapItem['type']) => {
     switch (type) {
       case 'explanation':
-        return { emoji: '💡', label: 'Concept', bgColor: 'from-amber-500/20 to-yellow-500/20', borderColor: 'border-amber-400/40' }
+        return { emoji: '💡', labelKey: 'conceptType' as const, bgColor: 'from-amber-500/20 to-yellow-500/20', borderColor: 'border-amber-400/40' }
       case 'key_point':
-        return { emoji: '📌', label: 'Key Point', bgColor: 'from-blue-500/20 to-indigo-500/20', borderColor: 'border-blue-400/40' }
+        return { emoji: '📌', labelKey: 'keyPointType' as const, bgColor: 'from-blue-500/20 to-indigo-500/20', borderColor: 'border-blue-400/40' }
       case 'formula':
-        return { emoji: '🔢', label: 'Formula', bgColor: 'from-purple-500/20 to-pink-500/20', borderColor: 'border-purple-400/40' }
+        return { emoji: '🔢', labelKey: 'formulaType' as const, bgColor: 'from-purple-500/20 to-pink-500/20', borderColor: 'border-purple-400/40' }
       case 'diagram':
-        return { emoji: '📊', label: 'Diagram', bgColor: 'from-cyan-500/20 to-blue-500/20', borderColor: 'border-cyan-400/40' }
+        return { emoji: '📊', labelKey: 'diagramType' as const, bgColor: 'from-cyan-500/20 to-blue-500/20', borderColor: 'border-cyan-400/40' }
       case 'example':
-        return { emoji: '✨', label: 'Example', bgColor: 'from-green-500/20 to-emerald-500/20', borderColor: 'border-green-400/40' }
+        return { emoji: '✨', labelKey: 'exampleLabel' as const, bgColor: 'from-green-500/20 to-emerald-500/20', borderColor: 'border-green-400/40' }
       case 'summary':
-        return { emoji: '📋', label: 'Summary', bgColor: 'from-indigo-500/20 to-violet-500/20', borderColor: 'border-indigo-400/40' }
+        return { emoji: '📋', labelKey: 'summaryType' as const, bgColor: 'from-indigo-500/20 to-violet-500/20', borderColor: 'border-indigo-400/40' }
       default:
-        return { emoji: '📝', label: 'Note', bgColor: 'from-gray-500/20 to-gray-600/20', borderColor: 'border-gray-400/40' }
+        return { emoji: '📝', labelKey: 'noteType' as const, bgColor: 'from-gray-500/20 to-gray-600/20', borderColor: 'border-gray-400/40' }
     }
   }
 
@@ -210,7 +213,7 @@ function RecapCard({ item, index }: RecapCardProps) {
       <div className="flex items-center gap-2 mb-4">
         <span className="text-2xl">{config.emoji}</span>
         <span className="text-sm font-medium text-white/80 uppercase tracking-wide">
-          {config.label}
+          {t(config.labelKey)}
         </span>
       </div>
 

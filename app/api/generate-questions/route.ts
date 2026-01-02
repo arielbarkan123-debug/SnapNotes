@@ -81,9 +81,12 @@ export async function POST(request: NextRequest) {
     let curriculumSection = ''
     const { data: userProfile } = await supabase
       .from('user_learning_profile')
-      .select('study_system, subjects, subject_levels, exam_format')
+      .select('study_system, subjects, subject_levels, exam_format, language')
       .eq('user_id', user.id)
       .single()
+
+    // Get user's language preference
+    const userLanguage = userProfile?.language || 'en'
 
     if (userProfile?.study_system && userProfile.study_system !== 'general' && userProfile.study_system !== 'other') {
       const curriculumContext = await buildCurriculumContext({
@@ -99,9 +102,20 @@ export async function POST(request: NextRequest) {
       curriculumSection = formatContextForPrompt(curriculumContext)
     }
 
+    // Build Hebrew language instruction if needed
+    const hebrewInstruction = userLanguage === 'he' ? `
+## Language Requirement - CRITICAL
+Generate ALL content in Hebrew (עברית).
+- All questions must be in Hebrew
+- All answer options must be in Hebrew
+- All explanations must be in Hebrew
+- Keep mathematical notation standard (numbers, symbols)
+- Use proper Hebrew educational terminology
+` : ''
+
     // Build prompt for question generation with curriculum awareness
     const systemPrompt = `You are an educational AI that generates practice questions. Generate questions that test understanding, not just memorization.
-
+${hebrewInstruction}
 ${curriculumSection ? `## Curriculum Context
 ${curriculumSection}
 

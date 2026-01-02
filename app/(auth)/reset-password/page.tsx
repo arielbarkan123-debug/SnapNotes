@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import FormInput from '@/components/ui/FormInput'
 import { mapSupabaseAuthError } from '@/lib/api/errors'
@@ -18,6 +19,7 @@ interface FormErrors {
 }
 
 export default function ResetPasswordPage() {
+  const t = useTranslations('auth')
   const router = useRouter()
   const [formData, setFormData] = useState<FormData>({
     password: '',
@@ -60,16 +62,16 @@ export default function ResetPasswordPage() {
 
     // Password validation
     if (!formData.password) {
-      newErrors.password = 'Password is required'
+      newErrors.password = t('validation.passwordRequired')
     } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters'
+      newErrors.password = t('validation.passwordTooShort')
     }
 
     // Confirm password validation
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password'
+      newErrors.confirmPassword = t('validation.confirmPasswordRequired')
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match'
+      newErrors.confirmPassword = t('validation.passwordsNoMatch')
     }
 
     setErrors(newErrors)
@@ -113,10 +115,10 @@ export default function ResetPasswordPage() {
         // Sign out after password reset
         await supabase.auth.signOut()
         // Redirect to login with success message
-        router.push('/login?message=Password updated successfully. Please log in.')
+        router.push(`/login?message=${encodeURIComponent(t('resetPassword.passwordUpdated'))}`)
       }
     } catch {
-      setServerError('An unexpected error occurred. Please try again.')
+      setServerError(t('resetPassword.unexpectedError'))
     } finally {
       setIsLoading(false)
     }
@@ -167,26 +169,26 @@ export default function ResetPasswordPage() {
                 href="/"
                 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400"
               >
-                StudySnap
+                NoteSnap
               </Link>
               <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mt-4">
-                Invalid or Expired Link
+                {t('resetPassword.invalidLink')}
               </h1>
               <p className="text-gray-600 dark:text-gray-400 mt-2">
-                This password reset link is invalid or has expired.
+                {t('resetPassword.invalidLinkDesc')}
               </p>
               <div className="mt-6 space-y-3">
                 <Link
                   href="/forgot-password"
                   className="block w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors text-center"
                 >
-                  Request New Link
+                  {t('resetPassword.requestNewLink')}
                 </Link>
                 <Link
                   href="/login"
                   className="block text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
                 >
-                  ← Back to login
+                  ← {t('resetPassword.backToLogin')}
                 </Link>
               </div>
             </div>
@@ -206,13 +208,13 @@ export default function ResetPasswordPage() {
               href="/"
               className="text-2xl font-bold text-indigo-600 dark:text-indigo-400"
             >
-              StudySnap
+              NoteSnap
             </Link>
             <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mt-4">
-              Reset your password
+              {t('resetPassword.title')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Enter your new password below.
+              {t('resetPassword.subtitle')}
             </p>
           </div>
 
@@ -228,7 +230,7 @@ export default function ResetPasswordPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <FormInput
-              label="New Password"
+              label={t('resetPassword.newPassword')}
               name="password"
               type="password"
               placeholder="••••••••"
@@ -240,7 +242,7 @@ export default function ResetPasswordPage() {
             />
 
             <FormInput
-              label="Confirm New Password"
+              label={t('resetPassword.confirmPassword')}
               name="confirmPassword"
               type="password"
               placeholder="••••••••"
@@ -259,7 +261,7 @@ export default function ResetPasswordPage() {
               {isLoading ? (
                 <>
                   <svg
-                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                    className="animate-spin -ms-1 me-2 h-4 w-4 text-white"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -278,10 +280,10 @@ export default function ResetPasswordPage() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     />
                   </svg>
-                  Updating...
+                  {t('resetPassword.resetting')}
                 </>
               ) : (
-                'Reset Password'
+                t('resetPassword.resetPassword')
               )}
             </button>
           </form>
@@ -292,7 +294,7 @@ export default function ResetPasswordPage() {
               href="/login"
               className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
             >
-              ← Back to login
+              ← {t('resetPassword.backToLogin')}
             </Link>
           </p>
         </div>

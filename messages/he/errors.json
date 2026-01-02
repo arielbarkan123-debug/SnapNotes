@@ -1,0 +1,17 @@
+{
+  "generic": "משהו השתבש",
+  "genericDescription": "נתקלנו בשגיאה בלתי צפויה. נסה שוב, או פנה לתמיכה אם הבעיה נמשכת.",
+  "tryAgain": "נסה שוב",
+  "reloadPage": "טען מחדש את הדף",
+  "retry": "נסה שוב",
+  "notFound": "הדף לא נמצא",
+  "notFoundDescription": "הדף שאתה מחפש לא קיים.",
+  "goHome": "חזרה לדף הבית",
+  "offline": "אתה לא מחובר",
+  "offlineDescription": "חלק מהתכונות עשויות לא לעבוד.",
+  "backOnline": "שוב מחובר!",
+  "connectionError": "שגיאת חיבור. נסה שוב.",
+  "networkError": "שגיאת רשת. אנא בדוק את החיבור שלך.",
+  "loadFailed": "הטעינה נכשלה",
+  "saveFailed": "השמירה נכשלה"
+}

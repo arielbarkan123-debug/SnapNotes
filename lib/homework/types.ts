@@ -264,6 +264,8 @@ export interface TutorContext {
   recentMessages: ConversationMessage[]
   hintsUsed: number
   currentProgress: number
+  /** User's preferred language ('en' or 'he') */
+  language?: 'en' | 'he'
 }
 
 export interface HintContext {
@@ -272,4 +274,6 @@ export interface HintContext {
   referenceAnalysis?: ReferenceAnalysis
   requestedLevel: HintLevel
   previousHints: HintResponse[]
+  /** User's preferred language ('en' or 'he') */
+  language?: 'en' | 'he'
 }

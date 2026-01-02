@@ -2,12 +2,14 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import FormInput from '@/components/ui/FormInput'
 
 // Admin email for support
 const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'support@notesnap.com'
 
 export default function ForgotPasswordPage() {
+  const t = useTranslations('auth')
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -18,11 +20,11 @@ export default function ForgotPasswordPage() {
   const validateEmail = (): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!email) {
-      setError('Email is required')
+      setError(t('validation.emailRequired'))
       return false
     }
     if (!emailRegex.test(email)) {
-      setError('Please enter a valid email address')
+      setError(t('validation.emailInvalid'))
       return false
     }
     return true
@@ -62,7 +64,7 @@ export default function ForgotPasswordPage() {
         setShowHelp(true) // Show help section after success
       }
     } catch {
-      setError('An unexpected error occurred. Please try again.')
+      setError(t('forgotPassword.unexpectedError'))
     } finally {
       setIsLoading(false)
     }
@@ -81,10 +83,10 @@ export default function ForgotPasswordPage() {
               NoteSnap
             </Link>
             <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mt-3 sm:mt-4">
-              Forgot your password?
+              {t('forgotPassword.title')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1.5 sm:mt-2 text-sm sm:text-base">
-              Enter your email and we&apos;ll send you a reset link.
+              {t('forgotPassword.subtitle')}
             </p>
           </div>
 
@@ -95,7 +97,7 @@ export default function ForgotPasswordPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">
-                <strong>Secure reset:</strong> The reset link will only be sent to your registered email address.
+                <strong>{t('forgotPassword.secureReset')}</strong> {t('forgotPassword.secureResetDesc')}
               </p>
             </div>
           </div>
@@ -112,7 +114,7 @@ export default function ForgotPasswordPage() {
                     {successMessage}
                   </p>
                   <p className="text-green-600 dark:text-green-500 text-xs mt-1">
-                    Check your inbox and spam folder. The link expires in 1 hour.
+                    {t('forgotPassword.checkInboxSpam')}
                   </p>
                 </div>
               </div>
@@ -136,10 +138,10 @@ export default function ForgotPasswordPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <FormInput
-              label="Email"
+              label={t('forgotPassword.email')}
               name="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder={t('forgotPassword.emailPlaceholder')}
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value)
@@ -157,7 +159,7 @@ export default function ForgotPasswordPage() {
               {isLoading ? (
                 <>
                   <svg
-                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                    className="animate-spin -ms-1 me-2 h-4 w-4 text-white"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -176,12 +178,12 @@ export default function ForgotPasswordPage() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     />
                   </svg>
-                  Sending...
+                  {t('forgotPassword.sending')}
                 </>
               ) : retryAfter !== null ? (
-                `Try again in ${Math.ceil(retryAfter / 60)} min`
+                t('forgotPassword.tryAgainIn', { minutes: Math.ceil(retryAfter / 60) })
               ) : (
-                'Send Reset Link'
+                t('forgotPassword.sendLink')
               )}
             </button>
           </form>
@@ -190,20 +192,20 @@ export default function ForgotPasswordPage() {
           {(showHelp || successMessage) && (
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
               <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-                Didn&apos;t receive the email?
+                {t('forgotPassword.didntReceive')}
               </h3>
               <ul className="space-y-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                 <li className="flex items-start gap-2">
                   <span className="text-indigo-500 mt-0.5">1.</span>
-                  <span>Check your spam or junk folder</span>
+                  <span>{t('forgotPassword.helpStep1')}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-indigo-500 mt-0.5">2.</span>
-                  <span>Make sure you entered the correct email</span>
+                  <span>{t('forgotPassword.helpStep2')}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-indigo-500 mt-0.5">3.</span>
-                  <span>Wait a few minutes and try again</span>
+                  <span>{t('forgotPassword.helpStep3')}</span>
                 </li>
               </ul>
             </div>
@@ -216,10 +218,10 @@ export default function ForgotPasswordPage() {
                 <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
-                Need help?
+                {t('forgotPassword.needHelp')}
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3">
-                If you can&apos;t access your email or need assistance, contact our support team:
+                {t('forgotPassword.cantAccessEmail')}
               </p>
               <a
                 href={`mailto:${ADMIN_EMAIL}?subject=Account Recovery Request&body=Hi,%0A%0AI need help recovering my NoteSnap account.%0A%0AMy registered email: ${email || '[your email]'}%0A%0APlease help me reset my password.%0A%0AThank you.`}
@@ -239,7 +241,7 @@ export default function ForgotPasswordPage() {
               href="/login"
               className="text-indigo-600 dark:text-indigo-400 hover:underline active:text-indigo-700 font-medium"
             >
-              ← Back to login
+              ← {t('forgotPassword.backToLogin')}
             </Link>
           </p>
         </div>

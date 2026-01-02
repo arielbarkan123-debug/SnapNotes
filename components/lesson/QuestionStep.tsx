@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
+import { useTranslations } from 'next-intl'
 import { Step, HelpContext } from '@/types'
 import { generateHint, HintContext as HintCtx, Hint } from '@/lib/adaptive/hints'
 import HintBubble, { HintButton } from './HintBubble'
@@ -57,6 +58,7 @@ export default function QuestionStep({
   questionId,
   isRetry: _isRetry = false,
 }: QuestionStepProps) {
+  const t = useTranslations('lesson')
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [hasChecked, setHasChecked] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
@@ -221,7 +223,7 @@ export default function QuestionStep({
       {/* Question badge and text */}
       <div className="text-center">
         <span className="inline-block px-3 py-1 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 text-xs font-bold uppercase tracking-wider rounded-full mb-4">
-          Question
+          {t('question')}
         </span>
         <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white leading-relaxed">
           {question}
@@ -257,7 +259,7 @@ export default function QuestionStep({
               onClick={() => handleSelect(index)}
               disabled={hasChecked}
               className={`
-                w-full p-4 rounded-2xl border-2 text-left transition-all duration-200
+                w-full p-4 rounded-2xl border-2 text-start transition-all duration-200
                 ${hasChecked
                   ? showCorrect
                     ? 'bg-green-50 dark:bg-green-900/30 border-green-500 dark:border-green-500'
@@ -359,8 +361,8 @@ export default function QuestionStep({
                   </svg>
                 </div>
                 <div>
-                  <span className="text-xl font-bold text-green-800 dark:text-green-200">Correct!</span>
-                  <span className="ml-2 text-2xl">🎉</span>
+                  <span className="text-xl font-bold text-green-800 dark:text-green-200">{t('correct')}</span>
+                  <span className="ms-2 text-2xl">🎉</span>
                 </div>
               </>
             ) : (
@@ -371,7 +373,7 @@ export default function QuestionStep({
                   </svg>
                 </div>
                 <div>
-                  <span className="text-xl font-bold text-red-800 dark:text-red-200">Not quite</span>
+                  <span className="text-xl font-bold text-red-800 dark:text-red-200">{t('notQuite')}</span>
                 </div>
               </>
             )}
@@ -380,7 +382,7 @@ export default function QuestionStep({
           {/* Hint used indicator */}
           {hintUsed && (
             <p className={`text-xs mb-2 ${isCorrect ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-              💡 Hint was used
+              💡 {t('hintUsed')}
             </p>
           )}
 
@@ -394,7 +396,7 @@ export default function QuestionStep({
           {/* Streak indicator */}
           {adaptiveState.streak >= 3 && adaptiveState.streakType === 'correct' && (
             <p className="text-xs mb-2 text-amber-600 dark:text-amber-400">
-              🔥 {adaptiveState.streak} correct in a row!
+              🔥 {t('correctStreak', { count: adaptiveState.streak })}
             </p>
           )}
 
@@ -416,14 +418,14 @@ export default function QuestionStep({
           {/* Show correct answer if wrong */}
           {!isCorrect && (
             <p className="mt-3 text-sm font-medium text-red-800 dark:text-red-200">
-              The correct answer was: <span className="font-bold">{options[correct_answer]}</span>
+              {t('correctAnswerWas')} <span className="font-bold">{options[correct_answer]}</span>
             </p>
           )}
 
           {/* Help and Practice buttons for wrong answers */}
           {!isCorrect && courseId && (
             <div className="mt-4 space-y-2">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Need more practice?</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('needMorePractice')}</p>
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowHelp(true)}
@@ -431,7 +433,7 @@ export default function QuestionStep({
                   className="flex-1 py-2 px-4 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg font-medium hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition flex items-center justify-center gap-2"
                 >
                   <span>🤔</span>
-                  <span>Explain</span>
+                  <span>{t('explain')}</span>
                 </button>
                 <button
                   onClick={() => setShowPracticeMore(true)}
@@ -439,7 +441,7 @@ export default function QuestionStep({
                   className="flex-1 py-2 px-4 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg font-medium hover:bg-purple-200 dark:hover:bg-purple-900/50 transition flex items-center justify-center gap-2"
                 >
                   <span>📝</span>
-                  <span>Practice More</span>
+                  <span>{t('practiceMore')}</span>
                 </button>
               </div>
             </div>
@@ -460,7 +462,7 @@ export default function QuestionStep({
             }
           `}
         >
-          Check Answer
+          {t('checkAnswer')}
         </button>
       ) : (
         <button
@@ -473,7 +475,7 @@ export default function QuestionStep({
             }
           `}
         >
-          Continue
+          {t('continue')}
         </button>
       )}
 

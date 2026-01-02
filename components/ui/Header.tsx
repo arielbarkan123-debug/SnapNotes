@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 
 interface HeaderProps {
@@ -14,6 +15,7 @@ interface HeaderProps {
 export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const t = useTranslations('common')
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -75,26 +77,26 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
             <div className="hidden md:flex items-center gap-6">
               <nav className="flex items-center gap-1">
                 <NavLink href="/dashboard" active={isActive('/dashboard')}>
-                  Courses
+                  {t('nav.courses')}
                 </NavLink>
                 <NavLink href="/review" active={isActive('/review')}>
-                  Review
+                  {t('nav.review')}
                 </NavLink>
-                <NavLink href="/practice" active={isActive('/practice')} badge="Mix">
-                  Practice
+                <NavLink href="/practice" active={isActive('/practice')} badge={t('nav.practiceMix')}>
+                  {t('nav.practice')}
                 </NavLink>
                 <NavLink href="/homework" active={isActive('/homework') || pathname?.startsWith('/homework')}>
-                  Homework
+                  {t('nav.homework')}
                 </NavLink>
                 <NavLink href="/exams" active={isActive('/exams')}>
-                  Exams
+                  {t('nav.exams')}
                 </NavLink>
                 <NavLink href="/progress" active={isActive('/progress')}>
-                  Progress
+                  {t('nav.progress')}
                 </NavLink>
                 {isAdmin && (
                   <NavLink href="/analytics" active={pathname?.startsWith('/analytics')}>
-                    Admin
+                    {t('nav.admin')}
                   </NavLink>
                 )}
               </nav>
@@ -117,7 +119,7 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
                 disabled={isLoggingOut}
                 className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 font-medium transition-colors disabled:opacity-50"
               >
-                {isLoggingOut ? 'Logging out...' : 'Log out'}
+                {isLoggingOut ? t('auth.loggingOut') : t('auth.logOut')}
               </button>
             </div>
 
@@ -134,7 +136,7 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                aria-label="Toggle menu"
+                aria-label={t('nav.toggleMenu')}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {isMobileMenuOpen ? (
@@ -182,29 +184,29 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             <MobileNavLink href="/dashboard" icon={CoursesIcon} active={isActive('/dashboard')}>
-              Courses
+              {t('nav.courses')}
             </MobileNavLink>
             <MobileNavLink href="/review" icon={ReviewIcon} active={isActive('/review')}>
-              Review Cards
+              {t('nav.reviewCards')}
             </MobileNavLink>
-            <MobileNavLink href="/practice" icon={PracticeIcon} active={isActive('/practice')} badge="Mix">
-              Practice
+            <MobileNavLink href="/practice" icon={PracticeIcon} active={isActive('/practice')} badge={t('nav.practiceMix')}>
+              {t('nav.practice')}
             </MobileNavLink>
             <MobileNavLink href="/homework" icon={HomeworkIcon} active={isActive('/homework') || pathname?.startsWith('/homework')}>
-              Homework Help
+              {t('nav.homeworkHelp')}
             </MobileNavLink>
             <MobileNavLink href="/exams" icon={ExamIcon} active={isActive('/exams')}>
-              Exams
+              {t('nav.exams')}
             </MobileNavLink>
             <MobileNavLink href="/progress" icon={ProgressIcon} active={isActive('/progress')}>
-              Progress
+              {t('nav.progress')}
             </MobileNavLink>
             <MobileNavLink href="/profile" icon={ProfileIcon} active={isActive('/profile')}>
-              Profile
+              {t('nav.profile')}
             </MobileNavLink>
             {isAdmin && (
               <MobileNavLink href="/analytics" icon={AdminIcon} active={pathname?.startsWith('/analytics')}>
-                Admin Dashboard
+                {t('nav.adminDashboard')}
               </MobileNavLink>
             )}
           </nav>
@@ -219,7 +221,7 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
-              {isLoggingOut ? 'Logging out...' : 'Log out'}
+              {isLoggingOut ? t('auth.loggingOut') : t('auth.logOut')}
             </button>
           </div>
         </div>
@@ -228,11 +230,11 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
       {/* Mobile Bottom Navigation Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 md:hidden safe-area-pb">
         <div className="flex items-center justify-around h-16">
-          <BottomNavLink href="/dashboard" icon={CoursesIcon} label="Courses" active={isActive('/dashboard')} />
-          <BottomNavLink href="/review" icon={ReviewIcon} label="Review" active={isActive('/review')} />
-          <BottomNavLink href="/practice" icon={PracticeIcon} label="Practice" active={isActive('/practice')} />
-          <BottomNavLink href="/exams" icon={ExamIcon} label="Exams" active={isActive('/exams')} />
-          <BottomNavLink href="/progress" icon={ProgressIcon} label="Progress" active={isActive('/progress')} />
+          <BottomNavLink href="/dashboard" icon={CoursesIcon} label={t('nav.courses')} active={isActive('/dashboard')} />
+          <BottomNavLink href="/review" icon={ReviewIcon} label={t('nav.review')} active={isActive('/review')} />
+          <BottomNavLink href="/practice" icon={PracticeIcon} label={t('nav.practice')} active={isActive('/practice')} />
+          <BottomNavLink href="/exams" icon={ExamIcon} label={t('nav.exams')} active={isActive('/exams')} />
+          <BottomNavLink href="/progress" icon={ProgressIcon} label={t('nav.progress')} active={isActive('/progress')} />
         </div>
       </nav>
 

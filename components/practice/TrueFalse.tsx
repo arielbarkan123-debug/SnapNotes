@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 // =============================================================================
 // Types
@@ -23,6 +24,7 @@ export default function TrueFalse({
   explanation,
   onAnswer,
 }: TrueFalseProps) {
+  const t = useTranslations('practice')
   const [selectedAnswer, setSelectedAnswer] = useState<boolean | null>(null)
   const [hasAnswered, setHasAnswered] = useState(false)
 
@@ -113,7 +115,7 @@ export default function TrueFalse({
             {hasAnswered && selectedAnswer === true && correct !== true ? '✗' : ''}
             {!hasAnswered && '👍'}
           </span>
-          <span>TRUE</span>
+          <span>{t('true')}</span>
         </button>
 
         <button
@@ -126,7 +128,7 @@ export default function TrueFalse({
             {hasAnswered && selectedAnswer === false && correct !== false ? '✗' : ''}
             {!hasAnswered && '👎'}
           </span>
-          <span>FALSE</span>
+          <span>{t('false')}</span>
         </button>
       </div>
 
@@ -144,11 +146,11 @@ export default function TrueFalse({
               <div className="flex items-center justify-center gap-2 mb-1">
                 <span className="text-2xl">🎉</span>
                 <p className="font-bold text-lg text-green-700 dark:text-green-400">
-                  Correct!
+                  {t('correct')}
                 </p>
               </div>
               <p className="text-sm text-green-600 dark:text-green-500">
-                You correctly identified this statement as {correct ? 'true' : 'false'}.
+                {correct ? t('identifiedAsTrue') : t('identifiedAsFalse')}
               </p>
             </div>
           ) : (
@@ -156,15 +158,15 @@ export default function TrueFalse({
               <div className="flex items-center justify-center gap-2 mb-2">
                 <span className="text-2xl">💡</span>
                 <p className="font-bold text-lg text-red-700 dark:text-red-400">
-                  Let&apos;s learn from this
+                  {t('letsLearnFromThis')}
                 </p>
               </div>
               <p className="text-gray-600 dark:text-gray-400 mb-3">
-                This is a common misconception. The statement is actually:
+                {t('commonMisconception')}
               </p>
               <div className="inline-block bg-white dark:bg-gray-800 rounded-lg px-4 py-2">
                 <span className={`font-bold text-lg ${correct ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                  {correct ? '✓ TRUE' : '✗ FALSE'}
+                  {correct ? `✓ ${t('true')}` : `✗ ${t('false')}`}
                 </span>
               </div>
             </div>
@@ -176,7 +178,7 @@ export default function TrueFalse({
       {hasAnswered && explanation && (
         <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-            {isCorrect ? 'Why this is correct:' : 'Here\'s why:'}
+            {isCorrect ? t('whyCorrect') : t('heresWhy')}
           </p>
           <p className="text-gray-700 dark:text-gray-300">{explanation}</p>
         </div>

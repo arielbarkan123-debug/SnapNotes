@@ -1,6 +1,7 @@
 'use client'
 
 import { Component, ErrorInfo, ReactNode } from 'react'
+import { useTranslations } from 'next-intl'
 import Button from './ui/Button'
 import { analytics } from '@/lib/analytics'
 
@@ -11,6 +12,12 @@ import { analytics } from '@/lib/analytics'
 interface ErrorBoundaryProps {
   children: ReactNode
   fallback?: ReactNode
+  translations?: {
+    title: string
+    description: string
+    tryAgain: string
+    reloadPage: string
+  }
 }
 
 interface ErrorBoundaryState {
@@ -76,6 +83,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         return this.props.fallback
       }
 
+      // Get translations (with fallback for when translations aren't available)
+      const t = this.props.translations || {
+        title: 'Something went wrong',
+        description: 'We encountered an unexpected error. Please try again, or contact support if the problem persists.',
+        tryAgain: 'Try Again',
+        reloadPage: 'Reload Page',
+      }
+
       // Default error UI
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
@@ -99,15 +114,15 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
             {/* Error Message */}
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              Something went wrong
+              {t.title}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              We encountered an unexpected error. Please try again, or contact support if the problem persists.
+              {t.description}
             </p>
 
             {/* Error Details (Development Only) */}
             {process.env.NODE_ENV === 'development' && this.state.error && (
-              <div className="mb-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-left overflow-auto">
+              <div className="mb-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-start overflow-auto">
                 <p className="text-sm font-mono text-red-600 dark:text-red-400 break-words">
                   {this.state.error.message}
                 </p>
@@ -122,10 +137,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button onClick={this.handleReset} variant="secondary">
-                Try Again
+                {t.tryAgain}
               </Button>
               <Button onClick={this.handleReload}>
-                Reload Page
+                {t.reloadPage}
               </Button>
             </div>
           </div>
@@ -151,12 +166,17 @@ interface ErrorFallbackProps {
 export function ErrorFallback({
   error,
   reset,
-  title = 'Something went wrong',
-  message = 'We encountered an unexpected error. Please try again.',
+  title,
+  message,
 }: ErrorFallbackProps) {
+  const t = useTranslations('errors')
+
   const handleReload = () => {
     window.location.reload()
   }
+
+  const displayTitle = title || t('generic')
+  const displayMessage = message || t('genericDescription')
 
   return (
     <div className="min-h-[400px] flex items-center justify-center px-4">
@@ -180,15 +200,15 @@ export function ErrorFallback({
 
         {/* Error Message */}
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-          {title}
+          {displayTitle}
         </h2>
         <p className="text-gray-600 dark:text-gray-400 mb-6">
-          {message}
+          {displayMessage}
         </p>
 
         {/* Error Details (Development Only) */}
         {process.env.NODE_ENV === 'development' && error && (
-          <div className="mb-6 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg text-left">
+          <div className="mb-6 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg text-start">
             <p className="text-sm font-mono text-red-600 dark:text-red-400 break-words">
               {error.message}
             </p>
@@ -199,11 +219,11 @@ export function ErrorFallback({
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           {reset && (
             <Button onClick={reset} variant="secondary">
-              Try Again
+              {t('tryAgain')}
             </Button>
           )}
           <Button onClick={handleReload}>
-            Reload Page
+            {t('reloadPage')}
           </Button>
         </div>
       </div>
@@ -222,8 +242,11 @@ interface NetworkErrorProps {
 
 export function NetworkError({
   onRetry,
-  message = 'Network error. Please check your connection.',
+  message,
 }: NetworkErrorProps) {
+  const t = useTranslations('errors')
+  const displayMessage = message || t('networkError')
+
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4">
       <div className="w-16 h-16 mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
@@ -242,12 +265,12 @@ export function NetworkError({
         </svg>
       </div>
       <p className="text-gray-600 dark:text-gray-400 text-center mb-4">
-        {message}
+        {displayMessage}
       </p>
       {onRetry && (
         <Button onClick={onRetry} variant="secondary" size="sm">
           <svg
-            className="w-4 h-4 mr-2"
+            className="w-4 h-4 me-2"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -259,10 +282,37 @@ export function NetworkError({
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          Retry
+          {t('retry')}
         </Button>
       )}
     </div>
+  )
+}
+
+// ============================================================================
+// Translated Error Boundary Wrapper
+// ============================================================================
+
+interface TranslatedErrorBoundaryProps {
+  children: ReactNode
+  fallback?: ReactNode
+}
+
+export function TranslatedErrorBoundary({ children, fallback }: TranslatedErrorBoundaryProps) {
+  const t = useTranslations('errors')
+
+  return (
+    <ErrorBoundary
+      fallback={fallback}
+      translations={{
+        title: t('generic'),
+        description: t('genericDescription'),
+        tryAgain: t('tryAgain'),
+        reloadPage: t('reloadPage'),
+      }}
+    >
+      {children}
+    </ErrorBoundary>
   )
 }
 

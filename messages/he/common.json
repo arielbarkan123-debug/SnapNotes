@@ -1,0 +1,50 @@
+{
+  "appName": "NoteSnap",
+  "nav": {
+    "courses": "קורסים",
+    "review": "חזרה",
+    "reviewCards": "כרטיסי חזרה",
+    "practice": "תרגול",
+    "practiceMix": "מיקס",
+    "homework": "שיעורי בית",
+    "homeworkHelp": "עזרה בשיעורי בית",
+    "exams": "מבחנים",
+    "progress": "התקדמות",
+    "profile": "פרופיל",
+    "admin": "ניהול",
+    "adminDashboard": "לוח בקרה למנהל",
+    "settings": "הגדרות",
+    "toggleMenu": "פתח/סגור תפריט"
+  },
+  "auth": {
+    "logOut": "התנתק",
+    "loggingOut": "מתנתק...",
+    "signOut": "התנתק"
+  },
+  "buttons": {
+    "save": "שמור",
+    "saveChanges": "שמור שינויים",
+    "saving": "שומר...",
+    "cancel": "ביטול",
+    "discard": "בטל שינויים",
+    "continue": "המשך",
+    "back": "חזרה",
+    "next": "הבא",
+    "submit": "שלח",
+    "retry": "נסה שוב",
+    "reset": "אפס",
+    "delete": "מחק",
+    "deleteForever": "מחק לצמיתות",
+    "confirm": "אשר"
+  },
+  "labels": {
+    "loading": "טוען...",
+    "error": "משהו השתבש",
+    "success": "הצלחה!",
+    "readOnly": "לקריאה בלבד",
+    "unsavedChanges": "יש לך שינויים שלא נשמרו"
+  },
+  "time": {
+    "memberSince": "חבר מאז {date}"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "generic": "Something went wrong",
+  "genericDescription": "We encountered an unexpected error. Please try again, or contact support if the problem persists.",
+  "tryAgain": "Try Again",
+  "reloadPage": "Reload Page",
+  "retry": "Retry",
+  "notFound": "Page not found",
+  "notFoundDescription": "The page you're looking for doesn't exist.",
+  "goHome": "Go Home",
+  "offline": "You're offline",
+  "offlineDescription": "Some features may not work.",
+  "backOnline": "Back online!",
+  "connectionError": "Connection error. Please try again.",
+  "networkError": "Network error. Please check your connection.",
+  "loadFailed": "Failed to load",
+  "saveFailed": "Failed to save"
+}

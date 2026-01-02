@@ -37,6 +37,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Fetch user's language preference
+    const { data: userProfile } = await supabase
+      .from('user_learning_profile')
+      .select('language')
+      .eq('user_id', user.id)
+      .single()
+
+    const userLanguage = (userProfile?.language || 'en') as 'en' | 'he'
+
     // Parse request body
     const body = await request.json()
     const { message } = body
@@ -102,6 +111,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       recentMessages: getRecentMessages(updatedSession, 10),
       hintsUsed: updatedSession.hints_used,
       currentProgress: calculateProgress(updatedSession),
+      language: userLanguage,
     }
 
     // Generate tutor response

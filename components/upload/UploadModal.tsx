@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import { useTranslations } from 'next-intl'
 import Button from '@/components/ui/Button'
 import { useToast } from '@/contexts/ToastContext'
 import { ErrorCodes } from '@/lib/api/errors'
@@ -132,7 +133,8 @@ function getMaxSizeForCategory(category: FileCategory): number {
   return MAX_FILE_SIZES[category]
 }
 
-function getButtonText(files: SelectedFile[]): string {
+// getButtonText is kept for reference but currently translations are used directly
+function _getButtonText(files: SelectedFile[]): string {
   if (files.length === 0) return 'Generate Course'
 
   // Get unique categories
@@ -233,6 +235,7 @@ function getErrorMessage(error: unknown, code?: string): UploadError {
 
 export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
   const router = useRouter()
+  const t = useTranslations('upload')
   const { error: showError } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
@@ -785,7 +788,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <h2 id="modal-title" className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
-            Create Course
+            {t('createCourse')}
           </h2>
           <button
             onClick={onClose}
@@ -817,7 +820,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              Upload Files
+              {t('uploadFiles')}
             </span>
           </button>
           <button
@@ -836,7 +839,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Enter Text
+              {t('enterText')}
             </span>
           </button>
         </div>
@@ -1294,7 +1297,7 @@ Statistics: Mean, Median, Mode, Range."
             disabled={isUploading}
             className="w-full sm:w-auto min-h-[48px] sm:min-h-[44px]"
           >
-            Cancel
+            {t('cancel')}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -1313,7 +1316,7 @@ Statistics: Mean, Median, Mode, Range."
             }
             className="w-full sm:w-auto min-h-[48px] sm:min-h-[44px]"
           >
-            {inputMode === 'text' ? 'Generate from Text' : getButtonText(selectedFiles)}
+            {inputMode === 'text' ? t('generateFromText') : t('generateCourse')}
           </Button>
         </div>
       </div>

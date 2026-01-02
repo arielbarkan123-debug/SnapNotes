@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Step } from '@/types'
 
 interface ReviewBeforeRetryProps {
@@ -21,6 +22,8 @@ export default function ReviewBeforeRetry({
   attemptNumber,
   onReady,
 }: ReviewBeforeRetryProps) {
+  const t = useTranslations('lesson')
+
   // Find related explanation steps near the question
   const relatedSteps = lessonSteps
     .slice(Math.max(0, questionIndex - 3), questionIndex)
@@ -40,12 +43,12 @@ export default function ReviewBeforeRetry({
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
-            <span className="font-semibold">Let&apos;s Review This</span>
+            <span className="font-semibold">{t('letsReviewThis')}</span>
           </div>
           <p className="text-amber-100 text-sm">
             {attemptNumber === 1
-              ? "No worries! Let's go over this concept again."
-              : "You've got this! Take another look at the explanation."}
+              ? t('noWorriesReview')
+              : t('gotThisReview')}
           </p>
         </div>
       </header>
@@ -63,7 +66,7 @@ export default function ReviewBeforeRetry({
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  The Key Concept
+                  {t('theKeyConcept')}
                 </h2>
                 <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                   {questionStep.explanation}
@@ -77,12 +80,12 @@ export default function ReviewBeforeRetry({
         {relatedSteps.length > 0 && (
           <div className="space-y-4 mb-6">
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              Related Information
+              {t('relatedInformation')}
             </h3>
             {relatedSteps.map((step, idx) => (
               <div
                 key={idx}
-                className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border-l-4 border-indigo-400"
+                className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border-s-4 border-indigo-400"
               >
                 {step.title && (
                   <h4 className="font-medium text-gray-900 dark:text-white mb-2">
@@ -103,11 +106,10 @@ export default function ReviewBeforeRetry({
             <span className="text-2xl">💪</span>
             <div>
               <p className="text-green-800 dark:text-green-300 font-medium">
-                You&apos;re learning!
+                {t('youAreLearning')}
               </p>
               <p className="text-green-700 dark:text-green-400 text-sm mt-1">
-                Making mistakes is part of learning. Each attempt helps build stronger understanding.
-                Take your time to review, then try again when you&apos;re ready.
+                {t('mistakesAreLearning')}
               </p>
             </div>
           </div>
@@ -121,7 +123,7 @@ export default function ReviewBeforeRetry({
             onClick={onReady}
             className="w-full py-4 rounded-xl font-semibold text-lg bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white transition-all duration-200"
           >
-            I&apos;m Ready to Try Again
+            {t('readyToTryAgain')}
           </button>
         </div>
       </footer>

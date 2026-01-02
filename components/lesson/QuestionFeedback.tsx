@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 // =============================================================================
 // Types
@@ -33,6 +34,7 @@ export default function QuestionFeedback({
   onContinue,
   onAnswer,
 }: QuestionFeedbackProps) {
+  const t = useTranslations('lesson')
   const [isVisible, setIsVisible] = useState(false)
 
   // Trigger entrance animation on mount
@@ -91,6 +93,7 @@ export default function QuestionFeedback({
               explanation={explanation}
               correctAnswer={correctAnswer}
               onContinue={handleContinue}
+              t={t}
             />
           ) : (
             <IncorrectFeedback
@@ -98,6 +101,7 @@ export default function QuestionFeedback({
               correctAnswer={correctAnswer}
               explanation={explanation}
               onContinue={handleContinue}
+              t={t}
             />
           )}
         </div>
@@ -114,9 +118,10 @@ interface CorrectFeedbackProps {
   explanation: string
   correctAnswer: string
   onContinue: () => void
+  t: ReturnType<typeof useTranslations<'lesson'>>
 }
 
-function CorrectFeedback({ explanation, correctAnswer, onContinue }: CorrectFeedbackProps) {
+function CorrectFeedback({ explanation, correctAnswer, onContinue, t }: CorrectFeedbackProps) {
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -128,10 +133,10 @@ function CorrectFeedback({ explanation, correctAnswer, onContinue }: CorrectFeed
         </div>
         <div>
           <h3 className="text-xl font-bold text-green-700 dark:text-green-400">
-            Correct!
+            {t('correct')}
           </h3>
           <p className="text-sm text-green-600 dark:text-green-500">
-            Great job!
+            {t('greatJob')}
           </p>
         </div>
       </div>
@@ -149,7 +154,7 @@ function CorrectFeedback({ explanation, correctAnswer, onContinue }: CorrectFeed
           <span className="text-lg flex-shrink-0">💡</span>
           <div>
             <p className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide mb-1">
-              Remember
+              {t('remember')}
             </p>
             <p className="text-sm text-green-800 dark:text-green-300 font-medium">
               {correctAnswer}
@@ -163,7 +168,7 @@ function CorrectFeedback({ explanation, correctAnswer, onContinue }: CorrectFeed
         onClick={onContinue}
         className="w-full py-4 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold rounded-xl transition-colors text-lg shadow-lg shadow-green-500/20"
       >
-        Continue
+        {t('continue')}
       </button>
     </div>
   )
@@ -178,6 +183,7 @@ interface IncorrectFeedbackProps {
   correctAnswer: string
   explanation: string
   onContinue: () => void
+  t: ReturnType<typeof useTranslations<'lesson'>>
 }
 
 function IncorrectFeedback({
@@ -185,6 +191,7 @@ function IncorrectFeedback({
   correctAnswer,
   explanation,
   onContinue,
+  t,
 }: IncorrectFeedbackProps) {
   return (
     <div className="space-y-4">
@@ -197,10 +204,10 @@ function IncorrectFeedback({
         </div>
         <div>
           <h3 className="text-xl font-bold text-orange-700 dark:text-orange-400">
-            Not quite
+            {t('notQuite')}
           </h3>
           <p className="text-sm text-orange-600 dark:text-orange-500">
-            Let&apos;s learn from this
+            {t('letsLearnFromThis')}
           </p>
         </div>
       </div>
@@ -217,7 +224,7 @@ function IncorrectFeedback({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wide mb-1">
-                Your answer
+                {t('yourAnswer')}
               </p>
               <p className="text-sm text-red-700 dark:text-red-300 line-through opacity-75">
                 {userAnswer}
@@ -236,7 +243,7 @@ function IncorrectFeedback({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-green-600 dark:text-green-400 uppercase tracking-wide mb-1">
-                Correct answer
+                {t('correctAnswer')}
               </p>
               <p className="text-sm text-green-700 dark:text-green-300 font-medium">
                 {correctAnswer}
@@ -252,7 +259,7 @@ function IncorrectFeedback({
           <span className="text-lg flex-shrink-0">📚</span>
           <div>
             <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1">
-              Why?
+              {t('why')}
             </p>
             <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
               {explanation}
@@ -266,7 +273,7 @@ function IncorrectFeedback({
         onClick={onContinue}
         className="w-full py-4 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-semibold rounded-xl transition-colors text-lg shadow-lg shadow-orange-500/20"
       >
-        Got it
+        {t('gotIt')}
       </button>
     </div>
   )
@@ -287,6 +294,7 @@ export function QuestionFeedbackCompact({
   correctAnswer,
   explanation,
 }: QuestionFeedbackCompactProps) {
+  const t = useTranslations('lesson')
   return (
     <div
       className={`
@@ -324,11 +332,11 @@ export function QuestionFeedbackCompact({
               }
             `}
           >
-            {isCorrect ? 'Correct!' : 'Not quite'}
+            {isCorrect ? t('correct') : t('notQuite')}
           </p>
           {!isCorrect && (
             <p className="text-sm text-green-700 dark:text-green-400 mb-2">
-              <span className="font-medium">Answer:</span> {correctAnswer}
+              <span className="font-medium">{t('answer')}</span> {correctAnswer}
             </p>
           )}
           <p className="text-sm text-gray-600 dark:text-gray-400">

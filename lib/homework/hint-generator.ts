@@ -28,6 +28,28 @@ function getAnthropicClient(): Anthropic {
 }
 
 // ============================================================================
+// Language Support
+// ============================================================================
+
+/**
+ * Build language-specific instruction for Hebrew support
+ */
+function buildLanguageInstruction(language?: 'en' | 'he'): string {
+  if (language === 'he') {
+    return `
+CRITICAL LANGUAGE REQUIREMENT:
+Generate ALL content in Hebrew (עברית).
+- All hints must be in Hebrew
+- All explanations must be in Hebrew
+- All worked examples must be in Hebrew
+- Keep mathematical notation standard (numbers, symbols, formulas)
+- Use proper Hebrew educational terminology
+`
+  }
+  return ''
+}
+
+// ============================================================================
 // Hint Level Definitions
 // ============================================================================
 
@@ -90,13 +112,14 @@ const HINT_LEVELS = {
  * Generate a hint at the specified level
  */
 export async function generateHint(context: HintContext): Promise<HintResponse> {
-  const { requestedLevel, questionAnalysis, referenceAnalysis, previousHints } = context
+  const { requestedLevel, questionAnalysis, referenceAnalysis, previousHints, language } = context
   const client = getAnthropicClient()
 
   const levelConfig = HINT_LEVELS[requestedLevel]
+  const languageInstruction = buildLanguageInstruction(language)
 
   // Build the prompt
-  let prompt = `HOMEWORK QUESTION:
+  let prompt = `${languageInstruction}HOMEWORK QUESTION:
 ${questionAnalysis.questionText}
 
 TOPIC: ${questionAnalysis.topic}

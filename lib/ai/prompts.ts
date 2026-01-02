@@ -23,6 +23,8 @@ export interface UserLearningContext {
   subjects?: string[]
   subjectLevels?: Record<string, string>
   examFormat?: 'match_real' | 'inspired_by'
+  // Language preference for content generation
+  language?: 'en' | 'he'
 }
 
 // Helper function to get education level description for prompts
@@ -62,6 +64,36 @@ function getStudyGoalContext(goal: UserLearningContext['studyGoal']): string {
   return contexts[goal]
 }
 
+// Helper function to build Hebrew language instruction for content generation
+function buildLanguageInstruction(language?: 'en' | 'he'): string {
+  if (language === 'he') {
+    return `
+
+## Language Requirement - CRITICAL
+Generate ALL content in Hebrew (עברית). This is mandatory.
+
+### Hebrew Content Guidelines:
+- ALL course titles, section titles, and lesson titles in Hebrew
+- ALL explanations, key points, and summaries in Hebrew
+- ALL questions, answer options, and feedback in Hebrew
+- ALL overview, connections, and furtherStudy content in Hebrew
+- Use proper Hebrew educational terminology
+- Use right-to-left text flow naturally
+- For mathematical formulas: keep standard notation (e.g., E=mc²) but explain in Hebrew
+- For scientific terms: use Hebrew translations where commonly used, or transliterate technical terms
+- For code or technical content: keep code in English, explain in Hebrew
+- Maintain a natural, educational Hebrew writing style appropriate for the student's level
+
+### Hebrew Writing Quality:
+- Use formal but accessible Hebrew (לשון פורמלית אך נגישה)
+- Avoid awkward translations - write naturally in Hebrew
+- Use common Hebrew educational phrases
+- Match the complexity of Hebrew to the student's education level
+`
+  }
+  return ''
+}
+
 // Build personalization section for prompts
 function buildPersonalizationSection(
   userContext?: UserLearningContext,
@@ -70,6 +102,12 @@ function buildPersonalizationSection(
   if (!userContext) return ''
 
   const parts: string[] = []
+
+  // Add Hebrew language instruction if applicable (at the top for priority)
+  const languageInstruction = buildLanguageInstruction(userContext.language)
+  if (languageInstruction) {
+    parts.push(languageInstruction)
+  }
 
   parts.push(`\n## Student Profile - IMPORTANT: Adapt ALL content to this level`)
   parts.push(`The student is a ${getEducationLevelDescription(userContext.educationLevel)}`)

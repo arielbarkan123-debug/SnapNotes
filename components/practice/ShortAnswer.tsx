@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 
 // =============================================================================
 // Types
@@ -31,6 +32,8 @@ export default function ShortAnswer({
   onAnswer,
   context,
 }: ShortAnswerProps) {
+  const t = useTranslations('practice')
+
   const [userInput, setUserInput] = useState('')
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null)
@@ -75,7 +78,7 @@ export default function ShortAnswer({
       setEvaluationResult({
         isCorrect: false,
         score: 0,
-        feedback: 'Could not evaluate automatically. Please compare with the model answer.',
+        feedback: t('couldNotEvaluate'),
         evaluationMethod: 'fuzzy',
       })
     } finally {
@@ -103,6 +106,12 @@ export default function ShortAnswer({
     return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
   }
 
+  const getScoreLabel = (score: number) => {
+    if (score >= 80) return t('correct')
+    if (score >= 50) return t('partialCredit')
+    return t('incorrect')
+  }
+
   return (
     <div className="w-full max-w-2xl mx-auto">
       {/* Question */}
@@ -115,7 +124,7 @@ export default function ShortAnswer({
       {/* User's Answer Input */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-          Your answer:
+          {t('yourAnswer')}
         </label>
         <textarea
           ref={textareaRef}
@@ -123,7 +132,7 @@ export default function ShortAnswer({
           onChange={(e) => setUserInput(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={hasSubmitted}
-          placeholder="Type your answer here..."
+          placeholder={t('typeAnswerHere')}
           rows={4}
           className={`w-full px-4 py-3 text-base rounded-xl border-2 transition-all outline-none resize-none ${
             hasSubmitted
@@ -133,7 +142,7 @@ export default function ShortAnswer({
         />
         {!hasSubmitted && (
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            Press Ctrl+Enter to submit
+            {t('pressCtrlEnter')}
           </p>
         )}
       </div>
@@ -149,7 +158,7 @@ export default function ShortAnswer({
               : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white hover:shadow-xl'
           }`}
         >
-          Check Answer
+          {t('checkAnswer')}
         </button>
       )}
 
@@ -158,7 +167,7 @@ export default function ShortAnswer({
         <div className="flex items-center justify-center gap-3 py-8">
           <div className="w-6 h-6 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
           <span className="text-gray-600 dark:text-gray-400 font-medium">
-            AI is checking your answer...
+            {t('aiCheckingAnswer')}
           </span>
         </div>
       )}
@@ -170,7 +179,7 @@ export default function ShortAnswer({
           <div className={`mb-4 p-4 rounded-xl border ${getScoreBgColor(evaluationResult.score)}`}>
             <div className="flex items-center justify-between mb-2">
               <span className={`text-2xl font-bold ${getScoreColor(evaluationResult.score)}`}>
-                {evaluationResult.score >= 80 ? '✓ Correct!' : evaluationResult.score >= 50 ? '~ Partial Credit' : '✗ Incorrect'}
+                {evaluationResult.score >= 80 ? '✓' : evaluationResult.score >= 50 ? '~' : '✗'} {getScoreLabel(evaluationResult.score)}
               </span>
               <span className={`text-3xl font-bold ${getScoreColor(evaluationResult.score)}`}>
                 {evaluationResult.score}%
@@ -181,7 +190,7 @@ export default function ShortAnswer({
             </p>
             {evaluationResult.evaluationTimeMs && (
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                Evaluated in {evaluationResult.evaluationTimeMs}ms
+                {t('evaluatedIn', { time: evaluationResult.evaluationTimeMs })}
                 {evaluationResult.evaluationMethod === 'ai' && ' (AI)'}
                 {evaluationResult.evaluationMethod === 'fuzzy' && ' (fuzzy match)'}
                 {evaluationResult.evaluationMethod === 'exact' && ' (exact match)'}
@@ -196,7 +205,7 @@ export default function ShortAnswer({
                 <span className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs">
                   You
                 </span>
-                Your answer
+                {t('yourAnswer')}
               </p>
               <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{userInput}</p>
             </div>
@@ -208,7 +217,7 @@ export default function ShortAnswer({
               <span className="w-5 h-5 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center text-xs">
                 ✓
               </span>
-              Model answer
+              {t('modelAnswer')}
             </p>
             <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-medium">
               {modelAnswer}

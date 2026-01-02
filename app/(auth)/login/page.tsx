@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import FormInput from '@/components/ui/FormInput'
 import { mapSupabaseAuthError } from '@/lib/api/errors'
@@ -18,6 +19,7 @@ interface FormErrors {
 }
 
 function LoginForm() {
+  const t = useTranslations('auth')
   const router = useRouter()
   const searchParams = useSearchParams()
   const [formData, setFormData] = useState<FormData>({
@@ -43,14 +45,14 @@ function LoginForm() {
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!formData.email) {
-      newErrors.email = 'Email is required'
+      newErrors.email = t('validation.emailRequired')
     } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address'
+      newErrors.email = t('validation.emailInvalid')
     }
 
     // Password validation
     if (!formData.password) {
-      newErrors.password = 'Password is required'
+      newErrors.password = t('validation.passwordRequired')
     }
 
     setErrors(newErrors)
@@ -98,7 +100,7 @@ function LoginForm() {
         router.refresh()
       }
     } catch {
-      setServerError('An unexpected error occurred. Please try again.')
+      setServerError(t('login.unexpectedError'))
     } finally {
       setIsLoading(false)
     }
@@ -115,10 +117,10 @@ function LoginForm() {
           NoteSnap
         </Link>
         <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mt-3 sm:mt-4">
-          Welcome back
+          {t('login.title')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1.5 sm:mt-2 text-sm sm:text-base">
-          Sign in to your account
+          {t('login.subtitle')}
         </p>
       </div>
 
@@ -143,10 +145,10 @@ function LoginForm() {
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-5">
         <FormInput
-          label="Email"
+          label={t('login.email')}
           name="email"
           type="email"
-          placeholder="you@example.com"
+          placeholder={t('login.emailPlaceholder')}
           value={formData.email}
           onChange={handleChange}
           error={errors.email}
@@ -155,7 +157,7 @@ function LoginForm() {
         />
 
         <FormInput
-          label="Password"
+          label={t('login.password')}
           name="password"
           type="password"
           placeholder="••••••••"
@@ -172,7 +174,7 @@ function LoginForm() {
             href="/forgot-password"
             className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline active:text-indigo-700 py-1"
           >
-            Forgot your password?
+            {t('login.forgotPassword')}
           </Link>
         </div>
 
@@ -184,7 +186,7 @@ function LoginForm() {
           {isLoading ? (
             <>
               <svg
-                className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                className="animate-spin -ms-1 me-2 h-4 w-4 text-white"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -203,22 +205,22 @@ function LoginForm() {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              Signing in...
+              {t('login.signingIn')}
             </>
           ) : (
-            'Sign In'
+            t('login.signIn')
           )}
         </button>
       </form>
 
       {/* Sign Up Link */}
       <p className="text-center text-gray-600 dark:text-gray-400 mt-6 text-sm sm:text-base">
-        Don&apos;t have an account?{' '}
+        {t('login.noAccount')}{' '}
         <Link
           href="/signup"
           className="text-indigo-600 dark:text-indigo-400 hover:underline active:text-indigo-700 font-medium"
         >
-          Sign up
+          {t('login.signUp')}
         </Link>
       </p>
     </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import type { CurriculumSetupStatus } from '@/lib/curriculum/types'
@@ -18,6 +19,7 @@ export function CurriculumSetupPrompt({
   dismissible = true,
   storageKey = 'curriculum-prompt-dismissed',
 }: CurriculumSetupPromptProps) {
+  const t = useTranslations('dashboard.curriculumSetup')
   const [dismissed, setDismissed] = useState(() => {
     if (typeof window === 'undefined') return false
     return localStorage.getItem(storageKey) === 'true'
@@ -33,19 +35,20 @@ export function CurriculumSetupPrompt({
     localStorage.setItem(storageKey, 'true')
   }
 
-  // Determine what's missing
+  // Determine what's missing (translated)
   const getMissingItems = (): string[] => {
     const missing: string[] = []
-    if (!status.hasSelectedSystem) missing.push('study system')
-    if (!status.hasSelectedGrade) missing.push('grade')
-    if (!status.hasSelectedSubjects) missing.push('subjects')
+    if (!status.hasSelectedSystem) missing.push(t('studySystem'))
+    if (!status.hasSelectedGrade) missing.push(t('grade'))
+    if (!status.hasSelectedSubjects) missing.push(t('subjects'))
     return missing
   }
 
   const missingItems = getMissingItems()
+  const andWord = t('and')
   const missingText = missingItems.length === 1
     ? missingItems[0]
-    : missingItems.slice(0, -1).join(', ') + ' and ' + missingItems[missingItems.length - 1]
+    : missingItems.slice(0, -1).join(', ') + ` ${andWord} ` + missingItems[missingItems.length - 1]
 
   return (
     <div
@@ -76,16 +79,16 @@ export function CurriculumSetupPrompt({
 
         <div className="flex-1 min-w-0 pr-6">
           <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-            Complete your learning profile
+            {t('completeProfile')}
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Select your {missingText} to get personalized study materials tailored to your curriculum.
+            {t('selectToPersonalize', { missing: missingText })}
           </p>
 
           <div className="mt-3">
             <Button href="/settings" size="sm">
-              Complete setup
-              <svg className="w-4 h-4 ml-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {t('completeSetup')}
+              <svg className="w-4 h-4 ms-1 inline rtl:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
             </Button>

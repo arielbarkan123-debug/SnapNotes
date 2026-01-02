@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { useXP } from '@/contexts/XPContext'
 import { LessonStep } from '@/types'
 import LessonRecap from './LessonRecap'
@@ -45,6 +46,7 @@ export default function LessonComplete({
   onNextLesson,
   conceptsGained = [],
 }: LessonCompleteProps) {
+  const t = useTranslations('lesson')
   const [animationStage, setAnimationStage] = useState(0)
   const [xpAwarded, setXpAwarded] = useState(0)
   const [showRecap, setShowRecap] = useState(false)
@@ -156,7 +158,7 @@ export default function LessonComplete({
         {/* Title & Lesson Name */}
         <div className={`text-center mb-8 transition-all duration-500 ${animationStage >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Lesson Complete
+            {t('lessonComplete')}
           </h1>
           <p className="text-gray-500 dark:text-gray-400">
             {lessonTitle}
@@ -173,13 +175,13 @@ export default function LessonComplete({
                 </svg>
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">XP Earned</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('xpEarned')}</p>
                 <p className="text-xl font-bold text-gray-900 dark:text-white">+{xpAwarded || totalXp}</p>
               </div>
             </div>
             {isPerfect && (
               <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-sm font-medium rounded-full">
-                Perfect!
+                {t('perfect')}
               </span>
             )}
           </div>
@@ -187,7 +189,7 @@ export default function LessonComplete({
           {hasQuestions && (
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-500 dark:text-gray-400">Accuracy</span>
+                <span className="text-gray-500 dark:text-gray-400">{t('accuracy')}</span>
                 <span className={`font-medium ${accuracy >= 80 ? 'text-green-600 dark:text-green-400' : accuracy >= 60 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`}>
                   {questionsCorrect}/{questionsTotal} ({accuracy}%)
                 </span>
@@ -206,7 +208,7 @@ export default function LessonComplete({
         {keyPoints.length > 0 && (
           <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6 transition-all duration-500 ${animationStage >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
-              What You Learned
+              {t('whatYouLearned')}
             </h3>
             <ul className="space-y-3">
               {keyPoints.map((point, i) => (
@@ -230,7 +232,7 @@ export default function LessonComplete({
               <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
-              Concept Mastery
+              {t('conceptMastery')}
             </h3>
             <div className="space-y-3">
               {conceptsGained.slice(0, 5).map((concept) => (
@@ -261,14 +263,14 @@ export default function LessonComplete({
             </div>
             {conceptsGained.length > 5 && (
               <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-3">
-                +{conceptsGained.length - 5} more concepts practiced
+                {t('moreConceptsPracticed', { count: conceptsGained.length - 5 })}
               </p>
             )}
             <Link
               href="/knowledge-map"
               className="flex items-center justify-center gap-1 text-sm text-indigo-600 dark:text-indigo-400 hover:underline mt-4"
             >
-              View Knowledge Map
+              {t('viewKnowledgeMap')}
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
@@ -279,8 +281,8 @@ export default function LessonComplete({
         {/* Progress Indicator */}
         <div className={`mb-6 transition-all duration-500 ${animationStage >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
           <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-2">
-            <span>Course Progress</span>
-            <span>{lessonIndex + 1} of {totalLessons} lessons</span>
+            <span>{t('courseProgress')}</span>
+            <span>{t('lessonsProgress', { current: lessonIndex + 1, total: totalLessons })}</span>
           </div>
           <div className="flex gap-1">
             {Array.from({ length: totalLessons }).map((_, i) => (
@@ -304,16 +306,16 @@ export default function LessonComplete({
               onClick={onNextLesson}
               className="flex items-center justify-center gap-2 w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors"
             >
-              Continue to Next Lesson
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {t('continueToNextLesson')}
+              <svg className="w-5 h-5 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
             </Link>
           ) : (
             <div className="text-center py-4 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl mb-3">
               <span className="text-2xl mb-1 block">🎓</span>
-              <p className="text-white font-semibold">Course Complete!</p>
-              <p className="text-blue-100 text-sm">Congratulations on finishing all lessons</p>
+              <p className="text-white font-semibold">{t('courseComplete')}</p>
+              <p className="text-blue-100 text-sm">{t('congratsFinished')}</p>
             </div>
           )}
 
@@ -326,7 +328,7 @@ export default function LessonComplete({
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
-                Review
+                {t('review')}
               </button>
             )}
             <Link
@@ -336,7 +338,7 @@ export default function LessonComplete({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
               </svg>
-              Course Overview
+              {t('courseOverview')}
             </Link>
           </div>
 
@@ -348,7 +350,7 @@ export default function LessonComplete({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Retry Lesson
+              {t('retryLesson')}
             </Link>
           )}
         </div>

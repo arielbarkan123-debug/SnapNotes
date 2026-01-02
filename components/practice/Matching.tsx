@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 
 // =============================================================================
 // Types
@@ -33,6 +34,8 @@ export default function Matching({
   correctPairs,
   onAnswer,
 }: MatchingProps) {
+  const t = useTranslations('practice')
+
   const [selectedTerm, setSelectedTerm] = useState<number | null>(null)
   const [matches, setMatches] = useState<Match[]>([])
   const [hasChecked, setHasChecked] = useState(false)
@@ -250,7 +253,7 @@ export default function Matching({
     const isMatched = isTermMatched(termIndex)
 
     let baseClass =
-      'w-full p-3 text-left rounded-xl border-2 transition-all duration-200 font-medium text-sm sm:text-base '
+      'w-full p-3 text-start rounded-xl border-2 transition-all duration-200 font-medium text-sm sm:text-base '
 
     if (hasChecked) {
       if (results[termIndex]) {
@@ -278,7 +281,7 @@ export default function Matching({
     const canSelect = selectedTerm !== null
 
     let baseClass =
-      'w-full p-3 text-left rounded-xl border-2 transition-all duration-200 font-medium text-sm sm:text-base '
+      'w-full p-3 text-start rounded-xl border-2 transition-all duration-200 font-medium text-sm sm:text-base '
 
     if (hasChecked) {
       // Find if this definition was part of a correct match
@@ -319,15 +322,15 @@ export default function Matching({
       <div className="mb-4 text-center">
         <p className="text-gray-600 dark:text-gray-400 text-sm">
           {hasChecked
-            ? `You got ${correctCount} of ${terms.length} correct`
+            ? t('youGot', { correct: correctCount, total: terms.length })
             : selectedTerm !== null
-              ? 'Now select a definition to match (use arrows or click)'
-              : 'Select a term, then its matching definition'}
+              ? t('nowSelectDefinition')
+              : t('selectThenDefinition')}
         </p>
         {/* Keyboard instructions - only show if not checked */}
         {!hasChecked && (
           <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
-            Keyboard: Arrow keys to navigate, Enter/Space to select, Esc to deselect
+            {t('keyboardNavInstructions')}
           </p>
         )}
       </div>
@@ -356,7 +359,7 @@ export default function Matching({
           {/* Terms Column */}
           <div className="space-y-3">
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-              Terms
+              {t('terms')}
             </p>
             {terms.map((term, index) => (
               <button
@@ -381,7 +384,7 @@ export default function Matching({
           {/* Definitions Column */}
           <div className="space-y-3">
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-              Definitions
+              {t('definitions')}
             </p>
             {shuffledDefinitions.map((def, shuffledIndex) => (
               <button
@@ -422,8 +425,8 @@ export default function Matching({
             }`}
           >
             {correctCount === terms.length
-              ? 'Perfect! All matches correct! 🎉'
-              : `${correctCount}/${terms.length} correct`}
+              ? t('perfectMatches')
+              : t('youGot', { correct: correctCount, total: terms.length })}
           </p>
         </div>
       )}
@@ -432,7 +435,7 @@ export default function Matching({
       {hasChecked && correctCount < terms.length && (
         <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
-            Correct pairings:
+            {t('correctPairings')}
           </p>
           <div className="space-y-2">
             {terms.map((term, index) => (
@@ -459,7 +462,7 @@ export default function Matching({
               : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-lg hover:shadow-xl'
           }`}
         >
-          {allMatched ? 'Check Answers' : `Match all pairs (${matches.length}/${terms.length})`}
+          {allMatched ? t('checkAnswers') : t('matchAllPairs', { matched: matches.length, total: terms.length })}
         </button>
       ) : null /* Parent component handles Continue/Next Card button */}
     </div>

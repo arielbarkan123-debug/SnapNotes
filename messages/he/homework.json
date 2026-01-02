@@ -1,0 +1,18 @@
+{
+  "title": "עזרה בשיעורי בית",
+  "uploadQuestion": "העלה את השאלה שלך",
+  "uploadReference": "העלה חומר עזר",
+  "askForHelp": "בקש עזרה",
+  "getHint": "קבל רמז",
+  "showSolution": "הצג פתרון",
+  "stepByStep": "צעד אחר צעד",
+  "checkAnswer": "בדוק את התשובה שלי",
+  "history": "היסטוריה",
+  "newSession": "אימון חדש",
+  "chatPlaceholder": "שאל שאלה על שיעורי הבית שלך...",
+  "thinking": "חושב...",
+  "hereIsHelp": "הנה עזרה",
+  "tryAgain": "נסה שוב בגישה אחרת",
+  "notFound": "בדיקת שיעורי הבית לא נמצאה",
+  "loadError": "טעינת התוצאות נכשלה"
+}

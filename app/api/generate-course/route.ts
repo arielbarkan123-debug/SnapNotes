@@ -77,7 +77,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     try {
       const { data: profile } = await supabase
         .from('user_learning_profile')
-        .select('education_level, study_system, study_goal, learning_styles')
+        .select('education_level, study_system, study_goal, learning_styles, language')
         .eq('user_id', user.id)
         .single()
 
@@ -87,6 +87,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           studySystem: profile.study_system || 'general',
           studyGoal: profile.study_goal || 'general_learning',
           learningStyles: profile.learning_styles || ['practice'],
+          language: profile.language || 'en',
         }
       }
     } catch {

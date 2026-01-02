@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 
 // =============================================================================
 // Types
@@ -29,6 +30,7 @@ interface SRSStats {
 // =============================================================================
 
 export default function DashboardWidget() {
+  const t = useTranslations('dashboard')
   const [stats, setStats] = useState<SRSStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -93,7 +95,7 @@ export default function DashboardWidget() {
           <div className="flex items-center gap-2 mb-3">
             <span className="text-2xl">📚</span>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Daily Review
+              {t('srs.dailyReviewTitle')}
             </h2>
           </div>
 
@@ -104,11 +106,11 @@ export default function DashboardWidget() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="font-medium">All caught up!</span>
+                <span className="font-medium">{t('srs.allCaughtUp')}</span>
               </div>
               {stats.streak > 0 && (
-                <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">
-                  {stats.streak} day streak 🔥
+                <span className="text-sm text-gray-600 dark:text-gray-400 ms-2">
+                  {t('srs.dayStreak', { days: stats.streak })} 🔥
                 </span>
               )}
             </div>
@@ -121,7 +123,7 @@ export default function DashboardWidget() {
                   {cardsDue > 99 ? '99+' : cardsDue}
                 </span>
                 <span className="text-sm text-gray-700 dark:text-gray-300">
-                  cards due
+                  {t('srs.cardsDue')}
                 </span>
               </div>
 
@@ -132,7 +134,7 @@ export default function DashboardWidget() {
                     {newCards > 99 ? '99+' : newCards}
                   </span>
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    new cards
+                    {t('srs.newCardsLabel')}
                   </span>
                 </div>
               )}
@@ -144,7 +146,7 @@ export default function DashboardWidget() {
                     {stats.unresolved_gaps > 99 ? '99+' : stats.unresolved_gaps}
                   </span>
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    gaps to fix
+                    {t('srs.gapsToFix')}
                   </span>
                 </div>
               )}
@@ -152,7 +154,7 @@ export default function DashboardWidget() {
               {/* Streak */}
               {stats.streak > 0 && (
                 <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
-                  <span>{stats.streak} day streak</span>
+                  <span>{t('srs.dayStreak', { days: stats.streak })}</span>
                   <span>🔥</span>
                 </div>
               )}
@@ -171,7 +173,7 @@ export default function DashboardWidget() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              Fix Gaps
+              {t('srs.fixGaps')}
             </Link>
           )}
 
@@ -191,11 +193,11 @@ export default function DashboardWidget() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Review More
+                {t('srs.reviewMore')}
               </>
             ) : (
               <>
-                Start Review
+                {t('srs.startReview')}
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
@@ -209,8 +211,8 @@ export default function DashboardWidget() {
       {stats.cards_reviewed_today > 0 && (
         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
-            <span>Today&apos;s progress</span>
-            <span>{stats.cards_reviewed_today} reviewed</span>
+            <span>{t('srs.todaysProgress')}</span>
+            <span>{t('srs.reviewed', { count: stats.cards_reviewed_today })}</span>
           </div>
           <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
             <div

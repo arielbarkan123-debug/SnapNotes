@@ -38,6 +38,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Fetch user's language preference
+    const { data: userProfile } = await supabase
+      .from('user_learning_profile')
+      .select('language')
+      .eq('user_id', user.id)
+      .single()
+
+    const userLanguage = (userProfile?.language || 'en') as 'en' | 'he'
+
     // Parse request body
     const body = await request.json()
     const { hintLevel } = body
@@ -117,6 +126,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       referenceAnalysis,
       requestedLevel: hintLevel as HintLevel,
       previousHints,
+      language: userLanguage,
     }
 
     // Generate the hint

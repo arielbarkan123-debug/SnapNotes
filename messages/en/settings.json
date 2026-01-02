@@ -1,0 +1,83 @@
+{
+  "title": "Settings",
+  "subtitle": "Manage your account and preferences",
+  "backToProfile": "Back to Profile",
+  "profile": {
+    "title": "Profile",
+    "description": "Your personal information",
+    "displayName": "Display Name",
+    "displayNamePlaceholder": "Your name",
+    "email": "Email"
+  },
+  "learning": {
+    "title": "Learning Preferences",
+    "description": "Customize your study experience",
+    "studySystem": "Study System",
+    "grade": "Grade",
+    "dailyStudyTime": "Daily Study Time",
+    "preferredStudyTime": "Preferred Study Time"
+  },
+  "studySystems": {
+    "ib": "IB",
+    "uk": "UK A-Levels",
+    "ap": "AP",
+    "israeli_bagrut": "Israeli Bagrut",
+    "us": "US System",
+    "general": "General"
+  },
+  "timeOptions": {
+    "short": "Quick",
+    "shortDesc": "< 15 min",
+    "medium": "Focused",
+    "mediumDesc": "15-30 min",
+    "long": "Deep",
+    "longDesc": "30+ min"
+  },
+  "preferredTimes": {
+    "morning": "Morning",
+    "afternoon": "Afternoon",
+    "evening": "Evening",
+    "varies": "Varies"
+  },
+  "curriculum": {
+    "title": "Curriculum Settings",
+    "description": "Subjects and exam preferences",
+    "yourSubjects": "Your Subjects",
+    "examFormatPreference": "Exam Format Preference",
+    "matchRealFormat": "Match Real Format",
+    "matchRealFormatDesc": "Exams follow your curriculum's exact structure",
+    "inspiredBy": "Inspired By",
+    "inspiredByDesc": "Flexible format with similar question styles"
+  },
+  "appSettings": {
+    "title": "App Settings",
+    "description": "Appearance and preferences",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "resetOnboarding": "Reset Onboarding",
+    "resetOnboardingDesc": "Start fresh with the welcome tutorial",
+    "language": "Language"
+  },
+  "saveChangesRefreshHint": "Save changes and refresh the page to apply the new language.",
+  "account": {
+    "title": "Account",
+    "description": "Manage your account",
+    "dangerZone": "Danger Zone",
+    "dangerZoneDesc": "Once you delete your account, there is no going back.",
+    "deleteAccount": "Delete Account",
+    "typeDeleteToConfirm": "Type DELETE to confirm:"
+  },
+  "toast": {
+    "loadError": "Failed to load settings",
+    "saveSuccess": "Settings saved successfully",
+    "savePartial": "Profile partially saved. Some settings may not have been saved.",
+    "saveError": "Failed to save settings",
+    "signOutError": "Failed to sign out",
+    "onboardingReset": "Onboarding reset! Redirecting...",
+    "onboardingResetError": "Failed to reset onboarding",
+    "deleteRequest": "Account deletion request submitted. Contact support to complete.",
+    "deleteError": "Failed to process deletion request"
+  }
+}

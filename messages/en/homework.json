@@ -1,0 +1,18 @@
+{
+  "title": "Homework Help",
+  "uploadQuestion": "Upload your question",
+  "uploadReference": "Upload reference material",
+  "askForHelp": "Ask for help",
+  "getHint": "Get a hint",
+  "showSolution": "Show solution",
+  "stepByStep": "Step by step",
+  "checkAnswer": "Check my answer",
+  "history": "History",
+  "newSession": "New Session",
+  "chatPlaceholder": "Ask a question about your homework...",
+  "thinking": "Thinking...",
+  "hereIsHelp": "Here's help",
+  "tryAgain": "Try again with a different approach",
+  "notFound": "Homework check not found",
+  "loadError": "Failed to load results"
+}

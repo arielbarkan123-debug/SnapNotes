@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 
 // =============================================================================
 // Types
@@ -23,6 +24,7 @@ export default function FillBlank({
   acceptableAnswers = [],
   onAnswer,
 }: FillBlankProps) {
+  const t = useTranslations('practice')
   const [userInput, setUserInput] = useState('')
   const [hasChecked, setHasChecked] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
@@ -100,7 +102,7 @@ export default function FillBlank({
       {/* Input Field */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-          Your answer:
+          {t('yourAnswer')}
         </label>
         <input
           ref={inputRef}
@@ -109,7 +111,7 @@ export default function FillBlank({
           onChange={(e) => setUserInput(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={hasChecked}
-          placeholder="Type your answer..."
+          placeholder={t('typeYourAnswer')}
           autoComplete="off"
           autoCapitalize="off"
           spellCheck="false"
@@ -137,17 +139,17 @@ export default function FillBlank({
               isCorrect ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
             }`}
           >
-            {isCorrect ? 'Correct! 🎉' : 'Not quite right'}
+            {isCorrect ? t('correct') : t('notQuiteRight')}
           </p>
           {!isCorrect && (
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              The correct answer is:{' '}
+              {t('correctAnswerIs')}{' '}
               <span className="font-semibold text-green-600 dark:text-green-400">{answer}</span>
             </p>
           )}
           {isCorrect && userInput.toLowerCase().trim() !== answer.toLowerCase().trim() && (
             <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
-              (Also accepted: {answer})
+              ({t('alsoAccepted')} {answer})
             </p>
           )}
         </div>
@@ -164,7 +166,7 @@ export default function FillBlank({
               : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-lg hover:shadow-xl'
           }`}
         >
-          Check Answer
+          {t('checkAnswer')}
         </button>
       ) : null /* Parent component handles Continue/Next Card button */}
     </div>

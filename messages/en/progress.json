@@ -1,0 +1,18 @@
+{
+  "title": "Progress",
+  "overview": "Overview",
+  "streak": "Day streak",
+  "totalXP": "Total XP",
+  "coursesCompleted": "Courses completed",
+  "questionsAnswered": "Questions answered",
+  "accuracy": "Accuracy",
+  "studyTime": "Study time",
+  "thisWeek": "This week",
+  "thisMonth": "This month",
+  "allTime": "All time",
+  "achievements": "Achievements",
+  "noAchievements": "Complete activities to earn achievements!",
+  "weakAreas": "Areas to improve",
+  "strongAreas": "Strong areas",
+  "recentActivity": "Recent activity"
+}

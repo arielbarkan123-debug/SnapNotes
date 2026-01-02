@@ -132,7 +132,8 @@ async function evaluateWithAI(
   expectedAnswer: string,
   userAnswer: string,
   context?: string,
-  curriculumContext?: string
+  curriculumContext?: string,
+  language: string = 'en'
 ): Promise<{ isCorrect: boolean; score: number; feedback: string }> {
   const apiKey = process.env.ANTHROPIC_API_KEY
 
@@ -154,8 +155,13 @@ Use the curriculum context above to:
 `
     : ''
 
+  // Build Hebrew language instruction if needed
+  const hebrewInstruction = language === 'he'
+    ? '\nCRITICAL: Write ALL feedback in Hebrew (עברית). The feedback field must be in Hebrew.'
+    : ''
+
   // Minimal prompt for speed with optional curriculum context
-  const prompt = `You are grading a student's answer.${curriculumContext ? ' Apply curriculum-specific grading criteria.' : ' Be generous with partial credit.'}
+  const prompt = `You are grading a student's answer.${curriculumContext ? ' Apply curriculum-specific grading criteria.' : ' Be generous with partial credit.'}${hebrewInstruction}
 ${curriculumInstructions}
 Question: ${question}
 Expected Answer: ${expectedAnswer}
@@ -170,7 +176,7 @@ Evaluate if the student's answer is correct. Consider:
 ${curriculumContext ? '- Apply curriculum command terms and assessment objectives' : ''}
 
 Respond with ONLY valid JSON (no markdown):
-{"correct":true/false,"score":0-100,"feedback":"one brief sentence"}`
+{"correct":true/false,"score":0-100,"feedback":"one brief sentence${language === 'he' ? ' in Hebrew' : ''}"}`
 
   try {
     const response = await client.messages.create({
@@ -245,6 +251,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Get user for curriculum context and gap detection
     let curriculumContextString = ''
     let userId: string | null = null
+    let userLanguage = 'en'
 
     try {
       const supabase = await createClient()
@@ -255,9 +262,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Fetch user learning profile
         const { data: userProfile } = await supabase
           .from('user_learning_profile')
-          .select('study_system, subjects, subject_levels')
+          .select('study_system, subjects, subject_levels, language')
           .eq('user_id', user.id)
           .single()
+
+        // Get user's language preference for AI feedback
+        userLanguage = userProfile?.language || 'en'
 
         if (userProfile?.study_system && userProfile.study_system !== 'general' && userProfile.study_system !== 'other') {
           // Build curriculum context for evaluation
@@ -333,7 +343,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Layer 3: AI evaluation for semantic matching
     try {
-      const aiResult = await evaluateWithAI(question, expectedAnswer, userAnswer, context, curriculumContextString)
+      const aiResult = await evaluateWithAI(question, expectedAnswer, userAnswer, context, curriculumContextString, userLanguage)
 
       // Record performance for gap detection (fire and forget)
       if (userId && conceptIds.length > 0) {

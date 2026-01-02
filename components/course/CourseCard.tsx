@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useTranslations, useLocale } from 'next-intl'
 import { Course, GeneratedCourse } from '@/types'
 import { useToast } from '@/contexts/ToastContext'
 import DeleteConfirmModal from './DeleteConfirmModal'
@@ -55,7 +56,7 @@ type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced'
 
 interface DifficultyInfo {
   level: DifficultyLevel
-  label: string
+  labelKey: string // Translation key instead of hardcoded label
   color: string
   bgColor: string
   icon: string
@@ -66,7 +67,7 @@ function estimateDifficulty(generatedCourse: GeneratedCourse | null): Difficulty
   if (!generatedCourse || !generatedCourse.lessons) {
     return {
       level: 'beginner',
-      label: 'Beginner',
+      labelKey: 'beginner',
       color: 'text-green-600 dark:text-green-400',
       bgColor: 'bg-green-100 dark:bg-green-900/30',
       icon: '🌱',
@@ -106,7 +107,7 @@ function estimateDifficulty(generatedCourse: GeneratedCourse | null): Difficulty
   if (score >= 5) {
     return {
       level: 'advanced',
-      label: 'Advanced',
+      labelKey: 'advanced',
       color: 'text-red-600 dark:text-red-400',
       bgColor: 'bg-red-100 dark:bg-red-900/30',
       icon: '🔥',
@@ -114,7 +115,7 @@ function estimateDifficulty(generatedCourse: GeneratedCourse | null): Difficulty
   } else if (score >= 2) {
     return {
       level: 'intermediate',
-      label: 'Intermediate',
+      labelKey: 'intermediate',
       color: 'text-amber-600 dark:text-amber-400',
       bgColor: 'bg-amber-100 dark:bg-amber-900/30',
       icon: '⚡',
@@ -122,7 +123,7 @@ function estimateDifficulty(generatedCourse: GeneratedCourse | null): Difficulty
   } else {
     return {
       level: 'beginner',
-      label: 'Beginner',
+      labelKey: 'beginner',
       color: 'text-green-600 dark:text-green-400',
       bgColor: 'bg-green-100 dark:bg-green-900/30',
       icon: '🌱',
@@ -130,9 +131,9 @@ function estimateDifficulty(generatedCourse: GeneratedCourse | null): Difficulty
   }
 }
 
-function formatDate(dateString: string): string {
+function formatDate(dateString: string, locale: string): string {
   const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(locale === 'he' ? 'he-IL' : 'en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -147,6 +148,8 @@ function truncateText(text: string, maxLength: number): string {
 export default function CourseCard({ course, onDelete }: CourseCardProps) {
   const router = useRouter()
   const { success, error: showError } = useToast()
+  const t = useTranslations('dashboard.courseCard')
+  const locale = useLocale()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [imageError, setImageError] = useState(false)
@@ -169,6 +172,14 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
   // Get lesson count for display
   const lessonCount = course.generated_course?.lessons?.length || 0
 
+  // Get translated lesson count text
+  const lessonCountText = lessonCount === 1
+    ? t('lessonSingular', { count: lessonCount })
+    : t('lessons', { count: lessonCount })
+
+  // Get translated difficulty label
+  const difficultyLabel = t(difficulty.labelKey)
+
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -188,7 +199,7 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
         throw new Error(data.error || 'Failed to delete course')
       }
 
-      success('Course deleted successfully')
+      success(t('deleteSuccess'))
       setShowDeleteModal(false)
 
       // Notify parent or refresh
@@ -198,7 +209,7 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
         router.refresh()
       }
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to delete course')
+      showError(err instanceof Error ? err.message : t('deleteFailed'))
     } finally {
       setIsDeleting(false)
     }
@@ -254,7 +265,7 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
             {/* Lesson count badge */}
             {lessonCount > 0 && (
               <div className="absolute bottom-3 left-3 bg-black/30 backdrop-blur-sm text-white text-xs font-medium px-2 py-1 rounded-full">
-                {lessonCount} lesson{lessonCount !== 1 ? 's' : ''}
+                {lessonCountText}
               </div>
             )}
           </div>
@@ -266,15 +277,15 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
             </h3>
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {formatDate(course.created_at)}
+                {formatDate(course.created_at, locale)}
               </p>
               {/* Difficulty Badge */}
               <div
                 className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${difficulty.bgColor} ${difficulty.color}`}
-                title={`${difficulty.label} difficulty - ${lessonCount} lesson${lessonCount !== 1 ? 's' : ''}`}
+                title={`${difficultyLabel} - ${lessonCountText}`}
               >
                 <span>{difficulty.icon}</span>
-                <span>{difficulty.label}</span>
+                <span>{difficultyLabel}</span>
               </div>
             </div>
           </div>

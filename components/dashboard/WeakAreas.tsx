@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 
 interface WeakArea {
   courseId: string
@@ -32,6 +33,7 @@ interface WeakAreasResponse {
 }
 
 export function WeakAreas() {
+  const t = useTranslations('dashboard')
   const [data, setData] = useState<WeakAreasResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -83,14 +85,14 @@ export function WeakAreas() {
             </svg>
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 dark:text-white">Failed to load</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Could not load weak areas</p>
+            <h3 className="font-semibold text-gray-900 dark:text-white">{t('weakAreas.failedToLoad')}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('weakAreas.couldNotLoad')}</p>
           </div>
           <button
             onClick={fetchWeakAreas}
             className="px-3 py-1.5 text-sm bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
           >
-            Retry
+            {t('weakAreas.retry')}
           </button>
         </div>
       </div>
@@ -107,8 +109,8 @@ export function WeakAreas() {
             </svg>
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white">All Caught Up!</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">No weak areas detected. Keep up the great work!</p>
+            <h3 className="font-semibold text-gray-900 dark:text-white">{t('allCaughtUp')}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('noWeakAreas')}</p>
           </div>
         </div>
       </div>
@@ -147,9 +149,9 @@ export function WeakAreas() {
             </svg>
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white">Areas to Review</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white">{t('weakAreas.title')}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {summary?.highPriority || 0} high priority • {summary?.lessonsNeedingReview || 0} due for review
+              {t('weakAreas.highPrioritySummary', { high: summary?.highPriority || 0, due: summary?.lessonsNeedingReview || 0 })}
             </p>
           </div>
         </div>
@@ -162,15 +164,15 @@ export function WeakAreas() {
             <p className={`text-lg font-bold ${getMasteryColor(summary.averageMastery)}`}>
               {Math.round(summary.averageMastery * 100)}%
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Avg Mastery</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('weakAreas.avgMastery')}</p>
           </div>
           <div className="text-center p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
             <p className="text-lg font-bold text-red-600 dark:text-red-400">{summary.highPriority}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">High Priority</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('weakAreas.highPriority')}</p>
           </div>
           <div className="text-center p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
             <p className="text-lg font-bold text-orange-600 dark:text-orange-400">{summary.lessonsNeedingReview}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Due Review</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('weakAreas.dueReview')}</p>
           </div>
         </div>
       )}
@@ -208,7 +210,7 @@ export function WeakAreas() {
                   {Math.round(area.masteryLevel * 100)}%
                 </p>
                 <p className="text-xs text-gray-400 dark:text-gray-500">
-                  {area.daysSinceStudy === 0 ? 'Today' : area.daysSinceStudy === 1 ? 'Yesterday' : `${area.daysSinceStudy}d ago`}
+                  {area.daysSinceStudy === 0 ? t('weakAreas.today') : area.daysSinceStudy === 1 ? t('weakAreas.yesterday') : t('weakAreas.daysAgo', { days: area.daysSinceStudy })}
                 </p>
               </div>
 
@@ -227,7 +229,7 @@ export function WeakAreas() {
           onClick={() => setExpanded(!expanded)}
           className="w-full mt-4 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium transition-colors"
         >
-          {expanded ? 'Show Less' : `Show ${weakAreas.length - 3} More`}
+          {expanded ? t('weakAreas.showLess') : t('weakAreas.showMore', { count: weakAreas.length - 3 })}
         </button>
       )}
     </div>

@@ -1,0 +1,50 @@
+{
+  "appName": "NoteSnap",
+  "nav": {
+    "courses": "Courses",
+    "review": "Review",
+    "reviewCards": "Review Cards",
+    "practice": "Practice",
+    "practiceMix": "Mix",
+    "homework": "Homework",
+    "homeworkHelp": "Homework Help",
+    "exams": "Exams",
+    "progress": "Progress",
+    "profile": "Profile",
+    "admin": "Admin",
+    "adminDashboard": "Admin Dashboard",
+    "settings": "Settings",
+    "toggleMenu": "Toggle menu"
+  },
+  "auth": {
+    "logOut": "Log out",
+    "loggingOut": "Logging out...",
+    "signOut": "Sign Out"
+  },
+  "buttons": {
+    "save": "Save",
+    "saveChanges": "Save Changes",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "discard": "Discard",
+    "continue": "Continue",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "retry": "Try Again",
+    "reset": "Reset",
+    "delete": "Delete",
+    "deleteForever": "Delete Forever",
+    "confirm": "Confirm"
+  },
+  "labels": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "success": "Success!",
+    "readOnly": "Read-only",
+    "unsavedChanges": "You have unsaved changes"
+  },
+  "time": {
+    "memberSince": "Member since {date}"
+  }
+}

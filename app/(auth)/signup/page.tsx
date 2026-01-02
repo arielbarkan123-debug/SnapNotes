@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import FormInput from '@/components/ui/FormInput'
 import { mapSupabaseAuthError } from '@/lib/api/errors'
@@ -21,6 +22,7 @@ interface FormErrors {
 }
 
 export default function SignupPage() {
+  const t = useTranslations('auth')
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
@@ -37,29 +39,29 @@ export default function SignupPage() {
 
     // Name validation
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required'
+      newErrors.name = t('validation.nameRequired')
     }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!formData.email) {
-      newErrors.email = 'Email is required'
+      newErrors.email = t('validation.emailRequired')
     } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address'
+      newErrors.email = t('validation.emailInvalid')
     }
 
     // Password validation
     if (!formData.password) {
-      newErrors.password = 'Password is required'
+      newErrors.password = t('validation.passwordRequired')
     } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters'
+      newErrors.password = t('validation.passwordTooShort')
     }
 
     // Confirm password validation
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password'
+      newErrors.confirmPassword = t('validation.confirmPasswordRequired')
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match'
+      newErrors.confirmPassword = t('validation.passwordsNoMatch')
     }
 
     setErrors(newErrors)
@@ -108,7 +110,7 @@ export default function SignupPage() {
         const { message } = mapSupabaseAuthError(error.message)
         setServerError(message)
       } else {
-        setSuccessMessage('Check your email to verify your account')
+        setSuccessMessage(t('signup.checkEmailVerify'))
         // Clear form
         setFormData({
           name: '',
@@ -118,7 +120,7 @@ export default function SignupPage() {
         })
       }
     } catch {
-      setServerError('An unexpected error occurred. Please try again.')
+      setServerError(t('signup.unexpectedError'))
     } finally {
       setIsLoading(false)
     }
@@ -137,10 +139,10 @@ export default function SignupPage() {
               NoteSnap
             </Link>
             <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mt-3 sm:mt-4">
-              Create your account
+              {t('signup.title')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1.5 sm:mt-2 text-sm sm:text-base">
-              Start your learning journey today
+              {t('signup.subtitle')}
             </p>
           </div>
 
@@ -165,10 +167,10 @@ export default function SignupPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <FormInput
-              label="Full Name"
+              label={t('signup.fullName')}
               name="name"
               type="text"
-              placeholder="John Doe"
+              placeholder={t('signup.namePlaceholder')}
               value={formData.name}
               onChange={handleChange}
               error={errors.name}
@@ -177,10 +179,10 @@ export default function SignupPage() {
             />
 
             <FormInput
-              label="Email"
+              label={t('signup.email')}
               name="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder={t('signup.emailPlaceholder')}
               value={formData.email}
               onChange={handleChange}
               error={errors.email}
@@ -189,7 +191,7 @@ export default function SignupPage() {
             />
 
             <FormInput
-              label="Password"
+              label={t('signup.password')}
               name="password"
               type="password"
               placeholder="••••••••"
@@ -201,7 +203,7 @@ export default function SignupPage() {
             />
 
             <FormInput
-              label="Confirm Password"
+              label={t('signup.confirmPassword')}
               name="confirmPassword"
               type="password"
               placeholder="••••••••"
@@ -220,7 +222,7 @@ export default function SignupPage() {
               {isLoading ? (
                 <>
                   <svg
-                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                    className="animate-spin -ms-1 me-2 h-4 w-4 text-white"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -239,22 +241,22 @@ export default function SignupPage() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     />
                   </svg>
-                  Creating account...
+                  {t('signup.creating')}
                 </>
               ) : (
-                'Create Account'
+                t('signup.createAccount')
               )}
             </button>
           </form>
 
           {/* Login Link */}
           <p className="text-center text-gray-600 dark:text-gray-400 mt-6 text-sm sm:text-base">
-            Already have an account?{' '}
+            {t('signup.hasAccount')}{' '}
             <Link
               href="/login"
               className="text-indigo-600 dark:text-indigo-400 hover:underline active:text-indigo-700 font-medium"
             >
-              Log in
+              {t('signup.signIn')}
             </Link>
           </p>
         </div>

@@ -36,7 +36,24 @@ function getAnthropicClient(): Anthropic {
 // System Prompts
 // ============================================================================
 
-const SOCRATIC_TUTOR_SYSTEM = `You are a warm, supportive Socratic tutor helping a student with their homework.
+/**
+ * Build language-specific instruction for Hebrew support
+ */
+function buildLanguageInstruction(language?: 'en' | 'he'): string {
+  if (language === 'he') {
+    return `
+## Language Requirement - CRITICAL
+Respond ONLY in Hebrew (עברית).
+- All messages, questions, and feedback must be in Hebrew
+- Keep mathematical notation standard (numbers, symbols, formulas)
+- Use proper Hebrew educational terminology
+- Maintain a warm, supportive tone in Hebrew
+`
+  }
+  return ''
+}
+
+const SOCRATIC_TUTOR_SYSTEM_BASE = `You are a warm, supportive Socratic tutor helping a student with their homework.
 
 ## Your Core Principles:
 1. GUIDE, DON'T TELL - Never give direct answers. Guide the student to discover solutions themselves.
@@ -81,6 +98,14 @@ Return your response as JSON:
   "celebrationMessage": null | "message if they solved it"
 }`
 
+/**
+ * Build the complete system prompt with optional language instruction
+ */
+function buildSocraticTutorSystem(language?: 'en' | 'he'): string {
+  const languageInstruction = buildLanguageInstruction(language)
+  return SOCRATIC_TUTOR_SYSTEM_BASE + languageInstruction
+}
+
 const INITIAL_GREETING_PROMPT = `The student has just uploaded their homework question. Generate a warm, encouraging opening message.
 
 QUESTION: {questionText}
@@ -118,7 +143,7 @@ export async function generateInitialGreeting(context: TutorContext): Promise<Tu
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
-    system: SOCRATIC_TUTOR_SYSTEM,
+    system: buildSocraticTutorSystem(context.language),
     messages: [{ role: 'user', content: prompt }],
   })
 
@@ -171,7 +196,7 @@ export async function generateTutorResponse(
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
-    system: SOCRATIC_TUTOR_SYSTEM,
+    system: buildSocraticTutorSystem(context.language),
     messages,
   })
 

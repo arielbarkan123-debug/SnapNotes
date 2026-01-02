@@ -8,6 +8,7 @@
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import useSWR from 'swr'
+import { useTranslations } from 'next-intl'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -46,6 +47,7 @@ const fetcher = async (url: string) => {
 
 export function PracticeWidget() {
   const router = useRouter()
+  const t = useTranslations('dashboard')
 
   const { data, isLoading, error } = useSWR<PracticeWidgetData>(
     '/api/practice/widget',
@@ -93,13 +95,13 @@ export function PracticeWidget() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
           <span className="text-xl">🎯</span>
-          Practice Mode
+          {t('practiceMode')}
         </h2>
         <Link
           href="/practice"
           className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
         >
-          View all →
+          {t('viewAll')}
         </Link>
       </div>
 
@@ -107,15 +109,15 @@ export function PracticeWidget() {
       {activeSession && (
         <button
           onClick={() => router.push(`/practice/${activeSession.id}`)}
-          className="w-full mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-indigo-200 dark:border-indigo-700 hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors text-left"
+          className="w-full mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-indigo-200 dark:border-indigo-700 hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors text-start"
         >
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium text-gray-900 dark:text-white">
-                Continue Session
+                {t('continueSession')}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {activeSession.questions_answered}/{activeSession.question_count} questions
+                {t('questionsProgress', { answered: activeSession.questions_answered, total: activeSession.question_count })}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -140,7 +142,7 @@ export function PracticeWidget() {
           onClick={() => router.push('/practice?type=targeted')}
           disabled={gapsCount === 0}
           className={`
-            p-4 rounded-lg text-left transition-all
+            p-4 rounded-lg text-start transition-all
             ${gapsCount > 0
               ? 'bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800'
               : 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
@@ -149,24 +151,24 @@ export function PracticeWidget() {
         >
           <div className="text-2xl mb-2">🩹</div>
           <p className="font-medium text-gray-900 dark:text-white text-sm">
-            Fix Gaps
+            {t('fixGaps')}
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            {gapsCount > 0 ? `${gapsCount} to fix` : 'None found'}
+            {gapsCount > 0 ? t('gapsToFix', { count: gapsCount }) : t('noGapsFound')}
           </p>
         </button>
 
         {/* Quick Practice */}
         <button
           onClick={() => router.push('/practice?type=quick')}
-          className="p-4 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 text-left transition-all"
+          className="p-4 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 text-start transition-all"
         >
           <div className="text-2xl mb-2">⚡</div>
           <p className="font-medium text-gray-900 dark:text-white text-sm">
-            Quick Practice
+            {t('quickPractice')}
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            5 questions
+            {t('fiveQuestions')}
           </p>
         </button>
       </div>
@@ -176,7 +178,7 @@ export function PracticeWidget() {
         <div className="mt-4 pt-4 border-t border-indigo-200 dark:border-indigo-800/50">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600 dark:text-gray-400">
-              {stats.totalQuestions} questions practiced
+              {t('questionsPracticed', { count: stats.totalQuestions })}
             </span>
             <span
               className={`font-medium ${
@@ -185,7 +187,7 @@ export function PracticeWidget() {
                   : 'text-amber-600 dark:text-amber-400'
               }`}
             >
-              {stats.overallAccuracy}% accuracy
+              {t('accuracyPercent', { percent: stats.overallAccuracy })}
             </span>
           </div>
         </div>
