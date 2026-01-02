@@ -326,3 +326,5 @@ export * from './srs'
 export * from './help'
 
 export * from './exam'
+
+export * from './past-exam'

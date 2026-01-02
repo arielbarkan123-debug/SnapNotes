@@ -1,0 +1,65 @@
+{
+  "title": "Past Exam Templates",
+  "subtitle": "Upload past exams to help generate similar-style questions",
+  "uploadButton": "Upload Past Exam",
+  "uploadDisabled": "Maximum 3 templates reached",
+  "templateCount": "{count} of {max} templates",
+  "noTemplates": "No past exam templates yet",
+  "noTemplatesDescription": "Upload a past exam to help the AI generate questions in a similar style",
+  "uploadFirst": "Upload Your First Template",
+
+  "statusPending": "Pending Analysis",
+  "statusAnalyzing": "Analyzing...",
+  "statusCompleted": "Analysis Complete",
+  "statusFailed": "Analysis Failed",
+
+  "retryAnalysis": "Retry Analysis",
+  "deleteTemplate": "Delete Template",
+  "viewDetails": "View Details",
+  "analyze": "Analyze",
+
+  "analysisResults": "Analysis Results",
+  "questionsFound": "{count} questions detected",
+  "totalPoints": "{points} total points",
+  "questionTypes": "Question Types",
+  "difficultyDistribution": "Difficulty Distribution",
+  "questionStyle": "Question Style",
+  "easy": "Easy",
+  "medium": "Medium",
+  "hard": "Hard",
+
+  "uploadModal": {
+    "title": "Upload Past Exam",
+    "dragDrop": "Drag & drop or click to select",
+    "fileTypes": "PDF, PowerPoint, Word, or Image",
+    "maxSize": "Max 20MB",
+    "titleLabel": "Template Title",
+    "titlePlaceholder": "e.g., Biology Final Exam 2024",
+    "descriptionLabel": "Description (optional)",
+    "descriptionPlaceholder": "Notes about this exam...",
+    "uploading": "Uploading...",
+    "upload": "Upload Template",
+    "cancel": "Cancel"
+  },
+
+  "examCreation": {
+    "usingTemplates": "Using {count} past exam template(s) for style matching",
+    "noTemplates": "No past exam templates configured",
+    "configureLink": "Configure templates"
+  },
+
+  "deleteConfirm": {
+    "title": "Delete Template",
+    "message": "Are you sure you want to delete this template? This action cannot be undone.",
+    "confirm": "Delete",
+    "cancel": "Cancel"
+  },
+
+  "errors": {
+    "limitReached": "You can only have up to 3 past exam templates",
+    "uploadFailed": "Failed to upload template",
+    "analysisFailed": "Analysis failed. Please try again.",
+    "deleteFailed": "Failed to delete template",
+    "fetchFailed": "Failed to load templates"
+  }
+}

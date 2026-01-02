@@ -81,3 +81,10 @@ export {
   type UsePracticeSessionReturn,
   type UsePracticeStatsReturn,
 } from './usePracticeSession'
+
+// Past Exam Templates
+export {
+  usePastExamTemplates,
+  PAST_EXAMS_CACHE_KEY,
+  type UsePastExamTemplatesReturn,
+} from './usePastExamTemplates'

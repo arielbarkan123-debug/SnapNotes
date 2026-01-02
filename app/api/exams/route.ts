@@ -4,6 +4,8 @@ import { CreateExamRequest } from '@/types'
 import Anthropic from '@anthropic-ai/sdk'
 import { buildExamContext, formatContextForPrompt } from '@/lib/curriculum'
 import type { StudySystem, ExamFormat } from '@/lib/curriculum'
+import { buildExamStyleGuide } from '@/lib/past-exams'
+import type { PastExamTemplate } from '@/types/past-exam'
 
 const AI_MODEL = 'claude-sonnet-4-20250514'
 
@@ -103,6 +105,18 @@ export async function POST(request: Request) {
     const subjectLevels = (userProfile?.subject_levels || {}) as Record<string, string>
     const examFormat = ((body as any).examFormat || userProfile?.exam_format || 'match_real') as ExamFormat
 
+    // Fetch user's past exam templates for style guide
+    const { data: pastExamTemplates } = await supabase
+      .from('past_exam_templates')
+      .select('extracted_analysis, title')
+      .eq('user_id', user.id)
+      .eq('analysis_status', 'completed')
+
+    // Build exam style guide from past exam templates (if any)
+    const examStyleGuide = pastExamTemplates && pastExamTemplates.length > 0
+      ? buildExamStyleGuide(pastExamTemplates as Pick<PastExamTemplate, 'extracted_analysis' | 'title'>[])
+      : ''
+
     let courseContent = ''
     const lessonList: { index: number; title: string }[] = []
 
@@ -159,7 +173,7 @@ Focus on testing understanding rather than matching exact exam format.`
 COURSE: ${course.title}
 ${curriculumSection ? `\n${curriculumSection}` : ''}
 ${examFormatInstruction}
-
+${examStyleGuide ? `\n${examStyleGuide}` : ''}
 CONTENT:
 ${courseContent}
 

@@ -15,6 +15,7 @@ import subjects from './subjects.json'
 import processing from './processing.json'
 import chat from './chat.json'
 import course from './course.json'
+import pastExams from './pastExams.json'
 
 const messages = {
   common,
@@ -34,6 +35,7 @@ const messages = {
   processing,
   chat,
   course,
+  pastExams,
 }
 
 export default messages

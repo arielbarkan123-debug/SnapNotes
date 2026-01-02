@@ -1,0 +1,65 @@
+{
+  "title": "תבניות מבחנים קודמים",
+  "subtitle": "העלה מבחנים קודמים כדי לעזור ליצור שאלות בסגנון דומה",
+  "uploadButton": "העלה מבחן קודם",
+  "uploadDisabled": "הגעת למקסימום 3 תבניות",
+  "templateCount": "{count} מתוך {max} תבניות",
+  "noTemplates": "אין עדיין תבניות מבחנים",
+  "noTemplatesDescription": "העלה מבחן קודם כדי לעזור לבינה המלאכותית ליצור שאלות בסגנון דומה",
+  "uploadFirst": "העלה תבנית ראשונה",
+
+  "statusPending": "ממתין לניתוח",
+  "statusAnalyzing": "מנתח...",
+  "statusCompleted": "הניתוח הושלם",
+  "statusFailed": "הניתוח נכשל",
+
+  "retryAnalysis": "נסה שוב",
+  "deleteTemplate": "מחק תבנית",
+  "viewDetails": "צפה בפרטים",
+  "analyze": "נתח",
+
+  "analysisResults": "תוצאות הניתוח",
+  "questionsFound": "{count} שאלות זוהו",
+  "totalPoints": "{points} נקודות סה״כ",
+  "questionTypes": "סוגי שאלות",
+  "difficultyDistribution": "התפלגות קושי",
+  "questionStyle": "סגנון שאלות",
+  "easy": "קל",
+  "medium": "בינוני",
+  "hard": "קשה",
+
+  "uploadModal": {
+    "title": "העלה מבחן קודם",
+    "dragDrop": "גרור או לחץ לבחירה",
+    "fileTypes": "PDF, PowerPoint, Word, או תמונה",
+    "maxSize": "עד 20MB",
+    "titleLabel": "שם התבנית",
+    "titlePlaceholder": "לדוגמה: מבחן סיום ביולוגיה 2024",
+    "descriptionLabel": "תיאור (אופציונלי)",
+    "descriptionPlaceholder": "הערות על מבחן זה...",
+    "uploading": "מעלה...",
+    "upload": "העלה תבנית",
+    "cancel": "ביטול"
+  },
+
+  "examCreation": {
+    "usingTemplates": "משתמש ב-{count} תבניות מבחן לסגנון",
+    "noTemplates": "לא הוגדרו תבניות מבחן קודם",
+    "configureLink": "הגדר תבניות"
+  },
+
+  "deleteConfirm": {
+    "title": "מחק תבנית",
+    "message": "האם אתה בטוח שברצונך למחוק תבנית זו? לא ניתן לבטל פעולה זו.",
+    "confirm": "מחק",
+    "cancel": "ביטול"
+  },
+
+  "errors": {
+    "limitReached": "ניתן להעלות עד 3 תבניות מבחן",
+    "uploadFailed": "העלאת התבנית נכשלה",
+    "analysisFailed": "הניתוח נכשל. נסה שוב.",
+    "deleteFailed": "מחיקת התבנית נכשלה",
+    "fetchFailed": "טעינת התבניות נכשלה"
+  }
+}
