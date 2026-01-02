@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { HelpContext, HelpRequestType, HelpAPIResponse } from '@/types'
 
 interface HelpModalProps {
@@ -10,6 +11,7 @@ interface HelpModalProps {
 }
 
 export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) {
+  const t = useTranslations('lesson')
   const [view, setView] = useState<'buttons' | 'loading' | 'response' | 'custom'>('buttons')
   const [response, setResponse] = useState('')
   const [sourceReference, setSourceReference] = useState<string | null>(null)
@@ -174,7 +176,7 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setView('buttons')} type="button" className="py-2.5 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition">← Back</button>
-                <button onClick={handleCustomSubmit} disabled={!customQuestion.trim()} type="button" className="flex-1 py-2.5 px-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">Ask AI</button>
+                <button onClick={handleCustomSubmit} disabled={!customQuestion.trim()} type="button" className="flex-1 py-2.5 px-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">{t('askAI')}</button>
               </div>
             </div>
           )}
