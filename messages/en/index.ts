@@ -9,6 +9,7 @@ import exam from './exam.json'
 import homework from './homework.json'
 import progress from './progress.json'
 import upload from './upload.json'
+import review from './review.json'
 
 const messages = {
   common,
@@ -22,6 +23,7 @@ const messages = {
   homework,
   progress,
   upload,
+  review,
 }
 
 export default messages

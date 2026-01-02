@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
+import { useTranslations } from 'next-intl'
 import type { HelpContext } from '@/types'
 import type { ReviewCard as ReviewCardType } from '@/types/srs'
 import { useCourses } from '@/hooks'
@@ -119,6 +120,9 @@ interface Answer {
 export default function PracticePage() {
   // SWR hook for courses with caching
   const { courses, isLoading: coursesLoading, error: coursesError } = useCourses()
+
+  // Translations
+  const t = useTranslations('practice.page')
 
   // Analytics tracking
   const { trackFeature } = useEventTracking()
@@ -474,10 +478,10 @@ export default function PracticePage() {
               </div>
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Practice Complete!
+              {t('practiceComplete')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Great work on your mixed practice session
+              {t('practiceCompleteSubtitle')}
             </p>
           </div>
 
@@ -488,7 +492,7 @@ export default function PracticePage() {
                 {stats.totalCards}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Questions
+                {t('questions')}
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-sm border border-gray-100 dark:border-gray-700">
@@ -500,7 +504,7 @@ export default function PracticePage() {
                 {accuracy}%
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Accuracy
+                {t('accuracy')}
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-sm border border-gray-100 dark:border-gray-700">
@@ -508,7 +512,7 @@ export default function PracticePage() {
                 {minutes}:{seconds.toString().padStart(2, '0')}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Time
+                {t('time')}
               </div>
             </div>
           </div>
@@ -516,7 +520,7 @@ export default function PracticePage() {
           {/* Performance by Course */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-              <h2 className="font-semibold text-gray-900 dark:text-white">Performance by Course</h2>
+              <h2 className="font-semibold text-gray-900 dark:text-white">{t('performanceByCourse')}</h2>
             </div>
             <div className="divide-y divide-gray-100 dark:divide-gray-700">
               {courseStatsArray.map((courseStat, index) => {
@@ -535,7 +539,7 @@ export default function PracticePage() {
                         {courseStat.courseName}
                         {isWeakest && (
                           <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-xs rounded-full">
-                            Needs Review
+                            {t('needsReview')}
                           </span>
                         )}
                       </span>
@@ -572,13 +576,13 @@ export default function PracticePage() {
               }}
               className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors"
             >
-              Practice Again
+              {t('practiceAgain')}
             </button>
             <Link
               href="/dashboard"
               className="block w-full py-3 px-6 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium rounded-xl transition-colors text-center"
             >
-              Back to Dashboard
+              {t('backToDashboard')}
             </Link>
           </div>
         </div>
@@ -606,10 +610,10 @@ export default function PracticePage() {
               </div>
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Mixed Practice
+              {t('mixedPractice')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Interleaved practice from multiple courses
+              {t('mixedPracticeSubtitle')}
             </p>
           </div>
 
@@ -635,7 +639,7 @@ export default function PracticePage() {
                   }}
                   className="mt-3 w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors text-sm"
                 >
-                  Generate Practice Questions
+                  {t('generatePracticeQuestions')}
                 </button>
               )}
             </div>
@@ -644,13 +648,13 @@ export default function PracticePage() {
           {hasNoCourses ? (
             <div className="text-center py-8">
               <p className="text-gray-600 dark:text-gray-400 mb-4">
-                You don&apos;t have any courses yet. Create a course to start practicing!
+                {t('noCoursesYet')}
               </p>
               <Link
                 href="/dashboard"
                 className="inline-block py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors"
               >
-                Go to Dashboard
+                {t('goToDashboard')}
               </Link>
             </div>
           ) : (
@@ -659,7 +663,7 @@ export default function PracticePage() {
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Number of Questions
+                    {t('numberOfQuestions')}
                   </label>
                   <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
                     {questionCount}
@@ -721,7 +725,7 @@ export default function PracticePage() {
               <div className="mb-8">
                 <div className="flex items-center justify-between mb-3">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Topics
+                    {t('topics')}
                   </label>
                   <button
                     onClick={selectAllCourses}
@@ -731,7 +735,7 @@ export default function PracticePage() {
                         : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                     }`}
                   >
-                    All Courses
+                    {t('allCourses')}
                   </button>
                 </div>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -776,10 +780,10 @@ export default function PracticePage() {
                   <span className="text-xl">💡</span>
                   <div>
                     <p className="text-sm text-purple-800 dark:text-purple-200 font-medium">
-                      Why Mixed Practice?
+                      {t('whyMixedPractice')}
                     </p>
                     <p className="text-sm text-purple-600 dark:text-purple-300 mt-1">
-                      Interleaved practice improves long-term retention by forcing your brain to recall information from different contexts.
+                      {t('whyMixedPracticeDesc')}
                     </p>
                   </div>
                 </div>
@@ -790,7 +794,7 @@ export default function PracticePage() {
                 onClick={startPractice}
                 className="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all text-lg shadow-lg"
               >
-                Start Practice
+                {t('startPractice')}
               </button>
 
               {/* Back link */}
@@ -799,7 +803,7 @@ export default function PracticePage() {
                   href="/dashboard"
                   className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-sm"
                 >
-                  Back to Dashboard
+                  {t('backToDashboard')}
                 </Link>
               </div>
             </>
@@ -818,12 +822,12 @@ export default function PracticePage() {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
         <div className="text-center">
-          <p className="text-gray-600 dark:text-gray-400">No question to display</p>
+          <p className="text-gray-600 dark:text-gray-400">{t('noQuestionToDisplay')}</p>
           <button
             onClick={() => setSessionState('complete')}
             className="mt-4 px-4 py-2 text-indigo-600 hover:text-indigo-700"
           >
-            End Session
+            {t('endSession', { ns: 'practice' })}
           </button>
         </div>
       </div>
@@ -837,7 +841,7 @@ export default function PracticePage() {
         <div className="flex items-center justify-between mb-2">
           <button
             onClick={() => {
-              if (confirm('End practice session?')) {
+              if (confirm(t('endSessionConfirm'))) {
                 setSessionState('complete')
               }
             }}
@@ -850,7 +854,7 @@ export default function PracticePage() {
 
           {/* Mixed Practice badge */}
           <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs font-semibold rounded-full">
-            Mixed Practice
+            {t('mixedPractice')}
           </span>
 
           <span className="text-sm text-gray-600 dark:text-gray-400">
@@ -999,7 +1003,7 @@ export default function PracticePage() {
                       {/* Course/Lesson info */}
                       <div className="mt-4 pt-4 border-t border-indigo-100 dark:border-indigo-900/40">
                         <p className="text-sm text-indigo-600 dark:text-indigo-400">
-                          <span className="font-medium">From:</span> {currentCard.courseName} — {currentCard.lessonTitle}
+                          <span className="font-medium">{t('from')}:</span> {currentCard.courseName} — {currentCard.lessonTitle}
                         </p>
                       </div>
 
@@ -1010,7 +1014,7 @@ export default function PracticePage() {
                           className="mt-3 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition"
                           type="button"
                         >
-                          🤔 Need help understanding this?
+                          🤔 {t('needHelpUnderstanding')}
                         </button>
                       )}
                     </div>
@@ -1033,7 +1037,7 @@ export default function PracticePage() {
                 disabled={isSubmitting}
                 className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-all text-lg disabled:opacity-50"
               >
-                {isSubmitting ? 'Saving...' : 'Next Card'}
+                {isSubmitting ? t('saving') : t('nextCard')}
               </button>
             )
           }
@@ -1046,7 +1050,7 @@ export default function PracticePage() {
                   onClick={showAnswer}
                   className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold rounded-xl transition-colors text-lg"
                 >
-                  Show Answer
+                  {t('showAnswer', { ns: 'practice' })}
                 </button>
               )
             } else {
@@ -1061,7 +1065,7 @@ export default function PracticePage() {
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
-                      Incorrect
+                      {t('incorrectBtn')}
                     </span>
                   </button>
                   <button
@@ -1073,7 +1077,7 @@ export default function PracticePage() {
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                      Correct
+                      {t('correctBtn')}
                     </span>
                   </button>
                 </div>

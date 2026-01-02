@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
+import { useTranslations } from 'next-intl'
 import ReviewCard from '@/components/srs/ReviewCard'
 import RatingButtons from '@/components/srs/RatingButtons'
 import { useEventTracking } from '@/lib/analytics'
@@ -32,6 +33,7 @@ interface SessionStats {
 export default function ReviewPage() {
   const router = useRouter()
   const { trackFeature } = useEventTracking()
+  const t = useTranslations('review')
 
   // Session state
   const [sessionState, setSessionState] = useState<SessionState>('loading')
@@ -200,7 +202,7 @@ export default function ReviewPage() {
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-indigo-200 dark:border-indigo-900 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Loading review session...</p>
+          <p className="text-gray-600 dark:text-gray-400">{t('loading')}</p>
         </div>
       </div>
     )
@@ -226,6 +228,7 @@ export default function ReviewPage() {
         error={error}
         onStart={startSession}
         onRefresh={fetchDueCards}
+        t={t}
       />
     )
   }
@@ -236,12 +239,12 @@ export default function ReviewPage() {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
         <div className="text-center">
-          <p className="text-gray-600 dark:text-gray-400">No card to display</p>
+          <p className="text-gray-600 dark:text-gray-400">{t('noCardToDisplay')}</p>
           <button
             onClick={() => setSessionState('complete')}
             className="mt-4 px-4 py-2 text-indigo-600 hover:text-indigo-700"
           >
-            End Session
+            {t('endSession')}
           </button>
         </div>
       </div>
@@ -263,7 +266,7 @@ export default function ReviewPage() {
             </svg>
           </button>
           <span className="text-sm text-gray-600 dark:text-gray-400">
-            Card {currentIndex + 1} of {session?.cards.length || 0}
+            {t('cardProgress', { current: currentIndex + 1, total: session?.cards.length || 0 })}
           </span>
           <div className="w-10" /> {/* Spacer for alignment */}
         </div>
@@ -311,9 +314,10 @@ interface StartScreenProps {
   error: string | null
   onStart: () => void
   onRefresh: () => void
+  t: ReturnType<typeof useTranslations<'review'>>
 }
 
-function StartScreen({ session, error, onStart, onRefresh }: StartScreenProps) {
+function StartScreen({ session, error, onStart, onRefresh, t }: StartScreenProps) {
   const totalCards = session?.cards_due || 0
   const newCards = session?.new_cards || 0
   const reviewCards = session?.review_cards || 0
@@ -332,10 +336,10 @@ function StartScreen({ session, error, onStart, onRefresh }: StartScreenProps) {
           </div>
 
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            All Caught Up!
+            {t('allCaughtUp')}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mb-8">
-            You&apos;ve reviewed all your cards for today. Come back later for more!
+            {t('allCaughtUpDesc')}
           </p>
 
           <div className="space-y-3">
@@ -343,13 +347,13 @@ function StartScreen({ session, error, onStart, onRefresh }: StartScreenProps) {
               href="/dashboard"
               className="block w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors text-center"
             >
-              Back to Dashboard
+              {t('backToDashboard')}
             </Link>
             <button
               onClick={onRefresh}
               className="w-full py-3 px-6 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium rounded-xl transition-colors"
             >
-              Check Again
+              {t('checkAgain')}
             </button>
           </div>
         </div>
@@ -371,7 +375,7 @@ function StartScreen({ session, error, onStart, onRefresh }: StartScreenProps) {
           </div>
 
           <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-            Unable to Load Cards
+            {t('unableToLoad')}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
 
@@ -379,7 +383,7 @@ function StartScreen({ session, error, onStart, onRefresh }: StartScreenProps) {
             onClick={onRefresh}
             className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors"
           >
-            Try Again
+            {t('tryAgain')}
           </button>
         </div>
       </div>
@@ -400,10 +404,10 @@ function StartScreen({ session, error, onStart, onRefresh }: StartScreenProps) {
             </div>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Daily Review
+            {t('dailyReview')}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Strengthen your memory with spaced repetition
+            {t('subtitle')}
           </p>
         </div>
 
@@ -414,7 +418,7 @@ function StartScreen({ session, error, onStart, onRefresh }: StartScreenProps) {
               {totalCards}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Total Cards
+              {t('totalCards')}
             </div>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-sm border border-gray-100 dark:border-gray-700">
@@ -422,7 +426,7 @@ function StartScreen({ session, error, onStart, onRefresh }: StartScreenProps) {
               {newCards}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              New
+              {t('new')}
             </div>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-sm border border-gray-100 dark:border-gray-700">
@@ -430,7 +434,7 @@ function StartScreen({ session, error, onStart, onRefresh }: StartScreenProps) {
               {reviewCards}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Review
+              {t('review')}
             </div>
           </div>
         </div>
@@ -441,7 +445,7 @@ function StartScreen({ session, error, onStart, onRefresh }: StartScreenProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span className="text-gray-600 dark:text-gray-400">
-            Estimated time: <span className="font-medium text-gray-900 dark:text-white">{estimatedMinutes} min</span>
+            {t('estimatedTime', { minutes: estimatedMinutes })}
           </span>
         </div>
 
@@ -450,7 +454,7 @@ function StartScreen({ session, error, onStart, onRefresh }: StartScreenProps) {
           onClick={onStart}
           className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold rounded-xl transition-colors text-lg"
         >
-          Start Review
+          {t('startReview')}
         </button>
 
         {/* Back link */}
@@ -459,7 +463,7 @@ function StartScreen({ session, error, onStart, onRefresh }: StartScreenProps) {
             href="/dashboard"
             className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-sm"
           >
-            Back to Dashboard
+            {t('backToDashboard')}
           </Link>
         </div>
       </div>

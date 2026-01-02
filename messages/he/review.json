@@ -1,0 +1,19 @@
+{
+  "loading": "טוען את החזרה...",
+  "noCardToDisplay": "אין כרטיס להצגה",
+  "endSession": "סיים את החזרה",
+  "cardProgress": "כרטיס {current} מתוך {total}",
+  "allCaughtUp": "הכל מעודכן!",
+  "allCaughtUpDesc": "סיימת לחזור על כל הכרטיסים שלך להיום. חזור מאוחר יותר!",
+  "backToDashboard": "חזרה ללוח הבקרה",
+  "checkAgain": "בדוק שוב",
+  "unableToLoad": "לא ניתן לטעון כרטיסים",
+  "tryAgain": "נסה שוב",
+  "dailyReview": "חזרה יומית",
+  "subtitle": "חזק את הזיכרון שלך עם חזרה מרווחת",
+  "totalCards": "סה״כ כרטיסים",
+  "new": "חדשים",
+  "review": "לחזרה",
+  "estimatedTime": "זמן משוער: {minutes} דקות",
+  "startReview": "התחל חזרה"
+}

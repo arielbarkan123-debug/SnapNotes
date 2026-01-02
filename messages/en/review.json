@@ -1,0 +1,19 @@
+{
+  "loading": "Loading review session...",
+  "noCardToDisplay": "No card to display",
+  "endSession": "End Session",
+  "cardProgress": "Card {current} of {total}",
+  "allCaughtUp": "All Caught Up!",
+  "allCaughtUpDesc": "You've reviewed all your cards for today. Come back later for more!",
+  "backToDashboard": "Back to Dashboard",
+  "checkAgain": "Check Again",
+  "unableToLoad": "Unable to Load Cards",
+  "tryAgain": "Try Again",
+  "dailyReview": "Daily Review",
+  "subtitle": "Strengthen your memory with spaced repetition",
+  "totalCards": "Total Cards",
+  "new": "New",
+  "review": "Review",
+  "estimatedTime": "Estimated time: {minutes} min",
+  "startReview": "Start Review"
+}

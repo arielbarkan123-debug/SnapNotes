@@ -913,28 +913,19 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
               {/* Text Input Area */}
               <div>
                 <label htmlFor="text-content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Enter your topics, notes, or outline
+                  {t('textInputLabel')}
                 </label>
                 <textarea
                   id="text-content"
                   value={textContent}
                   onChange={(e) => setTextContent(e.target.value)}
-                  placeholder="Example:
-The exam will include the following topics:
-
-Number Systems: Rounding, Standard Form, Indices (laws & solving for exponents), Surds (operations & rationalizing).
-
-Algebra: Factorization (grouping), Algebraic Fractions (solving linear equations with denominators), Substitution.
-
-Functions: Composite functions, Domain & Range concepts.
-
-Statistics: Mean, Median, Mode, Range."
+                  placeholder={t('textPlaceholder')}
                   disabled={isUploading}
                   rows={10}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition disabled:opacity-50 text-sm resize-none"
                 />
                 <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  Enter topics, subject outlines, or study notes. AI will expand them into a comprehensive course with lessons and questions.
+                  {t('textDescription')}
                 </p>
               </div>
 
@@ -943,33 +934,33 @@ Statistics: Mean, Median, Mode, Range."
                 <span>
                   {textContent.length < 20 ? (
                     <span className="text-amber-600 dark:text-amber-400">
-                      Minimum 20 characters required ({20 - textContent.length} more needed)
+                      {t('minCharsRequired', { remaining: 20 - textContent.length })}
                     </span>
                   ) : (
                     <span className="text-green-600 dark:text-green-400">
-                      Ready to generate
+                      {t('readyToGenerate')}
                     </span>
                   )}
                 </span>
-                <span>{textContent.length} characters</span>
+                <span>{t('characters', { count: textContent.length })}</span>
               </div>
 
               {/* Title Input */}
               <div>
                 <label htmlFor="text-course-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Course Title
+                  {t('courseTitle')}
                 </label>
                 <input
                   id="text-course-title"
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Course title (optional)"
+                  placeholder={t('courseTitlePlaceholder')}
                   disabled={isUploading}
                   className="w-full px-4 py-3 sm:py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl sm:rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition disabled:opacity-50 text-base"
                 />
                 <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  Leave blank to auto-generate from your content
+                  {t('courseTitleHintText')}
                 </p>
               </div>
             </div>
@@ -1009,15 +1000,15 @@ Statistics: Mean, Median, Mode, Range."
                 </div>
 
                 <p className="text-gray-700 dark:text-gray-300 font-medium mb-1 text-base">
-                  {isDragging ? 'Drop your files here' : 'Tap to select files'}
+                  {isDragging ? t('dropFiles') : t('tapToSelect')}
                 </p>
                 <p className="text-gray-500 dark:text-gray-400 text-sm mb-2 sm:mb-3 hidden sm:block">
-                  or drag & drop your notebook pages
+                  {t('dragAndDrop')}
                 </p>
                 <p className="text-gray-400 dark:text-gray-500 text-xs text-center">
-                  Images (10MB), PDF, PowerPoint, Word (20MB)
+                  {t('fileLimits')}
                   <br />
-                  <span className="text-gray-400/80">Up to {MAX_FILES} files</span>
+                  <span className="text-gray-400/80">{t('maxFiles', { max: MAX_FILES })}</span>
                 </p>
               </div>
             </div>
@@ -1027,9 +1018,9 @@ Statistics: Mean, Median, Mode, Range."
               {/* Header with count and clear button */}
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
+                  {selectedFiles.length === 1 ? t('fileSelected', { count: 1 }) : t('filesSelected', { count: selectedFiles.length })}
                   {selectedFiles.length >= MAX_FILES && (
-                    <span className="text-gray-500 dark:text-gray-400 font-normal"> (maximum reached)</span>
+                    <span className="text-gray-500 dark:text-gray-400 font-normal"> {t('maxReached')}</span>
                   )}
                 </p>
                 <button
@@ -1037,7 +1028,7 @@ Statistics: Mean, Median, Mode, Range."
                   disabled={isUploading}
                   className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium disabled:opacity-50"
                 >
-                  Clear all
+                  {t('clearAll')}
                 </button>
               </div>
 
@@ -1049,20 +1040,20 @@ Statistics: Mean, Median, Mode, Range."
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                     <div className="flex-1">
-                      <p className="text-amber-700 dark:text-amber-400 text-sm font-medium">Clear all {selectedFiles.length} files?</p>
-                      <p className="text-amber-600 dark:text-amber-500 text-xs mt-1">This action cannot be undone.</p>
+                      <p className="text-amber-700 dark:text-amber-400 text-sm font-medium">{t('clearConfirmTitle', { count: selectedFiles.length })}</p>
+                      <p className="text-amber-600 dark:text-amber-500 text-xs mt-1">{t('clearConfirmDesc')}</p>
                       <div className="flex gap-2 mt-2">
                         <button
                           onClick={confirmClearAll}
                           className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
                         >
-                          Clear All
+                          {t('clearAll')}
                         </button>
                         <button
                           onClick={cancelClearAll}
                           className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded-md transition-colors"
                         >
-                          Cancel
+                          {t('cancel')}
                         </button>
                       </div>
                     </div>
@@ -1073,7 +1064,7 @@ Statistics: Mean, Median, Mode, Range."
               {/* Reorder hint */}
               {selectedFiles.length > 1 && (
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                  Drag to reorder or use arrows. Order determines page sequence.
+                  {t('reorderHint')}
                 </p>
               )}
 
