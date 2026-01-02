@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import Button from '@/components/ui/Button'
 import { useEventTracking } from '@/lib/analytics/hooks'
 
@@ -33,6 +34,7 @@ function FeatureCard({
   href,
   gradient,
   popular,
+  popularLabel = 'Popular',
 }: {
   icon: string
   title: string
@@ -43,13 +45,14 @@ function FeatureCard({
   href: string
   gradient: string
   popular?: boolean
+  popularLabel?: string
 }) {
   return (
     <div className={`relative bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-indigo-300 dark:hover:border-indigo-600`}>
       {popular && (
         <div className="absolute top-4 right-4">
           <span className="px-2.5 py-1 text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-full">
-            Popular
+            {popularLabel}
           </span>
         </div>
       )}
@@ -141,6 +144,7 @@ function StatsCard({ value, label, icon }: { value: string; label: string; icon:
 // ============================================================================
 
 export default function HomeworkHubPage() {
+  const t = useTranslations('homework')
   const [recentItems, setRecentItems] = useState<RecentItem[]>([])
   const [stats, setStats] = useState({ checksCount: 0, helpSessions: 0, avgGrade: '-' })
   const [isLoading, setIsLoading] = useState(true)
@@ -163,7 +167,7 @@ export default function HomeworkHubPage() {
           const recentChecks: RecentItem[] = (checks || []).map((check: any) => ({
             id: check.id,
             type: 'check' as const,
-            title: check.topic || 'Homework Check',
+            title: check.topic || t('homeworkCheck'),
             subject: check.subject || 'General',
             date: new Date(check.created_at).toLocaleDateString(),
             status: check.status,
@@ -194,7 +198,7 @@ export default function HomeworkHubPage() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            Back to Dashboard
+            {t('backToDashboard')}
           </Link>
 
           <div className="flex items-center gap-4">
@@ -203,10 +207,10 @@ export default function HomeworkHubPage() {
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                Homework Hub
+                {t('hubTitle')}
               </h1>
               <p className="text-gray-600 dark:text-gray-400 mt-0.5">
-                Your all-in-one homework assistant
+                {t('hubSubtitle')}
               </p>
             </div>
           </div>
@@ -217,49 +221,50 @@ export default function HomeworkHubPage() {
       <main className="container mx-auto px-4 py-8 max-w-5xl">
         {/* Quick Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
-          <StatsCard value={stats.checksCount.toString()} label="Checks Done" icon="✅" />
-          <StatsCard value={stats.helpSessions.toString()} label="Help Sessions" icon="🎓" />
-          <StatsCard value={stats.avgGrade} label="Avg Grade" icon="📊" />
+          <StatsCard value={stats.checksCount.toString()} label={t('checksDone')} icon="✅" />
+          <StatsCard value={stats.helpSessions.toString()} label={t('helpSessions')} icon="🎓" />
+          <StatsCard value={stats.avgGrade} label={t('avgGrade')} icon="📊" />
         </div>
 
         {/* Main Features */}
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Choose Your Tool
+            {t('chooseYourTool')}
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
             {/* Homework Checker */}
             <FeatureCard
               icon="📝"
-              title="Homework Checker"
-              description="Get your homework reviewed before submitting"
+              title={t('homeworkChecker')}
+              description={t('homeworkCheckerDesc')}
               features={[
-                "Upload task & your answer",
-                "Instant AI-powered feedback",
-                "Grade estimate with explanations",
-                "Match teacher's grading style",
-                "Actionable improvement tips"
+                t('checkerFeature1'),
+                t('checkerFeature2'),
+                t('checkerFeature3'),
+                t('checkerFeature4'),
+                t('checkerFeature5')
               ]}
-              buttonText="Check My Homework"
+              buttonText={t('checkMyHomework')}
               buttonIcon="✓"
               href="/homework/check"
               gradient="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20"
               popular
+              popularLabel={t('popular')}
             />
 
             {/* Homework Helper */}
             <FeatureCard
               icon="🎓"
-              title="Homework Helper"
-              description="Get guided help to solve problems yourself"
+              title={t('homeworkHelper')}
+              description={t('homeworkHelperDesc')}
               features={[
-                "Socratic tutoring method",
-                "Step-by-step guidance",
-                "Learn while solving",
-                "Hints when you're stuck",
-                "Build real understanding"
+                t('helperFeature1'),
+                t('helperFeature2'),
+                t('helperFeature3'),
+                t('helperFeature4'),
+                t('helperFeature5')
               ]}
-              buttonText="Get Help"
+              buttonText={t('getHelp')}
               buttonIcon="💡"
               href="/homework/help"
               gradient="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20"
@@ -270,31 +275,31 @@ export default function HomeworkHubPage() {
         {/* Quick Actions */}
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Quick Actions
+            {t('quickActions')}
           </h2>
           <div className="grid sm:grid-cols-2 gap-3">
             <QuickActionCard
               icon="📷"
-              title="Quick Check"
-              description="Upload and check homework instantly"
+              title={t('quickCheck')}
+              description={t('quickCheckDesc')}
               href="/homework/check"
             />
             <QuickActionCard
               icon="❓"
-              title="Ask for Help"
-              description="Get guided help with a problem"
+              title={t('askForHelp')}
+              description={t('askForHelpDesc')}
               href="/homework/help"
             />
             <QuickActionCard
               icon="📜"
-              title="View History"
-              description="See all your past homework"
+              title={t('viewHistory')}
+              description={t('viewHistoryDesc')}
               href="/homework/history"
             />
             <QuickActionCard
               icon="📈"
-              title="My Progress"
-              description="Track your improvement over time"
+              title={t('myProgress')}
+              description={t('myProgressDesc')}
               href="/progress"
             />
           </div>
@@ -305,13 +310,13 @@ export default function HomeworkHubPage() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Recent Activity
+                {t('recentActivity')}
               </h2>
               <Link
                 href="/homework/history"
                 className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
               >
-                View all
+                {t('viewAll')}
               </Link>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -355,10 +360,10 @@ export default function HomeworkHubPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
             <div className="text-5xl mb-4">🚀</div>
             <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-              Ready to get started?
+              {t('readyToStart')}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 max-w-md mx-auto">
-              Choose a tool above to check your homework or get help with a problem. Your activity will appear here.
+              {t('readyToStartDesc')}
             </p>
           </div>
         )}

@@ -1,5 +1,22 @@
 {
   "title": "Exams",
+  "examMode": "Exam Mode",
+  "createExam": "Create Exam",
+  "createExamPlus": "+ Create Exam",
+  "noExamsYet": "No exams yet",
+  "createFirstExam": "Create Your First Exam",
+  "questionsMinutes": "{count} questions \u2022 {minutes} min",
+  "score": "Score",
+  "course": "Course",
+  "selectCourse": "Select a course",
+  "noCoursesAvailable": "No courses available",
+  "questions": "Questions: {count}",
+  "timeLimit": "Time Limit: {minutes} min",
+  "minLabel": "min",
+  "creatingExam": "Creating Exam...",
+  "pleaseSelectCourse": "Please select a course",
+  "connectionError": "Connection error. Please try again.",
+  "failedToCreate": "Failed to create exam",
   "startExam": "Start Exam",
   "continueExam": "Continue Exam",
   "reviewExam": "Review Exam",
@@ -13,5 +30,9 @@
   "failed": "Needs improvement",
   "reviewAnswers": "Review Answers",
   "retakeExam": "Retake Exam",
-  "backToExams": "Back to Exams"
+  "backToExams": "Back to Exams",
+  "statusCompleted": "completed",
+  "statusInProgress": "in progress",
+  "statusExpired": "expired",
+  "statusPending": "pending"
 }

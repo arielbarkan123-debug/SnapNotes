@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { useExams, useCourses, EXAMS_CACHE_KEY } from '@/hooks'
 import { useSWRConfig } from 'swr'
 
 export default function ExamsPage() {
   const router = useRouter()
   const { mutate: globalMutate } = useSWRConfig()
+  const t = useTranslations('exam')
 
   // SWR hooks for data fetching with caching
   const { exams, isLoading: examsLoading, error: examsError } = useExams()
@@ -36,7 +38,7 @@ export default function ExamsPage() {
 
   const handleCreate = async () => {
     if (!selectedCourse) {
-      setError('Please select a course')
+      setError(t('pleaseSelectCourse'))
       return
     }
 
@@ -61,10 +63,10 @@ export default function ExamsPage() {
         await globalMutate(EXAMS_CACHE_KEY)
         router.push(`/exams/${data.examId}`)
       } else {
-        setError(data.error || 'Failed to create exam')
+        setError(data.error || t('failedToCreate'))
       }
     } catch {
-      setError('Connection error. Please try again.')
+      setError(t('connectionError'))
     } finally {
       setCreating(false)
     }
@@ -90,15 +92,24 @@ export default function ExamsPage() {
     }
   }
 
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'completed': return t('statusCompleted')
+      case 'in_progress': return t('statusInProgress')
+      case 'expired': return t('statusExpired')
+      default: return t('statusPending')
+    }
+  }
+
   return (
     <div className="max-w-5xl mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Exam Mode</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('examMode')}</h1>
         <button
           onClick={() => setShowCreate(true)}
           className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition"
         >
-          + Create Exam
+          {t('createExamPlus')}
         </button>
       </div>
 
@@ -127,12 +138,12 @@ export default function ExamsPage() {
         </div>
       ) : exams.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-xl">
-          <p className="text-gray-500 dark:text-gray-400 mb-4">No exams yet</p>
+          <p className="text-gray-500 dark:text-gray-400 mb-4">{t('noExamsYet')}</p>
           <button
             onClick={() => setShowCreate(true)}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition"
           >
-            Create Your First Exam
+            {t('createFirstExam')}
           </button>
         </div>
       ) : (
@@ -147,12 +158,12 @@ export default function ExamsPage() {
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white">{exam.title}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {exam.question_count} questions • {exam.time_limit_minutes} min
+                    {t('questionsMinutes', { count: exam.question_count, minutes: exam.time_limit_minutes })}
                   </p>
                 </div>
                 <div className="text-right">
                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(exam.status)}`}>
-                    {exam.status.replace('_', ' ')}
+                    {getStatusLabel(exam.status)}
                   </span>
                   {exam.status === 'completed' && exam.grade && (
                     <div className={`text-2xl font-bold mt-1 ${getGradeColor(exam.grade)}`}>
@@ -164,7 +175,7 @@ export default function ExamsPage() {
               {exam.status === 'completed' && (
                 <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">Score</span>
+                    <span className="text-gray-500 dark:text-gray-400">{t('score')}</span>
                     <span className="font-medium text-gray-900 dark:text-white">
                       {exam.score}/{exam.total_points} ({exam.percentage}%)
                     </span>
@@ -180,7 +191,7 @@ export default function ExamsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={(e) => e.target === e.currentTarget && setShowCreate(false)}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-xl">
             <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Create Exam</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('createExam')}</h2>
               <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">✕</button>
             </div>
             <div className="p-4 space-y-4">
@@ -188,14 +199,14 @@ export default function ExamsPage() {
               {coursesError && <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 rounded-lg text-sm">{coursesError}</div>}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('course')}</label>
                 <select
                   value={selectedCourse}
                   onChange={(e) => setSelectedCourse(e.target.value)}
                   className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white"
                   disabled={courses.length === 0}
                 >
-                  <option value="">{courses.length === 0 ? 'No courses available' : 'Select a course'}</option>
+                  <option value="">{courses.length === 0 ? t('noCoursesAvailable') : t('selectCourse')}</option>
                   {courses.map((course) => (
                     <option key={course.id} value={course.id}>{course.title}</option>
                   ))}
@@ -203,7 +214,7 @@ export default function ExamsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Questions: {questionCount}</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('questions', { count: questionCount })}</label>
                 <input
                   type="range"
                   min="5"
@@ -220,7 +231,7 @@ export default function ExamsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Time Limit: {timeLimit} min</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('timeLimit', { minutes: timeLimit })}</label>
                 <input
                   type="range"
                   min="5"
@@ -231,8 +242,8 @@ export default function ExamsPage() {
                   className="w-full"
                 />
                 <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                  <span>5 min</span>
-                  <span>120 min</span>
+                  <span>5 {t('minLabel')}</span>
+                  <span>120 {t('minLabel')}</span>
                 </div>
               </div>
 
@@ -241,7 +252,7 @@ export default function ExamsPage() {
                 disabled={creating || !selectedCourse}
                 className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {creating ? 'Creating Exam...' : 'Create Exam'}
+                {creating ? t('creatingExam') : t('createExam')}
               </button>
             </div>
           </div>

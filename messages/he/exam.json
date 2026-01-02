@@ -1,5 +1,22 @@
 {
   "title": "מבחנים",
+  "examMode": "מצב מבחן",
+  "createExam": "צור מבחן",
+  "createExamPlus": "+ צור מבחן",
+  "noExamsYet": "אין מבחנים עדיין",
+  "createFirstExam": "צור את המבחן הראשון שלך",
+  "questionsMinutes": "{count} שאלות \u2022 {minutes} דק׳",
+  "score": "ציון",
+  "course": "קורס",
+  "selectCourse": "בחר קורס",
+  "noCoursesAvailable": "אין קורסים זמינים",
+  "questions": "שאלות: {count}",
+  "timeLimit": "מגבלת זמן: {minutes} דק׳",
+  "minLabel": "דק׳",
+  "creatingExam": "יוצר מבחן...",
+  "pleaseSelectCourse": "אנא בחר קורס",
+  "connectionError": "שגיאת חיבור. נסה שוב.",
+  "failedToCreate": "יצירת המבחן נכשלה",
   "startExam": "התחל מבחן",
   "continueExam": "המשך מבחן",
   "reviewExam": "סקור מבחן",
@@ -13,5 +30,9 @@
   "failed": "דרוש שיפור",
   "reviewAnswers": "סקור תשובות",
   "retakeExam": "בחן מחדש",
-  "backToExams": "חזרה למבחנים"
+  "backToExams": "חזרה למבחנים",
+  "statusCompleted": "הושלם",
+  "statusInProgress": "בתהליך",
+  "statusExpired": "פג תוקף",
+  "statusPending": "ממתין"
 }

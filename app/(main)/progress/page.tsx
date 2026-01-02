@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { useProgress } from '@/hooks'
 import { useEventTracking } from '@/lib/analytics/hooks'
 import {
@@ -20,6 +21,9 @@ export default function ProgressPage() {
   // SWR hook for data fetching with caching
   const { data, isLoading, error } = useProgress()
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null)
+
+  // Translations
+  const t = useTranslations('progress')
 
   // Analytics
   const { trackFeature } = useEventTracking()
@@ -58,10 +62,10 @@ export default function ProgressPage() {
       {/* Page Header */}
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-          Your Progress
+          {t('pageTitle')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Track your learning journey and identify areas for improvement
+          {t('pageSubtitle')}
         </p>
       </div>
 
@@ -69,32 +73,32 @@ export default function ProgressPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         <OverviewCard
           icon="⏱️"
-          label="Study Time"
+          label={t('studyTime')}
           value={formatTime(data.overview.studyTime.week)}
-          subtext={`${formatTime(data.overview.studyTime.month)} this month`}
+          subtext={t('studyTimeThisMonth', { time: formatTime(data.overview.studyTime.month) })}
           color="blue"
         />
         <OverviewCard
           icon="📚"
-          label="Cards Reviewed"
+          label={t('cardsReviewed')}
           value={data.overview.cardsReviewed.count.toString()}
           trend={data.overview.cardsReviewed.trend}
-          subtext="Last 7 days"
+          subtext={t('last7Days')}
           color="indigo"
         />
         <OverviewCard
           icon="🎯"
-          label="Accuracy"
+          label={t('accuracy')}
           value={`${data.overview.accuracy.percent}%`}
           trend={data.overview.accuracy.trend}
-          subtext="Last 7 days"
+          subtext={t('last7Days')}
           color="green"
         />
         <OverviewCard
           icon="⭐"
-          label="Mastery"
+          label={t('mastery')}
           value={`${data.overview.mastery.percent}%`}
-          subtext={`${data.overview.mastery.totalLessons} lessons`}
+          subtext={t('lessonsCount', { count: data.overview.mastery.totalLessons })}
           color="amber"
         />
       </div>
@@ -114,7 +118,7 @@ export default function ProgressPage() {
           {/* Accuracy Chart */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Accuracy Over Time
+              {t('accuracyOverTime')}
             </h2>
             <AccuracyChart data={data.accuracyChart} />
           </div>
@@ -122,7 +126,7 @@ export default function ProgressPage() {
           {/* Time Chart */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Study Time (Last 7 Days)
+              {t('studyTimeLast7Days')}
             </h2>
             <TimeChart data={data.timeChart} />
           </div>
@@ -137,7 +141,7 @@ export default function ProgressPage() {
       >
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Mastery Map
+            {t('masteryMap')}
           </h2>
           {data.masteryMap.length > 0 ? (
             <div className="space-y-4">
@@ -154,7 +158,7 @@ export default function ProgressPage() {
             </div>
           ) : (
             <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-              Complete some lessons to see your mastery progress
+              {t('noMasteryData')}
             </p>
           )}
         </div>
@@ -177,11 +181,11 @@ export default function ProgressPage() {
             <div className="flex items-center gap-2 mb-4">
               <span className="text-xl">💪</span>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Focus Areas
+                {t('focusAreas')}
               </h2>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              Practice these lessons to improve your overall mastery
+              {t('focusAreasDesc')}
             </p>
             {data.weakAreas.length > 0 ? (
               <div className="space-y-3">
@@ -193,7 +197,7 @@ export default function ProgressPage() {
               <div className="text-center py-6">
                 <span className="text-3xl mb-2 block">🎉</span>
                 <p className="text-gray-500 dark:text-gray-400">
-                  No weak areas! You&apos;re doing great.
+                  {t('noWeakAreas')}
                 </p>
               </div>
             )}
@@ -204,11 +208,11 @@ export default function ProgressPage() {
             <div className="flex items-center gap-2 mb-4">
               <span className="text-xl">🏆</span>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Mastered Topics
+                {t('masteredTopics')}
               </h2>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              Celebrate your progress on these lessons
+              {t('masteredTopicsDesc')}
             </p>
             {data.strongAreas.length > 0 ? (
               <div className="space-y-3">
@@ -220,7 +224,7 @@ export default function ProgressPage() {
               <div className="text-center py-6">
                 <span className="text-3xl mb-2 block">📖</span>
                 <p className="text-gray-500 dark:text-gray-400">
-                  Keep studying to master more lessons!
+                  {t('keepStudying')}
                 </p>
               </div>
             )}
@@ -238,7 +242,7 @@ export default function ProgressPage() {
             <div className="flex items-center gap-2 mb-4">
               <span className="text-xl">🧠</span>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Personalized Insights
+                {t('personalizedInsights')}
               </h2>
             </div>
             <div className="grid sm:grid-cols-2 gap-3">
@@ -308,12 +312,13 @@ interface AccuracyChartProps {
 }
 
 function AccuracyChart({ data }: AccuracyChartProps) {
+  const t = useTranslations('progress')
   const hasData = data.some(d => d.count > 0)
 
   if (!hasData) {
     return (
       <div className="h-48 flex items-center justify-center text-gray-500 dark:text-gray-400">
-        No review data yet. Start reviewing to see your accuracy trend.
+        {t('noReviewData')}
       </div>
     )
   }
@@ -345,9 +350,9 @@ function AccuracyChart({ data }: AccuracyChartProps) {
           ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
           : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
       }`}>
-        {trend === 'improving' && '📈 Improving'}
-        {trend === 'declining' && '📉 Needs attention'}
-        {trend === 'stable' && '➡️ Stable'}
+        {trend === 'improving' && `📈 ${t('trendImproving')}`}
+        {trend === 'declining' && `📉 ${t('trendDeclining')}`}
+        {trend === 'stable' && `➡️ ${t('trendStable')}`}
       </div>
 
       {/* Chart */}
@@ -395,6 +400,7 @@ interface TimeChartProps {
 }
 
 function TimeChart({ data }: TimeChartProps) {
+  const t = useTranslations('progress')
   const maxMinutes = Math.max(...data.map(d => d.minutes), 30) // Min scale of 30 min
   const goalMinutes = 15 // Daily goal
 
@@ -403,7 +409,7 @@ function TimeChart({ data }: TimeChartProps) {
       {/* Goal indicator */}
       <div className="mb-4 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
         <div className="w-3 h-3 border-2 border-dashed border-indigo-400 rounded-sm" />
-        <span>Daily goal: {goalMinutes} min</span>
+        <span>{t('dailyGoal', { minutes: goalMinutes })}</span>
       </div>
 
       {/* Chart */}
@@ -478,6 +484,7 @@ interface MasteryMapCourseProps {
 }
 
 function MasteryMapCourse({ course, isExpanded, onToggle }: MasteryMapCourseProps) {
+  const t = useTranslations('progress')
   const masteryPercent = Math.round(course.mastery * 100)
 
   return (
@@ -499,7 +506,7 @@ function MasteryMapCourse({ course, isExpanded, onToggle }: MasteryMapCourseProp
             {course.title}
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {course.completedCount} / {course.lessonCount} lessons completed
+            {t('lessonsCompleted', { completed: course.completedCount, total: course.lessonCount })}
           </p>
         </div>
 
@@ -574,6 +581,7 @@ interface AreaItemProps {
 }
 
 function WeakAreaItem({ area }: AreaItemProps) {
+  const t = useTranslations('progress')
   const masteryPercent = Math.round(area.mastery * 100)
 
   return (
@@ -595,7 +603,7 @@ function WeakAreaItem({ area }: AreaItemProps) {
         </div>
       </div>
       <span className="text-indigo-600 dark:text-indigo-400 text-sm font-medium">
-        Practice
+        {t('practice')}
       </span>
     </Link>
   )
@@ -711,20 +719,21 @@ function LoadingSkeleton() {
 }
 
 function ErrorState() {
+  const t = useTranslations('progress')
   return (
     <div className="container mx-auto px-4 py-16 text-center">
       <div className="text-4xl mb-4">😕</div>
       <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-        Couldn&apos;t load progress
+        {t('errorTitle')}
       </h2>
       <p className="text-gray-600 dark:text-gray-400 mb-4">
-        Something went wrong. Please try again later.
+        {t('errorDesc')}
       </p>
       <Link
         href="/dashboard"
         className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
       >
-        Back to Dashboard
+        {t('backToDashboard')}
       </Link>
     </div>
   )
