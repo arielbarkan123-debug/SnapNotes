@@ -48,7 +48,60 @@
     "matchRealFormat": "פורמט מקורי",
     "matchRealFormatDesc": "המבחנים עוקבים אחר המבנה המדויק של תוכנית הלימודים שלך",
     "inspiredBy": "בהשראת",
-    "inspiredByDesc": "פורמט גמיש עם סגנונות שאלות דומים"
+    "inspiredByDesc": "פורמט גמיש עם סגנונות שאלות דומים",
+    "otherSubjects": "מקצועות אחרים",
+    "groups": {
+      "ib": {
+        "group1": "קבוצה 1: לימודי שפה וספרות",
+        "group2": "קבוצה 2: רכישת שפה",
+        "group3": "קבוצה 3: אנשים וחברות",
+        "group4": "קבוצה 4: מדעים",
+        "group5": "קבוצה 5: מתמטיקה",
+        "group6": "קבוצה 6: אמנויות"
+      },
+      "uk": {
+        "sciences": "מדעים",
+        "mathematics": "מתמטיקה",
+        "humanities": "מדעי הרוח והחברה",
+        "languages": "שפות וספרות",
+        "arts": "אמנויות יצירתיות ומופע",
+        "technology": "טכנולוגיה ומקצועות"
+      },
+      "ap": {
+        "sciences": "מדעים",
+        "mathematics": "מתמטיקה ומדעי המחשב",
+        "humanities": "היסטוריה ומדעי החברה",
+        "languages": "אנגלית",
+        "world-languages": "שפות ותרבויות עולמיות",
+        "arts": "אמנויות",
+        "capstone": "AP Capstone"
+      },
+      "israeli_bagrut": {
+        "sciences": "מדעים",
+        "mathematics": "מתמטיקה",
+        "humanities": "מדעי הרוח",
+        "social": "מדעי החברה",
+        "languages": "שפות",
+        "arts": "אמנויות",
+        "required": "מקצועות חובה"
+      },
+      "us": {
+        "sciences": "מדעים",
+        "mathematics": "מתמטיקה",
+        "english": "אנגלית ואומנויות שפה",
+        "social-studies": "לימודי חברה",
+        "world-languages": "שפות עולמיות",
+        "arts": "אמנויות יפות ומופע",
+        "electives": "מקצועות בחירה"
+      },
+      "general": {
+        "core": "מקצועות ליבה",
+        "sciences": "מדעים",
+        "languages": "שפות",
+        "arts": "אמנויות ומדעי הרוח",
+        "practical": "כישורים מעשיים"
+      }
+    }
   },
   "appSettings": {
     "title": "הגדרות אפליקציה",

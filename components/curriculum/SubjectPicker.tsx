@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { SubjectCard } from './SubjectCard'
 import { loadAvailableSubjects } from '@/lib/curriculum/loader'
@@ -31,6 +32,7 @@ export function SubjectPicker({
   compact = false,
   className,
 }: SubjectPickerProps) {
+  const t = useTranslations('settings')
   const [subjectsData, setSubjectsData] = useState<SystemSubjects | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -115,10 +117,18 @@ export function SubjectPicker({
 
   // Get group order from subjectsData.groups, or use alphabetical if no groups defined
   const groupOrder = subjectsData.groups?.map((g) => g.id) || Object.keys(groupedSubjects).sort()
-  const groupLabels = subjectsData.groups?.reduce<Record<string, string>>(
-    (acc, g) => ({ ...acc, [g.id]: g.name }),
-    {}
-  ) || {}
+
+  // Get translated group label - falls back to original name if translation not found
+  const getGroupLabel = (groupId: string): string => {
+    try {
+      // Try to get translated group name from settings.curriculum.groups.{system}.{groupId}
+      return t(`curriculum.groups.${system}.${groupId}`)
+    } catch {
+      // Fall back to the original group name from data
+      const originalGroup = subjectsData.groups?.find((g) => g.id === groupId)
+      return originalGroup?.name || groupId
+    }
+  }
 
   return (
     <div className={cn('space-y-6', className)}>
@@ -139,7 +149,7 @@ export function SubjectPicker({
           <div key={groupId} className="space-y-3">
             {/* Group header */}
             <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide border-b border-gray-200 dark:border-gray-700 pb-1">
-              {groupLabels[groupId] || groupId}
+              {getGroupLabel(groupId)}
             </h3>
 
             {/* Subject grid */}
@@ -173,7 +183,7 @@ export function SubjectPicker({
       {groupedSubjects['other']?.length > 0 && !groupOrder.includes('other') && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide border-b border-gray-200 dark:border-gray-700 pb-1">
-            Other Subjects
+            {t('curriculum.otherSubjects')}
           </h3>
           <div
             className={cn(

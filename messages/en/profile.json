@@ -32,5 +32,34 @@
   "categoryMastery": "Mastery",
   "studyToKeepStreak": "Study today to keep your streak!",
   "daysToGo": "{days} days to go",
-  "nextStreak": "Next: {days} Day Streak"
+  "nextStreak": "Next: {emoji} {label}",
+  "streak": {
+    "dayStreak": "{count} Day Streak",
+    "dayStreakMilestone": "{emoji} {count} Day Streak!",
+    "startAStreak": "Start a Streak",
+    "bestDays": "Best: {days} days",
+    "done": "Done",
+    "days": {
+      "sun": "S",
+      "mon": "M",
+      "tue": "T",
+      "wed": "W",
+      "thu": "T",
+      "fri": "F",
+      "sat": "S"
+    },
+    "studyToKeepStreak": "Study today to keep your streak!",
+    "greatStart": "Great start! Come back tomorrow to build your streak.",
+    "keepItGoing": "Keep it going! {days} more days to your first milestone.",
+    "awesomeDedication": "Awesome dedication! Keep the fire burning!",
+    "startStreakPrompt": "Complete a lesson or review to start your streak!",
+    "dontBreakChain": "Don't break the chain!",
+    "nextMilestone": "Next: {emoji} {label}",
+    "daysToGo": "{days} days to go",
+    "streakLost": "Streak Lost",
+    "streakEnded": "Your {days} day streak has ended.",
+    "dontWorry": "Don't worry - you can start a new one today!",
+    "dismiss": "Dismiss",
+    "startNewStreak": "Start New Streak"
+  }
 }

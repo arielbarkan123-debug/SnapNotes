@@ -32,5 +32,34 @@
   "categoryMastery": "שליטה",
   "studyToKeepStreak": "למד היום כדי לשמור על הרצף!",
   "daysToGo": "{days} ימים נותרו",
-  "nextStreak": "הבא: רצף של {days} ימים"
+  "nextStreak": "הבא: {emoji} {label}",
+  "streak": {
+    "dayStreak": "רצף של {count} ימים",
+    "dayStreakMilestone": "{emoji} רצף של {count} ימים!",
+    "startAStreak": "התחל רצף",
+    "bestDays": "השיא: {days} ימים",
+    "done": "בוצע",
+    "days": {
+      "sun": "א",
+      "mon": "ב",
+      "tue": "ג",
+      "wed": "ד",
+      "thu": "ה",
+      "fri": "ו",
+      "sat": "ש"
+    },
+    "studyToKeepStreak": "למד היום כדי לשמור על הרצף!",
+    "greatStart": "התחלה מעולה! חזור מחר כדי לבנות את הרצף שלך.",
+    "keepItGoing": "המשך כך! עוד {days} ימים עד לאבן הדרך הראשונה שלך.",
+    "awesomeDedication": "מסירות מדהימה! המשך לשמור על האש!",
+    "startStreakPrompt": "השלם שיעור או סקירה כדי להתחיל את הרצף שלך!",
+    "dontBreakChain": "אל תשבור את הרצף!",
+    "nextMilestone": "הבא: {emoji} {label}",
+    "daysToGo": "{days} ימים נותרו",
+    "streakLost": "הרצף אבד",
+    "streakEnded": "הרצף של {days} ימים שלך הסתיים.",
+    "dontWorry": "אל תדאג - אתה יכול להתחיל אחד חדש היום!",
+    "dismiss": "סגור",
+    "startNewStreak": "התחל רצף חדש"
+  }
 }

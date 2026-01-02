@@ -48,7 +48,60 @@
     "matchRealFormat": "Match Real Format",
     "matchRealFormatDesc": "Exams follow your curriculum's exact structure",
     "inspiredBy": "Inspired By",
-    "inspiredByDesc": "Flexible format with similar question styles"
+    "inspiredByDesc": "Flexible format with similar question styles",
+    "otherSubjects": "Other Subjects",
+    "groups": {
+      "ib": {
+        "group1": "Group 1: Studies in Language & Literature",
+        "group2": "Group 2: Language Acquisition",
+        "group3": "Group 3: Individuals & Societies",
+        "group4": "Group 4: Sciences",
+        "group5": "Group 5: Mathematics",
+        "group6": "Group 6: The Arts"
+      },
+      "uk": {
+        "sciences": "Sciences",
+        "mathematics": "Mathematics",
+        "humanities": "Humanities & Social Sciences",
+        "languages": "Languages & Literature",
+        "arts": "Creative & Performing Arts",
+        "technology": "Technology & Vocational"
+      },
+      "ap": {
+        "sciences": "Sciences",
+        "mathematics": "Mathematics & Computer Science",
+        "humanities": "History & Social Sciences",
+        "languages": "English",
+        "world-languages": "World Languages & Cultures",
+        "arts": "Arts",
+        "capstone": "AP Capstone"
+      },
+      "israeli_bagrut": {
+        "sciences": "Sciences",
+        "mathematics": "Mathematics",
+        "humanities": "Humanities",
+        "social": "Social Sciences",
+        "languages": "Languages",
+        "arts": "Arts",
+        "required": "Required Subjects"
+      },
+      "us": {
+        "sciences": "Sciences",
+        "mathematics": "Mathematics",
+        "english": "English & Language Arts",
+        "social-studies": "Social Studies",
+        "world-languages": "World Languages",
+        "arts": "Fine & Performing Arts",
+        "electives": "Electives"
+      },
+      "general": {
+        "core": "Core Subjects",
+        "sciences": "Sciences",
+        "languages": "Languages",
+        "arts": "Arts & Humanities",
+        "practical": "Practical Skills"
+      }
+    }
   },
   "appSettings": {
     "title": "App Settings",

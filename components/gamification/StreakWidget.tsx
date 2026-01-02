@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { getStreakFlames, STREAK_MILESTONES } from '@/lib/gamification/streak'
 
 // =============================================================================
@@ -74,6 +75,7 @@ export function StreakWidget({
   compact = false,
   onClick,
 }: StreakWidgetProps) {
+  const t = useTranslations('profile.streak')
   const [timeLeft, setTimeLeft] = useState(hoursRemaining)
 
   // Update countdown timer
@@ -91,13 +93,13 @@ export function StreakWidget({
 
   // Get day labels for last 7 days
   const getDayLabels = (): string[] => {
-    const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+    const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
     const today = new Date().getDay()
     const labels: string[] = []
 
     for (let i = 6; i >= 0; i--) {
       const dayIndex = (today - i + 7) % 7
-      labels.push(days[dayIndex])
+      labels.push(t(`days.${dayKeys[dayIndex]}`))
     }
 
     return labels
@@ -187,17 +189,17 @@ export function StreakWidget({
             `}>
               {isMilestone && milestone ? (
                 <span className="flex items-center gap-1">
-                  {milestone.emoji} {currentStreak} Day Streak!
+                  {t('dayStreakMilestone', { emoji: milestone.emoji, count: currentStreak })}
                 </span>
               ) : currentStreak > 0 ? (
-                `${currentStreak} Day Streak`
+                t('dayStreak', { count: currentStreak })
               ) : (
-                'Start a Streak'
+                t('startAStreak')
               )}
             </div>
             {longestStreak > currentStreak && currentStreak > 0 && (
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                Best: {longestStreak} days
+                {t('bestDays', { days: longestStreak })}
               </div>
             )}
           </div>
@@ -207,7 +209,7 @@ export function StreakWidget({
         {activeToday && currentStreak > 0 && (
           <div className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
             <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-            Done
+            {t('done')}
           </div>
         )}
       </div>
@@ -232,7 +234,7 @@ export function StreakWidget({
             <div className="flex items-center gap-2">
               <span className="text-sm">⚠️</span>
               <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
-                Study today to keep your streak!
+                {t('studyToKeepStreak')}
               </span>
             </div>
             <div className="flex items-center gap-1 text-sm font-bold text-orange-600 dark:text-orange-400">
@@ -245,27 +247,27 @@ export function StreakWidget({
         ) : activeToday && currentStreak > 0 ? (
           <div className="text-center text-sm text-gray-600 dark:text-gray-400">
             {currentStreak === 1 ? (
-              "Great start! Come back tomorrow to build your streak."
+              t('greatStart')
             ) : currentStreak < 7 ? (
-              `Keep it going! ${7 - currentStreak} more days to your first milestone.`
+              t('keepItGoing', { days: 7 - currentStreak })
             ) : (
-              "Awesome dedication! Keep the fire burning! 🔥"
+              t('awesomeDedication')
             )}
           </div>
         ) : currentStreak === 0 ? (
           <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-            Complete a lesson or review to start your streak!
+            {t('startStreakPrompt')}
           </div>
         ) : (
           <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-            Don&apos;t break the chain!
+            {t('dontBreakChain')}
           </div>
         )}
       </div>
 
       {/* Milestone progress (if not at milestone) */}
       {currentStreak > 0 && !isMilestone && (
-        <MilestoneProgress currentStreak={currentStreak} />
+        <MilestoneProgress currentStreak={currentStreak} t={t} />
       )}
     </div>
   )
@@ -275,7 +277,7 @@ export function StreakWidget({
 // Milestone Progress Sub-component
 // =============================================================================
 
-function MilestoneProgress({ currentStreak }: { currentStreak: number }) {
+function MilestoneProgress({ currentStreak, t }: { currentStreak: number; t: ReturnType<typeof useTranslations<'profile.streak'>> }) {
   // Find next milestone
   const nextMilestone = STREAK_MILESTONES.find(m => m.days > currentStreak)
 
@@ -291,8 +293,8 @@ function MilestoneProgress({ currentStreak }: { currentStreak: number }) {
   return (
     <div className="mt-4 pt-3 border-t border-orange-200/50 dark:border-orange-800/30">
       <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-1.5">
-        <span>Next: {nextMilestone.emoji} {nextMilestone.label}</span>
-        <span>{daysToGo} days to go</span>
+        <span>{t('nextMilestone', { emoji: nextMilestone.emoji, label: nextMilestone.label })}</span>
+        <span>{t('daysToGo', { days: daysToGo })}</span>
       </div>
       <div className="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
         <div
@@ -355,16 +357,18 @@ interface StreakBrokenProps {
 }
 
 export function StreakBroken({ previousStreak, onClose, onStartNew }: StreakBrokenProps) {
+  const t = useTranslations('profile.streak')
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6 text-center dark:border-gray-700 dark:bg-gray-800">
       <div className="text-5xl mb-3">😢</div>
       <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-        Streak Lost
+        {t('streakLost')}
       </h3>
       <p className="text-gray-600 dark:text-gray-400 mb-4">
-        Your {previousStreak} day streak has ended.
+        {t('streakEnded', { days: previousStreak })}
         <br />
-        Don&apos;t worry - you can start a new one today!
+        {t('dontWorry')}
       </p>
       <div className="flex gap-3 justify-center">
         {onClose && (
@@ -372,7 +376,7 @@ export function StreakBroken({ previousStreak, onClose, onStartNew }: StreakBrok
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
           >
-            Dismiss
+            {t('dismiss')}
           </button>
         )}
         {onStartNew && (
@@ -380,7 +384,7 @@ export function StreakBroken({ previousStreak, onClose, onStartNew }: StreakBrok
             onClick={onStartNew}
             className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-red-500 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all"
           >
-            Start New Streak
+            {t('startNewStreak')}
           </button>
         )}
       </div>
