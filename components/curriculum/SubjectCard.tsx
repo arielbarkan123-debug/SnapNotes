@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { LevelToggle } from './LevelToggle'
 import { hasSubjectLevels } from '@/lib/curriculum/grades'
@@ -28,6 +29,19 @@ export function SubjectCard({
   compact = false,
   className,
 }: SubjectCardProps) {
+  const t = useTranslations('subjects')
+
+  // Get translated subject name - falls back to original if not found
+  const getSubjectName = (): string => {
+    try {
+      return t(`${system}.${subject.id}`)
+    } catch {
+      return subject.name
+    }
+  }
+
+  const translatedName = getSubjectName()
+
   // Only show levels if the system supports it AND the grade requires it
   // For Israeli Bagrut, younger grades (א-ט) don't choose יחידות
   const showLevels = hasSubjectLevels(system, grade) && subject.levels && subject.levels.length > 0
@@ -73,15 +87,8 @@ export function SubjectCard({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className={cn('font-medium truncate', compact ? 'text-sm' : 'text-base')}>
-            {subject.shortName || subject.name}
+            {translatedName}
           </div>
-
-          {/* Show full name if we have shortName */}
-          {subject.shortName && subject.name !== subject.shortName && !compact && (
-            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-              {subject.name}
-            </div>
-          )}
         </div>
       </div>
 
