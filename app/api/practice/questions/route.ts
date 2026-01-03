@@ -38,7 +38,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     if (difficulty) {
-      query = query.eq('difficulty_level', parseInt(difficulty))
+      const difficultyNum = parseInt(difficulty, 10)
+      // Validate: must be a number between 1-10
+      if (isNaN(difficultyNum) || difficultyNum < 1 || difficultyNum > 10) {
+        return NextResponse.json(
+          { error: 'difficulty must be a number between 1 and 10' },
+          { status: 400 }
+        )
+      }
+      query = query.eq('difficulty_level', difficultyNum)
     }
 
     const { data, error } = await query.limit(limit)

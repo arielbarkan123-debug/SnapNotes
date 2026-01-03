@@ -25,6 +25,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
   const [isMinimized, setIsMinimized] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const hasShownWelcome = useRef(false)
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = useCallback(() => {
@@ -42,9 +43,10 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
     }
   }, [isOpen, isMinimized])
 
-  // Add welcome message on first open
+  // Add welcome message on first open - use ref to prevent re-runs
   useEffect(() => {
-    if (isOpen && messages.length === 0) {
+    if (isOpen && !hasShownWelcome.current) {
+      hasShownWelcome.current = true
       setMessages([{
         id: 'welcome',
         role: 'assistant',
@@ -54,7 +56,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
         timestamp: new Date(),
       }])
     }
-  }, [isOpen, courseName, messages.length, t])
+  }, [isOpen, courseName, t])
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return

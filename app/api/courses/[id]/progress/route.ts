@@ -40,16 +40,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // Get user progress
+    // Get user progress - use maybeSingle() since new users won't have a record
     const { data: progress, error: progressError } = await supabase
       .from('user_progress')
       .select('*')
       .eq('user_id', user.id)
       .eq('course_id', courseId)
-      .single()
+      .maybeSingle()
 
-    if (progressError && progressError.code !== 'PGRST116') {
-      // PGRST116 = no rows returned, which is fine
+    if (progressError) {
       console.error('Error fetching progress:', progressError)
       return NextResponse.json(
         { error: 'Failed to fetch progress' },
@@ -137,13 +136,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // Check if progress exists
+    // Check if progress exists - use maybeSingle() since it might not exist
     const { data: existingProgress } = await supabase
       .from('user_progress')
       .select('id')
       .eq('user_id', user.id)
       .eq('course_id', courseId)
-      .single()
+      .maybeSingle()
 
     let progress
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useCallback, useState, useRef, ReactNode } from 'react'
+import { createContext, useContext, useCallback, useState, useRef, useEffect, ReactNode } from 'react'
 import { XPPopupContainer, type XPPopupData } from '@/components/gamification/XPPopup'
 import { getLevelTitle } from '@/lib/gamification/xp'
 
@@ -117,6 +117,19 @@ export function XPProvider({ children }: XPProviderProps) {
     batchTimer.current = setTimeout(() => {
       flushBatch()
     }, 500)
+  }, [flushBatch])
+
+  // Cleanup: Clear timer on unmount to prevent memory leak and lost XP
+  useEffect(() => {
+    return () => {
+      if (batchTimer.current) {
+        clearTimeout(batchTimer.current)
+        // Flush any remaining batched XP before unmount
+        if (batchedXP.current > 0) {
+          flushBatch()
+        }
+      }
+    }
   }, [flushBatch])
 
   const value: XPContextValue = {

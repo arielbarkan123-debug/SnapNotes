@@ -8,7 +8,8 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { sessionId, userId, deviceInfo, utmParams, referrer, landingPage } = body
+    // SECURITY: Never accept userId from client - always use authenticated user
+    const { sessionId, deviceInfo, utmParams, referrer, landingPage } = body
 
     if (!sessionId) {
       return NextResponse.json({ error: 'Session ID is required' }, { status: 400 })
@@ -18,12 +19,9 @@ export async function POST(request: NextRequest) {
     // Use service client for database operations to bypass RLS
     const serviceClient = createServiceClient()
 
-    // Get current user if not provided
-    let actualUserId = userId
-    if (!actualUserId) {
-      const { data: { user } } = await supabase.auth.getUser()
-      actualUserId = user?.id || null
-    }
+    // SECURITY: Always get userId from authenticated session, never from request
+    const { data: { user } } = await supabase.auth.getUser()
+    const actualUserId = user?.id || null
 
     // Insert session
     const { error } = await serviceClient.from('analytics_sessions').insert({

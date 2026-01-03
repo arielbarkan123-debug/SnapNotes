@@ -93,6 +93,27 @@ export type ClaudeErrorCode =
   | 'TIMEOUT'
 
 // ============================================================================
+// Security: Input Sanitization
+// ============================================================================
+
+/**
+ * Sanitizes user input to prevent prompt injection attacks.
+ * - Limits length to prevent token exhaustion
+ * - Removes characters that could be interpreted as prompt delimiters
+ * - Escapes potential control sequences
+ */
+function sanitizeUserInput(input: string | undefined, maxLength: number = 200): string | undefined {
+  if (!input) return undefined
+
+  return input
+    .slice(0, maxLength) // Limit length
+    .replace(/[<>{}[\]\\]/g, '') // Remove potential control characters
+    .replace(/```/g, '') // Remove code blocks that could inject prompts
+    .replace(/\n{3,}/g, '\n\n') // Limit consecutive newlines
+    .trim()
+}
+
+// ============================================================================
 // Custom Error Class
 // ============================================================================
 
@@ -344,7 +365,9 @@ export async function generateStudyCourse(
   // Format extracted content for the prompt
   const formattedContent = formatExtractedContentForPrompt(extractedContent)
   const imageCount = imageUrls?.length || 0
-  const { systemPrompt, userPrompt } = getCourseGenerationPrompt(formattedContent, userTitle, imageCount, userContext)
+  // SECURITY: Sanitize user input before passing to prompt
+  const safeTitle = sanitizeUserInput(userTitle)
+  const { systemPrompt, userPrompt } = getCourseGenerationPrompt(formattedContent, safeTitle, imageCount, userContext)
 
   try {
     const response = await client.messages.create({
@@ -485,7 +508,9 @@ export async function generateCourseFromImageSingleCall(
 ): Promise<{ course: GeneratedCourse; rawText: string }> {
   const client = getAnthropicClient()
   const { base64, mediaType } = await fetchImageAsBase64(imageUrl)
-  const { systemPrompt, userPrompt } = getCombinedAnalysisPrompt(userTitle)
+  // SECURITY: Sanitize user input before passing to prompt
+  const safeTitle = sanitizeUserInput(userTitle)
+  const { systemPrompt, userPrompt } = getCombinedAnalysisPrompt(safeTitle)
 
   try {
     const response = await client.messages.create({
@@ -854,7 +879,9 @@ export async function generateCourseFromDocument(
 ): Promise<DocumentCourseResult> {
   const client = getAnthropicClient()
   const imageCount = imageUrls?.length || 0
-  const { systemPrompt, userPrompt } = getDocumentCoursePrompt(document, userTitle, imageCount, userContext)
+  // SECURITY: Sanitize user input before passing to prompt
+  const safeTitle = sanitizeUserInput(userTitle)
+  const { systemPrompt, userPrompt } = getDocumentCoursePrompt(document, safeTitle, imageCount, userContext)
 
   try {
     const response = await client.messages.create({
@@ -993,7 +1020,9 @@ export async function generateCourseFromText(
   }
 
   const client = getAnthropicClient()
-  const { systemPrompt, userPrompt } = getTextCoursePrompt(textContent, userTitle, userContext)
+  // SECURITY: Sanitize user input before passing to prompt
+  const safeTitle = sanitizeUserInput(userTitle)
+  const { systemPrompt, userPrompt } = getTextCoursePrompt(textContent, safeTitle, userContext)
 
   try {
     const response = await client.messages.create({

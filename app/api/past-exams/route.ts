@@ -119,8 +119,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Parse form data
-    const formData = await request.formData()
+    // Parse form data with error handling
+    let formData: FormData
+    try {
+      formData = await request.formData()
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Invalid form data' },
+        { status: 400 }
+      )
+    }
+
     const file = formData.get('file') as File | null
     const title = (formData.get('title') as string) || ''
     const description = (formData.get('description') as string) || null

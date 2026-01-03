@@ -42,7 +42,8 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              // SECURITY: Removed 'unsafe-eval' - only 'unsafe-inline' kept for Next.js hydration
+              "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://images.unsplash.com https://*.unsplash.com https://picsum.photos https://*.picsum.photos",
               "font-src 'self' data:",

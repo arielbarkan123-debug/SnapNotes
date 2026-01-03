@@ -175,14 +175,27 @@ Remember: You're a tutor, not just an answer machine. Help them understand, don'
       ],
     })
 
-    // Extract response text
-    const assistantMessage = response.content[0].type === 'text'
-      ? response.content[0].text
-      : 'I apologize, but I was unable to generate a response.'
+    // Extract response text with proper validation
+    if (!response.content || response.content.length === 0) {
+      console.error('[Chat API] Empty response from AI')
+      return NextResponse.json(
+        { error: 'No response generated' },
+        { status: 500 }
+      )
+    }
+
+    const textBlock = response.content.find(block => block.type === 'text')
+    if (!textBlock || textBlock.type !== 'text') {
+      console.error('[Chat API] No text block in response')
+      return NextResponse.json(
+        { error: 'Unexpected response format' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({
       success: true,
-      message: assistantMessage,
+      message: textBlock.text,
     })
   } catch (error) {
     console.error('[Chat API] Error:', error)

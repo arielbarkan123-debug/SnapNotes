@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import Button from '@/components/ui/Button'
 
 interface DeleteConfirmModalProps {
@@ -11,6 +11,9 @@ interface DeleteConfirmModalProps {
   courseTitle: string
 }
 
+// Track number of open modals to prevent overflow conflicts
+let openModalCount = 0
+
 export default function DeleteConfirmModal({
   isOpen,
   onClose,
@@ -18,6 +21,8 @@ export default function DeleteConfirmModal({
   isDeleting,
   courseTitle
 }: DeleteConfirmModalProps) {
+  const hasSetOverflow = useRef(false)
+
   // Handle escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -30,15 +35,23 @@ export default function DeleteConfirmModal({
     return () => document.removeEventListener('keydown', handleEscape)
   }, [isOpen, onClose, isDeleting])
 
-  // Prevent body scroll when modal is open
+  // Prevent body scroll when modal is open - use counter to handle nested modals
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !hasSetOverflow.current) {
+      openModalCount++
+      hasSetOverflow.current = true
       document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
     }
+
     return () => {
-      document.body.style.overflow = ''
+      if (hasSetOverflow.current) {
+        openModalCount--
+        hasSetOverflow.current = false
+        // Only restore overflow when no modals are open
+        if (openModalCount === 0) {
+          document.body.style.overflow = ''
+        }
+      }
     }
   }, [isOpen])
 

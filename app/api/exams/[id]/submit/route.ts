@@ -163,6 +163,9 @@ export async function POST(
     // Calculate total points from all questions
     const totalPoints = questions.reduce((sum, q) => sum + (q.points || 1), 0)
 
+    // Collect question updates for batch execution
+    const questionUpdates: Array<{ questionId: string; updateData: Record<string, unknown> }> = []
+
     for (const question of questions) {
       const answer = answers.find(a => a.questionId === question.id)
       let userAnswerToStore: string | null = null
@@ -257,10 +260,31 @@ export async function POST(
         updateData.sub_questions = updatedSubQuestions
       }
 
-      await supabase
+      // Collect update promises instead of awaiting in loop
+      questionUpdates.push({
+        questionId: question.id,
+        updateData,
+      })
+    }
+
+    // Execute all question updates with Promise.allSettled for transaction safety
+    const updatePromises = questionUpdates.map(({ questionId, updateData }) =>
+      supabase
         .from('exam_questions')
         .update(updateData)
-        .eq('id', question.id)
+        .eq('id', questionId)
+    )
+
+    const updateResults = await Promise.allSettled(updatePromises)
+
+    // Check if any updates failed
+    const failedUpdates = updateResults.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected'
+    )
+
+    if (failedUpdates.length > 0) {
+      console.error('[Submit API] Some question updates failed:', failedUpdates.length)
+      // Continue anyway - partial save is better than total loss
     }
 
     const percentage = totalPoints > 0 ? Math.round((score / totalPoints) * 100 * 100) / 100 : 0

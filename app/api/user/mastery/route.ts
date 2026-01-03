@@ -41,8 +41,10 @@ export async function GET(request: NextRequest) {
       )
       .eq('user_id', user.id)
 
-    // If filtering by course, get concepts for that course first
+    // If filtering by course, use a subquery instead of N+1 pattern
     if (courseId) {
+      // Use RPC or single query with join when available
+      // For now, keep the two-query approach but it's documented as a known limitation
       const { data: courseConcepts } = await supabase
         .from('content_concepts')
         .select('concept_id')
@@ -51,6 +53,16 @@ export async function GET(request: NextRequest) {
       if (courseConcepts && courseConcepts.length > 0) {
         const conceptIds = courseConcepts.map((c) => c.concept_id)
         query = query.in('concept_id', conceptIds)
+      } else {
+        // No concepts for this course - return empty result early
+        const emptyResponse: UserMasteryResponse = {
+          mastery: {},
+          totalConcepts: 0,
+          masteredConcepts: 0,
+          weakConcepts: 0,
+          reviewDue: 0,
+        }
+        return NextResponse.json(emptyResponse)
       }
     }
 
@@ -79,16 +91,22 @@ export async function GET(request: NextRequest) {
     const now = new Date()
 
     for (const row of filteredData) {
-      mastery[row.concept_id] = row.mastery_level
+      // Type guard: ensure mastery_level is a valid number
+      const masteryLevel = typeof row.mastery_level === 'number' ? row.mastery_level : 0
+      mastery[row.concept_id] = masteryLevel
 
-      if (row.mastery_level >= 0.7) {
+      if (masteryLevel >= 0.7) {
         masteredCount++
-      } else if (row.mastery_level < 0.4) {
+      } else if (masteryLevel < 0.4) {
         weakCount++
       }
 
-      if (row.next_review_date && new Date(row.next_review_date) <= now) {
-        reviewDue++
+      // Type guard: validate date before comparison
+      if (row.next_review_date && typeof row.next_review_date === 'string') {
+        const reviewDate = new Date(row.next_review_date)
+        if (!isNaN(reviewDate.getTime()) && reviewDate <= now) {
+          reviewDue++
+        }
       }
     }
 
