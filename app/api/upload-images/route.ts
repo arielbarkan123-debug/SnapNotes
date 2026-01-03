@@ -301,14 +301,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const extension = getFileExtension(file.name)
         const storagePath = `${user.id}/${courseId}/page-${index}.${extension}`
 
-        // Convert file to buffer
-        const arrayBuffer = await file.arrayBuffer()
-        const buffer = Buffer.from(arrayBuffer)
-
-        // Upload to Supabase Storage
+        // Upload File directly to Supabase Storage (more memory efficient)
+        // Supabase storage accepts File objects, avoiding Buffer copy in memory
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from(BUCKET_NAME)
-          .upload(storagePath, buffer, {
+          .upload(storagePath, file, {
             contentType: file.type || `image/${extension}`,
             cacheControl: '3600',
             upsert: false,

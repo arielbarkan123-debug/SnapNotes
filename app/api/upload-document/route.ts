@@ -149,9 +149,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return createErrorResponse(ErrorCodes.FILE_TOO_LARGE, `File size must be under ${maxSizeMB}MB`)
     }
 
-    // 6. Convert file to buffer
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
+    // 6. Convert file to buffer for processing
+    // Note: We create Buffer only for processDocument(), then upload the original File
+    // to avoid keeping two large copies in memory simultaneously
+    const buffer = Buffer.from(await file.arrayBuffer())
 
     // 7. Process document to extract content
     let extractedContent: ExtractedDocument
@@ -185,7 +186,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const storagePath = generateStoragePath(user.id, file.name)
 
     // 9. Upload original file to Supabase Storage
-    const { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(storagePath, buffer, {
+    // Use the original File object (not buffer) to reduce memory usage
+    // Supabase storage accepts File directly
+    const { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(storagePath, file, {
       contentType: file.type,
       cacheControl: '3600',
       upsert: false,
