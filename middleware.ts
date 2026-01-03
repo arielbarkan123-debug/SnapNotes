@@ -7,11 +7,8 @@ const protectedRoutes = ['/dashboard', '/course']
 // Auth routes (redirect to dashboard if already authenticated)
 const authRoutes = ['/login', '/signup', '/forgot-password', '/reset-password']
 
-// Pattern to match lesson routes: /course/[id]/lesson/[lessonIndex]
-const lessonRoutePattern = /^\/course\/([^/]+)\/lesson\/(\d+)$/
-
 export async function middleware(request: NextRequest) {
-  const { user, supabaseResponse, supabase } = await updateSession(request)
+  const { user, supabaseResponse } = await updateSession(request)
   const { pathname } = request.nextUrl
 
   // Check if the current path is a protected route
@@ -37,38 +34,6 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
-  }
-
-  // Check lesson access for lesson routes (prevents React hooks error #310)
-  const lessonMatch = pathname.match(lessonRoutePattern)
-  if (lessonMatch && user) {
-    const courseId = lessonMatch[1]
-    const lessonIndex = parseInt(lessonMatch[2], 10)
-
-    // Only check for lessons beyond index 0 (first lesson is always accessible)
-    if (lessonIndex > 0) {
-      try {
-        // Use the authenticated Supabase client from updateSession
-        const { data: progress } = await supabase
-          .from('user_progress')
-          .select('completed_lessons')
-          .eq('user_id', user.id)
-          .eq('course_id', courseId)
-          .single()
-
-        const completedLessons = progress?.completed_lessons || []
-        const isAccessible = completedLessons.includes(lessonIndex - 1)
-
-        // If lesson is locked, redirect to course page
-        if (!isAccessible) {
-          const url = request.nextUrl.clone()
-          url.pathname = `/course/${courseId}`
-          return NextResponse.redirect(url)
-        }
-      } catch {
-        // On error, let the page handle it
-      }
-    }
   }
 
   return supabaseResponse

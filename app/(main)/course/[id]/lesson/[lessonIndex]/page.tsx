@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Course, UserProgress, GeneratedCourse, Lesson } from '@/types'
 import LessonView from './LessonView'
+import LockedLessonRedirect from './LockedLessonRedirect'
 
 interface LessonPageProps {
   params: {
@@ -143,9 +144,9 @@ export default async function LessonPage({ params }: LessonPageProps) {
         // Not authenticated - redirect to login
         redirect('/login')
       case 'locked':
-        // Lesson is locked - redirect to course page instead of notFound()
-        // This avoids React hooks hydration issues with next-intl
-        redirect(`/course/${data.courseId}`)
+        // Lesson is locked - use client-side redirect to avoid React hooks error #310
+        // Server-side redirect causes hydration mismatch during RSC streaming
+        return <LockedLessonRedirect courseId={data.courseId!} />
       case 'no_course':
       case 'invalid_index':
       default:
