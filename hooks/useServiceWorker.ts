@@ -29,6 +29,12 @@ export function useServiceWorker() {
 
     if (!isSupported) return
 
+    // Keep track of listeners for cleanup
+    let currentRegistration: ServiceWorkerRegistration | null = null
+    let currentWorker: ServiceWorker | null = null
+    let updateFoundHandler: (() => void) | null = null
+    let stateChangeHandler: (() => void) | null = null
+
     // Register service worker
     const registerSW = async () => {
       try {
@@ -36,7 +42,7 @@ export function useServiceWorker() {
           scope: '/',
         })
 
-        console.log('[PWA] Service worker registered:', registration.scope)
+        currentRegistration = registration
 
         setState(prev => ({
           ...prev,
@@ -45,18 +51,21 @@ export function useServiceWorker() {
         }))
 
         // Check for updates
-        registration.addEventListener('updatefound', () => {
+        updateFoundHandler = () => {
           const newWorker = registration.installing
           if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
+            currentWorker = newWorker
+            stateChangeHandler = () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 setState(prev => ({ ...prev, updateAvailable: true }))
               }
-            })
+            }
+            newWorker.addEventListener('statechange', stateChangeHandler)
           }
-        })
-      } catch (error) {
-        console.error('[PWA] Service worker registration failed:', error)
+        }
+        registration.addEventListener('updatefound', updateFoundHandler)
+      } catch {
+        // Service worker registration failed - silently continue
       }
     }
 
@@ -71,6 +80,13 @@ export function useServiceWorker() {
 
     return () => {
       clearInterval(intervalId)
+      // Clean up event listeners
+      if (currentRegistration && updateFoundHandler) {
+        currentRegistration.removeEventListener('updatefound', updateFoundHandler)
+      }
+      if (currentWorker && stateChangeHandler) {
+        currentWorker.removeEventListener('statechange', stateChangeHandler)
+      }
     }
   }, [])
 

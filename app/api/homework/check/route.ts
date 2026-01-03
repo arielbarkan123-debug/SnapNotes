@@ -81,14 +81,24 @@ export async function POST(request: NextRequest) {
 
       if (updateError) {
         console.error('Update error:', updateError)
-        throw updateError
+        // Mark as error so it doesn't stay stuck in 'analyzing'
+        await supabase
+          .from('homework_checks')
+          .update({ status: 'error' })
+          .eq('id', check.id)
+          .eq('user_id', user.id)
+
+        return NextResponse.json(
+          { error: 'Failed to save analysis results. Please try again.' },
+          { status: 500 }
+        )
       }
 
       return NextResponse.json({ check: updatedCheck })
     } catch (analysisError) {
       console.error('Analysis error:', analysisError)
 
-      // Update check with error status
+      // Update check with error status so it doesn't stay stuck in 'analyzing'
       await supabase
         .from('homework_checks')
         .update({ status: 'error' })

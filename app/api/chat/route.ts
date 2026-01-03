@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
         .select('title, generated_course')
         .eq('id', courseId)
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (course) {
         courseName = course.title
@@ -76,13 +76,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Fetch curriculum context for personalized tutoring
+    // Fetch curriculum context for personalized tutoring (may not exist for new users)
     let curriculumSection = ''
     const { data: userProfile } = await supabase
       .from('user_learning_profile')
       .select('study_system, subjects, subject_levels, education_level, language')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     // Get user's language preference
     const userLanguage = userProfile?.language || 'en'

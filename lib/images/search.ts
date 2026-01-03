@@ -66,6 +66,7 @@ interface UnsplashSearchResponse {
 const UNSPLASH_API_URL = 'https://api.unsplash.com'
 const DEFAULT_PER_PAGE = 5
 const MAX_PER_PAGE = 30
+const IMAGE_SEARCH_TIMEOUT_MS = 5000 // 5 second timeout per search
 
 // =============================================================================
 // Main Functions
@@ -106,14 +107,21 @@ export async function searchImages(
       params.append('orientation', orientation)
     }
 
+    // Add timeout to prevent hanging on slow API responses
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), IMAGE_SEARCH_TIMEOUT_MS)
+
     const response = await fetch(
       `${UNSPLASH_API_URL}/search/photos?${params.toString()}`,
       {
         headers: {
           Authorization: `Client-ID ${accessKey}`,
         },
+        signal: controller.signal,
       }
     )
+
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -139,6 +147,10 @@ export async function searchImages(
       height: photo.height,
     }))
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      // Timeout - silently return empty array
+      return []
+    }
     console.error('Failed to search images:', error)
     return []
   }

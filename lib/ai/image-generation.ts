@@ -4,10 +4,24 @@
  */
 
 const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY
+const IS_DEV = process.env.NODE_ENV === 'development'
 
 // Retry configuration
 const MAX_RETRIES = 3
 const INITIAL_DELAY_MS = 1000
+
+// Only log in development to avoid leaking data in production
+function devLog(...args: unknown[]) {
+  if (IS_DEV) {
+    console.log(...args)
+  }
+}
+
+function devError(...args: unknown[]) {
+  if (IS_DEV) {
+    console.error(...args)
+  }
+}
 
 interface GenerateImageResult {
   success: boolean
@@ -71,7 +85,7 @@ function isRetryableError(error: string): boolean {
  */
 export async function generateCourseImage(courseTitle: string): Promise<GenerateImageResult> {
   if (!GOOGLE_AI_API_KEY) {
-    console.error('[ImageGen] GOOGLE_AI_API_KEY not configured')
+    devError('[ImageGen] GOOGLE_AI_API_KEY not configured')
     return { success: false, error: 'API key not configured' }
   }
 
@@ -94,7 +108,7 @@ export async function generateCourseImage(courseTitle: string): Promise<Generate
     // Don't sleep after the last attempt
     if (attempt < MAX_RETRIES) {
       const delay = INITIAL_DELAY_MS * Math.pow(2, attempt - 1) // Exponential backoff
-      console.log(`[ImageGen] Retry ${attempt}/${MAX_RETRIES} in ${delay}ms for: ${courseTitle}`)
+      devLog(`[ImageGen] Retry ${attempt}/${MAX_RETRIES} in ${delay}ms`)
       await sleep(delay)
     }
   }
@@ -118,14 +132,15 @@ Requirements:
 - Good color harmony and composition`
 
   try {
-    console.log(`[ImageGen] Attempt ${attempt}/${MAX_RETRIES} - Generating image for:`, courseTitle)
+    devLog(`[ImageGen] Attempt ${attempt}/${MAX_RETRIES} - Generating image`)
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_AI_API_KEY}`,
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent',
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-goog-api-key': GOOGLE_AI_API_KEY as string,
         },
         body: JSON.stringify({
           contents: [
@@ -142,7 +157,7 @@ Requirements:
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      console.error('[ImageGen] Gemini API error:', response.status, errorData)
+      devError('[ImageGen] Gemini API error:', response.status)
 
       const errorMessage = errorData?.error?.message || response.statusText
 
@@ -175,7 +190,7 @@ Requirements:
 
       for (const part of parts) {
         if (part.inlineData) {
-          console.log(`[ImageGen] Success on attempt ${attempt} for: ${courseTitle}`)
+          devLog(`[ImageGen] Success on attempt ${attempt}`)
           return {
             success: true,
             imageBase64: part.inlineData.data,
@@ -185,10 +200,10 @@ Requirements:
       }
     }
 
-    console.error('[ImageGen] No image in response:', JSON.stringify(data).substring(0, 500))
+    devError('[ImageGen] No image in response')
     return { success: false, error: 'No image generated in response' }
   } catch (error) {
-    console.error('[ImageGen] Failed to generate image:', error)
+    devError('[ImageGen] Failed to generate image:', error instanceof Error ? error.message : 'Unknown')
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'

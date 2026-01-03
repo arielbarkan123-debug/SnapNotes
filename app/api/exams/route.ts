@@ -106,12 +106,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Course has no content' }, { status: 400 })
     }
 
-    // Fetch user learning profile for curriculum context
+    // Fetch user learning profile for curriculum context (may not exist for new users)
     const { data: userProfile } = await supabase
       .from('user_learning_profile')
       .select('study_system, subjects, subject_levels, exam_format')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     const studySystem = (userProfile?.study_system || 'general') as StudySystem
     const subjects = (userProfile?.subjects || []) as string[]

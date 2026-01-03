@@ -6,6 +6,61 @@ import { ExamWithQuestions, ExamQuestion, ExamAnswer } from '@/types'
 import QuestionRenderer from '@/components/exam/QuestionRenderer'
 import { useEventTracking } from '@/lib/analytics'
 
+// localStorage keys for exam answer backup
+const EXAM_ANSWERS_KEY_PREFIX = 'notesnap_exam_answers_'
+const EXAM_MARKED_KEY_PREFIX = 'notesnap_exam_marked_'
+
+function getExamStorageKey(examId: string): string {
+  return `${EXAM_ANSWERS_KEY_PREFIX}${examId}`
+}
+
+function getMarkedStorageKey(examId: string): string {
+  return `${EXAM_MARKED_KEY_PREFIX}${examId}`
+}
+
+function saveAnswersToLocalStorage(examId: string, answers: Record<string, ExamAnswer>) {
+  try {
+    localStorage.setItem(getExamStorageKey(examId), JSON.stringify(answers))
+  } catch {
+    // localStorage might be full or unavailable
+  }
+}
+
+function loadAnswersFromLocalStorage(examId: string): Record<string, ExamAnswer> | null {
+  try {
+    const saved = localStorage.getItem(getExamStorageKey(examId))
+    return saved ? JSON.parse(saved) : null
+  } catch {
+    return null
+  }
+}
+
+function saveMarkedToLocalStorage(examId: string, marked: Set<string>) {
+  try {
+    localStorage.setItem(getMarkedStorageKey(examId), JSON.stringify([...marked]))
+  } catch {
+    // localStorage might be full or unavailable
+  }
+}
+
+function loadMarkedFromLocalStorage(examId: string): Set<string> | null {
+  try {
+    const saved = localStorage.getItem(getMarkedStorageKey(examId))
+    return saved ? new Set(JSON.parse(saved)) : null
+  } catch {
+    return null
+  }
+}
+
+function clearExamLocalStorage(examId: string) {
+  try {
+    localStorage.removeItem(getExamStorageKey(examId))
+    localStorage.removeItem(getMarkedStorageKey(examId))
+  } catch {
+    // Ignore errors
+  }
+}
+
 // Helper to check if a question is answered based on its type
 function isQuestionAnswered(answer: ExamAnswer | undefined, questionType: string): boolean {
   if (!answer) return false
@@ -98,6 +153,7 @@ export default function TakeExamPage() {
         })
 
         if (data.exam.status === 'in_progress') {
+          // First, load any answers from server
           const existingAnswers: Record<string, ExamAnswer> = {}
           ;(data.exam.questions || []).forEach((q: ExamQuestion) => {
             const parsed = parseStoredAnswer(q)
@@ -105,7 +161,24 @@ export default function TakeExamPage() {
               existingAnswers[q.id] = parsed
             }
           })
+
+          // Then merge with any localStorage backup (localStorage takes priority for unsaved work)
+          const localAnswers = loadAnswersFromLocalStorage(data.exam.id)
+          if (localAnswers) {
+            // Merge: localStorage answers override server answers (they're more recent)
+            Object.assign(existingAnswers, localAnswers)
+          }
+
           setAnswers(existingAnswers)
+
+          // Also restore marked questions
+          const localMarked = loadMarkedFromLocalStorage(data.exam.id)
+          if (localMarked) {
+            setMarkedForReview(localMarked)
+          }
+        } else if (data.exam.status === 'completed' || data.exam.status === 'expired') {
+          // Clear localStorage when exam is finished
+          clearExamLocalStorage(data.exam.id)
         }
       } else {
         setError(data.error || 'Failed to load exam')
@@ -150,6 +223,9 @@ export default function TakeExamPage() {
 
       const data = await res.json()
       if (data.success) {
+        // Clear localStorage backup after successful submission
+        clearExamLocalStorage(examId)
+
         // Track exam completed
         const questions = exam.questions || []
         trackFeature('exam_completed', {
@@ -246,7 +322,12 @@ export default function TakeExamPage() {
   }
 
   const handleAnswer = (answer: ExamAnswer) => {
-    setAnswers(prev => ({ ...prev, [answer.questionId]: answer }))
+    setAnswers(prev => {
+      const updated = { ...prev, [answer.questionId]: answer }
+      // Save to localStorage for backup
+      saveAnswersToLocalStorage(examId, updated)
+      return updated
+    })
   }
 
   const formatTime = (seconds: number) => {
@@ -532,6 +613,7 @@ export default function TakeExamPage() {
                 if (newMarked.has(question.id)) newMarked.delete(question.id)
                 else newMarked.add(question.id)
                 setMarkedForReview(newMarked)
+                saveMarkedToLocalStorage(examId, newMarked)
               }}
               className={`text-sm ${markedForReview.has(question.id) ? 'text-yellow-600' : 'text-gray-400 hover:text-yellow-600'}`}
             >
