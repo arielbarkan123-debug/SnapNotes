@@ -104,14 +104,15 @@ export async function PATCH(request: Request) {
       )
     }
 
-    // Verify ownership
+    // Verify ownership - include user_id in query to prevent timing attacks
     const { data: existingSession } = await supabase
       .from('study_sessions')
-      .select('id, user_id')
+      .select('id')
       .eq('id', sessionId)
+      .eq('user_id', user.id)
       .single()
 
-    if (!existingSession || existingSession.user_id !== user.id) {
+    if (!existingSession) {
       return NextResponse.json(
         { success: false, error: 'Session not found' },
         { status: 404 }

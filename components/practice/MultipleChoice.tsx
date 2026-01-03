@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 
 // =============================================================================
@@ -38,6 +38,15 @@ export default function MultipleChoice({
   const [isCorrect, setIsCorrect] = useState(false)
   const [attemptCount, setAttemptCount] = useState(0)
   const [showFinalFeedback, setShowFinalFeedback] = useState(false)
+
+  // Reset state when question changes to prevent showing stale answers
+  useEffect(() => {
+    setSelectedIndex(null)
+    setHasChecked(false)
+    setIsCorrect(false)
+    setAttemptCount(0)
+    setShowFinalFeedback(false)
+  }, [question])
 
   // Get random encouraging message and tip (stable per render)
   const encouragementIndex = useMemo(() =>

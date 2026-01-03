@@ -49,19 +49,21 @@ export async function GET() {
       userProfileResult,
       gamificationStatsResult,
     ] = await Promise.allSettled([
-      // Review logs this week
+      // Review logs this week (limit to prevent memory issues)
       supabase
         .from('review_logs')
         .select('id, rating, review_duration_ms, reviewed_at')
         .eq('user_id', user.id)
-        .gte('reviewed_at', startOfWeek.toISOString()),
+        .gte('reviewed_at', startOfWeek.toISOString())
+        .limit(1000),
 
       // Review logs this month
       supabase
         .from('review_logs')
         .select('id, rating, review_duration_ms, reviewed_at')
         .eq('user_id', user.id)
-        .gte('reviewed_at', startOfMonth.toISOString()),
+        .gte('reviewed_at', startOfMonth.toISOString())
+        .limit(5000),
 
       // Review logs last 30 days (for accuracy chart)
       supabase
@@ -69,7 +71,8 @@ export async function GET() {
         .select('id, rating, review_duration_ms, reviewed_at')
         .eq('user_id', user.id)
         .gte('reviewed_at', thirtyDaysAgo.toISOString())
-        .order('reviewed_at', { ascending: true }),
+        .order('reviewed_at', { ascending: true })
+        .limit(5000),
 
       // Review logs last 7 days (for time chart)
       supabase
@@ -77,7 +80,8 @@ export async function GET() {
         .select('id, rating, review_duration_ms, reviewed_at')
         .eq('user_id', user.id)
         .gte('reviewed_at', sevenDaysAgo.toISOString())
-        .order('reviewed_at', { ascending: true }),
+        .order('reviewed_at', { ascending: true })
+        .limit(1000),
 
       // Previous 7 days (for trend comparison)
       supabase
@@ -85,7 +89,8 @@ export async function GET() {
         .select('id, rating')
         .eq('user_id', user.id)
         .gte('reviewed_at', fourteenDaysAgo.toISOString())
-        .lt('reviewed_at', sevenDaysAgo.toISOString()),
+        .lt('reviewed_at', sevenDaysAgo.toISOString())
+        .limit(1000),
 
       // Practice logs this week (mixed practice sessions)
       supabase
@@ -93,7 +98,8 @@ export async function GET() {
         .select('id, was_correct, duration_ms, created_at')
         .eq('user_id', user.id)
         .gte('created_at', sevenDaysAgo.toISOString())
-        .order('created_at', { ascending: true }),
+        .order('created_at', { ascending: true })
+        .limit(1000),
 
       // Practice logs last 30 days (for chart)
       supabase
@@ -101,7 +107,8 @@ export async function GET() {
         .select('id, was_correct, duration_ms, created_at')
         .eq('user_id', user.id)
         .gte('created_at', thirtyDaysAgo.toISOString())
-        .order('created_at', { ascending: true }),
+        .order('created_at', { ascending: true })
+        .limit(5000),
 
       // Practice logs previous 7 days (for trend)
       supabase
@@ -109,7 +116,8 @@ export async function GET() {
         .select('id, was_correct')
         .eq('user_id', user.id)
         .gte('created_at', fourteenDaysAgo.toISOString())
-        .lt('created_at', sevenDaysAgo.toISOString()),
+        .lt('created_at', sevenDaysAgo.toISOString())
+        .limit(1000),
 
       // Study sessions this week
       supabase
@@ -117,7 +125,8 @@ export async function GET() {
         .select('duration_seconds, session_type, started_at')
         .eq('user_id', user.id)
         .eq('is_completed', true)
-        .gte('started_at', startOfWeek.toISOString()),
+        .gte('started_at', startOfWeek.toISOString())
+        .limit(500),
 
       // Study sessions this month
       supabase
@@ -125,21 +134,24 @@ export async function GET() {
         .select('duration_seconds, session_type, started_at')
         .eq('user_id', user.id)
         .eq('is_completed', true)
-        .gte('started_at', startOfMonth.toISOString()),
+        .gte('started_at', startOfMonth.toISOString())
+        .limit(1000),
 
-      // User's courses
+      // User's courses (reasonable limit for UI)
       supabase
         .from('courses')
         .select('id, title, cover_image_url, generated_course')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false }),
+        .order('created_at', { ascending: false })
+        .limit(100),
 
       // Lesson progress - select only needed fields for mastery calculations
       supabase
         .from('lesson_progress')
         .select('id, course_id, lesson_index, lesson_title, completed, mastery_level, total_attempts, total_correct')
         .eq('user_id', user.id)
-        .order('mastery_level', { ascending: true }),
+        .order('mastery_level', { ascending: true })
+        .limit(1000),
 
       // Step performance for fallback mastery calculation (limited to prevent memory issues)
       supabase

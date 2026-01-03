@@ -189,9 +189,9 @@ export function useAdaptiveDifficulty(
     }
   }, [courseId])
 
-  // Computed values
-  const shouldIncreaseDifficulty = state.accuracy > 0.85 || state.streak >= 3 && state.streakType === 'correct'
-  const shouldDecreaseDifficulty = state.accuracy < 0.65 || state.streak >= 3 && state.streakType === 'wrong'
+  // Computed values - explicit parentheses for clarity
+  const shouldIncreaseDifficulty = state.accuracy > 0.85 || (state.streak >= 3 && state.streakType === 'correct')
+  const shouldDecreaseDifficulty = state.accuracy < 0.65 || (state.streak >= 3 && state.streakType === 'wrong')
 
   const performanceLevel: 'struggling' | 'learning' | 'mastering' =
     state.accuracy < 0.5 ? 'struggling' :

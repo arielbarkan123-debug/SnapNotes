@@ -34,6 +34,18 @@ export async function GET(request: NextRequest) {
 
     // If detect=true, run gap detection first
     if (detect && courseId) {
+      // Verify user owns this course before running detection
+      const { data: course } = await supabase
+        .from('courses')
+        .select('id')
+        .eq('id', courseId)
+        .eq('user_id', user.id)
+        .single()
+
+      if (!course) {
+        return NextResponse.json({ error: 'Course not found' }, { status: 404 })
+      }
+
       const lessonIdx = lessonIndex ? parseInt(lessonIndex, 10) : undefined
 
       let result

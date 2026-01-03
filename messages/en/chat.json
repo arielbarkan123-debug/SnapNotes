@@ -1,9 +1,11 @@
 {
   "aiTutor": "AI Tutor",
   "generalHelp": "General Help",
+  "openChat": "Open chat",
   "clearChat": "Clear chat",
   "minimize": "Minimize",
   "close": "Close",
+  "sendMessage": "Send message",
   "askQuestion": "Ask a question...",
   "enterToSend": "Press Enter to send, Shift+Enter for new line",
   "chatCleared": "Chat cleared! How can I help you?",

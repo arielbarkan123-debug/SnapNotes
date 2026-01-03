@@ -648,7 +648,25 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
 
         // Store document content in sessionStorage to avoid URL length limits
         const docId = `doc_${Date.now()}`
-        sessionStorage.setItem(docId, JSON.stringify(uploadData.extractedContent))
+        try {
+          sessionStorage.setItem(docId, JSON.stringify(uploadData.extractedContent))
+        } catch (storageError) {
+          // Handle quota exceeded or other storage errors
+          console.error('[UploadModal] sessionStorage quota exceeded:', storageError)
+          // Clear old document entries and retry
+          for (let i = sessionStorage.length - 1; i >= 0; i--) {
+            const key = sessionStorage.key(i)
+            if (key?.startsWith('doc_')) {
+              sessionStorage.removeItem(key)
+            }
+          }
+          try {
+            sessionStorage.setItem(docId, JSON.stringify(uploadData.extractedContent))
+          } catch {
+            // If still fails, continue without session storage - will use URL params only
+            console.error('[UploadModal] Failed to store document content')
+          }
+        }
 
         const params = new URLSearchParams()
         params.set('documentId', docId)

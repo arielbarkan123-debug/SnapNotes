@@ -198,6 +198,7 @@ export default function TutoringChat({
 }: TutoringChatProps) {
   const t = useTranslations('chat')
   const [input, setInput] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false) // Local state to prevent double-submit
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -236,16 +237,21 @@ export default function TutoringChat({
     async (e: React.FormEvent) => {
       e.preventDefault()
       const message = input.trim()
-      if (!message || isLoading) return
+      if (!message || isLoading || isSubmitting) return
 
+      setIsSubmitting(true)
       setInput('')
       // Clear draft since message is being sent
       if (session.id) {
         clearDraft(session.id)
       }
-      await onSendMessage(message)
+      try {
+        await onSendMessage(message)
+      } finally {
+        setIsSubmitting(false)
+      }
     },
-    [input, isLoading, onSendMessage, session.id]
+    [input, isLoading, isSubmitting, onSendMessage, session.id]
   )
 
   const handleKeyDown = useCallback(
@@ -260,10 +266,10 @@ export default function TutoringChat({
 
   const handleHintRequest = useCallback(
     async (level: HintLevel) => {
-      if (isLoading) return
+      if (isLoading || isSubmitting) return
       await onRequestHint(level)
     },
-    [isLoading, onRequestHint]
+    [isLoading, isSubmitting, onRequestHint]
   )
 
   return (

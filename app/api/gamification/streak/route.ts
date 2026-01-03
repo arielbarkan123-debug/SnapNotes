@@ -64,7 +64,10 @@ export async function POST(): Promise<NextResponse> {
 
     if (gamificationError && gamificationError.code !== 'PGRST116') {
       // PGRST116 = no rows found, which is OK for new users
+      // For other errors, log and return error response
       console.error('[Streak:POST] Error fetching gamification:', gamificationError)
+      logError('Gamification:streak:fetch', gamificationError)
+      return createErrorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to fetch gamification data')
     }
 
     console.log('[Streak:POST] Current gamification:', gamification)

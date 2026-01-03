@@ -41,10 +41,21 @@ export async function GET(request: NextRequest) {
       )
       .eq('user_id', user.id)
 
-    // If filtering by course, use a subquery instead of N+1 pattern
+    // If filtering by course, verify ownership first
     if (courseId) {
-      // Use RPC or single query with join when available
-      // For now, keep the two-query approach but it's documented as a known limitation
+      // Verify user owns this course
+      const { data: course } = await supabase
+        .from('courses')
+        .select('id')
+        .eq('id', courseId)
+        .eq('user_id', user.id)
+        .single()
+
+      if (!course) {
+        return NextResponse.json({ error: 'Course not found' }, { status: 404 })
+      }
+
+      // Now fetch concepts for the verified course
       const { data: courseConcepts } = await supabase
         .from('content_concepts')
         .select('concept_id')

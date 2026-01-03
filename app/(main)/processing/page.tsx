@@ -288,7 +288,11 @@ function ProcessingContent() {
     }
 
     // Mark as started in sessionStorage
-    sessionStorage.setItem(processingKey, 'started')
+    try {
+      sessionStorage.setItem(processingKey, 'started')
+    } catch {
+      // Ignore quota errors for processing flag - it's just a guard against double-submit
+    }
 
     setState({ status: 'processing' })
     setCurrentStage(0)

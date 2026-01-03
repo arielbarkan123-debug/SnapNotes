@@ -46,14 +46,15 @@ export async function POST(request: Request) {
     // Calculate mastery from step_performance (returns 0 if table doesn't exist)
     const mastery = await calculateLessonMastery(supabase, user.id, courseId, lessonIndex)
 
-    // Upsert lesson progress
+    // Use upsert with proper conflict handling to avoid race conditions
+    // First, try to get existing for atomic increment calculation
     const { data: existing, error: selectError } = await supabase
       .from('lesson_progress')
-      .select('*')
+      .select('id, lesson_title, completed, completed_at, total_attempts, total_correct, total_time_seconds')
       .eq('user_id', user.id)
       .eq('course_id', courseId)
       .eq('lesson_index', lessonIndex)
-      .single()
+      .maybeSingle()
 
     // If table doesn't exist, return success without tracking
     if (selectError && selectError.code === 'PGRST205') {
@@ -61,57 +62,73 @@ export async function POST(request: Request) {
     }
 
     let progress
-    if (existing) {
-      const { data, error } = await supabase
-        .from('lesson_progress')
-        .update({
-          lesson_title: lessonTitle || existing.lesson_title,
-          completed: existing.completed || completed,
-          completed_at: (existing.completed || completed) ? (existing.completed_at || new Date().toISOString()) : null,
-          mastery_level: mastery,
-          total_attempts: existing.total_attempts + questionsAnswered,
-          total_correct: existing.total_correct + questionsCorrect,
-          total_time_seconds: existing.total_time_seconds + timeSeconds,
-          last_studied_at: new Date().toISOString(),
-        })
-        .eq('id', existing.id)
-        .select()
-        .single()
 
-      if (error) {
-        // Don't throw if table doesn't exist
-        if (error.code === 'PGRST205') {
-          return NextResponse.json({ success: true, progress: null })
+    // Use atomic upsert to prevent race conditions
+    // We pass incremental values and let the database handle conflicts
+    const upsertData = {
+      user_id: user.id,
+      course_id: courseId,
+      lesson_index: lessonIndex,
+      lesson_title: lessonTitle || existing?.lesson_title || `Lesson ${lessonIndex + 1}`,
+      completed: existing?.completed || completed,
+      completed_at: (existing?.completed || completed) ? (existing?.completed_at || new Date().toISOString()) : null,
+      mastery_level: mastery,
+      // For existing records, add to current values. For new records, use provided values.
+      total_attempts: (existing?.total_attempts ?? 0) + questionsAnswered,
+      total_correct: (existing?.total_correct ?? 0) + questionsCorrect,
+      total_time_seconds: (existing?.total_time_seconds ?? 0) + timeSeconds,
+      last_studied_at: new Date().toISOString(),
+    }
+
+    const { data, error } = await supabase
+      .from('lesson_progress')
+      .upsert(upsertData, {
+        onConflict: 'user_id,course_id,lesson_index',
+        ignoreDuplicates: false,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      // Handle race condition: if conflict occurred, retry once with fresh data
+      if (error.code === '23505') {
+        // Unique violation - another request inserted first, retry
+        const { data: retryExisting } = await supabase
+          .from('lesson_progress')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('course_id', courseId)
+          .eq('lesson_index', lessonIndex)
+          .single()
+
+        if (retryExisting) {
+          const { data: retryData, error: retryError } = await supabase
+            .from('lesson_progress')
+            .update({
+              lesson_title: lessonTitle || retryExisting.lesson_title,
+              completed: retryExisting.completed || completed,
+              completed_at: (retryExisting.completed || completed) ? (retryExisting.completed_at || new Date().toISOString()) : null,
+              mastery_level: mastery,
+              total_attempts: retryExisting.total_attempts + questionsAnswered,
+              total_correct: retryExisting.total_correct + questionsCorrect,
+              total_time_seconds: retryExisting.total_time_seconds + timeSeconds,
+              last_studied_at: new Date().toISOString(),
+            })
+            .eq('id', retryExisting.id)
+            .select()
+            .single()
+
+          if (retryError && retryError.code !== 'PGRST205') {
+            throw retryError
+          }
+          progress = retryData
         }
+      } else if (error.code === 'PGRST205') {
+        return NextResponse.json({ success: true, progress: null })
+      } else {
         throw error
       }
-      progress = data
     } else {
-      const { data, error } = await supabase
-        .from('lesson_progress')
-        .insert({
-          user_id: user.id,
-          course_id: courseId,
-          lesson_index: lessonIndex,
-          lesson_title: lessonTitle,
-          completed: completed,
-          completed_at: completed ? new Date().toISOString() : null,
-          mastery_level: mastery,
-          total_attempts: questionsAnswered,
-          total_correct: questionsCorrect,
-          total_time_seconds: timeSeconds,
-          last_studied_at: new Date().toISOString(),
-        })
-        .select()
-        .single()
-
-      if (error) {
-        // Don't throw if table doesn't exist
-        if (error.code === 'PGRST205') {
-          return NextResponse.json({ success: true, progress: null })
-        }
-        throw error
-      }
       progress = data
     }
 

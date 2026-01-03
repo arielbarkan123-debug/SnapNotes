@@ -1,9 +1,11 @@
 {
   "aiTutor": "מורה AI",
   "generalHelp": "עזרה כללית",
+  "openChat": "פתח צ'אט",
   "clearChat": "נקה צ'אט",
   "minimize": "מזער",
   "close": "סגור",
+  "sendMessage": "שלח הודעה",
   "askQuestion": "שאל שאלה...",
   "enterToSend": "לחץ Enter לשליחה, Shift+Enter לשורה חדשה",
   "chatCleared": "הצ'אט נוקה! איך אני יכול לעזור?",

@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check template limit
+    // Check template limit (initial check - we'll also handle race condition at insert time)
     const { count, error: countError } = await supabase
       .from('past_exam_templates')
       .select('*', { count: 'exact', head: true })
@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Early rejection if already at limit (but race condition still possible)
     if ((count || 0) >= MAX_TEMPLATES) {
       return NextResponse.json(
         { success: false, error: `Maximum ${MAX_TEMPLATES} templates allowed` },
@@ -218,6 +219,20 @@ export async function POST(request: NextRequest) {
       console.error('Error creating template record:', insertError)
       // Clean up uploaded file
       await supabase.storage.from('past-exams').remove([storagePath])
+
+      // Check if this was a race condition - re-count to give accurate error
+      const { count: currentCount } = await supabase
+        .from('past_exam_templates')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+
+      if ((currentCount || 0) >= MAX_TEMPLATES) {
+        return NextResponse.json(
+          { success: false, error: `Maximum ${MAX_TEMPLATES} templates allowed. Please delete an existing template first.` },
+          { status: 400 }
+        )
+      }
+
       return NextResponse.json(
         { success: false, error: 'Failed to create template record' },
         { status: 500 }

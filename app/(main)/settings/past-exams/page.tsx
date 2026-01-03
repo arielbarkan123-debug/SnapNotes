@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { usePastExamTemplates, PAST_EXAMS_CACHE_KEY } from '@/hooks'
 import { mutate } from 'swr'
 import type { PastExamTemplate, AnalysisStatus } from '@/types/past-exam'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import { ToastContainer, type Toast } from '@/components/ui/Toast'
 
 // Icons
 function ArrowLeftIcon({ className }: { className?: string }) {
@@ -382,6 +384,18 @@ export default function PastExamsPage() {
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [analyzingId, setAnalyzingId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [toasts, setToasts] = useState<Toast[]>([])
+
+  // Toast helpers
+  const addToast = useCallback((type: Toast['type'], message: string) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    setToasts(prev => [...prev, { id, type, message }])
+  }, [])
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id))
+  }, [])
 
   const handleUpload = async (file: File, title: string, description: string) => {
     const formData = new FormData()
@@ -409,10 +423,17 @@ export default function PastExamsPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t('deleteConfirm.message'))) return
+  const handleDeleteClick = (id: string) => {
+    setConfirmDeleteId(id)
+  }
 
+  const handleDeleteConfirm = async () => {
+    if (!confirmDeleteId) return
+
+    const id = confirmDeleteId
+    setConfirmDeleteId(null)
     setDeletingId(id)
+
     try {
       const response = await fetch(`/api/past-exams/${id}`, {
         method: 'DELETE',
@@ -423,9 +444,10 @@ export default function PastExamsPage() {
       }
 
       await mutate(PAST_EXAMS_CACHE_KEY)
+      addToast('success', t('deleteSuccess'))
     } catch (err) {
       console.error('Delete error:', err)
-      alert(t('errors.deleteFailed'))
+      addToast('error', t('errors.deleteFailed'))
     } finally {
       setDeletingId(null)
     }
@@ -532,7 +554,7 @@ export default function PastExamsPage() {
                 key={template.id}
                 template={template}
                 t={t}
-                onDelete={handleDelete}
+                onDelete={handleDeleteClick}
                 onAnalyze={handleAnalyze}
                 isDeleting={deletingId === template.id}
                 isAnalyzing={analyzingId === template.id}
@@ -548,6 +570,21 @@ export default function PastExamsPage() {
           onUpload={handleUpload}
           t={t}
         />
+
+        {/* Confirm Delete Dialog */}
+        <ConfirmDialog
+          isOpen={confirmDeleteId !== null}
+          onClose={() => setConfirmDeleteId(null)}
+          onConfirm={handleDeleteConfirm}
+          title={t('deleteConfirm.title')}
+          message={t('deleteConfirm.message')}
+          confirmText={t('deleteConfirm.confirm')}
+          cancelText={t('deleteConfirm.cancel')}
+          variant="danger"
+        />
+
+        {/* Toast Notifications */}
+        <ToastContainer toasts={toasts} onDismiss={removeToast} />
       </div>
     </div>
   )

@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import { usePracticeStats } from '@/hooks/usePracticeSession'
+import { ToastContainer, type Toast } from '@/components/ui/Toast'
 import type { SessionType, PracticeSession } from '@/lib/practice/types'
 import type { DifficultyLevel } from '@/lib/adaptive/types'
 
@@ -192,6 +193,17 @@ export default function PracticeHubContent({
     difficulty: 0 as DifficultyLevel | 0,
   })
   const [isCreating, setIsCreating] = useState(false)
+  const [toasts, setToasts] = useState<Toast[]>([])
+
+  // Toast helpers
+  const addToast = useCallback((type: Toast['type'], message: string) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    setToasts(prev => [...prev, { id, type, message }])
+  }, [])
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id))
+  }, [])
 
   // Create a practice session
   const createSession = useCallback(
@@ -238,12 +250,12 @@ export default function PracticeHubContent({
           sessionType,
           error: error instanceof Error ? error.message : 'Unknown error',
         })
-        alert(error instanceof Error ? error.message : 'Failed to create session')
+        addToast('error', error instanceof Error ? error.message : 'Failed to create session')
       } finally {
         setIsCreating(false)
       }
     },
-    [router, trackStep, trackFeature]
+    [router, trackStep, trackFeature, addToast]
   )
 
   // Create custom session
@@ -294,11 +306,11 @@ export default function PracticeHubContent({
         sessionType: 'custom',
         error: error instanceof Error ? error.message : 'Unknown error',
       })
-      alert(error instanceof Error ? error.message : 'Failed to create session')
+      addToast('error', error instanceof Error ? error.message : 'Failed to create session')
     } finally {
       setIsCreating(false)
     }
-  }, [router, customConfig, trackStep, trackFeature])
+  }, [router, customConfig, trackStep, trackFeature, addToast])
 
   // Total available questions
   const totalQuestions = Object.values(questionsPerCourse).reduce((a, b) => a + b, 0)
@@ -603,6 +615,9 @@ export default function PracticeHubContent({
             </div>
           </div>
         )}
+
+        {/* Toast Notifications */}
+        <ToastContainer toasts={toasts} onDismiss={removeToast} />
       </div>
     </div>
   )

@@ -293,9 +293,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const normalizedExpected = normalizeText(expectedAnswer)
 
     if (normalizedUser === normalizedExpected) {
-      // Record performance for gap detection (fire and forget)
+      // Record performance for gap detection (fire and forget, but log errors)
       if (userId && conceptIds.length > 0) {
-        recordPerformanceForGapDetection(userId, conceptIds, true, 100, courseId, lessonIndex, responseTimeMs).catch(() => {})
+        recordPerformanceForGapDetection(userId, conceptIds, true, 100, courseId, lessonIndex, responseTimeMs).catch(err => {
+          console.error('[Evaluate Answer] Gap detection recording failed:', err)
+        })
       }
       return NextResponse.json({
         isCorrect: true,
@@ -309,9 +311,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Check acceptable answers for exact match
     for (const alt of acceptableAnswers) {
       if (normalizeText(alt) === normalizedUser) {
-        // Record performance for gap detection (fire and forget)
+        // Record performance for gap detection (fire and forget, but log errors)
         if (userId && conceptIds.length > 0) {
-          recordPerformanceForGapDetection(userId, conceptIds, true, 100, courseId, lessonIndex, responseTimeMs).catch(() => {})
+          recordPerformanceForGapDetection(userId, conceptIds, true, 100, courseId, lessonIndex, responseTimeMs).catch(err => {
+            console.error('[Evaluate Answer] Gap detection recording failed:', err)
+          })
         }
         return NextResponse.json({
           isCorrect: true,
@@ -328,9 +332,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (fuzzyResult.matches) {
       const fuzzyScore = Math.round(fuzzyResult.similarity * 100)
-      // Record performance for gap detection (fire and forget)
+      // Record performance for gap detection (fire and forget, but log errors)
       if (userId && conceptIds.length > 0) {
-        recordPerformanceForGapDetection(userId, conceptIds, true, fuzzyScore, courseId, lessonIndex, responseTimeMs).catch(() => {})
+        recordPerformanceForGapDetection(userId, conceptIds, true, fuzzyScore, courseId, lessonIndex, responseTimeMs).catch(err => {
+          console.error('[Evaluate Answer] Gap detection recording failed:', err)
+        })
       }
       return NextResponse.json({
         isCorrect: true,
@@ -345,7 +351,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     try {
       const aiResult = await evaluateWithAI(question, expectedAnswer, userAnswer, context, curriculumContextString, userLanguage)
 
-      // Record performance for gap detection (fire and forget)
+      // Record performance for gap detection (fire and forget, but log errors)
       if (userId && conceptIds.length > 0) {
         recordPerformanceForGapDetection(
           userId,
@@ -355,7 +361,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           courseId,
           lessonIndex,
           responseTimeMs
-        ).catch(() => {}) // Ignore errors
+        ).catch(err => {
+          console.error('[Evaluate Answer] Gap detection recording failed:', err)
+        })
       }
 
       return NextResponse.json({
@@ -372,7 +380,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const partialScore = Math.round(fuzzyResult.similarity * 100)
       const isPartial = fuzzyResult.similarity >= 0.6
 
-      // Record performance for gap detection (fire and forget)
+      // Record performance for gap detection (fire and forget, but log errors)
       if (userId && conceptIds.length > 0) {
         recordPerformanceForGapDetection(
           userId,
@@ -382,7 +390,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           courseId,
           lessonIndex,
           responseTimeMs
-        ).catch(() => {}) // Ignore errors
+        ).catch(err => {
+          console.error('[Evaluate Answer] Gap detection recording failed:', err)
+        })
       }
 
       if (isPartial) {

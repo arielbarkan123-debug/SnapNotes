@@ -49,6 +49,8 @@
     "configureLink": "Configure templates"
   },
 
+  "deleteSuccess": "Template deleted successfully",
+
   "deleteConfirm": {
     "title": "Delete Template",
     "message": "Are you sure you want to delete this template? This action cannot be undone.",

@@ -56,7 +56,10 @@ export async function POST(request: Request) {
       const now = new Date()
       const dayOfWeek = now.getDay()
       const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)
-      weekOf = new Date(now.setDate(diff)).toISOString().split('T')[0]
+      // Create a new date to avoid mutating 'now'
+      const monday = new Date(now)
+      monday.setDate(diff)
+      weekOf = monday.toISOString().split('T')[0]
     }
 
     // Insert reflection

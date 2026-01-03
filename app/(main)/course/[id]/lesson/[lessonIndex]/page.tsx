@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Course, UserProgress, GeneratedCourse, Lesson } from '@/types'
 import LessonView from './LessonView'
@@ -10,13 +10,30 @@ interface LessonPageProps {
   }
 }
 
-async function getLessonData(courseId: string, lessonIndex: number) {
+interface LessonDataResult {
+  success: true
+  course: Course
+  progress: UserProgress
+  lessonIndex: number
+  lesson: Lesson
+  totalLessons: number
+}
+
+interface LessonDataError {
+  success: false
+  reason: 'no_user' | 'no_course' | 'invalid_index' | 'locked'
+  courseId?: string
+}
+
+type GetLessonDataResult = LessonDataResult | LessonDataError
+
+async function getLessonData(courseId: string, lessonIndex: number): Promise<GetLessonDataResult> {
   const supabase = await createClient()
 
   // Get authenticated user
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    return null
+    return { success: false, reason: 'no_user' }
   }
 
   // Fetch course - IMPORTANT: Filter by user_id to ensure user owns this course
@@ -28,7 +45,7 @@ async function getLessonData(courseId: string, lessonIndex: number) {
     .single()
 
   if (courseError || !course) {
-    return null
+    return { success: false, reason: 'no_course' }
   }
 
   const generatedCourse = course.generated_course as GeneratedCourse & { sections?: Lesson[] }
@@ -37,7 +54,7 @@ async function getLessonData(courseId: string, lessonIndex: number) {
 
   // Validate lesson index
   if (lessonIndex < 0 || lessonIndex >= lessons.length) {
-    return null
+    return { success: false, reason: 'invalid_index', courseId }
   }
 
   // Fetch user progress
@@ -81,10 +98,11 @@ async function getLessonData(courseId: string, lessonIndex: number) {
     (progress.completed_lessons || []).includes(lessonIndex - 1)
 
   if (!isAccessible) {
-    return null
+    return { success: false, reason: 'locked', courseId }
   }
 
   return {
+    success: true,
     course: course as Course,
     progress: progress as UserProgress,
     lessonIndex,
@@ -97,7 +115,7 @@ export async function generateMetadata({ params }: LessonPageProps) {
   const lessonIndex = parseInt(params.lessonIndex, 10)
   const data = await getLessonData(params.id, lessonIndex)
 
-  if (!data) {
+  if (!data.success) {
     return {
       title: 'Lesson Not Found | StudySnap',
     }
@@ -118,8 +136,21 @@ export default async function LessonPage({ params }: LessonPageProps) {
 
   const data = await getLessonData(params.id, lessonIndex)
 
-  if (!data) {
-    notFound()
+  if (!data.success) {
+    // Handle different error cases
+    switch (data.reason) {
+      case 'no_user':
+        // Not authenticated - redirect to login
+        redirect('/login')
+      case 'locked':
+        // Lesson is locked - redirect to course page instead of notFound()
+        // This avoids React hooks hydration issues with next-intl
+        redirect(`/course/${data.courseId}`)
+      case 'no_course':
+      case 'invalid_index':
+      default:
+        notFound()
+    }
   }
 
   return (
