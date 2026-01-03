@@ -26,6 +26,7 @@ const QUESTION_TYPE_DESCRIPTIONS: Record<PracticeQuestionType, string> = {
   short_answer: 'Open question requiring a brief text response',
   matching: 'Match items from two columns',
   sequence: 'Put items in correct order',
+  image_label: 'Label parts of a diagram or image (requires image_label_data with labels and positions)',
 }
 
 const COGNITIVE_LEVEL_DESCRIPTIONS: Record<CognitiveLevel, string> = {

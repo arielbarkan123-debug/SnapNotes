@@ -3,14 +3,11 @@ import { createClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
+import { getAnthropicApiKey } from '@/lib/env'
 
-// Validate API key exists
-if (!process.env.ANTHROPIC_API_KEY) {
-  console.error('[Generate Questions API] ANTHROPIC_API_KEY is not configured')
-}
-
+// Initialize Anthropic client with validated API key
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || '',
+  apiKey: getAnthropicApiKey(),
 })
 
 const MAX_QUESTIONS = 10

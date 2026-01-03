@@ -8,12 +8,54 @@ export type ExamQuestionType =
   | 'matching'
   | 'ordering'
   | 'passage_based'
+  | 'image_label'
 
 export type SubQuestionType = 'multiple_choice' | 'true_false' | 'fill_blank' | 'short_answer'
 
 export interface MatchingPair {
   left: string
   right: string
+}
+
+/** Interaction mode for image label questions */
+export type ImageLabelMode = 'drag' | 'type' | 'both'
+
+/** A label position on an image */
+export interface ImageLabel {
+  /** Unique identifier for this label */
+  id: string
+  /** The correct text/answer for this label */
+  correct_text: string
+  /** Position as percentage (0-100) from left edge */
+  x: number
+  /** Position as percentage (0-100) from top edge */
+  y: number
+  /** Width of the input box (for type mode), in percentage */
+  box_width?: number
+  /** Optional hints for this label */
+  hints?: string[]
+  /** User's answer for this label */
+  user_answer?: string
+  /** Whether the user's answer is correct */
+  is_correct?: boolean
+}
+
+/** Image label question data */
+export interface ImageLabelData {
+  /** URL to the image */
+  image_url: string
+  /** Alt text for accessibility */
+  image_alt?: string
+  /** Interaction mode: drag labels, type in boxes, or both */
+  interaction_mode: ImageLabelMode
+  /** The labels to place/fill on the image */
+  labels: ImageLabel[]
+  /** Source of the image */
+  image_source?: 'extracted' | 'web' | 'uploaded'
+  /** Credit for web images */
+  image_credit?: string
+  /** Link to image credit */
+  image_credit_url?: string
 }
 
 export interface SubQuestion {
@@ -66,6 +108,8 @@ export interface ExamQuestion {
   ordering_items: string[] | null
   sub_questions: SubQuestion[] | null
   acceptable_answers: string[] | null
+  // Image label question fields
+  image_label_data: ImageLabelData | null
 }
 
 export interface ExamWithQuestions extends Exam {
@@ -85,6 +129,8 @@ export interface ExamAnswer {
   matchingAnswers?: MatchingPair[]
   orderingAnswer?: string[]
   subAnswers?: { subQuestionId: string; answer: string }[]
+  /** Answers for image label questions: maps label id to user's answer */
+  imageLabelAnswers?: { labelId: string; answer: string }[]
 }
 
 export interface SubmitExamRequest {

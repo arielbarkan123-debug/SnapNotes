@@ -12,4 +12,6 @@ export {
 export {
   buildExamStyleGuide,
   hasCompletedAnalysis,
+  pastExamsHaveImages,
+  getAggregatedImageAnalysis,
 } from './style-guide'

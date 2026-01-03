@@ -14,6 +14,7 @@ export type QuestionTypeKey =
   | 'ordering'
   | 'essay'
   | 'passage_based'
+  | 'image_label'
 
 export interface QuestionTypeAnalysis {
   count: number
@@ -80,6 +81,42 @@ export interface SampleQuestion {
   difficulty: 'easy' | 'medium' | 'hard'
 }
 
+// Enhanced image analysis for smart image sourcing
+export type DiagramType =
+  | 'cell_diagram'
+  | 'anatomy'
+  | 'graph'
+  | 'chart'
+  | 'map'
+  | 'circuit'
+  | 'molecular_structure'
+  | 'flow_diagram'
+  | 'timeline'
+  | 'process_diagram'
+  | 'labeled_illustration'
+  | 'other'
+
+export type LabelingStyle = 'drag_drop' | 'fill_blank' | 'multiple_choice' | 'point_and_identify'
+
+export interface ImageAnalysis {
+  /** Whether the exam contains diagrams/images */
+  has_diagrams: boolean
+  /** Count of diagrams in the exam */
+  diagram_count: number
+  /** Types of diagrams found */
+  diagram_types: DiagramType[]
+  /** Topics covered by the diagrams */
+  diagram_topics: string[]
+  /** How labels/identifications are tested */
+  labeling_style: LabelingStyle | null
+  /** Typical number of labels per diagram question */
+  typical_label_count: number
+  /** Whether diagrams require students to add labels */
+  requires_labeling: boolean
+  /** Suggested search queries for finding similar images */
+  suggested_image_queries: string[]
+}
+
 export interface ExamAnalysis {
   total_questions: number
   total_points: number
@@ -91,6 +128,8 @@ export interface ExamAnalysis {
   grading_patterns: GradingPatterns
   question_style: QuestionStyleAnalysis
   sample_questions: SampleQuestion[]
+  /** Enhanced image/diagram analysis for smart image sourcing */
+  image_analysis?: ImageAnalysis
 }
 
 export interface PastExamTemplate {

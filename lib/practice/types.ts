@@ -15,6 +15,7 @@ export type PracticeQuestionType =
   | 'short_answer'
   | 'matching'
   | 'sequence'
+  | 'image_label'
 
 export type QuestionSource = 'generated' | 'manual' | 'imported' | 'srs'
 
@@ -56,6 +57,18 @@ export interface QuestionOptions {
   pairs?: { left: string; right: string }[]
   // For sequence
   items?: string[]
+  // For image_label
+  image_label_data?: {
+    image_url: string
+    interaction_mode: 'drag' | 'type' | 'both'
+    labels: Array<{
+      id: string
+      correct_text: string
+      position: { x: number; y: number }
+      box_width?: number
+      hints?: string[]
+    }>
+  }
 }
 
 export type PracticeQuestionInsert = Omit<
@@ -287,6 +300,7 @@ export const PRACTICE_CONFIG = {
     short_answer: 1.5,
     matching: 1,
     sequence: 1,
+    image_label: 2,
   } as Record<PracticeQuestionType, number>,
 
   // Minimum questions for each session type

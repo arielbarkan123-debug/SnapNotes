@@ -163,12 +163,24 @@ export class ClaudeAPIError extends Error {
 // Image Utilities
 // ============================================================================
 
+// Timeout for image fetching (10 seconds)
+const IMAGE_FETCH_TIMEOUT_MS = 10000
+
 /**
  * Fetches an image from URL and converts it to base64
+ * Includes timeout protection for slow/unresponsive CDNs
  */
 export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
   try {
-    const response = await fetch(imageUrl)
+    // Create AbortController for timeout
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), IMAGE_FETCH_TIMEOUT_MS)
+
+    const response = await fetch(imageUrl, {
+      signal: controller.signal,
+    })
+
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
       throw new ClaudeAPIError(
@@ -195,6 +207,13 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
   } catch (error) {
     if (error instanceof ClaudeAPIError) {
       throw error
+    }
+    // Handle timeout specifically
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ClaudeAPIError(
+        'Image fetch timed out. The image server is taking too long to respond.',
+        'TIMEOUT'
+      )
     }
     throw new ClaudeAPIError(
       'Failed to fetch image. Please check the URL and try again.',

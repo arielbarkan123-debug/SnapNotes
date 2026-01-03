@@ -4,7 +4,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
-import type { ExamAnalysis } from '@/types/past-exam'
+import type { ExamAnalysis, ImageAnalysis, DiagramType, LabelingStyle } from '@/types/past-exam'
 
 const anthropic = new Anthropic()
 
@@ -43,7 +43,15 @@ ANALYZE THE FOLLOWING ASPECTS:
    - Partial credit rules
    - Bonus questions present
 
-7. **Sample Questions**
+7. **Image/Diagram Analysis** (IMPORTANT - analyze thoroughly)
+   - Are there any diagrams, charts, graphs, or images?
+   - What types? (cell_diagram, anatomy, graph, chart, map, circuit, molecular_structure, flow_diagram, timeline, process_diagram, labeled_illustration, other)
+   - What topics do they cover?
+   - Do students need to label parts? How? (drag_drop, fill_blank, multiple_choice, point_and_identify)
+   - How many labels per diagram typically?
+   - Generate search queries that would find similar educational images
+
+8. **Sample Questions**
    - Extract 2-3 representative questions of different types
    - Note their difficulty and point value
 
@@ -110,7 +118,17 @@ RESPOND WITH VALID JSON ONLY (no markdown, no explanation, just the JSON object)
       "points": <number>,
       "difficulty": "easy" | "medium" | "hard"
     }
-  ]
+  ],
+  "image_analysis": {
+    "has_diagrams": <boolean>,
+    "diagram_count": <number>,
+    "diagram_types": ["<cell_diagram|anatomy|graph|chart|map|circuit|molecular_structure|flow_diagram|timeline|process_diagram|labeled_illustration|other>"],
+    "diagram_topics": ["<topics covered by diagrams>"],
+    "labeling_style": "<drag_drop|fill_blank|multiple_choice|point_and_identify|null>",
+    "typical_label_count": <number>,
+    "requires_labeling": <boolean>,
+    "suggested_image_queries": ["<search queries to find similar educational images>"]
+  }
 }`
 
 /**
@@ -217,6 +235,7 @@ function validateAndCleanAnalysis(analysis: ExamAnalysis): ExamAnalysis {
     ordering: { ...defaultQuestionType, ...analysis.question_types?.ordering },
     essay: { ...defaultQuestionType, ...analysis.question_types?.essay },
     passage_based: { ...defaultQuestionType, ...analysis.question_types?.passage_based },
+    image_label: { ...defaultQuestionType, ...analysis.question_types?.image_label },
   }
 
   // Filter out question types with 0 count
@@ -257,6 +276,9 @@ function validateAndCleanAnalysis(analysis: ExamAnalysis): ExamAnalysis {
     bloom.create = 100 - bloom.remember - bloom.understand - bloom.apply - bloom.analyze - bloom.evaluate
   }
 
+  // Validate image analysis
+  const imageAnalysis = validateImageAnalysis(analysis.image_analysis, analysis.question_style?.uses_diagrams)
+
   return {
     total_questions: analysis.total_questions || 0,
     total_points: analysis.total_points || 0,
@@ -285,12 +307,54 @@ function validateAndCleanAnalysis(analysis: ExamAnalysis): ExamAnalysis {
     question_style: {
       avg_question_length_words: analysis.question_style?.avg_question_length_words || 15,
       uses_scenarios: analysis.question_style?.uses_scenarios || false,
-      uses_diagrams: analysis.question_style?.uses_diagrams || false,
+      uses_diagrams: imageAnalysis.has_diagrams,
       uses_calculations: analysis.question_style?.uses_calculations || false,
       command_terms: analysis.question_style?.command_terms || [],
       bloom_levels: bloom,
     },
     sample_questions: analysis.sample_questions || [],
+    image_analysis: imageAnalysis,
+  }
+}
+
+/**
+ * Validate and clean up image analysis data
+ */
+function validateImageAnalysis(
+  imageAnalysis: Partial<ImageAnalysis> | undefined,
+  usesDiagramsFallback?: boolean
+): ImageAnalysis {
+  const validDiagramTypes: DiagramType[] = [
+    'cell_diagram', 'anatomy', 'graph', 'chart', 'map', 'circuit',
+    'molecular_structure', 'flow_diagram', 'timeline', 'process_diagram',
+    'labeled_illustration', 'other'
+  ]
+
+  const validLabelingStyles: LabelingStyle[] = [
+    'drag_drop', 'fill_blank', 'multiple_choice', 'point_and_identify'
+  ]
+
+  // Filter diagram types to only valid values
+  const diagramTypes = (imageAnalysis?.diagram_types || [])
+    .filter((t): t is DiagramType => validDiagramTypes.includes(t as DiagramType))
+
+  // Validate labeling style
+  const labelingStyle = imageAnalysis?.labeling_style &&
+    validLabelingStyles.includes(imageAnalysis.labeling_style as LabelingStyle)
+    ? imageAnalysis.labeling_style as LabelingStyle
+    : null
+
+  const hasDiagrams = imageAnalysis?.has_diagrams ?? usesDiagramsFallback ?? false
+
+  return {
+    has_diagrams: hasDiagrams,
+    diagram_count: imageAnalysis?.diagram_count || (hasDiagrams ? 1 : 0),
+    diagram_types: diagramTypes,
+    diagram_topics: imageAnalysis?.diagram_topics || [],
+    labeling_style: labelingStyle,
+    typical_label_count: imageAnalysis?.typical_label_count || 0,
+    requires_labeling: imageAnalysis?.requires_labeling || false,
+    suggested_image_queries: imageAnalysis?.suggested_image_queries || [],
   }
 }
 

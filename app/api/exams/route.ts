@@ -1,11 +1,13 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { CreateExamRequest } from '@/types'
 import Anthropic from '@anthropic-ai/sdk'
 import { buildExamContext, formatContextForPrompt } from '@/lib/curriculum'
 import type { StudySystem, ExamFormat } from '@/lib/curriculum'
-import { buildExamStyleGuide } from '@/lib/past-exams'
-import type { PastExamTemplate } from '@/types/past-exam'
+import { buildExamStyleGuide, pastExamsHaveImages, getAggregatedImageAnalysis } from '@/lib/past-exams'
+import { shouldIncludeImages, detectVisualContentMentions } from '@/lib/images/smart-search'
+import type { PastExamTemplate, ImageAnalysis } from '@/types/past-exam'
+import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 
 const AI_MODEL = 'claude-sonnet-4-20250514'
 
@@ -48,13 +50,24 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
       return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
+    }
+
+    // Check rate limit
+    const rateLimitId = getIdentifier(user.id, request)
+    const rateLimit = checkRateLimit(rateLimitId, RATE_LIMITS.generateExam)
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many requests. Please wait before generating another exam.' },
+        { status: 429, headers: getRateLimitHeaders(rateLimit) }
+      )
     }
 
     const body: CreateExamRequest = await request.json()
@@ -117,6 +130,30 @@ export async function POST(request: Request) {
       ? buildExamStyleGuide(pastExamTemplates as Pick<PastExamTemplate, 'extracted_analysis' | 'title'>[])
       : ''
 
+    // Check if we should include image-based questions
+    const pastExamsHaveImageContent = pastExamTemplates && pastExamTemplates.length > 0
+      ? pastExamsHaveImages(pastExamTemplates as Pick<PastExamTemplate, 'extracted_analysis'>[])
+      : false
+
+    // Get aggregated image analysis for smart image decisions
+    const aggregatedImageAnalysis: ImageAnalysis | undefined = pastExamTemplates && pastExamTemplates.length > 0
+      ? getAggregatedImageAnalysis(pastExamTemplates as Pick<PastExamTemplate, 'extracted_analysis'>[])
+      : undefined
+
+    // Detect visual content from course title and subject
+    const visualMentions = detectVisualContentMentions(course.title + ' ' + subjects.join(' '))
+
+    // Determine if we should include image_label questions
+    const imageSearchContext = {
+      title: course.title,
+      subject: subjects[0] || 'general',
+      topics: [] as string[],
+      pastExamHasImages: pastExamsHaveImageContent,
+      pastExamImageAnalysis: aggregatedImageAnalysis,
+      userMentionedVisuals: visualMentions,
+    }
+    const imageDecision = shouldIncludeImages(imageSearchContext)
+
     let courseContent = ''
     const lessonList: { index: number; title: string }[] = []
 
@@ -147,12 +184,18 @@ export async function POST(request: Request) {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
     // Calculate question type distribution
-    const mcCount = Math.round(questionCount * 0.35)
-    const tfCount = Math.round(questionCount * 0.15)
-    const fbCount = Math.round(questionCount * 0.15)
-    const saCount = Math.round(questionCount * 0.10)
-    const matchCount = Math.round(questionCount * 0.10)
-    const orderCount = Math.round(questionCount * 0.10)
+    // If images are appropriate, include image_label questions (reduce other types slightly)
+    const includeImageQuestions = imageDecision.shouldInclude && questionCount >= 10
+    const imageLabelCount = includeImageQuestions ? Math.max(1, Math.round(questionCount * 0.10)) : 0
+
+    // Adjust other percentages when including image questions
+    const adjustmentFactor = includeImageQuestions ? 0.9 : 1.0
+    const mcCount = Math.round(questionCount * 0.35 * adjustmentFactor)
+    const tfCount = Math.round(questionCount * 0.15 * adjustmentFactor)
+    const fbCount = Math.round(questionCount * 0.15 * adjustmentFactor)
+    const saCount = Math.round(questionCount * 0.10 * adjustmentFactor)
+    const matchCount = Math.round(questionCount * 0.10 * adjustmentFactor)
+    const orderCount = Math.round(questionCount * 0.10 * adjustmentFactor)
     const passageCount = Math.max(1, Math.round(questionCount * 0.05))
 
     // Build list of lesson titles for validation
@@ -187,7 +230,8 @@ QUESTION TYPE DISTRIBUTION (approximate):
 - ${saCount} short_answer questions (1-3 word answers)
 - ${matchCount} matching questions (4 pairs each)
 - ${orderCount} ordering questions (4 items to arrange)
-- ${passageCount} passage_based questions (paragraph with 2 sub-questions)
+- ${passageCount} passage_based questions (paragraph with 2 sub-questions)${includeImageQuestions ? `
+- ${imageLabelCount} image_label questions (diagram labeling with 3-5 labels each)` : ''}
 
 === CRITICAL REQUIREMENTS FOR QUESTION QUALITY ===
 
@@ -331,10 +375,39 @@ RESPOND WITH ONLY VALID JSON in this exact format:
         }
       ],
       "explanation": "This passage tests comprehension of..."
-    }
+    }${includeImageQuestions ? `,
+    {
+      "lesson_index": 0,
+      "lesson_title": "Lesson title with visual content",
+      "question_type": "image_label",
+      "question_text": "Label the parts of the diagram below:",
+      "options": [],
+      "correct_answer": "",
+      "image_label_data": {
+        "image_url": "SEARCH_IMAGE:cell structure diagram",
+        "image_alt": "Diagram of a cell showing major organelles",
+        "interaction_mode": "type",
+        "labels": [
+          { "id": "label1", "correct_text": "Nucleus", "x": 50, "y": 30, "box_width": 15 },
+          { "id": "label2", "correct_text": "Mitochondria", "x": 25, "y": 60, "box_width": 15 },
+          { "id": "label3", "correct_text": "Cell membrane", "x": 80, "y": 50, "box_width": 15 },
+          { "id": "label4", "correct_text": "Cytoplasm", "x": 50, "y": 70, "box_width": 15 }
+        ]
+      },
+      "explanation": "Each organelle has a specific function..."
+    }` : ''}
   ]
 }
 
+${includeImageQuestions ? `
+**IMAGE LABEL QUESTION INSTRUCTIONS:**
+- For image_label questions, use "SEARCH_IMAGE:<search query>" as the image_url value
+- The search query should describe what image to find (e.g., "cell structure diagram", "human heart anatomy")
+- Labels should have x,y positions as percentages (0-100) indicating where on the image the label should appear
+- Include 3-5 labels per diagram
+- interaction_mode can be "type" (student types answers), "drag" (student drags labels), or "both"
+- Make sure the labels match specific parts that would appear in educational diagrams
+` : ''}
 DO NOT include any text outside the JSON. Only output valid JSON.`
 
     console.log('[Exams API] Generating questions for:', course.title)
@@ -437,6 +510,14 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
         return q.sub_questions && Array.isArray(q.sub_questions) && q.sub_questions.length > 0
       }
 
+      // Image label needs image_label_data with labels
+      if (q.question_type === 'image_label') {
+        return q.image_label_data &&
+          q.image_label_data.labels &&
+          Array.isArray(q.image_label_data.labels) &&
+          q.image_label_data.labels.length > 0
+      }
+
       return true
     }
 
@@ -492,6 +573,44 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
       }, { status: 500 })
     }
 
+    // Process image_label questions to fetch actual images
+    const { searchEducationalImages } = await import('@/lib/images')
+    for (const q of validatedQuestions) {
+      if (q.question_type === 'image_label' && q.image_label_data) {
+        const imageUrl = q.image_label_data.image_url || ''
+        if (imageUrl.startsWith('SEARCH_IMAGE:')) {
+          const searchQuery = imageUrl.replace('SEARCH_IMAGE:', '').trim()
+          try {
+            const subject = subjects[0] || 'education'
+            const searchResults = await searchEducationalImages(searchQuery + ' ' + subject, subject)
+            if (searchResults.length > 0) {
+              const image = searchResults[0]
+              q.image_label_data.image_url = image.url
+              q.image_label_data.image_source = 'web'
+              q.image_label_data.image_credit = image.credit
+              q.image_label_data.image_credit_url = image.creditUrl
+              console.log('[Exams API] Found image for:', searchQuery)
+            } else {
+              // If no image found, remove this question or keep placeholder
+              console.log('[Exams API] No image found for:', searchQuery)
+              q.image_label_data.image_url = '' // Will be filtered out
+            }
+          } catch (error) {
+            console.error('[Exams API] Image search error:', error)
+            q.image_label_data.image_url = ''
+          }
+        }
+      }
+    }
+
+    // Filter out image_label questions with no valid image
+    questionsData.questions = validatedQuestions.filter((q: any) => {
+      if (q.question_type === 'image_label') {
+        return q.image_label_data?.image_url && !q.image_label_data.image_url.startsWith('SEARCH_IMAGE:')
+      }
+      return true
+    })
+
     // Calculate points based on question type
     const calculatePoints = (q: any): number => {
       switch (q.question_type) {
@@ -504,6 +623,10 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
             return q.sub_questions.reduce((sum: number, sq: any) => sum + (sq.points || 1), 0)
           }
           return 2
+        case 'image_label':
+          // Points based on number of labels
+          const labelCount = q.image_label_data?.labels?.length || 0
+          return Math.max(2, labelCount)
         default:
           return 1
       }
@@ -551,6 +674,8 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
       ordering_items: q.ordering_items || null,
       sub_questions: q.sub_questions || null,
       acceptable_answers: q.acceptable_answers || null,
+      // Image label question data
+      image_label_data: q.question_type === 'image_label' ? q.image_label_data : null,
     }))
 
     const { error: questionsError } = await supabase

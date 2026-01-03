@@ -46,6 +46,12 @@ export const ErrorCodes = {
   INTERNAL_ERROR: 'INTERNAL_ERROR',
   DATABASE_ERROR: 'DATABASE_ERROR',
   NETWORK_ERROR: 'NETWORK_ERROR',
+
+  // Network-specific errors (for better user feedback)
+  NETWORK_TIMEOUT: 'NETWORK_TIMEOUT',
+  SLOW_CONNECTION: 'SLOW_CONNECTION',
+  SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
+  IMAGE_FETCH_FAILED: 'IMAGE_FETCH_FAILED',
 } as const
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes]
@@ -112,6 +118,12 @@ const defaultErrorMessages: Record<ErrorCode, string> = {
   [ErrorCodes.INTERNAL_ERROR]: 'Something went wrong on our end. Please try again in a moment',
   [ErrorCodes.DATABASE_ERROR]: 'Could not save your data. Please try again',
   [ErrorCodes.NETWORK_ERROR]: 'Connection lost. Please check your internet and try again',
+
+  // Network-specific
+  [ErrorCodes.NETWORK_TIMEOUT]: 'The request timed out. Your connection may be slow - please try again',
+  [ErrorCodes.SLOW_CONNECTION]: 'Your connection seems slow. Please wait or try again later',
+  [ErrorCodes.SERVICE_UNAVAILABLE]: 'This service is temporarily unavailable. Please try again in a few minutes',
+  [ErrorCodes.IMAGE_FETCH_FAILED]: 'Could not load the image. Please check your connection and try again',
 }
 
 // ============================================================================

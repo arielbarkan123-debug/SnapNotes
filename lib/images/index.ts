@@ -16,6 +16,17 @@ export {
 export type { SearchedImage } from './search'
 
 export {
+  shouldIncludeImages,
+  extractVisualKeywords,
+  detectVisualContentMentions,
+  smartSearchImages,
+  getTopicImageQueries,
+  filterEducationalImages,
+} from './smart-search'
+
+export type { ImageSearchContext, SmartImageResult } from './smart-search'
+
+export {
   uploadExtractedImages,
   uploadBase64Image,
 } from './upload'

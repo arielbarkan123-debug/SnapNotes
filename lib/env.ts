@@ -19,7 +19,7 @@ interface ServerEnv {
 interface ClientEnv {
   NEXT_PUBLIC_SUPABASE_URL: string
   NEXT_PUBLIC_SUPABASE_ANON_KEY: string
-  NEXT_PUBLIC_APP_URL?: string
+  NEXT_PUBLIC_APP_URL: string
 }
 
 interface Env extends ServerEnv, ClientEnv {}
@@ -103,7 +103,10 @@ export function getClientEnv(): ClientEnv {
       'NEXT_PUBLIC_SUPABASE_ANON_KEY',
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     ),
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_APP_URL: validateUrl(
+      'NEXT_PUBLIC_APP_URL',
+      process.env.NEXT_PUBLIC_APP_URL
+    ),
   }
 }
 
@@ -155,6 +158,16 @@ export function getAnthropicApiKey(): string {
 }
 
 /**
+ * Get App URL (required for auth redirects, emails, metadata)
+ */
+export function getAppUrl(): string {
+  return validateUrl(
+    'NEXT_PUBLIC_APP_URL',
+    process.env.NEXT_PUBLIC_APP_URL
+  )
+}
+
+/**
  * Check if all required environment variables are set
  * Call this during app startup to fail fast
  */
@@ -165,6 +178,7 @@ export function validateEnv(): void {
   const clientVars = [
     'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'NEXT_PUBLIC_APP_URL',
   ]
 
   for (const name of clientVars) {

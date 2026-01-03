@@ -3,7 +3,7 @@
  * Converts past exam analysis into a prompt context for exam generation
  */
 
-import type { ExamAnalysis, PastExamTemplate, QuestionTypeKey } from '@/types/past-exam'
+import type { ExamAnalysis, PastExamTemplate, QuestionTypeKey, ImageAnalysis, DiagramType, LabelingStyle } from '@/types/past-exam'
 
 /**
  * Aggregate analyses from multiple past exam templates
@@ -99,6 +99,9 @@ function aggregateAnalyses(analyses: ExamAnalysis[]): ExamAnalysis {
   // Combine sample questions (take first 2 from each)
   const sampleQuestions = analyses.flatMap((a) => a.sample_questions.slice(0, 2)).slice(0, 6)
 
+  // Aggregate image analysis
+  const imageAnalysis = aggregateImageAnalyses(analyses.map((a) => a.image_analysis).filter((ia): ia is ImageAnalysis => !!ia))
+
   return {
     total_questions: avgTotalQuestions,
     total_points: avgTotalPoints,
@@ -139,6 +142,73 @@ function aggregateAnalyses(analyses: ExamAnalysis[]): ExamAnalysis {
       bloom_levels: bloom,
     },
     sample_questions: sampleQuestions,
+    image_analysis: imageAnalysis,
+  }
+}
+
+/**
+ * Aggregate image analyses from multiple exams
+ */
+function aggregateImageAnalyses(imageAnalyses: ImageAnalysis[]): ImageAnalysis | undefined {
+  if (imageAnalyses.length === 0) {
+    return undefined
+  }
+
+  // Check if any exam has diagrams
+  const hasDiagrams = imageAnalyses.some((ia) => ia.has_diagrams)
+  if (!hasDiagrams) {
+    return {
+      has_diagrams: false,
+      diagram_count: 0,
+      diagram_types: [],
+      diagram_topics: [],
+      labeling_style: null,
+      typical_label_count: 0,
+      requires_labeling: false,
+      suggested_image_queries: [],
+    }
+  }
+
+  // Aggregate diagram types (union)
+  const allDiagramTypes = new Set<DiagramType>()
+  imageAnalyses.forEach((ia) => ia.diagram_types.forEach((dt) => allDiagramTypes.add(dt)))
+
+  // Aggregate diagram topics (union)
+  const allDiagramTopics = new Set<string>()
+  imageAnalyses.forEach((ia) => ia.diagram_topics.forEach((dt) => allDiagramTopics.add(dt)))
+
+  // Aggregate suggested queries (union, limit to 10)
+  const allQueries = new Set<string>()
+  imageAnalyses.forEach((ia) => ia.suggested_image_queries.forEach((q) => allQueries.add(q)))
+
+  // Find most common labeling style
+  const labelingStyles = imageAnalyses
+    .filter((ia) => ia.labeling_style)
+    .map((ia) => ia.labeling_style!)
+  const labelingStyleCounts = labelingStyles.reduce((acc, style) => {
+    acc[style] = (acc[style] || 0) + 1
+    return acc
+  }, {} as Record<LabelingStyle, number>)
+  const mostCommonLabelingStyle = Object.entries(labelingStyleCounts)
+    .sort((a, b) => b[1] - a[1])[0]?.[0] as LabelingStyle | undefined
+
+  // Average diagram count and label count
+  const avgDiagramCount = Math.round(
+    imageAnalyses.reduce((sum, ia) => sum + ia.diagram_count, 0) / imageAnalyses.length
+  )
+  const avgLabelCount = Math.round(
+    imageAnalyses.reduce((sum, ia) => sum + ia.typical_label_count, 0) / imageAnalyses.length
+  )
+
+  return {
+    has_diagrams: true,
+    diagram_count: avgDiagramCount,
+    diagram_types: Array.from(allDiagramTypes),
+    diagram_topics: Array.from(allDiagramTopics).slice(0, 10),
+    labeling_style: mostCommonLabelingStyle || null,
+    typical_label_count: avgLabelCount,
+    requires_labeling: imageAnalyses.some((ia) => ia.requires_labeling),
+    suggested_image_queries: Array.from(allQueries).slice(0, 10),
   }
 }
 
@@ -157,6 +227,7 @@ function formatQuestionTypeDistribution(
     ordering: 'Ordering/Sequence',
     essay: 'Essay',
     passage_based: 'Passage-Based',
+    image_label: 'Image Labeling',
   }
 
   return Object.entries(questionTypes)
@@ -232,6 +303,39 @@ export function buildExamStyleGuide(
     lines.push('- Include calculation-based questions where appropriate')
   }
 
+  // Add image/diagram guidance if past exams use them
+  if (aggregated.image_analysis?.has_diagrams) {
+    lines.push('')
+    lines.push('**Diagram/Image Questions (IMPORTANT - Past exams include these):**')
+    lines.push(`- Past exams contain ${aggregated.image_analysis.diagram_count || 'some'} diagrams/images`)
+
+    if (aggregated.image_analysis.diagram_types.length > 0) {
+      lines.push(`- Diagram types used: ${aggregated.image_analysis.diagram_types.join(', ')}`)
+    }
+
+    if (aggregated.image_analysis.requires_labeling) {
+      lines.push('- Exams require students to LABEL parts of diagrams')
+      if (aggregated.image_analysis.labeling_style) {
+        const styleDescriptions: Record<string, string> = {
+          'drag_drop': 'Students drag labels to correct positions',
+          'fill_blank': 'Students fill in blank labels on diagrams',
+          'multiple_choice': 'Students select correct labels from options',
+          'point_and_identify': 'Students identify labeled parts',
+        }
+        lines.push(`- Labeling style: ${styleDescriptions[aggregated.image_analysis.labeling_style] || aggregated.image_analysis.labeling_style}`)
+      }
+      if (aggregated.image_analysis.typical_label_count > 0) {
+        lines.push(`- Typical number of labels per diagram: ${aggregated.image_analysis.typical_label_count}`)
+      }
+    }
+
+    if (aggregated.image_analysis.diagram_topics.length > 0) {
+      lines.push(`- Diagram topics: ${aggregated.image_analysis.diagram_topics.slice(0, 5).join(', ')}`)
+    }
+
+    lines.push('- GENERATE image_label questions when appropriate for visual content')
+  }
+
   lines.push('')
   lines.push('**Cognitive Levels (Bloom\'s Taxonomy):**')
   lines.push(`- Remember/Recall: ${aggregated.question_style.bloom_levels.remember}%`)
@@ -264,4 +368,29 @@ export function hasCompletedAnalysis(
   return templates.some(
     (t) => t.analysis_status === 'completed' && t.extracted_analysis !== null
   )
+}
+
+/**
+ * Check if past exams contain images/diagrams
+ */
+export function pastExamsHaveImages(
+  templates: Pick<PastExamTemplate, 'extracted_analysis'>[]
+): boolean {
+  return templates.some(
+    (t) => t.extracted_analysis?.image_analysis?.has_diagrams ||
+           t.extracted_analysis?.question_style?.uses_diagrams
+  )
+}
+
+/**
+ * Get aggregated image analysis from past exam templates
+ */
+export function getAggregatedImageAnalysis(
+  templates: Pick<PastExamTemplate, 'extracted_analysis'>[]
+): ImageAnalysis | undefined {
+  const imageAnalyses = templates
+    .filter((t) => t.extracted_analysis?.image_analysis)
+    .map((t) => t.extracted_analysis!.image_analysis!)
+
+  return aggregateImageAnalyses(imageAnalyses)
 }

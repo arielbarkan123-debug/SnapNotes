@@ -23,6 +23,7 @@ import { generateCourseImage } from '@/lib/ai/image-generation'
 import { extractAndStoreConcepts } from '@/lib/concepts'
 import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
+import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 
 // ============================================================================
 // Types
@@ -72,7 +73,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return createErrorResponse(ErrorCodes.UNAUTHORIZED, 'Please log in to generate a course')
     }
 
-    // 1.5. Fetch user learning profile for personalization
+    // 1.5. Check rate limit
+    const rateLimitId = getIdentifier(user.id, request)
+    const rateLimit = checkRateLimit(rateLimitId, RATE_LIMITS.generateCourse)
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Too many requests. Please wait before generating another course.',
+          code: 'RATE_LIMITED',
+        },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimit),
+        }
+      )
+    }
+
+    // 1.6. Fetch user learning profile for personalization
     let userContext: UserLearningContext | undefined
     try {
       const { data: profile } = await supabase
