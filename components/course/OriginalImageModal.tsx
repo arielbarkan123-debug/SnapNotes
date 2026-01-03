@@ -18,6 +18,7 @@ export default function OriginalImageModal({
 }: OriginalImageModalProps) {
   const [scale, setScale] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
+  const [hasError, setHasError] = useState(false)
 
   // Handle escape key
   useEffect(() => {
@@ -43,11 +44,12 @@ export default function OriginalImageModal({
     }
   }, [isOpen])
 
-  // Reset scale when modal opens
+  // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
       setScale(1)
       setIsLoading(true)
+      setHasError(false)
     }
   }, [isOpen])
 
@@ -130,29 +132,43 @@ export default function OriginalImageModal({
         className="relative w-full h-full sm:w-auto sm:h-auto sm:max-w-[90vw] sm:max-h-[85vh] overflow-auto flex items-center justify-center pt-16 pb-12 sm:pt-0 sm:pb-0"
         onClick={(e) => e.stopPropagation()}
       >
-        {isLoading && (
+        {isLoading && !hasError && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
           </div>
         )}
-        <div
-          style={{
-            transform: `scale(${scale})`,
-            transformOrigin: 'center center',
-            transition: 'transform 0.2s ease-out',
-          }}
-        >
-          <Image
-            src={imageUrl}
-            alt={title}
-            width={800}
-            height={1100}
-            className="rounded-lg shadow-2xl max-w-full sm:max-w-none"
-            style={{ maxHeight: '85vh', width: 'auto', height: 'auto' }}
-            onLoad={() => setIsLoading(false)}
-            priority
-          />
-        </div>
+        {hasError ? (
+          <div className="flex flex-col items-center justify-center text-white/70 p-8">
+            <svg className="w-16 h-16 mb-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p className="text-center">Unable to load image</p>
+            <p className="text-sm text-white/50 mt-1">Check your connection and try again</p>
+          </div>
+        ) : (
+          <div
+            style={{
+              transform: `scale(${scale})`,
+              transformOrigin: 'center center',
+              transition: 'transform 0.2s ease-out',
+            }}
+          >
+            <Image
+              src={imageUrl}
+              alt={title}
+              width={800}
+              height={1100}
+              className="rounded-lg shadow-2xl max-w-full sm:max-w-none"
+              style={{ maxHeight: '85vh', width: 'auto', height: 'auto' }}
+              onLoad={() => setIsLoading(false)}
+              onError={() => {
+                setIsLoading(false)
+                setHasError(true)
+              }}
+              priority
+            />
+          </div>
+        )}
       </div>
 
       {/* Instructions */}

@@ -163,12 +163,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const duplicateCheckField = documentContent ? documentUrl : urls[0]
 
       if (duplicateCheckField) {
+        // Use maybeSingle() instead of single() to handle 0 results gracefully
         const { data: existingCourse } = await supabase
           .from('courses')
           .select('id')
           .eq('user_id', user.id)
           .or(`original_image_url.eq.${duplicateCheckField},document_url.eq.${duplicateCheckField}`)
-          .single()
+          .maybeSingle()
 
         if (existingCourse) {
           return NextResponse.json({
