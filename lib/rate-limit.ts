@@ -100,24 +100,44 @@ export function checkRateLimit(
 }
 
 /**
+ * Parse rate limit from environment variable
+ * Format: "limit,windowMs" e.g., "10,60000" for 10 requests per minute
+ */
+function parseRateLimitEnv(envVar: string | undefined, defaultLimit: number, defaultWindowMs: number): RateLimitConfig {
+  if (!envVar) {
+    return { limit: defaultLimit, windowMs: defaultWindowMs }
+  }
+  const [limitStr, windowMsStr] = envVar.split(',')
+  const limit = parseInt(limitStr, 10)
+  const windowMs = parseInt(windowMsStr, 10)
+  if (isNaN(limit) || isNaN(windowMs) || limit <= 0 || windowMs <= 0) {
+    console.warn(`Invalid rate limit env format: ${envVar}, using defaults`)
+    return { limit: defaultLimit, windowMs: defaultWindowMs }
+  }
+  return { limit, windowMs }
+}
+
+/**
  * Pre-configured rate limits for different API operations
+ * All limits can be overridden via environment variables:
+ * RATE_LIMIT_GENERATE_COURSE, RATE_LIMIT_CHAT, etc.
  */
 export const RATE_LIMITS = {
   // AI-intensive operations (expensive)
-  generateCourse: { limit: 5, windowMs: 60 * 1000 }, // 5 per minute
-  generateExam: { limit: 10, windowMs: 60 * 1000 }, // 10 per minute
-  generateQuestions: { limit: 20, windowMs: 60 * 1000 }, // 20 per minute
-  chat: { limit: 30, windowMs: 60 * 1000 }, // 30 per minute
-  evaluateAnswer: { limit: 30, windowMs: 60 * 1000 }, // 30 per minute
+  generateCourse: parseRateLimitEnv(process.env.RATE_LIMIT_GENERATE_COURSE, 5, 60 * 1000),
+  generateExam: parseRateLimitEnv(process.env.RATE_LIMIT_GENERATE_EXAM, 10, 60 * 1000),
+  generateQuestions: parseRateLimitEnv(process.env.RATE_LIMIT_GENERATE_QUESTIONS, 20, 60 * 1000),
+  chat: parseRateLimitEnv(process.env.RATE_LIMIT_CHAT, 30, 60 * 1000),
+  evaluateAnswer: parseRateLimitEnv(process.env.RATE_LIMIT_EVALUATE_ANSWER, 30, 60 * 1000),
 
   // Medium operations
-  upload: { limit: 20, windowMs: 60 * 1000 }, // 20 per minute
-  search: { limit: 50, windowMs: 60 * 1000 }, // 50 per minute
+  upload: parseRateLimitEnv(process.env.RATE_LIMIT_UPLOAD, 20, 60 * 1000),
+  search: parseRateLimitEnv(process.env.RATE_LIMIT_SEARCH, 50, 60 * 1000),
 
   // Auth operations (protect against brute force)
-  login: { limit: 10, windowMs: 15 * 60 * 1000 }, // 10 per 15 minutes
-  forgotPassword: { limit: 5, windowMs: 60 * 60 * 1000 }, // 5 per hour
-} as const
+  login: parseRateLimitEnv(process.env.RATE_LIMIT_LOGIN, 10, 15 * 60 * 1000),
+  forgotPassword: parseRateLimitEnv(process.env.RATE_LIMIT_FORGOT_PASSWORD, 5, 60 * 60 * 1000),
+}
 
 /**
  * Get rate limit headers for response

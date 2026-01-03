@@ -28,11 +28,27 @@ import { GeneratedCourse } from '@/types'
 // Configuration
 // ============================================================================
 
-const AI_MODEL = 'claude-sonnet-4-20250514'
+// AI model with environment variable fallback
+const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514'
+const AI_MODEL_FAST = process.env.ANTHROPIC_MODEL_FAST || 'claude-3-5-haiku-20241022'
 const MAX_TOKENS_EXTRACTION = 4096
 const MAX_TOKENS_GENERATION = 8192
 const MAX_IMAGES_PER_REQUEST = 5 // Claude's recommended limit for optimal performance
 const API_TIMEOUT_MS = 120000 // 2 minute timeout for AI operations
+
+/**
+ * Get the default AI model for standard operations
+ */
+export function getAIModel(): string {
+  return AI_MODEL
+}
+
+/**
+ * Get the fast AI model for quick responses
+ */
+export function getAIModelFast(): string {
+  return AI_MODEL_FAST
+}
 
 // Initialize Anthropic client (singleton)
 let anthropicClient: Anthropic | null = null

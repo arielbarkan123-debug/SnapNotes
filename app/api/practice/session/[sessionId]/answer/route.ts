@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes, logError } from '@/lib/api/errors'
+import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 import { getSession, recordAnswer } from '@/lib/practice'
 import type { AnswerQuestionRequest } from '@/lib/practice/types'
 
@@ -23,6 +24,20 @@ export async function POST(
     } = await supabase.auth.getUser()
     if (authError || !user) {
       return createErrorResponse(ErrorCodes.UNAUTHORIZED, 'Please log in')
+    }
+
+    // Rate limiting
+    const rateLimitResult = checkRateLimit(
+      getIdentifier(user.id, request),
+      RATE_LIMITS.evaluateAnswer
+    )
+    if (!rateLimitResult.allowed) {
+      const response = createErrorResponse(ErrorCodes.RATE_LIMITED)
+      const headers = getRateLimitHeaders(rateLimitResult)
+      Object.entries(headers).forEach(([key, value]) => {
+        response.headers.set(key, value)
+      })
+      return response
     }
 
     // Get session to verify ownership and status

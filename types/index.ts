@@ -262,14 +262,45 @@ export interface AuthState {
 // ============================================
 
 /**
- * ApiResponse<T> - Generic wrapper for API responses
- * Either contains data on success, or error message on failure
+ * ApiSuccessResponse<T> - Success response with data
  */
-export interface ApiResponse<T> {
-  /** The response data (null if error) */
-  data: T | null
-  /** Error message (null if success) */
-  error: string | null
+export interface ApiSuccessResponse<T> {
+  /** The response data */
+  data: T
+  /** No error on success */
+  error: null
+}
+
+/**
+ * ApiErrorResponse - Error response with message
+ */
+export interface ApiErrorResponse {
+  /** No data on error */
+  data: null
+  /** Error message */
+  error: string
+}
+
+/**
+ * ApiResponse<T> - Discriminated union for API responses
+ * Either contains data on success, or error message on failure
+ * Using a discriminated union prevents invalid states where
+ * both data and error are null, or both are non-null.
+ */
+export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse
+
+/**
+ * Type guard to check if response is successful
+ */
+export function isApiSuccess<T>(response: ApiResponse<T>): response is ApiSuccessResponse<T> {
+  return response.error === null && response.data !== null
+}
+
+/**
+ * Type guard to check if response is an error
+ */
+export function isApiError<T>(response: ApiResponse<T>): response is ApiErrorResponse {
+  return response.error !== null && response.data === null
 }
 
 /**

@@ -4,6 +4,8 @@ import Anthropic from '@anthropic-ai/sdk'
 import { buildChatContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
 import { getAnthropicApiKey } from '@/lib/env'
+import { createErrorResponse, ErrorCodes, mapClaudeAPIError } from '@/lib/api/errors'
+import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 
 // Initialize Anthropic client with validated API key
 const anthropic = new Anthropic({
@@ -28,23 +30,37 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
+    }
+
+    // Rate limiting
+    const rateLimitResult = checkRateLimit(
+      getIdentifier(user.id, request),
+      RATE_LIMITS.chat
+    )
+    if (!rateLimitResult.allowed) {
+      const response = createErrorResponse(ErrorCodes.RATE_LIMITED)
+      const headers = getRateLimitHeaders(rateLimitResult)
+      Object.entries(headers).forEach(([key, value]) => {
+        response.headers.set(key, value)
+      })
+      return response
     }
 
     const { courseId, message, history = [] } = await request.json()
 
     if (!message || typeof message !== 'string') {
-      return NextResponse.json({ error: 'Message is required' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.INVALID_INPUT, 'Message is required')
     }
 
     // Validate message length
     if (message.length > MAX_MESSAGE_LENGTH) {
-      return NextResponse.json({ error: 'Message too long' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.INVALID_INPUT, 'Message too long')
     }
 
     // Validate API key is configured
     if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({ error: 'Chat service not configured' }, { status: 503 })
+      return createErrorResponse(ErrorCodes.AI_SERVICE_UNAVAILABLE, 'Chat service not configured')
     }
 
     // Get course content for context
@@ -178,19 +194,13 @@ Remember: You're a tutor, not just an answer machine. Help them understand, don'
     // Extract response text with proper validation
     if (!response.content || response.content.length === 0) {
       console.error('[Chat API] Empty response from AI')
-      return NextResponse.json(
-        { error: 'No response generated' },
-        { status: 500 }
-      )
+      return createErrorResponse(ErrorCodes.AI_PROCESSING_FAILED, 'No response generated')
     }
 
     const textBlock = response.content.find(block => block.type === 'text')
     if (!textBlock || textBlock.type !== 'text') {
       console.error('[Chat API] No text block in response')
-      return NextResponse.json(
-        { error: 'Unexpected response format' },
-        { status: 500 }
-      )
+      return createErrorResponse(ErrorCodes.AI_PROCESSING_FAILED, 'Unexpected response format')
     }
 
     return NextResponse.json({
@@ -199,9 +209,7 @@ Remember: You're a tutor, not just an answer machine. Help them understand, don'
     })
   } catch (error) {
     console.error('[Chat API] Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to process chat message' },
-      { status: 500 }
-    )
+    const mappedError = mapClaudeAPIError(error)
+    return createErrorResponse(mappedError.code, mappedError.message)
   }
 }
