@@ -144,10 +144,17 @@ const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonProps>(
 
     // Render as link
     if ('href' in rest && rest.href) {
+      const linkClassName = isLoading
+        ? `${combinedClassName} pointer-events-none opacity-50 cursor-not-allowed`
+        : combinedClassName
+
       return (
         <Link
           ref={ref as React.Ref<HTMLAnchorElement>}
-          className={combinedClassName}
+          className={linkClassName}
+          aria-disabled={isLoading}
+          aria-busy={isLoading}
+          tabIndex={isLoading ? -1 : undefined}
           {...(rest as ButtonAsLink)}
         >
           {content}

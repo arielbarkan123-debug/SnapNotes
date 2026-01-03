@@ -67,6 +67,7 @@ export function XPPopup({ popup, onComplete }: XPPopupProps) {
           ${stage === 'visible' ? 'opacity-100 scale-100' : ''}
           ${stage === 'exit' ? 'opacity-0 scale-110' : ''}
         `}
+        aria-label={`Level up! You reached level ${popup.level}${popup.title ? `, ${popup.title}` : ''}`}
       >
         <div className="flex flex-col items-center gap-2">
           {/* Glow effect */}
@@ -129,12 +130,13 @@ export function XPPopup({ popup, onComplete }: XPPopupProps) {
       style={{
         transitionDuration: stage === 'enter' ? '150ms' : '500ms',
       }}
+      aria-label={`Earned ${popup.amount} experience points`}
     >
       <div className="flex items-center gap-1 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 px-4 py-2 shadow-lg shadow-yellow-500/30">
         <span className="text-lg font-bold text-white drop-shadow">
           +{popup.amount} XP
         </span>
-        <span className="text-lg">✨</span>
+        <span className="text-lg" aria-hidden="true">✨</span>
       </div>
     </div>
   )
@@ -146,7 +148,7 @@ export function XPPopup({ popup, onComplete }: XPPopupProps) {
 
 export function XPPopupContainer({ popups, onComplete }: XPPopupContainerProps) {
   return (
-    <>
+    <div role="status" aria-live="polite" aria-label="XP notifications">
       {popups.map((popup, index) => (
         <div
           key={popup.id}
@@ -158,7 +160,7 @@ export function XPPopupContainer({ popups, onComplete }: XPPopupContainerProps) 
           <XPPopup popup={popup} onComplete={onComplete} />
         </div>
       ))}
-    </>
+    </div>
   )
 }
 

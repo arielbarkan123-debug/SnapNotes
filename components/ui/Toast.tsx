@@ -191,7 +191,7 @@ export function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
 
   return (
     <div
-      className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"
+      className="fixed top-4 end-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"
       aria-live="polite"
       aria-label="Notifications"
     >
