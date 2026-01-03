@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
-import { createClient } from '@supabase/supabase-js'
 
 // Routes that require authentication
 const protectedRoutes = ['/dashboard', '/course']
@@ -12,7 +11,7 @@ const authRoutes = ['/login', '/signup', '/forgot-password', '/reset-password']
 const lessonRoutePattern = /^\/course\/([^/]+)\/lesson\/(\d+)$/
 
 export async function middleware(request: NextRequest) {
-  const { user, supabaseResponse } = await updateSession(request)
+  const { user, supabaseResponse, supabase } = await updateSession(request)
   const { pathname } = request.nextUrl
 
   // Check if the current path is a protected route
@@ -49,20 +48,7 @@ export async function middleware(request: NextRequest) {
     // Only check for lessons beyond index 0 (first lesson is always accessible)
     if (lessonIndex > 0) {
       try {
-        // Create a Supabase client for the middleware
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          {
-            global: {
-              headers: {
-                Authorization: request.headers.get('Authorization') || '',
-              },
-            },
-          }
-        )
-
-        // Get user's progress for this course
+        // Use the authenticated Supabase client from updateSession
         const { data: progress } = await supabase
           .from('user_progress')
           .select('completed_lessons')
