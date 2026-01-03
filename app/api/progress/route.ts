@@ -48,7 +48,7 @@ export async function GET() {
       stepPerformanceResult,
       userProfileResult,
       gamificationStatsResult,
-    ] = await Promise.all([
+    ] = await Promise.allSettled([
       // Review logs this week
       supabase
         .from('review_logs')
@@ -141,44 +141,53 @@ export async function GET() {
         .eq('user_id', user.id)
         .order('mastery_level', { ascending: true }),
 
-      // Step performance for fallback mastery calculation
+      // Step performance for fallback mastery calculation (limited to prevent memory issues)
       supabase
         .from('step_performance')
         .select('course_id, lesson_index, was_correct, created_at')
         .eq('user_id', user.id)
-        .gte('created_at', thirtyDaysAgo.toISOString()),
+        .gte('created_at', thirtyDaysAgo.toISOString())
+        .limit(1000),
 
       // User learning profile - select only fields needed for insights
       supabase
         .from('user_learning_profile')
         .select('preferred_study_time, optimal_session_length, peak_performance_hour, accuracy_trend, study_goal')
         .eq('user_id', user.id)
-        .single(),
+        .maybeSingle(),
 
       // Gamification stats - select only fields needed for insights
       supabase
         .from('user_gamification')
         .select('current_streak, total_xp')
         .eq('user_id', user.id)
-        .single(),
+        .maybeSingle(),
     ])
 
-    // Extract data with fallbacks
-    const weekLogs: ReviewLog[] = (reviewLogsWeekResult.data || []) as ReviewLog[]
-    const monthLogs: ReviewLog[] = (reviewLogsMonthResult.data || []) as ReviewLog[]
-    const last30DaysLogs: ReviewLog[] = (reviewLogs30DaysResult.data || []) as ReviewLog[]
-    const last7DaysLogs: ReviewLog[] = (reviewLogs7DaysResult.data || []) as ReviewLog[]
-    const prevPeriodLogs: ReviewLog[] = (previousPeriodLogsResult.data || []) as ReviewLog[]
-    const practiceLogsWeek: PracticeLog[] = (practiceLogsWeekResult.data || []) as PracticeLog[]
-    const practiceLogs30Days: PracticeLog[] = (practiceLogs30DaysResult.data || []) as PracticeLog[]
-    const practiceLogsPrevPeriod: PracticeLog[] = (practiceLogsPrevPeriodResult.data || []) as PracticeLog[]
-    const studySessionsWeek: StudySession[] = (studySessionsWeekResult.data || []) as StudySession[]
-    const studySessionsMonth: StudySession[] = (studySessionsMonthResult.data || []) as StudySession[]
-    const courses: Course[] = (coursesResult.data || []) as Course[]
-    const lessonProgress: LessonProgress[] = (lessonProgressResult.data || []) as LessonProgress[]
-    const stepPerformance: StepPerformance[] = (stepPerformanceResult.data || []) as StepPerformance[]
-    const userProfile = userProfileResult.data as LearningProfile | null
-    const gamificationStats = gamificationStatsResult.data as GamificationStats | null
+    // Helper to safely extract data from PromiseSettledResult
+    function extractData<T>(result: PromiseSettledResult<{ data: T | null; error: unknown }>): T | null {
+      if (result.status === 'fulfilled' && result.value?.data) {
+        return result.value.data
+      }
+      return null
+    }
+
+    // Extract data with fallbacks (handles rejected promises gracefully)
+    const weekLogs: ReviewLog[] = (extractData(reviewLogsWeekResult) || []) as ReviewLog[]
+    const monthLogs: ReviewLog[] = (extractData(reviewLogsMonthResult) || []) as ReviewLog[]
+    const last30DaysLogs: ReviewLog[] = (extractData(reviewLogs30DaysResult) || []) as ReviewLog[]
+    const last7DaysLogs: ReviewLog[] = (extractData(reviewLogs7DaysResult) || []) as ReviewLog[]
+    const prevPeriodLogs: ReviewLog[] = (extractData(previousPeriodLogsResult) || []) as ReviewLog[]
+    const practiceLogsWeek: PracticeLog[] = (extractData(practiceLogsWeekResult) || []) as PracticeLog[]
+    const practiceLogs30Days: PracticeLog[] = (extractData(practiceLogs30DaysResult) || []) as PracticeLog[]
+    const practiceLogsPrevPeriod: PracticeLog[] = (extractData(practiceLogsPrevPeriodResult) || []) as PracticeLog[]
+    const studySessionsWeek: StudySession[] = (extractData(studySessionsWeekResult) || []) as StudySession[]
+    const studySessionsMonth: StudySession[] = (extractData(studySessionsMonthResult) || []) as StudySession[]
+    const courses: Course[] = (extractData(coursesResult) || []) as Course[]
+    const lessonProgress: LessonProgress[] = (extractData(lessonProgressResult) || []) as LessonProgress[]
+    const stepPerformance: StepPerformance[] = (extractData(stepPerformanceResult) || []) as StepPerformance[]
+    const userProfile = extractData(userProfileResult) as LearningProfile | null
+    const gamificationStats = extractData(gamificationStatsResult) as GamificationStats | null
 
     // =========================================================================
     // Study Time Calculations

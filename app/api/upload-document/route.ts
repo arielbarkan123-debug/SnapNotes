@@ -32,6 +32,8 @@ const MAX_FILE_SIZES: Record<DocumentType, number> = {
   unknown: 0,
 }
 
+const MAX_TOTAL_SIZE = 25 * 1024 * 1024 // 25MB total payload limit
+
 const BUCKET_NAME = 'documents'
 
 // ============================================================================
@@ -89,6 +91,18 @@ function mapDocumentError(error: Error): { code: keyof typeof ErrorCodes; messag
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    // 0. Validate Content-Length to prevent DOS attacks
+    const contentLength = request.headers.get('content-length')
+    if (contentLength) {
+      const size = parseInt(contentLength, 10)
+      if (size > MAX_TOTAL_SIZE) {
+        return createErrorResponse(
+          ErrorCodes.FILE_TOO_LARGE,
+          `Total upload size exceeds ${MAX_TOTAL_SIZE / (1024 * 1024)}MB limit`
+        )
+      }
+    }
+
     // 1. Verify authentication
     const supabase = await createClient()
     const {

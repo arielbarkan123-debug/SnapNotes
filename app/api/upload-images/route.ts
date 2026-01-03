@@ -46,6 +46,7 @@ const ACCEPTED_FILE_TYPES = [
 ]
 const ACCEPTED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif', 'gif']
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB per file
+const MAX_TOTAL_SIZE = 50 * 1024 * 1024 // 50MB total payload limit
 const MAX_FILES = 10
 const BUCKET_NAME = 'notebook-images'
 
@@ -192,6 +193,18 @@ async function validateFile(file: File, index: number): Promise<UploadError | nu
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    // 0. Validate Content-Length to prevent DOS attacks
+    const contentLength = request.headers.get('content-length')
+    if (contentLength) {
+      const size = parseInt(contentLength, 10)
+      if (size > MAX_TOTAL_SIZE) {
+        return createErrorResponse(
+          ErrorCodes.FILE_TOO_LARGE,
+          `Total upload size exceeds ${MAX_TOTAL_SIZE / (1024 * 1024)}MB limit`
+        )
+      }
+    }
+
     // 1. Verify authentication
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
