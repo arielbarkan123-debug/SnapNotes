@@ -33,9 +33,14 @@ export async function DELETE(
       .from('courses')
       .select('id, user_id, original_image_url')
       .eq('id', courseId)
-      .single()
+      .maybeSingle()
 
-    if (fetchError || !course) {
+    if (fetchError) {
+      logError('DeleteCourse:fetch', fetchError)
+      return createErrorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to fetch course')
+    }
+
+    if (!course) {
       return createErrorResponse(ErrorCodes.NOT_FOUND, 'Course not found')
     }
 
@@ -184,9 +189,14 @@ export async function GET(
       .from('courses')
       .select('*')
       .eq('id', courseId)
-      .single()
+      .maybeSingle()
 
-    if (error || !course) {
+    if (error) {
+      logError('GetCourse:fetch', error)
+      return createErrorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to fetch course')
+    }
+
+    if (!course) {
       return createErrorResponse(ErrorCodes.NOT_FOUND, 'Course not found')
     }
 

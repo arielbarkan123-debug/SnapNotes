@@ -25,6 +25,56 @@ export const PRACTICE_SESSION_KEY = (id: string) => `/api/practice/session/${id}
 export const PRACTICE_STATS_KEY = '/api/practice/session?include=stats,active,recent'
 
 // -----------------------------------------------------------------------------
+// LocalStorage Persistence (prevents progress loss on refresh)
+// -----------------------------------------------------------------------------
+
+const PRACTICE_STATE_KEY_PREFIX = 'notesnap_practice_state_'
+
+function getPracticeStateKey(sessionId: string): string {
+  return `${PRACTICE_STATE_KEY_PREFIX}${sessionId}`
+}
+
+function savePracticeState(sessionId: string, questionIndex: number): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(getPracticeStateKey(sessionId), JSON.stringify({
+      questionIndex,
+      savedAt: Date.now(),
+    }))
+  } catch {
+    // localStorage might be full or unavailable - silently continue
+  }
+}
+
+function loadPracticeState(sessionId: string): number | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const stored = localStorage.getItem(getPracticeStateKey(sessionId))
+    if (!stored) return null
+
+    const state = JSON.parse(stored)
+    // Only use state if saved within last 24 hours
+    const maxAge = 24 * 60 * 60 * 1000
+    if (Date.now() - state.savedAt > maxAge) {
+      localStorage.removeItem(getPracticeStateKey(sessionId))
+      return null
+    }
+    return state.questionIndex
+  } catch {
+    return null
+  }
+}
+
+function clearPracticeState(sessionId: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.removeItem(getPracticeStateKey(sessionId))
+  } catch {
+    // Ignore errors
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Fetcher
 // -----------------------------------------------------------------------------
 
@@ -127,12 +177,25 @@ export function usePracticeSession(sessionId?: string): UsePracticeSessionReturn
   // Get current question
   const currentQuestion = questions[currentQuestionIndex] || null
 
-  // Sync current question index with session
+  // Sync current question index with session and localStorage
   useEffect(() => {
-    if (session) {
-      setCurrentQuestionIndex(session.current_question_index)
+    if (session && sessionId) {
+      // Try to restore from localStorage first (in case of page refresh)
+      const savedIndex = loadPracticeState(sessionId)
+      if (savedIndex !== null && savedIndex >= 0 && savedIndex < questions.length) {
+        setCurrentQuestionIndex(savedIndex)
+      } else {
+        setCurrentQuestionIndex(session.current_question_index)
+      }
     }
-  }, [session?.current_question_index])
+  }, [session?.id]) // Only run when session first loads
+
+  // Save question index to localStorage whenever it changes
+  useEffect(() => {
+    if (sessionId && currentQuestionIndex >= 0) {
+      savePracticeState(sessionId, currentQuestionIndex)
+    }
+  }, [sessionId, currentQuestionIndex])
 
   // Start a new session
   const startSession = useCallback(
@@ -229,6 +292,9 @@ export function usePracticeSession(sessionId?: string): UsePracticeSessionReturn
       const sessionResult = await res.json()
       setResult(sessionResult)
 
+      // Clear localStorage since session is complete
+      clearPracticeState(sessionId)
+
       // Invalidate stats cache
       mutate(PRACTICE_STATS_KEY)
 
@@ -288,6 +354,9 @@ export function usePracticeSession(sessionId?: string): UsePracticeSessionReturn
       const error = await res.json()
       throw new Error(error.message || 'Failed to abandon session')
     }
+
+    // Clear localStorage since session is abandoned
+    clearPracticeState(sessionId)
 
     // Invalidate stats cache
     mutate(PRACTICE_STATS_KEY)

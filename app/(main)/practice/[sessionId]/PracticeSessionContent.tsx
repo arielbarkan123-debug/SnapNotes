@@ -8,6 +8,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useToast } from '@/contexts/ToastContext'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import type {
   PracticeSession,
@@ -347,6 +348,7 @@ export default function PracticeSessionContent({
   answers,
 }: PracticeSessionContentProps) {
   const router = useRouter()
+  const { error: showError } = useToast()
   const startTimeRef = useRef<number>(Date.now())
 
   // Analytics
@@ -361,6 +363,7 @@ export default function PracticeSessionContent({
   const [answeredCount, setAnsweredCount] = useState(session.questions_answered)
   const [correctCount, setCorrectCount] = useState(session.questions_correct)
   const [hasTrackedView, setHasTrackedView] = useState(false)
+  const [_submitError, setSubmitError] = useState<{ answer: string; error: string } | null>(null)
 
   // Current question
   const currentQuestion = questions[currentIndex]
@@ -412,6 +415,7 @@ export default function PracticeSessionContent({
         }
 
         const result: AnswerQuestionResponse = await res.json()
+        setSubmitError(null) // Clear any previous error
         setLastResult(result)
         setAnsweredCount(result.sessionProgress.questionsAnswered)
         setCorrectCount(result.sessionProgress.questionsCorrect)
@@ -427,13 +431,15 @@ export default function PracticeSessionContent({
           isCorrect: result.isCorrect,
           responseTimeMs: responseTime,
         })
-      } catch {
-        alert('Failed to submit answer. Please try again.')
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to submit answer'
+        setSubmitError({ answer, error: errorMessage })
+        showError('Failed to submit answer. Click "Retry" below to try again.')
       } finally {
         setIsSubmitting(false)
       }
     },
-    [currentQuestion, currentIndex, session.id, isSubmitting, trackFeature]
+    [currentQuestion, currentIndex, session.id, isSubmitting, trackFeature, showError]
   )
 
   // Handle next question

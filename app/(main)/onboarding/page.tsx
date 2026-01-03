@@ -7,6 +7,7 @@ import { useFunnelTracking, useEventTracking } from '@/lib/analytics'
 import { GradeSelector, SubjectPicker, type SelectedSubject } from '@/components/curriculum'
 import { getDefaultGrade, hasCurriculumData } from '@/lib/curriculum/grades'
 import type { StudySystem } from '@/lib/curriculum/types'
+import { useToast } from '@/contexts/ToastContext'
 
 // =============================================================================
 // Types
@@ -25,6 +26,53 @@ interface OnboardingData {
   timeAvailability: TimeAvailability | null
   preferredTime: PreferredTime | null
   learningStyles: LearningStyle[]
+}
+
+// =============================================================================
+// LocalStorage Persistence (prevents progress loss on refresh/close)
+// =============================================================================
+
+const ONBOARDING_STATE_KEY = 'notesnap_onboarding_state'
+
+function saveOnboardingState(data: OnboardingData, step: number): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(ONBOARDING_STATE_KEY, JSON.stringify({
+      data,
+      step,
+      savedAt: Date.now(),
+    }))
+  } catch {
+    // localStorage might be full - silently continue
+  }
+}
+
+function loadOnboardingState(): { data: OnboardingData; step: number } | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const stored = localStorage.getItem(ONBOARDING_STATE_KEY)
+    if (!stored) return null
+
+    const state = JSON.parse(stored)
+    // Only use state if saved within last 7 days
+    const maxAge = 7 * 24 * 60 * 60 * 1000
+    if (Date.now() - state.savedAt > maxAge) {
+      localStorage.removeItem(ONBOARDING_STATE_KEY)
+      return null
+    }
+    return { data: state.data, step: state.step }
+  } catch {
+    return null
+  }
+}
+
+function clearOnboardingState(): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.removeItem(ONBOARDING_STATE_KEY)
+  } catch {
+    // Ignore errors
+  }
 }
 
 // =============================================================================
@@ -166,6 +214,7 @@ const LEARNING_STYLES = [
 
 export default function OnboardingPage() {
   const router = useRouter()
+  const { error: showError } = useToast()
   const [currentStep, setCurrentStep] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -180,6 +229,23 @@ export default function OnboardingPage() {
     preferredTime: null,
     learningStyles: [],
   })
+  const [_saveError, setSaveError] = useState<string | null>(null)
+
+  // Restore state from localStorage on mount
+  useEffect(() => {
+    const saved = loadOnboardingState()
+    if (saved) {
+      setData(saved.data)
+      setCurrentStep(saved.step)
+    }
+  }, [])
+
+  // Save state to localStorage when data or step changes
+  useEffect(() => {
+    if (currentStep > 0 && !isLoading) {
+      saveOnboardingState(data, currentStep)
+    }
+  }, [data, currentStep, isLoading])
 
   // Determine if we should show subject selection step
   const showSubjectStep = data.studySystem && hasCurriculumData(data.studySystem)
@@ -394,7 +460,11 @@ export default function OnboardingPage() {
         .insert(profileData)
 
       if (error) {
-        // Learning profile save failed - continue anyway
+        console.error('[Onboarding] Failed to create learning profile:', error.message)
+        showError('Failed to save your preferences. Please try again.')
+        setSaveError('learning_profile')
+        setIsSaving(false)
+        return
       }
 
       // Also update the profiles table with grade and subjects
@@ -410,7 +480,8 @@ export default function OnboardingPage() {
         .eq('id', user.id)
 
       if (profileUpdateError) {
-        // Profile update failed - continue anyway
+        // Profile update is non-critical - log but continue
+        console.error('[Onboarding] Failed to update profiles table:', profileUpdateError.message)
       }
 
       // Initialize gamification stats
@@ -428,13 +499,20 @@ export default function OnboardingPage() {
         })
 
       if (gamError) {
-        // Gamification init failed - continue anyway
+        // Gamification init is non-critical - log but continue
+        console.error('[Onboarding] Failed to init gamification:', gamError.message)
       }
+
+      // Clear localStorage since onboarding completed successfully
+      clearOnboardingState()
 
       // Redirect to dashboard
       router.push('/dashboard?welcome=true')
-    } catch {
-      router.push('/dashboard')
+    } catch (err) {
+      console.error('[Onboarding] Unexpected error:', err)
+      showError('Something went wrong. Please try again.')
+      setSaveError('unknown')
+      setIsSaving(false)
     }
   }
 

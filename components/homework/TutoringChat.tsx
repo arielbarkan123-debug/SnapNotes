@@ -17,6 +17,60 @@ interface TutoringChatProps {
 }
 
 // ============================================================================
+// LocalStorage Draft Persistence
+// ============================================================================
+
+const CHAT_DRAFT_KEY_PREFIX = 'notesnap_chat_draft_'
+
+function getDraftKey(sessionId: string): string {
+  return `${CHAT_DRAFT_KEY_PREFIX}${sessionId}`
+}
+
+function saveDraft(sessionId: string, text: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    if (text.trim()) {
+      localStorage.setItem(getDraftKey(sessionId), JSON.stringify({
+        text,
+        savedAt: Date.now(),
+      }))
+    } else {
+      localStorage.removeItem(getDraftKey(sessionId))
+    }
+  } catch {
+    // localStorage might be full - silently continue
+  }
+}
+
+function loadDraft(sessionId: string): string {
+  if (typeof window === 'undefined') return ''
+  try {
+    const stored = localStorage.getItem(getDraftKey(sessionId))
+    if (!stored) return ''
+
+    const draft = JSON.parse(stored)
+    // Only use draft if saved within last 24 hours
+    const maxAge = 24 * 60 * 60 * 1000
+    if (Date.now() - draft.savedAt > maxAge) {
+      localStorage.removeItem(getDraftKey(sessionId))
+      return ''
+    }
+    return draft.text || ''
+  } catch {
+    return ''
+  }
+}
+
+function clearDraft(sessionId: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.removeItem(getDraftKey(sessionId))
+  } catch {
+    // Ignore errors
+  }
+}
+
+// ============================================================================
 // Sub-components
 // ============================================================================
 
@@ -147,6 +201,27 @@ export default function TutoringChat({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
+  // Restore draft from localStorage on mount
+  useEffect(() => {
+    if (session.id) {
+      const savedDraft = loadDraft(session.id)
+      if (savedDraft) {
+        setInput(savedDraft)
+      }
+    }
+  }, [session.id])
+
+  // Auto-save draft to localStorage (debounced)
+  useEffect(() => {
+    if (!session.id) return
+
+    const timeoutId = setTimeout(() => {
+      saveDraft(session.id, input)
+    }, 500) // Debounce 500ms
+
+    return () => clearTimeout(timeoutId)
+  }, [session.id, input])
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -164,9 +239,13 @@ export default function TutoringChat({
       if (!message || isLoading) return
 
       setInput('')
+      // Clear draft since message is being sent
+      if (session.id) {
+        clearDraft(session.id)
+      }
       await onSendMessage(message)
     },
-    [input, isLoading, onSendMessage]
+    [input, isLoading, onSendMessage, session.id]
   )
 
   const handleKeyDown = useCallback(

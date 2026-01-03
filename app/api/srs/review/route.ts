@@ -157,6 +157,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
  * - Incorrect (rating < 3): -0.1 mastery, floored at 0
  *
  * Also tracks peak mastery for decay detection
+ *
+ * Uses optimistic locking with retry to prevent race conditions
+ * when multiple reviews happen simultaneously for the same concept
  */
 async function updateConceptMastery(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -165,69 +168,98 @@ async function updateConceptMastery(
   isCorrect: boolean,
   reviewedAt: Date
 ): Promise<void> {
+  const MAX_RETRIES = 3
+
   try {
     // Process each concept
     for (const conceptId of conceptIds) {
-      // Get current mastery record
-      const { data: existing } = await supabase
-        .from('user_concept_mastery')
-        .select('mastery_level, peak_mastery, total_exposures, successful_recalls')
-        .eq('user_id', userId)
-        .eq('concept_id', conceptId)
-        .single()
+      let retries = 0
+      let success = false
 
-      if (existing) {
-        // Update existing mastery
-        const masteryChange = isCorrect ? 0.05 : -0.1
-        const newMastery = Math.min(1.0, Math.max(0, existing.mastery_level + masteryChange))
-        const newPeakMastery = Math.max(existing.peak_mastery || 0, newMastery)
-
-        await supabase
+      while (retries < MAX_RETRIES && !success) {
+        // Get current mastery record
+        const { data: existing } = await supabase
           .from('user_concept_mastery')
-          .update({
-            mastery_level: newMastery,
-            peak_mastery: newPeakMastery,
-            total_exposures: existing.total_exposures + 1,
-            successful_recalls: existing.successful_recalls + (isCorrect ? 1 : 0),
-            last_reviewed_at: reviewedAt.toISOString(),
-          })
+          .select('mastery_level, peak_mastery, total_exposures, successful_recalls')
           .eq('user_id', userId)
           .eq('concept_id', conceptId)
-      } else {
-        // Create new mastery record
-        const initialMastery = isCorrect ? 0.3 : 0.1
-        await supabase
-          .from('user_concept_mastery')
-          .insert({
-            user_id: userId,
-            concept_id: conceptId,
-            mastery_level: initialMastery,
-            peak_mastery: initialMastery,
-            total_exposures: 1,
-            successful_recalls: isCorrect ? 1 : 0,
-            last_reviewed_at: reviewedAt.toISOString(),
-          })
-      }
+          .maybeSingle()
 
-      // Check if this resolves any knowledge gaps
-      if (isCorrect) {
-        // Get current mastery after update
-        const { data: updatedMastery } = await supabase
-          .from('user_concept_mastery')
-          .select('mastery_level')
-          .eq('user_id', userId)
-          .eq('concept_id', conceptId)
-          .single()
+        if (existing) {
+          // Update existing mastery with optimistic locking
+          // Use total_exposures as version to detect concurrent updates
+          const expectedExposures = existing.total_exposures
+          const masteryChange = isCorrect ? 0.05 : -0.1
+          const newMastery = Math.min(1.0, Math.max(0, existing.mastery_level + masteryChange))
+          const newPeakMastery = Math.max(existing.peak_mastery || 0, newMastery)
 
-        // If mastery is now above 0.5, mark related gaps as resolved
-        if (updatedMastery && updatedMastery.mastery_level >= 0.5) {
-          await supabase
-            .from('user_knowledge_gaps')
-            .update({ resolved: true })
+          const { data: updateResult, error: updateError } = await supabase
+            .from('user_concept_mastery')
+            .update({
+              mastery_level: newMastery,
+              peak_mastery: newPeakMastery,
+              total_exposures: expectedExposures + 1,
+              successful_recalls: existing.successful_recalls + (isCorrect ? 1 : 0),
+              last_reviewed_at: reviewedAt.toISOString(),
+            })
             .eq('user_id', userId)
             .eq('concept_id', conceptId)
-            .eq('resolved', false)
+            .eq('total_exposures', expectedExposures) // Optimistic lock check
+            .select('mastery_level')
+            .maybeSingle()
+
+          if (updateError) {
+            retries++
+            continue
+          }
+
+          // If no rows were updated, it means another request updated it first - retry
+          if (!updateResult) {
+            retries++
+            continue
+          }
+
+          success = true
+
+          // Check if this resolves any knowledge gaps
+          if (isCorrect && updateResult.mastery_level >= 0.5) {
+            await supabase
+              .from('user_knowledge_gaps')
+              .update({ resolved: true })
+              .eq('user_id', userId)
+              .eq('concept_id', conceptId)
+              .eq('resolved', false)
+          }
+        } else {
+          // Create new mastery record (use upsert to handle race on insert)
+          const initialMastery = isCorrect ? 0.3 : 0.1
+          const { error: insertError } = await supabase
+            .from('user_concept_mastery')
+            .upsert({
+              user_id: userId,
+              concept_id: conceptId,
+              mastery_level: initialMastery,
+              peak_mastery: initialMastery,
+              total_exposures: 1,
+              successful_recalls: isCorrect ? 1 : 0,
+              last_reviewed_at: reviewedAt.toISOString(),
+            }, {
+              onConflict: 'user_id,concept_id',
+              ignoreDuplicates: false,
+            })
+
+          if (insertError) {
+            // Conflict on insert means another request created it - retry to update
+            retries++
+            continue
+          }
+
+          success = true
         }
+      }
+
+      if (!success) {
+        console.error(`Failed to update concept mastery after ${MAX_RETRIES} retries:`, conceptId)
       }
     }
   } catch (error) {
