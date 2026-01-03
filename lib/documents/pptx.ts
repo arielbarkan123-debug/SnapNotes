@@ -14,6 +14,39 @@
 import JSZip from 'jszip'
 
 // =============================================================================
+// Configuration
+// =============================================================================
+
+// Timeout for ZIP operations (30 seconds)
+const ZIP_TIMEOUT_MS = 30000
+
+// Maximum file size (50MB)
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024
+
+/**
+ * Wraps a promise with a timeout
+ */
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  errorMessage: string
+): Promise<T> {
+  let timeoutId: NodeJS.Timeout
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(errorMessage))
+    }, timeoutMs)
+  })
+
+  try {
+    return await Promise.race([promise, timeoutPromise])
+  } finally {
+    clearTimeout(timeoutId!)
+  }
+}
+
+// =============================================================================
 // Types
 // =============================================================================
 
@@ -227,11 +260,20 @@ function parseNotesXML(xml: string): string {
  * @throws Error if file is corrupted, password-protected, or empty
  */
 export async function processPPTX(buffer: Buffer): Promise<ExtractedDocument> {
+  // Validate file size
+  if (buffer.length > MAX_FILE_SIZE_BYTES) {
+    throw new Error(`File too large. Maximum size is ${MAX_FILE_SIZE_BYTES / 1024 / 1024}MB`)
+  }
+
   let zip: JSZip
 
-  // Try to open the ZIP archive
+  // Try to open the ZIP archive with timeout protection
   try {
-    zip = await JSZip.loadAsync(buffer)
+    zip = await withTimeout(
+      JSZip.loadAsync(buffer),
+      ZIP_TIMEOUT_MS,
+      'PowerPoint file processing timed out. The file may be too large or corrupted.'
+    )
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes('encrypted') || error.message.includes('password')) {

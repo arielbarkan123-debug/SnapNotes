@@ -11,6 +11,39 @@ import JSZip from 'jszip'
 import { ExtractedDocument, ExtractedImage } from './pptx'
 
 // =============================================================================
+// Configuration
+// =============================================================================
+
+// Timeout for ZIP/mammoth operations (30 seconds)
+const PROCESS_TIMEOUT_MS = 30000
+
+// Maximum file size (50MB)
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024
+
+/**
+ * Wraps a promise with a timeout
+ */
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  errorMessage: string
+): Promise<T> {
+  let timeoutId: NodeJS.Timeout
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(errorMessage))
+    }, timeoutMs)
+  })
+
+  try {
+    return await Promise.race([promise, timeoutPromise])
+  } finally {
+    clearTimeout(timeoutId!)
+  }
+}
+
+// =============================================================================
 // Types
 // =============================================================================
 
@@ -148,7 +181,11 @@ async function extractImagesFromDOCX(buffer: Buffer): Promise<ExtractedImage[]> 
   const extractedImages: ExtractedImage[] = []
 
   try {
-    const zip = await JSZip.loadAsync(buffer)
+    const zip = await withTimeout(
+      JSZip.loadAsync(buffer),
+      PROCESS_TIMEOUT_MS,
+      'Image extraction from Word document timed out.'
+    )
     const mediaFiles: { path: string; filename: string }[] = []
 
     zip.forEach((relativePath) => {
@@ -206,15 +243,24 @@ async function extractImagesFromDOCX(buffer: Buffer): Promise<ExtractedImage[]> 
  * @throws Error if file is corrupted or unreadable
  */
 export async function processDOCX(buffer: Buffer): Promise<ExtractedDocument> {
+  // Validate file size
+  if (buffer.length > MAX_FILE_SIZE_BYTES) {
+    throw new Error(`File too large. Maximum size is ${MAX_FILE_SIZE_BYTES / 1024 / 1024}MB`)
+  }
+
   let rawTextResult: MammothResult
   let htmlResult: MammothResult
 
   try {
-    // Extract both raw text and HTML for structure
-    ;[rawTextResult, htmlResult] = await Promise.all([
-      mammoth.extractRawText({ buffer }),
-      mammoth.convertToHtml({ buffer }),
-    ])
+    // Extract both raw text and HTML for structure with timeout protection
+    ;[rawTextResult, htmlResult] = await withTimeout(
+      Promise.all([
+        mammoth.extractRawText({ buffer }),
+        mammoth.convertToHtml({ buffer }),
+      ]),
+      PROCESS_TIMEOUT_MS,
+      'Word document processing timed out. The file may be too large or corrupted.'
+    )
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes('encrypted') || error.message.includes('password')) {

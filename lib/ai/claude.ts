@@ -93,6 +93,52 @@ export type ClaudeErrorCode =
   | 'TIMEOUT'
 
 // ============================================================================
+// Retry Logic with Exponential Backoff
+// ============================================================================
+
+const MAX_RETRIES = 3
+const INITIAL_RETRY_DELAY_MS = 1000
+
+/**
+ * Executes an async operation with exponential backoff retry logic
+ * Only retries on transient errors (network, rate limit, timeout)
+ */
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  operationName: string
+): Promise<T> {
+  let lastError: Error | undefined
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await operation()
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+
+      // Convert to ClaudeAPIError to check if retryable
+      const claudeError = error instanceof ClaudeAPIError
+        ? error
+        : ClaudeAPIError.fromAnthropicError(error)
+
+      // Only retry on transient errors
+      if (!claudeError.retryable || attempt === MAX_RETRIES) {
+        throw claudeError
+      }
+
+      // Exponential backoff: 1s, 2s, 4s
+      const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1)
+      console.warn(
+        `[${operationName}] Attempt ${attempt}/${MAX_RETRIES} failed: ${lastError.message}. Retrying in ${delay}ms...`
+      )
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
+
+  // Should never reach here, but TypeScript needs it
+  throw lastError || new ClaudeAPIError('Unknown retry error', 'API_ERROR')
+}
+
+// ============================================================================
 // Security: Input Sanitization
 // ============================================================================
 
@@ -127,7 +173,8 @@ export class ClaudeAPIError extends Error {
     this.name = 'ClaudeAPIError'
     this.code = code
     this.statusCode = statusCode
-    this.retryable = code === 'RATE_LIMIT' || code === 'NETWORK_ERROR'
+    // Retry on transient errors: rate limits, network issues, timeouts
+    this.retryable = code === 'RATE_LIMIT' || code === 'NETWORK_ERROR' || code === 'TIMEOUT'
   }
 
   static fromAnthropicError(error: unknown): ClaudeAPIError {
@@ -270,30 +317,33 @@ export async function analyzeNotebookImage(imageUrl: string): Promise<AnalysisRe
   const { systemPrompt, userPrompt } = getImageAnalysisPrompt()
 
   try {
-    const response = await client.messages.create({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS_EXTRACTION,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: mediaType,
-                data: base64,
+    const response = await withRetry(
+      () => client.messages.create({
+        model: AI_MODEL,
+        max_tokens: MAX_TOKENS_EXTRACTION,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: mediaType,
+                  data: base64,
+                },
               },
-            },
-            {
-              type: 'text',
-              text: userPrompt,
-            },
-          ],
-        },
-      ],
-    })
+              {
+                type: 'text',
+                text: userPrompt,
+              },
+            ],
+          },
+        ],
+      }),
+      'analyzeNotebookImage'
+    )
 
     // Extract text from response
     const textContent = response.content.find(block => block.type === 'text')
@@ -370,17 +420,20 @@ export async function generateStudyCourse(
   const { systemPrompt, userPrompt } = getCourseGenerationPrompt(formattedContent, safeTitle, imageCount, userContext)
 
   try {
-    const response = await client.messages.create({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS_GENERATION,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: userPrompt,
-        },
-      ],
-    })
+    const response = await withRetry(
+      () => client.messages.create({
+        model: AI_MODEL,
+        max_tokens: MAX_TOKENS_GENERATION,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: userPrompt,
+          },
+        ],
+      }),
+      'generateStudyCourse'
+    )
 
     // Extract text from response
     const textContent = response.content.find(block => block.type === 'text')
@@ -513,30 +566,33 @@ export async function generateCourseFromImageSingleCall(
   const { systemPrompt, userPrompt } = getCombinedAnalysisPrompt(safeTitle)
 
   try {
-    const response = await client.messages.create({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS_GENERATION,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: mediaType,
-                data: base64,
+    const response = await withRetry(
+      () => client.messages.create({
+        model: AI_MODEL,
+        max_tokens: MAX_TOKENS_GENERATION,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: mediaType,
+                  data: base64,
+                },
               },
-            },
-            {
-              type: 'text',
-              text: userPrompt,
-            },
-          ],
-        },
-      ],
-    })
+              {
+                type: 'text',
+                text: userPrompt,
+              },
+            ],
+          },
+        ],
+      }),
+      'generateCourseFromImageSingleCall'
+    )
 
     // Extract text from response
     const textContent = response.content.find(block => block.type === 'text')
@@ -687,17 +743,20 @@ async function analyzeImageBatch(imageUrls: string[]): Promise<AnalysisResult> {
   })
 
   try {
-    const response = await client.messages.create({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS_EXTRACTION * 2, // More tokens for multiple images
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: messageContent,
-        },
-      ],
-    })
+    const response = await withRetry(
+      () => client.messages.create({
+        model: AI_MODEL,
+        max_tokens: MAX_TOKENS_EXTRACTION * 2, // More tokens for multiple images
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: messageContent,
+          },
+        ],
+      }),
+      'analyzeImageBatch'
+    )
 
     // Extract text from response
     const textContent = response.content.find((block) => block.type === 'text')
@@ -884,17 +943,20 @@ export async function generateCourseFromDocument(
   const { systemPrompt, userPrompt } = getDocumentCoursePrompt(document, safeTitle, imageCount, userContext)
 
   try {
-    const response = await client.messages.create({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS_GENERATION,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: userPrompt,
-        },
-      ],
-    })
+    const response = await withRetry(
+      () => client.messages.create({
+        model: AI_MODEL,
+        max_tokens: MAX_TOKENS_GENERATION,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: userPrompt,
+          },
+        ],
+      }),
+      'generateCourseFromDocument'
+    )
 
     // Extract text from response
     const textContent = response.content.find((block) => block.type === 'text')
@@ -1025,17 +1087,20 @@ export async function generateCourseFromText(
   const { systemPrompt, userPrompt } = getTextCoursePrompt(textContent, safeTitle, userContext)
 
   try {
-    const response = await client.messages.create({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS_GENERATION,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: userPrompt,
-        },
-      ],
-    })
+    const response = await withRetry(
+      () => client.messages.create({
+        model: AI_MODEL,
+        max_tokens: MAX_TOKENS_GENERATION,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: userPrompt,
+          },
+        ],
+      }),
+      'generateCourseFromText'
+    )
 
     // Extract text from response
     const textResponseContent = response.content.find((block) => block.type === 'text')
