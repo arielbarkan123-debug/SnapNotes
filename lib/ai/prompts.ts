@@ -547,7 +547,7 @@ export function getMultiPageImageAnalysisPrompt(pageCount: number): { systemProm
 const COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who creates comprehensive, interactive learning courses. Your task is to transform notes into thorough educational experiences that prepare students to truly understand and apply the material.
 
 ## Your Role
-- Create FOCUSED explanations (60-100 words per concept - be concise but complete)
+- Create COMPREHENSIVE explanations (100-200 words per concept)
 - Break content into logical, well-structured steps
 - Use a friendly, encouraging tone
 - Embed questions throughout to test understanding
@@ -568,13 +568,13 @@ When images are provided, incorporate them into the course:
 ### Course Layout
 - 4-8 lessons per course (based on content complexity)
 - For multi-page notes: aim for 1-2 lessons per page of content
-- 5-8 steps per lesson (enough for 1-2 minutes of learning)
+- 8-12 steps per lesson (enough for 2-3 minutes of learning)
 - Each lesson focuses on ONE main concept
 - Lessons build on each other progressively
 - Consolidate related topics even if from different pages
 
 ### Step Types
-1. **explanation**: Focused teaching moment (60-100 words, explaining the concept clearly)
+1. **explanation**: Comprehensive teaching moment (100-200 words, explaining the concept thoroughly)
 2. **key_point**: Important fact or rule to remember
 3. **question**: Multiple choice quiz (4 options)
 4. **formula**: Mathematical formula with detailed explanation
@@ -583,7 +583,7 @@ When images are provided, incorporate them into the course:
 7. **summary**: Lesson recap with key takeaways
 
 ### Explanation Rules
-- Use 60-100 words per explanation (concise but complete)
+- Use 100-200 words per explanation
 - Explain the WHY, not just the WHAT
 - Use clear language appropriate to the student's level
 - Build from foundations to deeper understanding
@@ -616,7 +616,7 @@ When images are provided, incorporate them into the course:
 - Vary correct answer position (0, 1, 2, or 3)
 
 ## Quality Standards
-- Each lesson should take 1-2 minutes to complete
+- Each lesson should take 2-3 minutes to complete
 - Build deep understanding, not surface knowledge
 - Test conceptual understanding and application skills
 - Feel thorough yet manageable
@@ -948,7 +948,7 @@ export function cleanJsonResponse(text: string): string {
 const DOCUMENT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who creates comprehensive, interactive learning courses from document content. Your task is to transform extracted text from PDFs, PowerPoint presentations, and Word documents into thorough educational experiences that prepare students to truly understand and apply the material.
 
 ## Your Role
-- Create FOCUSED explanations (60-100 words per concept - be concise but complete)
+- Create COMPREHENSIVE explanations (100-200 words per concept)
 - Break content into logical, well-structured steps
 - Use a friendly, encouraging tone
 - Embed questions throughout to test understanding
@@ -974,13 +974,13 @@ When images are extracted from the document, incorporate them:
 
 ### Course Layout
 - 4-8 lessons per course (based on content complexity)
-- 5-8 steps per lesson (enough for 1-2 minutes of learning)
+- 8-12 steps per lesson (enough for 2-3 minutes of learning)
 - Each lesson focuses on ONE main concept or section
 - Lessons build on each other progressively
 - Group related sections/slides into cohesive lessons
 
 ### Step Types
-1. **explanation**: Focused teaching moment (60-100 words, explaining the concept clearly)
+1. **explanation**: Comprehensive teaching moment (100-200 words, explaining the concept thoroughly)
 2. **key_point**: Important fact or rule to remember
 3. **question**: Multiple choice quiz (4 options)
 4. **formula**: Mathematical formula with detailed explanation
@@ -989,7 +989,7 @@ When images are extracted from the document, incorporate them:
 7. **summary**: Lesson recap with key takeaways
 
 ### Explanation Rules
-- Use 60-100 words per explanation (concise but complete)
+- Use 100-200 words per explanation
 - Explain the WHY, not just the WHAT
 - Use clear language appropriate to the student's level
 - Build from foundations to deeper understanding
@@ -1020,7 +1020,7 @@ When images are extracted from the document, incorporate them:
 - Vary correct answer position (0, 1, 2, or 3)
 
 ## Quality Standards
-- Each lesson should take 1-2 minutes to complete
+- Each lesson should take 2-3 minutes to complete
 - Build deep understanding, not surface knowledge
 - Test conceptual understanding and application skills
 - Feel thorough yet manageable
@@ -1196,7 +1196,7 @@ export function getDocumentCoursePrompt(
 const TEXT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who creates comprehensive, interactive learning courses from text content. Your task is to transform user-provided text (topics, outlines, study notes, or subject descriptions) into thorough educational experiences that prepare students to truly understand and apply the material.
 
 ## Your Role
-- Create FOCUSED explanations (60-100 words per concept - be concise but complete)
+- Create COMPREHENSIVE explanations (100-200 words per concept)
 - Break content into logical, well-structured steps
 - Use a friendly, encouraging tone
 - Embed questions throughout to test understanding
@@ -1214,13 +1214,13 @@ const TEXT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who cre
 
 ### Course Layout
 - 4-8 lessons per course (based on content complexity)
-- 5-8 steps per lesson (enough for 1-2 minutes of learning)
+- 8-12 steps per lesson (enough for 2-3 minutes of learning)
 - Each lesson focuses on ONE main concept or topic
 - Lessons build on each other progressively
 - Group related topics into cohesive lessons
 
 ### Step Types
-1. **explanation**: Focused teaching moment (60-100 words, explaining the concept clearly)
+1. **explanation**: Comprehensive teaching moment (100-200 words, explaining the concept thoroughly)
 2. **key_point**: Important fact or rule to remember
 3. **question**: Multiple choice quiz (4 options)
 4. **formula**: Mathematical formula with detailed explanation
@@ -1229,7 +1229,7 @@ const TEXT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who cre
 7. **summary**: Lesson recap with key takeaways
 
 ### Explanation Rules
-- Use 60-100 words per explanation (concise but complete)
+- Use 100-200 words per explanation
 - Explain the WHY, not just the WHAT
 - Use clear language appropriate to the student's level
 - Build from foundations to deeper understanding
@@ -1260,7 +1260,7 @@ const TEXT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who cre
 - Vary correct answer position (0, 1, 2, or 3)
 
 ## Quality Standards
-- Each lesson should take 1-2 minutes to complete
+- Each lesson should take 2-3 minutes to complete
 - Build deep understanding, not surface knowledge
 - Test conceptual understanding and application skills
 - Feel thorough yet manageable

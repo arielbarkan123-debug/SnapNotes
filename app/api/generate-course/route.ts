@@ -29,9 +29,9 @@ import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from 
 // Route Configuration
 // ============================================================================
 
-// Extend timeout for course generation (Vercel hobby allows up to 60s)
+// Extend timeout for course generation (Vercel Pro allows up to 300s)
 // Course generation with comprehensive prompts needs more time
-export const maxDuration = 60
+export const maxDuration = 120
 
 // ============================================================================
 // Types
