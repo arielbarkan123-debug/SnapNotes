@@ -30,8 +30,8 @@ import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from 
 // ============================================================================
 
 // Extend timeout for course generation (Vercel Pro allows up to 300s)
-// Course generation with comprehensive prompts needs more time
-export const maxDuration = 120
+// Document processing (PPTX, PDF) + AI generation needs more time
+export const maxDuration = 240
 
 // ============================================================================
 // Types
