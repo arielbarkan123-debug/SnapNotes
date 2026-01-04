@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { CourseInsert } from '@/types'
 import {
@@ -13,9 +13,7 @@ import type { UserLearningContext } from '@/lib/ai'
 import type { ExtractedDocument } from '@/lib/documents'
 import {
   ErrorCodes,
-  createErrorResponse,
   logError,
-  mapClaudeAPIError,
 } from '@/lib/api/errors'
 import { generateCardsFromCourse } from '@/lib/srs'
 import { uploadExtractedImages, searchEducationalImages } from '@/lib/images'
@@ -54,309 +52,406 @@ interface GenerateCourseRequest {
 
 type SourceType = 'image' | 'pdf' | 'pptx' | 'docx' | 'text'
 
-interface GenerateCourseSuccessResponse {
-  success: true
-  courseId: string
-  cardsGenerated: number
-  /** Number of images processed */
-  imagesProcessed?: number
-  /** Source type of the course */
-  sourceType?: SourceType
-}
+// Streaming message types
+type StreamMessage =
+  | { type: 'heartbeat'; timestamp: number }
+  | { type: 'progress'; stage: string; percent: number }
+  | { type: 'success'; courseId: string; cardsGenerated: number; imagesProcessed: number; sourceType: SourceType }
+  | { type: 'error'; error: string; code: string; retryable: boolean }
 
 // ============================================================================
-// Route Handler
+// Route Handler - Streaming Version
 // ============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  try {
-    // 1. Verify authentication
-    const supabase = await createClient()
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+export async function POST(request: NextRequest): Promise<Response> {
+  // Create a TransformStream to send data to client
+  const encoder = new TextEncoder()
+  let streamController: ReadableStreamDefaultController<Uint8Array> | null = null
 
-    if (authError || !user) {
-      return createErrorResponse(ErrorCodes.UNAUTHORIZED, 'Please log in to generate a course')
+  // Helper to send a message to the stream
+  const sendMessage = (msg: StreamMessage) => {
+    if (streamController) {
+      try {
+        streamController.enqueue(encoder.encode(JSON.stringify(msg) + '\n'))
+      } catch {
+        // Stream might be closed
+      }
     }
+  }
 
-    // 1.5. Check rate limit
-    const rateLimitId = getIdentifier(user.id, request)
-    const rateLimit = checkRateLimit(rateLimitId, RATE_LIMITS.generateCourse)
-
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Too many requests. Please wait before generating another course.',
-          code: 'RATE_LIMITED',
-        },
-        {
-          status: 429,
-          headers: getRateLimitHeaders(rateLimit),
-        }
-      )
+  // Helper to close the stream
+  const closeStream = () => {
+    if (streamController) {
+      try {
+        streamController.close()
+      } catch {
+        // Stream might already be closed
+      }
     }
+  }
 
-    // 1.6. Fetch user learning profile for personalization
-    let userContext: UserLearningContext | undefined
+  // Start heartbeat interval to keep connection alive
+  let heartbeatInterval: ReturnType<typeof setInterval> | null = null
+  const startHeartbeat = () => {
+    heartbeatInterval = setInterval(() => {
+      sendMessage({ type: 'heartbeat', timestamp: Date.now() })
+    }, 10000) // Send heartbeat every 10 seconds
+  }
+
+  const stopHeartbeat = () => {
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval)
+      heartbeatInterval = null
+    }
+  }
+
+  // Create the readable stream
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      streamController = controller
+    },
+    cancel() {
+      stopHeartbeat()
+    }
+  })
+
+  // Process the request asynchronously
+  ;(async () => {
     try {
-      const { data: profile } = await supabase
-        .from('user_learning_profile')
-        .select('education_level, study_system, study_goal, learning_styles, language')
-        .eq('user_id', user.id)
+      // Start heartbeat immediately
+      startHeartbeat()
+      sendMessage({ type: 'progress', stage: 'Starting', percent: 5 })
+
+      // 1. Verify authentication
+      const supabase = await createClient()
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
+
+      if (authError || !user) {
+        sendMessage({ type: 'error', error: 'Please log in to generate a course', code: ErrorCodes.UNAUTHORIZED, retryable: false })
+        stopHeartbeat()
+        closeStream()
+        return
+      }
+
+      // 1.5. Check rate limit
+      const rateLimitId = getIdentifier(user.id, request)
+      const rateLimit = checkRateLimit(rateLimitId, RATE_LIMITS.generateCourse)
+
+      if (!rateLimit.allowed) {
+        sendMessage({ type: 'error', error: 'Too many requests. Please wait before generating another course.', code: 'RATE_LIMITED', retryable: true })
+        stopHeartbeat()
+        closeStream()
+        return
+      }
+
+      sendMessage({ type: 'progress', stage: 'Authenticated', percent: 10 })
+
+      // 1.6. Fetch user learning profile for personalization
+      let userContext: UserLearningContext | undefined
+      try {
+        const { data: profile } = await supabase
+          .from('user_learning_profile')
+          .select('education_level, study_system, study_goal, learning_styles, language')
+          .eq('user_id', user.id)
+          .single()
+
+        if (profile) {
+          userContext = {
+            educationLevel: profile.education_level || 'high_school',
+            studySystem: profile.study_system || 'general',
+            studyGoal: profile.study_goal || 'general_learning',
+            learningStyles: profile.learning_styles || ['practice'],
+            language: profile.language || 'en',
+          }
+        }
+      } catch {
+        // Continue without personalization if profile fetch fails
+      }
+
+      // 2. Parse request body
+      let body: GenerateCourseRequest
+      try {
+        body = await request.json()
+      } catch {
+        sendMessage({ type: 'error', error: 'Invalid request body', code: ErrorCodes.INVALID_INPUT, retryable: false })
+        stopHeartbeat()
+        closeStream()
+        return
+      }
+
+      const { imageUrl, imageUrls, documentContent, documentUrl, textContent, title } = body
+
+      // 3. Determine source type and validate input
+      let sourceType: SourceType = 'image'
+      let urls: string[] = []
+
+      // Check if this is a text-based request
+      if (textContent && typeof textContent === 'string' && textContent.trim().length > 0) {
+        sourceType = 'text'
+      }
+      // Check if this is a document-based request
+      else if (documentContent && documentContent.type) {
+        // Document content provided - skip image processing
+        sourceType = documentContent.type as SourceType
+      } else {
+        // Image-based request - normalize to array of URLs
+        if (imageUrls && Array.isArray(imageUrls) && imageUrls.length > 0) {
+          urls = imageUrls.filter((url) => typeof url === 'string' && url.trim())
+        } else if (imageUrl && typeof imageUrl === 'string') {
+          urls = [imageUrl]
+        }
+
+        if (urls.length === 0) {
+          sendMessage({ type: 'error', error: 'Either imageUrl/imageUrls, documentContent, or textContent is required', code: ErrorCodes.MISSING_FIELD, retryable: false })
+          stopHeartbeat()
+          closeStream()
+          return
+        }
+
+        // Limit to 10 images max
+        if (urls.length > 10) {
+          sendMessage({ type: 'error', error: 'Maximum 10 images allowed per course', code: ErrorCodes.VALIDATION_ERROR, retryable: false })
+          stopHeartbeat()
+          closeStream()
+          return
+        }
+      }
+
+      sendMessage({ type: 'progress', stage: 'Validating input', percent: 15 })
+
+      // 4. Check for duplicate courses (skip for text-based - text content is unique each time)
+      // For images: check by primary image URL
+      // For documents: check by document URL or document title
+      if (sourceType !== 'text') {
+        const duplicateCheckField = documentContent ? documentUrl : urls[0]
+
+        if (duplicateCheckField) {
+          // Use maybeSingle() instead of single() to handle 0 results gracefully
+          const { data: existingCourse } = await supabase
+            .from('courses')
+            .select('id')
+            .eq('user_id', user.id)
+            .or(`original_image_url.eq.${duplicateCheckField},document_url.eq.${duplicateCheckField}`)
+            .maybeSingle()
+
+          if (existingCourse) {
+            sendMessage({
+              type: 'success',
+              courseId: existingCourse.id,
+              cardsGenerated: 0,
+              imagesProcessed: 0,
+              sourceType
+            })
+            stopHeartbeat()
+            closeStream()
+            return
+          }
+        }
+      }
+
+      // 5. Generate a temporary course ID for image uploads
+      const tempCourseId = crypto.randomUUID()
+
+      sendMessage({ type: 'progress', stage: 'Generating course with AI', percent: 25 })
+
+      // 6. Generate course using AI service
+      let extractedContent: string
+      let generatedCourse
+      // Image URLs are embedded in the course steps via normalizeGeneratedCourse
+      let _courseImageUrls: string[] = []
+
+      try {
+        if (sourceType === 'text' && textContent) {
+          // Text-based generation - use text directly
+          sendMessage({ type: 'progress', stage: 'Analyzing your text', percent: 30 })
+          const result = await generateCourseFromText(textContent, title, userContext)
+          generatedCourse = result.generatedCourse
+          extractedContent = textContent // Use the user's text as extracted content
+
+          // Try to fetch web images based on course title/topics
+          try {
+            const webImages = await searchEducationalImages(generatedCourse.title)
+            if (webImages.length > 0) {
+              _courseImageUrls = webImages.map((img) => img.url)
+            }
+          } catch {
+            // Web image search failed, continue without images
+          }
+        } else if (documentContent) {
+          // Document-based generation - check for extracted images
+          let imageUrls: string[] = []
+
+          sendMessage({ type: 'progress', stage: 'Processing document', percent: 30 })
+
+          // If document has extracted images, upload them to storage
+          if (documentContent.images && documentContent.images.length > 0) {
+            try {
+              sendMessage({ type: 'progress', stage: 'Uploading images', percent: 35 })
+              const uploadResults = await uploadExtractedImages(
+                documentContent.images,
+                user.id,
+                tempCourseId
+              )
+              // Filter successful uploads and get URLs
+              imageUrls = uploadResults
+                .filter((r) => r.success)
+                .map((r) => (r as { url: string }).url)
+              _courseImageUrls = imageUrls
+            } catch (uploadError) {
+              logError('GenerateCourse:imageUpload', uploadError)
+              // Continue without images if upload fails
+            }
+          }
+
+          sendMessage({ type: 'progress', stage: 'Generating course content', percent: 45 })
+
+          // Generate course with image information
+          const result = await generateCourseFromDocument(documentContent, title, imageUrls, userContext)
+          generatedCourse = result.generatedCourse
+          extractedContent = documentContent.content // Use the already extracted content
+        } else if (urls.length === 1) {
+          // Single image - the uploaded image itself can be referenced
+          _courseImageUrls = urls
+          sendMessage({ type: 'progress', stage: 'Analyzing your image', percent: 35 })
+          const result = await generateCourseFromImage(urls[0], title, userContext)
+          generatedCourse = result.generatedCourse
+          extractedContent = result.extractionRawText
+        } else {
+          // Multiple images - all uploaded images can be referenced
+          _courseImageUrls = urls
+          sendMessage({ type: 'progress', stage: 'Analyzing your images', percent: 35 })
+          const result = await generateCourseFromMultipleImages(urls, title, userContext)
+          generatedCourse = result.generatedCourse
+          extractedContent = result.extractionRawText
+        }
+      } catch (error) {
+        logError('GenerateCourse:AI', error)
+
+        let errorMessage = 'Failed to generate course. Please try again.'
+        let errorCode: string = ErrorCodes.AI_PROCESSING_FAILED
+
+        if (error instanceof ClaudeAPIError) {
+          errorCode = mapClaudeAPIErrorCode(error.code)
+          errorMessage = getUserFriendlyError(error)
+        }
+
+        sendMessage({ type: 'error', error: errorMessage, code: errorCode, retryable: true })
+        stopHeartbeat()
+        closeStream()
+        return
+      }
+
+      sendMessage({ type: 'progress', stage: 'Saving course', percent: 75 })
+
+      // 6. Save to database
+      const courseData: CourseInsert = {
+        user_id: user.id,
+        title: generatedCourse.title,
+        extracted_content: extractedContent,
+        generated_course: generatedCourse,
+        source_type: sourceType,
+      }
+
+      // Set source-specific fields
+      if (sourceType === 'text') {
+        // Text-based courses don't have image or document URLs
+        courseData.original_image_url = null
+        courseData.document_url = null
+      } else if (documentContent) {
+        courseData.document_url = documentUrl || null
+        courseData.original_image_url = null // No image for document-based courses
+      } else {
+        courseData.original_image_url = urls[0]
+        courseData.image_urls = urls.length > 1 ? urls : null
+      }
+
+      const { data: course, error: dbError } = await supabase
+        .from('courses')
+        .insert(courseData)
+        .select('id')
         .single()
 
-      if (profile) {
-        userContext = {
-          educationLevel: profile.education_level || 'high_school',
-          studySystem: profile.study_system || 'general',
-          studyGoal: profile.study_goal || 'general_learning',
-          learningStyles: profile.learning_styles || ['practice'],
-          language: profile.language || 'en',
-        }
-      }
-    } catch {
-      // Continue without personalization if profile fetch fails
-    }
-
-    // 2. Parse request body
-    let body: GenerateCourseRequest
-    try {
-      body = await request.json()
-    } catch {
-      return createErrorResponse(ErrorCodes.INVALID_INPUT, 'Invalid request body')
-    }
-
-    const { imageUrl, imageUrls, documentContent, documentUrl, textContent, title } = body
-
-    // 3. Determine source type and validate input
-    let sourceType: SourceType = 'image'
-    let urls: string[] = []
-
-    // Check if this is a text-based request
-    if (textContent && typeof textContent === 'string' && textContent.trim().length > 0) {
-      sourceType = 'text'
-    }
-    // Check if this is a document-based request
-    else if (documentContent && documentContent.type) {
-      // Document content provided - skip image processing
-      sourceType = documentContent.type as SourceType
-    } else {
-      // Image-based request - normalize to array of URLs
-      if (imageUrls && Array.isArray(imageUrls) && imageUrls.length > 0) {
-        urls = imageUrls.filter((url) => typeof url === 'string' && url.trim())
-      } else if (imageUrl && typeof imageUrl === 'string') {
-        urls = [imageUrl]
+      if (dbError || !course) {
+        logError('GenerateCourse:database', dbError)
+        sendMessage({ type: 'error', error: 'Failed to save course. Please try again.', code: ErrorCodes.DATABASE_ERROR, retryable: true })
+        stopHeartbeat()
+        closeStream()
+        return
       }
 
-      if (urls.length === 0) {
-        return createErrorResponse(
-          ErrorCodes.MISSING_FIELD,
-          'Either imageUrl/imageUrls, documentContent, or textContent is required'
-        )
-      }
+      sendMessage({ type: 'progress', stage: 'Creating flashcards', percent: 85 })
 
-      // Limit to 10 images max
-      if (urls.length > 10) {
-        return createErrorResponse(ErrorCodes.VALIDATION_ERROR, 'Maximum 10 images allowed per course')
-      }
-    }
+      // 7. Generate review cards from course content
+      let cardsGenerated = 0
 
-    // 4. Check for duplicate courses (skip for text-based - text content is unique each time)
-    // For images: check by primary image URL
-    // For documents: check by document URL or document title
-    if (sourceType !== 'text') {
-      const duplicateCheckField = documentContent ? documentUrl : urls[0]
+      try {
+        const cards = generateCardsFromCourse(generatedCourse, course.id)
 
-      if (duplicateCheckField) {
-        // Use maybeSingle() instead of single() to handle 0 results gracefully
-        const { data: existingCourse } = await supabase
-          .from('courses')
-          .select('id')
-          .eq('user_id', user.id)
-          .or(`original_image_url.eq.${duplicateCheckField},document_url.eq.${duplicateCheckField}`)
-          .maybeSingle()
+        if (cards.length > 0) {
+          const cardsWithUser = cards.map((card) => ({
+            ...card,
+            user_id: user.id,
+          }))
 
-        if (existingCourse) {
-          return NextResponse.json({
-            success: true,
-            courseId: existingCourse.id,
-            cardsGenerated: 0,
-            isDuplicate: true,
-            imagesProcessed: 0,
-            sourceType,
-          })
-        }
-      }
-    }
+          const { data: insertedCards, error: cardsError } = await supabase
+            .from('review_cards')
+            .insert(cardsWithUser)
+            .select('id')
 
-    // 5. Generate a temporary course ID for image uploads
-    const tempCourseId = crypto.randomUUID()
-
-    // 6. Generate course using AI service
-    let extractedContent: string
-    let generatedCourse
-    // Image URLs are embedded in the course steps via normalizeGeneratedCourse
-    let _courseImageUrls: string[] = []
-
-    try {
-      if (sourceType === 'text' && textContent) {
-        // Text-based generation - use text directly
-        // For text courses, we can optionally search for web images later
-        const result = await generateCourseFromText(textContent, title, userContext)
-        generatedCourse = result.generatedCourse
-        extractedContent = textContent // Use the user's text as extracted content
-
-        // Try to fetch web images based on course title/topics
-        try {
-          const webImages = await searchEducationalImages(generatedCourse.title)
-          if (webImages.length > 0) {
-            _courseImageUrls = webImages.map((img) => img.url)
-          }
-        } catch {
-          // Web image search failed, continue without images
-        }
-      } else if (documentContent) {
-        // Document-based generation - check for extracted images
-        let imageUrls: string[] = []
-
-
-        // If document has extracted images, upload them to storage
-        if (documentContent.images && documentContent.images.length > 0) {
-          try {
-            const uploadResults = await uploadExtractedImages(
-              documentContent.images,
-              user.id,
-              tempCourseId
-            )
-            // Filter successful uploads and get URLs
-            imageUrls = uploadResults
-              .filter((r) => r.success)
-              .map((r) => (r as { url: string }).url)
-            _courseImageUrls = imageUrls
-          } catch (uploadError) {
-            logError('GenerateCourse:imageUpload', uploadError)
-            // Continue without images if upload fails
+          if (cardsError) {
+            logError('GenerateCourse:cards', cardsError)
+          } else {
+            cardsGenerated = insertedCards?.length || 0
           }
         }
-
-        // Generate course with image information
-        const result = await generateCourseFromDocument(documentContent, title, imageUrls, userContext)
-        generatedCourse = result.generatedCourse
-        extractedContent = documentContent.content // Use the already extracted content
-      } else if (urls.length === 1) {
-        // Single image - the uploaded image itself can be referenced
-        _courseImageUrls = urls
-        const result = await generateCourseFromImage(urls[0], title, userContext)
-        generatedCourse = result.generatedCourse
-        extractedContent = result.extractionRawText
-      } else {
-        // Multiple images - all uploaded images can be referenced
-        _courseImageUrls = urls
-        const result = await generateCourseFromMultipleImages(urls, title, userContext)
-        generatedCourse = result.generatedCourse
-        extractedContent = result.extractionRawText
+      } catch (cardError) {
+        logError('GenerateCourse:cardGeneration', cardError)
       }
+
+      sendMessage({ type: 'progress', stage: 'Finishing up', percent: 95 })
+
+      // 8. Generate cover image (non-blocking - fire and forget)
+      // This runs in the background and updates the course when done
+      generateCoverImage(supabase, user.id, course.id, generatedCourse.title).catch((err) => {
+        logError('GenerateCourse:coverImage', err)
+      })
+
+      // 9. Extract concepts for knowledge graph (non-blocking)
+      // This builds the concept map for gap detection and adaptive learning
+      extractConcepts(user.id, course.id, generatedCourse.title, generatedCourse, userContext).catch((err) => {
+        logError('GenerateCourse:conceptExtraction', err)
+      })
+
+      // 10. Send success message and close stream
+      sendMessage({
+        type: 'success',
+        courseId: course.id,
+        cardsGenerated,
+        imagesProcessed: documentContent ? 0 : urls.length,
+        sourceType
+      })
+      stopHeartbeat()
+      closeStream()
+
     } catch (error) {
-      logError('GenerateCourse:AI', error)
-
-      if (error instanceof ClaudeAPIError) {
-        const errorCode = mapClaudeAPIErrorCode(error.code)
-        return createErrorResponse(errorCode, getUserFriendlyError(error))
-      }
-
-      const { code, message } = mapClaudeAPIError(error)
-      return createErrorResponse(code, message)
+      logError('GenerateCourse:unhandled', error)
+      sendMessage({ type: 'error', error: 'An unexpected error occurred. Please try again.', code: ErrorCodes.INTERNAL_ERROR, retryable: true })
+      stopHeartbeat()
+      closeStream()
     }
+  })()
 
-    // 6. Save to database
-    const courseData: CourseInsert = {
-      user_id: user.id,
-      title: generatedCourse.title,
-      extracted_content: extractedContent,
-      generated_course: generatedCourse,
-      source_type: sourceType,
-    }
-
-    // Set source-specific fields
-    if (sourceType === 'text') {
-      // Text-based courses don't have image or document URLs
-      courseData.original_image_url = null
-      courseData.document_url = null
-    } else if (documentContent) {
-      courseData.document_url = documentUrl || null
-      courseData.original_image_url = null // No image for document-based courses
-    } else {
-      courseData.original_image_url = urls[0]
-      courseData.image_urls = urls.length > 1 ? urls : null
-    }
-
-    const { data: course, error: dbError } = await supabase
-      .from('courses')
-      .insert(courseData)
-      .select('id')
-      .single()
-
-    if (dbError || !course) {
-      logError('GenerateCourse:database', dbError)
-      return createErrorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to save course. Please try again.')
-    }
-
-    // 7. Generate review cards from course content
-    let cardsGenerated = 0
-
-    try {
-      const cards = generateCardsFromCourse(generatedCourse, course.id)
-
-      if (cards.length > 0) {
-        const cardsWithUser = cards.map((card) => ({
-          ...card,
-          user_id: user.id,
-        }))
-
-        const { data: insertedCards, error: cardsError } = await supabase
-          .from('review_cards')
-          .insert(cardsWithUser)
-          .select('id')
-
-        if (cardsError) {
-          logError('GenerateCourse:cards', cardsError)
-        } else {
-          cardsGenerated = insertedCards?.length || 0
-        }
-      }
-    } catch (cardError) {
-      logError('GenerateCourse:cardGeneration', cardError)
-    }
-
-    // 8. Generate cover image (non-blocking - fire and forget)
-    // This runs in the background and updates the course when done
-    generateCoverImage(supabase, user.id, course.id, generatedCourse.title).catch((err) => {
-      logError('GenerateCourse:coverImage', err)
-    })
-
-    // 9. Extract concepts for knowledge graph (non-blocking)
-    // This builds the concept map for gap detection and adaptive learning
-    extractConcepts(user.id, course.id, generatedCourse.title, generatedCourse, userContext).catch((err) => {
-      logError('GenerateCourse:conceptExtraction', err)
-    })
-
-    // 10. Return success
-    const response: GenerateCourseSuccessResponse = {
-      success: true,
-      courseId: course.id,
-      cardsGenerated,
-      imagesProcessed: documentContent ? 0 : urls.length,
-      sourceType,
-    }
-
-    return NextResponse.json(response)
-  } catch (error) {
-    logError('GenerateCourse:unhandled', error)
-    return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'An unexpected error occurred. Please try again.')
-  }
+  // Return the stream immediately
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  })
 }
 
 // ============================================================================
@@ -449,7 +544,10 @@ async function generateCoverImage(supabase: any, userId: string, courseId: strin
 // ============================================================================
 
 export async function GET() {
-  return createErrorResponse(ErrorCodes.VALIDATION_ERROR, 'Method not allowed', 405)
+  return new Response(JSON.stringify({ success: false, error: 'Method not allowed' }), {
+    status: 405,
+    headers: { 'Content-Type': 'application/json' }
+  })
 }
 
 // ============================================================================

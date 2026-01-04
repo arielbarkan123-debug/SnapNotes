@@ -277,7 +277,7 @@ function ProcessingContent() {
     return () => clearTimeout(timeout)
   }, [state.status, currentStage, progressStages.length])
 
-  // API call
+  // API call with streaming support
   const generateCourse = useCallback(async () => {
     if (!hasValidInput || !processingKey) return
 
@@ -328,70 +328,124 @@ function ProcessingContent() {
         body: JSON.stringify(requestBody),
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        // Clear the processing flag so retry can work
-        if (processingKey) {
-          sessionStorage.removeItem(processingKey)
-        }
-        setState({
-          status: 'error',
-          error: data.error || 'Failed to generate course',
-          retryable: data.retryable ?? true,
-        })
-        return
+      // Handle streaming response
+      if (!response.body) {
+        throw new Error('No response body')
       }
 
-      // Clear the processing flag on success
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      // Read stream
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) break
+
+        // Decode chunk and add to buffer
+        buffer += decoder.decode(value, { stream: true })
+
+        // Process complete lines
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || '' // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.trim()) continue
+
+          try {
+            const message = JSON.parse(line)
+
+            switch (message.type) {
+              case 'heartbeat':
+                // Connection is alive, no action needed
+                break
+
+              case 'progress':
+                // Update UI progress (optional - we have our own progress animation)
+                // You could map server progress to local progress here
+                break
+
+              case 'success':
+                // Clear the processing flag on success
+                if (processingKey) {
+                  sessionStorage.removeItem(processingKey)
+                }
+
+                setState({
+                  status: 'success',
+                  courseId: message.courseId,
+                  cardsGenerated: message.cardsGenerated || 0,
+                })
+
+                // Track course created (step 5 - final step of course creation funnel)
+                trackFunnelStep('course_created', 5, {
+                  courseId: message.courseId,
+                  cardsGenerated: message.cardsGenerated || 0,
+                  sourceType: sourceType,
+                })
+
+                // Award XP for course creation
+                try {
+                  const xpResponse = await fetch('/api/gamification/xp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ event: 'course_created' }),
+                  })
+
+                  if (xpResponse.ok) {
+                    const xpData = await xpResponse.json()
+                    setXpAwarded(xpData.xpAwarded)
+                    showXP(xpData.xpAwarded)
+
+                    if (xpData.levelUp && xpData.newLevel) {
+                      setTimeout(() => showLevelUp(xpData.newLevel, xpData.newTitle), 1500)
+                    }
+                  }
+
+                  // Update streak
+                  await fetch('/api/gamification/streak', { method: 'POST' })
+
+                  // Check for achievements (first_course, etc.)
+                  await fetch('/api/gamification/check', { method: 'POST' })
+                } catch {
+                  // XP award failed - continue anyway
+                }
+
+                // Redirect to the new course after a brief delay to show success
+                setTimeout(() => {
+                  router.push(`/course/${message.courseId}`)
+                }, 2500)
+                return
+
+              case 'error':
+                // Clear the processing flag so retry can work
+                if (processingKey) {
+                  sessionStorage.removeItem(processingKey)
+                }
+                setState({
+                  status: 'error',
+                  error: message.error || 'Failed to generate course',
+                  retryable: message.retryable ?? true,
+                })
+                return
+            }
+          } catch {
+            // Ignore parse errors for incomplete/malformed messages
+          }
+        }
+      }
+
+      // If we got here without success/error, something went wrong
       if (processingKey) {
         sessionStorage.removeItem(processingKey)
       }
-
       setState({
-        status: 'success',
-        courseId: data.courseId,
-        cardsGenerated: data.cardsGenerated || 0,
+        status: 'error',
+        error: 'Connection closed unexpectedly. Please try again.',
+        retryable: true,
       })
 
-      // Track course created (step 5 - final step of course creation funnel)
-      trackFunnelStep('course_created', 5, {
-        courseId: data.courseId,
-        cardsGenerated: data.cardsGenerated || 0,
-        sourceType: sourceType,
-      })
-
-      // Award XP for course creation
-      try {
-        const xpResponse = await fetch('/api/gamification/xp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ event: 'course_created' }),
-        })
-
-        if (xpResponse.ok) {
-          const xpData = await xpResponse.json()
-          setXpAwarded(xpData.xpAwarded)
-          showXP(xpData.xpAwarded)
-
-          if (xpData.levelUp && xpData.newLevel) {
-            setTimeout(() => showLevelUp(xpData.newLevel, xpData.newTitle), 1500)
-          }
-        }
-
-        // Update streak
-        await fetch('/api/gamification/streak', { method: 'POST' })
-
-        // Check for achievements (first_course, etc.)
-        await fetch('/api/gamification/check', { method: 'POST' })
-      } catch {
-        // XP award failed - continue anyway
-      }
-
-      // Redirect to the new course after a brief delay to show success
-      setTimeout(() => {
-        router.push(`/course/${data.courseId}`)
-      }, 2500)
     } catch {
       // Clear the processing flag so retry can work
       if (processingKey) {
