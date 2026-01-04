@@ -54,40 +54,14 @@ function getStudySystemContext(system: UserLearningContext['studySystem']): stri
   return contexts[system]
 }
 
-// Get comprehensive Israeli Bagrut context
+// Get Israeli Bagrut context
 function getBagrutContext(): string {
-  return `The student is preparing for Israeli Bagrut (בגרות) matriculation exams.
+  return `The student is preparing for Israeli Bagrut (בגרות) exams.
 
-### Bagrut Exam Preparation Guidelines:
+**DO:** Focus on problem-solving techniques, step-by-step solutions, worked examples.
+**DON'T:** Include exam logistics, point values, time limits, admin info.
 
-**DO focus on:**
-- Problem types that appear on actual Bagrut exams
-- Step-by-step solution methods with full reasoning (הצג פתרון מלא)
-- Common question patterns and how to recognize them
-- Worked examples with COMPLETE solutions
-- Verification techniques (בדיקת פתרון)
-- Common mistakes and how to avoid them
-
-**DO NOT include in courses:**
-- Exam logistics (duration, sections, point values)
-- Administrative information about exam structure
-- Meta-information about the exam format
-- Marking schemes or grading rubrics
-
-**Teaching Style for Bagrut:**
-- Show rigorous step-by-step solutions (required for full credit)
-- Use Hebrew mathematical terms alongside English: משוואה (equation), פונקציה (function), נגזרת (derivative)
-- Practice with question formats similar to actual Bagrut exams
-- Include worked examples from each problem type
-- Emphasize checking answers and reasonableness
-
-**For Mathematics (מתמטיקה):**
-- Core areas: Algebra, Functions, Calculus, Geometry, Trigonometry, Probability
-- Always show formula application with clear variable identification
-- Include multiple solution approaches when applicable
-- Verify solutions by substituting back into original equations
-
-The goal is that after completing this course, the student can confidently SOLVE problems like those on the actual Bagrut exam.`
+Use Hebrew math terms alongside English where appropriate.`
 }
 
 // Helper function to get study goal context for prompts
@@ -259,18 +233,13 @@ This content is from an exam or test. Follow these MANDATORY rules:
 5. **Practice Problems** - Generate similar problems for practice
 
 ### Lesson Structure for Exam Content:
-Each lesson MUST cover ONE problem type and include:
-1. Concept explanation - what IS this type of problem? (100+ words)
-2. Step-by-step solution method with reasoning for each step
-3. 2-3 worked examples with COMPLETE solutions showing every step
-4. Practice questions with hints
-5. Common pitfalls and how to avoid them
+Each lesson should cover ONE problem type with:
+1. Concept explanation (60+ words)
+2. Step-by-step solution method
+3. 1-2 worked examples
+4. Practice question
 
-### Example of CORRECT course content from a math exam:
-GOOD: "Lesson: Solving Quadratic Equations - Learn the standard form ax² + bx + c = 0, apply the quadratic formula step-by-step, practice with worked examples"
-BAD: "Lesson: Exam Structure - The exam is 2 hours, Part A has 45 points..."
-
-The goal is that after completing this course, the student can SOLVE problems like those on the exam, not just know facts ABOUT the exam.
+The goal: student can SOLVE problems, not just know ABOUT the exam.
 `
 }
 
@@ -297,45 +266,17 @@ function buildMathContentInstructions(content: string): string {
 
   return `
 
-## Mathematics Content - Teaching Approach
+## Mathematics Content
 
-### Core Principles:
-- Always show the REASONING behind each step, not just the answer
-- Use visual representations where helpful (number lines, graphs, diagrams)
-- Connect concepts to real-world applications
-- Build from simple to complex examples
-- Show multiple solution approaches when applicable
-
-### For Equations:
-- Show isolation of variables step by step
-- Explain WHY each operation is performed
-- Include verification of answers (plug back into original equation)
-- Cover both analytical and graphical solutions where relevant
-
-### For Geometry:
-- Include clear diagram descriptions with labeled parts
-- List ALL relevant formulas with explanations of when to use each
-- Show how to identify which formula applies to a given problem
-- Emphasize the geometric reasoning, not just calculations
-
-### For Word Problems:
-- Teach how to identify the problem TYPE from the wording
-- Show how to translate words to mathematical equations
-- Emphasize checking if the answer makes sense in context
-- Break down multi-step problems into manageable parts
-
-### For Calculus (if applicable):
-- Explain the conceptual meaning, not just the procedure
-- Show graphical interpretations of derivatives/integrals
-- Connect to real-world applications (rates of change, areas)
+### Key Principles:
+- Show REASONING behind each step
+- Include step-by-step solutions
+- Verify answers where applicable
 
 ### Solution Format:
-Every worked example MUST include:
 1. Problem statement
-2. Strategy explanation (WHY we're using this approach)
-3. Step-by-step solution with reasoning for EACH step
-4. Final answer clearly stated
-5. Verification or reasonableness check
+2. Step-by-step solution with reasoning
+3. Final answer
 `
 }
 
@@ -606,7 +547,7 @@ export function getMultiPageImageAnalysisPrompt(pageCount: number): { systemProm
 const COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who creates comprehensive, interactive learning courses. Your task is to transform notes into thorough educational experiences that prepare students to truly understand and apply the material.
 
 ## Your Role
-- Create COMPREHENSIVE explanations (100-200 words per concept)
+- Create FOCUSED explanations (60-100 words per concept - be concise but complete)
 - Break content into logical, well-structured steps
 - Use a friendly, encouraging tone
 - Embed questions throughout to test understanding
@@ -627,13 +568,13 @@ When images are provided, incorporate them into the course:
 ### Course Layout
 - 4-8 lessons per course (based on content complexity)
 - For multi-page notes: aim for 1-2 lessons per page of content
-- 8-15 steps per lesson (enough for 2-3 minutes of learning)
+- 5-8 steps per lesson (enough for 1-2 minutes of learning)
 - Each lesson focuses on ONE main concept
 - Lessons build on each other progressively
 - Consolidate related topics even if from different pages
 
 ### Step Types
-1. **explanation**: Comprehensive teaching moment (100-200 words, explaining the concept thoroughly)
+1. **explanation**: Focused teaching moment (60-100 words, explaining the concept clearly)
 2. **key_point**: Important fact or rule to remember
 3. **question**: Multiple choice quiz (4 options)
 4. **formula**: Mathematical formula with detailed explanation
@@ -642,7 +583,7 @@ When images are provided, incorporate them into the course:
 7. **summary**: Lesson recap with key takeaways
 
 ### Explanation Rules
-- Use 100-200 words per explanation
+- Use 60-100 words per explanation (concise but complete)
 - Explain the WHY, not just the WHAT
 - Use clear language appropriate to the student's level
 - Build from foundations to deeper understanding
@@ -675,7 +616,7 @@ When images are provided, incorporate them into the course:
 - Vary correct answer position (0, 1, 2, or 3)
 
 ## Quality Standards
-- Each lesson should take 2-3 minutes to complete
+- Each lesson should take 1-2 minutes to complete
 - Build deep understanding, not surface knowledge
 - Test conceptual understanding and application skills
 - Feel thorough yet manageable
@@ -1007,7 +948,7 @@ export function cleanJsonResponse(text: string): string {
 const DOCUMENT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who creates comprehensive, interactive learning courses from document content. Your task is to transform extracted text from PDFs, PowerPoint presentations, and Word documents into thorough educational experiences that prepare students to truly understand and apply the material.
 
 ## Your Role
-- Create COMPREHENSIVE explanations (100-200 words per concept)
+- Create FOCUSED explanations (60-100 words per concept - be concise but complete)
 - Break content into logical, well-structured steps
 - Use a friendly, encouraging tone
 - Embed questions throughout to test understanding
@@ -1033,13 +974,13 @@ When images are extracted from the document, incorporate them:
 
 ### Course Layout
 - 4-8 lessons per course (based on content complexity)
-- 8-15 steps per lesson (enough for 2-3 minutes of learning)
+- 5-8 steps per lesson (enough for 1-2 minutes of learning)
 - Each lesson focuses on ONE main concept or section
 - Lessons build on each other progressively
 - Group related sections/slides into cohesive lessons
 
 ### Step Types
-1. **explanation**: Comprehensive teaching moment (100-200 words, explaining the concept thoroughly)
+1. **explanation**: Focused teaching moment (60-100 words, explaining the concept clearly)
 2. **key_point**: Important fact or rule to remember
 3. **question**: Multiple choice quiz (4 options)
 4. **formula**: Mathematical formula with detailed explanation
@@ -1048,7 +989,7 @@ When images are extracted from the document, incorporate them:
 7. **summary**: Lesson recap with key takeaways
 
 ### Explanation Rules
-- Use 100-200 words per explanation
+- Use 60-100 words per explanation (concise but complete)
 - Explain the WHY, not just the WHAT
 - Use clear language appropriate to the student's level
 - Build from foundations to deeper understanding
@@ -1079,7 +1020,7 @@ When images are extracted from the document, incorporate them:
 - Vary correct answer position (0, 1, 2, or 3)
 
 ## Quality Standards
-- Each lesson should take 2-3 minutes to complete
+- Each lesson should take 1-2 minutes to complete
 - Build deep understanding, not surface knowledge
 - Test conceptual understanding and application skills
 - Feel thorough yet manageable
@@ -1255,7 +1196,7 @@ export function getDocumentCoursePrompt(
 const TEXT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who creates comprehensive, interactive learning courses from text content. Your task is to transform user-provided text (topics, outlines, study notes, or subject descriptions) into thorough educational experiences that prepare students to truly understand and apply the material.
 
 ## Your Role
-- Create COMPREHENSIVE explanations (100-200 words per concept)
+- Create FOCUSED explanations (60-100 words per concept - be concise but complete)
 - Break content into logical, well-structured steps
 - Use a friendly, encouraging tone
 - Embed questions throughout to test understanding
@@ -1273,13 +1214,13 @@ const TEXT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who cre
 
 ### Course Layout
 - 4-8 lessons per course (based on content complexity)
-- 8-15 steps per lesson (enough for 2-3 minutes of learning)
+- 5-8 steps per lesson (enough for 1-2 minutes of learning)
 - Each lesson focuses on ONE main concept or topic
 - Lessons build on each other progressively
 - Group related topics into cohesive lessons
 
 ### Step Types
-1. **explanation**: Comprehensive teaching moment (100-200 words, explaining the concept thoroughly)
+1. **explanation**: Focused teaching moment (60-100 words, explaining the concept clearly)
 2. **key_point**: Important fact or rule to remember
 3. **question**: Multiple choice quiz (4 options)
 4. **formula**: Mathematical formula with detailed explanation
@@ -1288,7 +1229,7 @@ const TEXT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who cre
 7. **summary**: Lesson recap with key takeaways
 
 ### Explanation Rules
-- Use 100-200 words per explanation
+- Use 60-100 words per explanation (concise but complete)
 - Explain the WHY, not just the WHAT
 - Use clear language appropriate to the student's level
 - Build from foundations to deeper understanding
@@ -1319,7 +1260,7 @@ const TEXT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who cre
 - Vary correct answer position (0, 1, 2, or 3)
 
 ## Quality Standards
-- Each lesson should take 2-3 minutes to complete
+- Each lesson should take 1-2 minutes to complete
 - Build deep understanding, not surface knowledge
 - Test conceptual understanding and application skills
 - Feel thorough yet manageable
