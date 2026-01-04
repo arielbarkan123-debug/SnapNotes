@@ -26,6 +26,14 @@ import type { StudySystem } from '@/lib/curriculum/types'
 import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 
 // ============================================================================
+// Route Configuration
+// ============================================================================
+
+// Extend timeout for course generation (Vercel hobby allows up to 60s)
+// Course generation with comprehensive prompts needs more time
+export const maxDuration = 60
+
+// ============================================================================
 // Types
 // ============================================================================
 
