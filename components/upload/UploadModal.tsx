@@ -8,6 +8,12 @@ import Button from '@/components/ui/Button'
 import { useToast } from '@/contexts/ToastContext'
 import { ErrorCodes } from '@/lib/api/errors'
 import { useFunnelTracking } from '@/lib/analytics'
+import {
+  uploadFileToStorage,
+  deleteFileFromStorage,
+  validateFile as validateDirectUpload,
+  type FileType as DirectUploadFileType,
+} from '@/lib/upload/direct-upload'
 
 // ============================================================================
 // Types & Constants
@@ -606,31 +612,101 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         // For now, only process the first document
         const docFile = documentFiles[0]
 
-        const formData = new FormData()
-        formData.append('file', docFile.file)
-
-        const uploadResponse = await fetch('/api/upload-document', {
-          method: 'POST',
-          body: formData,
-        })
-
-        let uploadData
-        try {
-          uploadData = await uploadResponse.json()
-        } catch {
-          throw new Error('Invalid server response. Please try again.')
-        }
-
-        if (!uploadResponse.ok) {
-          const errorInfo = getErrorMessage(null, uploadData.code)
+        // Validate file for direct upload
+        const validation = validateDirectUpload(docFile.file)
+        if (!validation.valid) {
           setError({
-            message: uploadData.error || errorInfo.message,
-            code: uploadData.code,
-            isRetryable: errorInfo.isRetryable,
+            message: validation.error || 'Invalid file',
+            isRetryable: false,
           })
           setIsUploading(false)
           setUploadProgress(null)
           return
+        }
+
+        // Step 1: Get user ID for storage path
+        setUploadProgress({ current: 0, total: 1, status: 'uploading' })
+        let userId: string
+        try {
+          const authRes = await fetch('/api/auth/me')
+          if (!authRes.ok) {
+            throw new Error('Please sign in to upload files')
+          }
+          const authData = await authRes.json()
+          userId = authData.userId
+        } catch (err) {
+          setError({
+            message: err instanceof Error ? err.message : 'Authentication failed',
+            code: ErrorCodes.UNAUTHORIZED,
+            isRetryable: false,
+          })
+          setIsUploading(false)
+          setUploadProgress(null)
+          return
+        }
+
+        // Step 2: Upload directly to Supabase Storage (bypasses Vercel 4.5MB limit!)
+        let storagePath: string
+        let fileType: DirectUploadFileType
+        try {
+          const uploadResult = await uploadFileToStorage(
+            docFile.file,
+            userId,
+            (progress) => {
+              // Map progress 10-90 to our UI progress
+              setUploadProgress({
+                current: progress / 100,
+                total: 1,
+                status: 'uploading',
+              })
+            }
+          )
+          storagePath = uploadResult.storagePath
+          fileType = uploadResult.fileType
+        } catch (err) {
+          console.error('[UploadModal] Direct upload failed:', err)
+          setError({
+            message: err instanceof Error ? err.message : 'Upload failed. Please try again.',
+            isRetryable: true,
+          })
+          setIsUploading(false)
+          setUploadProgress(null)
+          return
+        }
+
+        // Step 3: Process the uploaded document via API
+        setUploadProgress({ current: 0.9, total: 1, status: 'processing' })
+        let uploadData
+        try {
+          const processRes = await fetch('/api/process-document', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              storagePath,
+              fileName: docFile.file.name,
+              fileType,
+            }),
+          })
+
+          uploadData = await processRes.json()
+
+          if (!processRes.ok) {
+            // Clean up uploaded file on processing failure
+            await deleteFileFromStorage(storagePath).catch(() => {})
+            const errorInfo = getErrorMessage(null, uploadData.code)
+            setError({
+              message: uploadData.error || errorInfo.message,
+              code: uploadData.code,
+              isRetryable: errorInfo.isRetryable,
+            })
+            setIsUploading(false)
+            setUploadProgress(null)
+            return
+          }
+        } catch {
+          // Clean up uploaded file on processing failure
+          await deleteFileFromStorage(storagePath).catch(() => {})
+          throw new Error('Processing failed. Please try again.')
         }
 
         // Update progress
@@ -648,8 +724,9 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
 
         // Store document content in sessionStorage to avoid URL length limits
         const docId = `doc_${Date.now()}`
+        const contentToStore = uploadData.extractedContent || uploadData.content
         try {
-          sessionStorage.setItem(docId, JSON.stringify(uploadData.extractedContent))
+          sessionStorage.setItem(docId, JSON.stringify(contentToStore))
         } catch (storageError) {
           // Handle quota exceeded or other storage errors
           console.error('[UploadModal] sessionStorage quota exceeded:', storageError)
@@ -661,7 +738,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
             }
           }
           try {
-            sessionStorage.setItem(docId, JSON.stringify(uploadData.extractedContent))
+            sessionStorage.setItem(docId, JSON.stringify(contentToStore))
           } catch {
             // If still fails, continue without session storage - will use URL params only
             console.error('[UploadModal] Failed to store document content')
@@ -670,8 +747,8 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
 
         const params = new URLSearchParams()
         params.set('documentId', docId)
-        params.set('documentUrl', uploadData.storagePath || '')
-        params.set('sourceType', uploadData.documentType)
+        params.set('documentUrl', uploadData.storagePath || storagePath)
+        params.set('sourceType', uploadData.documentType || fileType)
 
         if (title.trim()) {
           params.set('title', title.trim())
