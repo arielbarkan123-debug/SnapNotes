@@ -34,7 +34,7 @@ const AI_MODEL_FAST = process.env.ANTHROPIC_MODEL_FAST || 'claude-3-5-haiku-2024
 const MAX_TOKENS_EXTRACTION = 4096
 const MAX_TOKENS_GENERATION = 8192
 const MAX_IMAGES_PER_REQUEST = 5 // Claude's recommended limit for optimal performance
-const API_TIMEOUT_MS = 120000 // 2 minute timeout for AI operations
+const API_TIMEOUT_MS = 210000 // 3.5 minute timeout for AI operations (documents need more time)
 
 /**
  * Get the default AI model for standard operations
