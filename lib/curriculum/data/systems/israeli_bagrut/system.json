@@ -1,0 +1,118 @@
+{
+  "id": "israeli_bagrut",
+  "name": "Israeli Bagrut (Matriculation)",
+  "nameHebrew": "בגרות ישראלית",
+  "description": "The Israeli Bagrut examination is the national high school certification exam in Israel. Students take exams in core and elective subjects at various unit levels (3, 4, or 5 units) with higher units indicating greater depth and difficulty. The Bagrut certificate is required for university admission.",
+  "grading": {
+    "scale": "0-100 per subject",
+    "passingGrade": "56 points minimum per subject",
+    "descriptions": [
+      { "grade": "90-100", "description": "Excellent (מצוין)", "percentageRange": "90-100%" },
+      { "grade": "80-89", "description": "Very Good (טוב מאוד)", "percentageRange": "80-89%" },
+      { "grade": "70-79", "description": "Good (טוב)", "percentageRange": "70-79%" },
+      { "grade": "56-69", "description": "Satisfactory (עובר)", "percentageRange": "56-69%" },
+      { "grade": "0-55", "description": "Failing (נכשל)", "percentageRange": "0-55%" }
+    ]
+  },
+  "unitLevels": {
+    "3_units": {
+      "name": "3 יחידות לימוד",
+      "englishName": "3 Study Units",
+      "difficulty": "basic",
+      "description": "Basic level, minimum requirement for most subjects"
+    },
+    "4_units": {
+      "name": "4 יחידות לימוד",
+      "englishName": "4 Study Units",
+      "difficulty": "intermediate",
+      "description": "Intermediate level, expanded curriculum"
+    },
+    "5_units": {
+      "name": "5 יחידות לימוד",
+      "englishName": "5 Study Units",
+      "difficulty": "advanced",
+      "description": "Advanced level, most comprehensive and challenging"
+    }
+  },
+  "assessmentPhilosophy": "Bagrut exams emphasize demonstrating complete mastery of material through showing all work and reasoning. Partial credit is awarded for correct methodology even if the final answer is incorrect. Questions progress from straightforward recall to complex multi-step problems requiring integration of multiple concepts. All work must be shown clearly to receive full credit.",
+  "keyTerminology": {
+    "בגרות": "Bagrut - the matriculation examination",
+    "יחידות לימוד": "Study Units - measure of course depth (3, 4, or 5 units)",
+    "מועד": "Exam session (מועד א׳ - first session, מועד ב׳ - second session)",
+    "חלק": "Part/Section of the exam",
+    "סעיף": "Sub-question within a question",
+    "נקודות": "Points awarded for a question",
+    "שאלון": "Questionnaire/exam paper number",
+    "פתרון": "Solution/answer",
+    "הוכחה": "Proof",
+    "חישוב": "Calculation"
+  },
+  "commandTerms": [
+    {
+      "term": "פתור",
+      "termEnglish": "Solve",
+      "definition": "Find the solution(s) to an equation or problem, showing all steps",
+      "cognitiveLevel": 2,
+      "examples": ["פתור את המשוואה", "Solve the equation x² + 5x + 6 = 0"]
+    },
+    {
+      "term": "חשב",
+      "termEnglish": "Calculate",
+      "definition": "Compute a numerical answer, showing the calculation process",
+      "cognitiveLevel": 2,
+      "examples": ["חשב את שטח המשולש", "Calculate the area of the triangle"]
+    },
+    {
+      "term": "הוכח",
+      "termEnglish": "Prove",
+      "definition": "Provide a logical mathematical proof with clear steps and justification",
+      "cognitiveLevel": 3,
+      "examples": ["הוכח כי המשולשים חופפים", "Prove that the triangles are congruent"]
+    },
+    {
+      "term": "מצא",
+      "termEnglish": "Find",
+      "definition": "Determine the value, expression, or object requested",
+      "cognitiveLevel": 2,
+      "examples": ["מצא את נקודות החיתוך", "Find the intersection points"]
+    },
+    {
+      "term": "הסבר",
+      "termEnglish": "Explain",
+      "definition": "Provide reasoning and justification for your answer",
+      "cognitiveLevel": 2,
+      "examples": ["הסבר את תשובתך", "Explain your answer"]
+    },
+    {
+      "term": "בדוק",
+      "termEnglish": "Check/Verify",
+      "definition": "Verify that a given solution or statement is correct",
+      "cognitiveLevel": 2,
+      "examples": ["בדוק את הפתרון", "Verify the solution"]
+    },
+    {
+      "term": "שרטט",
+      "termEnglish": "Sketch/Draw",
+      "definition": "Create an accurate diagram or graph with labels",
+      "cognitiveLevel": 1,
+      "examples": ["שרטט את גרף הפונקציה", "Sketch the graph of the function"]
+    },
+    {
+      "term": "קבע",
+      "termEnglish": "Determine",
+      "definition": "Establish or decide based on given information",
+      "cognitiveLevel": 2,
+      "examples": ["קבע האם הטענה נכונה", "Determine if the statement is true"]
+    }
+  ],
+  "examFormat": {
+    "duration": "Typically 3-4 hours depending on subject and units",
+    "structure": "Usually Part A (mandatory) and Part B (choose from options)",
+    "materials": "Scientific calculator permitted, formula sheets often provided",
+    "language": "Hebrew (with English terms in parentheses for technical subjects)"
+  },
+  "academicYear": {
+    "start": "September",
+    "examPeriod": "Summer (מועד א׳ - June/July), Winter (מועד ב׳ - January/February)"
+  }
+}

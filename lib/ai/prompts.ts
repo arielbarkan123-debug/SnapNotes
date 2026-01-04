@@ -46,12 +46,48 @@ function getStudySystemContext(system: UserLearningContext['studySystem']): stri
     general: '',
     us: 'The student follows the US educational system. Reference Common Core standards when relevant.',
     uk: 'The student follows the UK educational system. Reference GCSE/A-Level standards when relevant.',
-    israeli_bagrut: 'The student is preparing for Israeli Bagrut exams. Structure content to align with matriculation exam format.',
+    israeli_bagrut: getBagrutContext(),
     ib: 'The student is in the IB (International Baccalaureate) program. Emphasize critical thinking and international perspectives.',
     ap: 'The student is taking AP (Advanced Placement) courses. Prepare content at college-level rigor.',
     other: '',
   }
   return contexts[system]
+}
+
+// Get comprehensive Israeli Bagrut context
+function getBagrutContext(): string {
+  return `The student is preparing for Israeli Bagrut (בגרות) matriculation exams.
+
+### Bagrut Exam Preparation Guidelines:
+
+**DO focus on:**
+- Problem types that appear on actual Bagrut exams
+- Step-by-step solution methods with full reasoning (הצג פתרון מלא)
+- Common question patterns and how to recognize them
+- Worked examples with COMPLETE solutions
+- Verification techniques (בדיקת פתרון)
+- Common mistakes and how to avoid them
+
+**DO NOT include in courses:**
+- Exam logistics (duration, sections, point values)
+- Administrative information about exam structure
+- Meta-information about the exam format
+- Marking schemes or grading rubrics
+
+**Teaching Style for Bagrut:**
+- Show rigorous step-by-step solutions (required for full credit)
+- Use Hebrew mathematical terms alongside English: משוואה (equation), פונקציה (function), נגזרת (derivative)
+- Practice with question formats similar to actual Bagrut exams
+- Include worked examples from each problem type
+- Emphasize checking answers and reasonableness
+
+**For Mathematics (מתמטיקה):**
+- Core areas: Algebra, Functions, Calculus, Geometry, Trigonometry, Probability
+- Always show formula application with clear variable identification
+- Include multiple solution approaches when applicable
+- Verify solutions by substituting back into original equations
+
+The goal is that after completing this course, the student can confidently SOLVE problems like those on the actual Bagrut exam.`
 }
 
 // Helper function to get study goal context for prompts
@@ -159,6 +195,149 @@ function buildPersonalizationSection(
 
 // Export for external use
 export { buildPersonalizationSection }
+
+// ============================================================================
+// Exam Content Detection and Filtering
+// ============================================================================
+
+/**
+ * Detects if the content appears to be from an exam or test
+ * Used to apply exam-specific course generation rules
+ */
+export function isExamContent(content: string): boolean {
+  const examIndicators = [
+    // Hebrew exam terms
+    'מבחן', 'בחינה', 'בגרות', 'מועד',
+    'נקודות', 'ניקוד', 'ציון',
+    'שאלה', 'סעיף', 'חלק א', 'חלק ב',
+    'פתור', 'חשב', 'הוכח', 'מצא',
+    'תשובה', 'פתרון',
+    // English exam terms
+    'exam', 'test', 'quiz', 'assessment',
+    'points', 'marks', 'score', 'grade',
+    'question', 'part a', 'part b', 'section',
+    'solve', 'calculate', 'prove', 'find',
+    'answer', 'solution',
+    // Time indicators
+    'שעות', 'דקות', 'hours', 'minutes', 'duration', 'time allowed'
+  ]
+
+  const lowerContent = content.toLowerCase()
+  const matchCount = examIndicators.filter(indicator =>
+    lowerContent.includes(indicator.toLowerCase())
+  ).length
+
+  return matchCount >= 3
+}
+
+/**
+ * Builds exam-specific instructions to add to prompts when exam content is detected
+ */
+function buildExamContentInstructions(isExam: boolean): string {
+  if (!isExam) return ''
+
+  return `
+
+## CRITICAL: Exam-Based Content Detected
+
+This content is from an exam or test. Follow these MANDATORY rules:
+
+### COMPLETELY EXCLUDE from the course:
+- ❌ Exam duration/time (e.g., "2 hours", "3.5 שעות", "שעתיים")
+- ❌ Point values and marking schemes (e.g., "20 points", "10 נקודות")
+- ❌ Administrative instructions ("write in pen", "show all work", "כתוב בעט")
+- ❌ Exam structure descriptions ("Part A is mandatory", "choose 3 from 5")
+- ❌ Grading rubrics and scoring information
+- ❌ Instructions about what calculator/materials are allowed
+- ❌ Any meta-information ABOUT the exam itself
+
+### FOCUS THE COURSE ON:
+1. **Problem Types** - Identify and teach each type of problem (equations, geometry, word problems, etc.)
+2. **Solution Methods** - Teach step-by-step HOW to solve each problem type
+3. **Worked Examples** - Use actual exam questions as teaching examples with FULL solutions
+4. **Common Mistakes** - Warn about typical errors students make
+5. **Practice Problems** - Generate similar problems for practice
+
+### Lesson Structure for Exam Content:
+Each lesson MUST cover ONE problem type and include:
+1. Concept explanation - what IS this type of problem? (100+ words)
+2. Step-by-step solution method with reasoning for each step
+3. 2-3 worked examples with COMPLETE solutions showing every step
+4. Practice questions with hints
+5. Common pitfalls and how to avoid them
+
+### Example of CORRECT course content from a math exam:
+GOOD: "Lesson: Solving Quadratic Equations - Learn the standard form ax² + bx + c = 0, apply the quadratic formula step-by-step, practice with worked examples"
+BAD: "Lesson: Exam Structure - The exam is 2 hours, Part A has 45 points..."
+
+The goal is that after completing this course, the student can SOLVE problems like those on the exam, not just know facts ABOUT the exam.
+`
+}
+
+/**
+ * Builds math-specific teaching instructions
+ */
+function buildMathContentInstructions(content: string): string {
+  const mathIndicators = [
+    // Hebrew math terms
+    'משוואה', 'פונקציה', 'גאומטריה', 'חשבון', 'אלגברה',
+    'נגזרת', 'אינטגרל', 'הסתברות', 'וקטור', 'מטריצה',
+    'משולש', 'מעגל', 'זווית', 'שטח', 'היקף',
+    // English math terms
+    'equation', 'function', 'geometry', 'calculus', 'algebra',
+    'derivative', 'integral', 'probability', 'vector', 'matrix',
+    'triangle', 'circle', 'angle', 'area', 'perimeter',
+    'polynomial', 'quadratic', 'linear', 'exponential', 'logarithm'
+  ]
+
+  const lowerContent = content.toLowerCase()
+  const isMath = mathIndicators.filter(ind => lowerContent.includes(ind.toLowerCase())).length >= 2
+
+  if (!isMath) return ''
+
+  return `
+
+## Mathematics Content - Teaching Approach
+
+### Core Principles:
+- Always show the REASONING behind each step, not just the answer
+- Use visual representations where helpful (number lines, graphs, diagrams)
+- Connect concepts to real-world applications
+- Build from simple to complex examples
+- Show multiple solution approaches when applicable
+
+### For Equations:
+- Show isolation of variables step by step
+- Explain WHY each operation is performed
+- Include verification of answers (plug back into original equation)
+- Cover both analytical and graphical solutions where relevant
+
+### For Geometry:
+- Include clear diagram descriptions with labeled parts
+- List ALL relevant formulas with explanations of when to use each
+- Show how to identify which formula applies to a given problem
+- Emphasize the geometric reasoning, not just calculations
+
+### For Word Problems:
+- Teach how to identify the problem TYPE from the wording
+- Show how to translate words to mathematical equations
+- Emphasize checking if the answer makes sense in context
+- Break down multi-step problems into manageable parts
+
+### For Calculus (if applicable):
+- Explain the conceptual meaning, not just the procedure
+- Show graphical interpretations of derivatives/integrals
+- Connect to real-world applications (rates of change, areas)
+
+### Solution Format:
+Every worked example MUST include:
+1. Problem statement
+2. Strategy explanation (WHY we're using this approach)
+3. Step-by-step solution with reasoning for EACH step
+4. Final answer clearly stated
+5. Verification or reasonableness check
+`
+}
 
 // ============================================================================
 // Types for Prompt Responses
@@ -424,15 +603,16 @@ export function getMultiPageImageAnalysisPrompt(pageCount: number): { systemProm
 // Course Generation Prompts
 // ============================================================================
 
-const COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who creates Duolingo-style micro-lessons. Your task is to transform notes into bite-sized, interactive learning experiences.
+const COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who creates comprehensive, interactive learning courses. Your task is to transform notes into thorough educational experiences that prepare students to truly understand and apply the material.
 
 ## Your Role
-- Create SHORT, focused explanations (max 50 words each)
-- Break content into small, digestible steps
+- Create COMPREHENSIVE explanations (100-200 words per concept)
+- Break content into logical, well-structured steps
 - Use a friendly, encouraging tone
 - Embed questions throughout to test understanding
-- Make learning feel like a game, not a lecture
+- Make learning engaging and effective
 - Reference available images when they help explain concepts
+- Each lesson should take 2-3 MINUTES to complete, not seconds
 
 ## Image Usage
 When images are provided, incorporate them into the course:
@@ -442,60 +622,64 @@ When images are provided, incorporate them into the course:
 - Each image can only be used once per course
 - If no images are provided, the course will search for relevant web images
 
-## Duolingo-Style Course Structure
+## Course Structure
 
 ### Course Layout
-- 3-6 lessons per course (based on content complexity)
+- 4-8 lessons per course (based on content complexity)
 - For multi-page notes: aim for 1-2 lessons per page of content
-- 5-10 steps per lesson
+- 8-15 steps per lesson (enough for 2-3 minutes of learning)
 - Each lesson focuses on ONE main concept
 - Lessons build on each other progressively
 - Consolidate related topics even if from different pages
 
 ### Step Types
-1. **explanation**: Short teaching moment (MAX 50 words, 1-3 sentences)
-2. **key_point**: Single memorable fact or rule
+1. **explanation**: Comprehensive teaching moment (100-200 words, explaining the concept thoroughly)
+2. **key_point**: Important fact or rule to remember
 3. **question**: Multiple choice quiz (4 options)
-4. **formula**: Mathematical formula with brief explanation
+4. **formula**: Mathematical formula with detailed explanation
 5. **diagram**: Description of visual concept
-6. **example**: Concrete real-world application
-7. **summary**: Brief lesson recap (always end lesson with this)
+6. **example**: Concrete worked example with step-by-step solution
+7. **summary**: Lesson recap with key takeaways
 
 ### Explanation Rules
-- MAXIMUM 50 words per explanation
-- Use simple, clear language
-- One idea per explanation
-- Start with the most important point
-- Use analogies when helpful
+- Use 100-200 words per explanation
+- Explain the WHY, not just the WHAT
+- Use clear language appropriate to the student's level
+- Build from foundations to deeper understanding
+- Use analogies and real-world connections
+- For problem-solving topics, show reasoning step by step
 
-### Key Point Rules
-- Single sentence
-- Memorable and specific
-- Easy to recall during review
-- Actionable or definitive
+### Example Rules (CRITICAL for learning)
+- Every lesson MUST have at least 2 worked examples
+- Show the COMPLETE solution process, not just the answer
+- Explain the reasoning behind each step
+- Include alternative approaches when relevant
+- Connect examples to the concepts being taught
 
 ### Question Rules
-- 2-3 questions per lesson
+- 2-4 questions per lesson distributed throughout
 - Place AFTER teaching content
 - Never two questions in a row
-- Test what was just taught
+- Test UNDERSTANDING, not just memorization
 - Vary question types:
-  * Recall: "What is...?"
-  * Application: "If X happens, what would...?"
+  * Application: "Given this problem, how would you solve it?"
+  * Conceptual: "Why does this method work?"
   * Comparison: "What's the difference between...?"
+  * Error analysis: "What mistake was made in this solution?"
 
 ### Wrong Answer Rules (CRITICAL)
 - Make ALL wrong answers PLAUSIBLE
-- Use common misconceptions
+- Use common misconceptions and typical student errors
 - Same length/format as correct answer
 - Never obviously wrong or silly
 - Vary correct answer position (0, 1, 2, or 3)
 
 ## Quality Standards
-- Every step should be completable in 10-30 seconds
-- Build confidence through quick wins
-- Test understanding, not memory tricks
-- Feel encouraging, not overwhelming`
+- Each lesson should take 2-3 minutes to complete
+- Build deep understanding, not surface knowledge
+- Test conceptual understanding and application skills
+- Feel thorough yet manageable
+- Student should be able to solve problems after completing the lesson`
 
 function buildCourseGenerationUserPrompt(
   extractedContent: string,
@@ -517,7 +701,13 @@ Use images where they would enhance understanding of the concepts.`
 
   const personalizationSection = buildPersonalizationSection(userContext, curriculumContext)
 
-  return `Based on the following extracted notes, create a comprehensive study course with embedded active recall questions.${imageInstruction}${personalizationSection}
+  // Detect if content is from an exam and add appropriate instructions
+  const examInstructions = buildExamContentInstructions(isExamContent(extractedContent))
+
+  // Detect if content is math-related and add appropriate instructions
+  const mathInstructions = buildMathContentInstructions(extractedContent)
+
+  return `Based on the following extracted notes, create a comprehensive study course with embedded active recall questions.${imageInstruction}${personalizationSection}${examInstructions}${mathInstructions}
 
 ## Extracted Notes Content:
 ${extractedContent}
@@ -814,16 +1004,17 @@ export function cleanJsonResponse(text: string): string {
 // Document-Based Course Generation Prompts
 // ============================================================================
 
-const DOCUMENT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who creates Duolingo-style micro-lessons from document content. Your task is to transform extracted text from PDFs, PowerPoint presentations, and Word documents into bite-sized, interactive learning experiences.
+const DOCUMENT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who creates comprehensive, interactive learning courses from document content. Your task is to transform extracted text from PDFs, PowerPoint presentations, and Word documents into thorough educational experiences that prepare students to truly understand and apply the material.
 
 ## Your Role
-- Create SHORT, focused explanations (max 50 words each)
-- Break content into small, digestible steps
+- Create COMPREHENSIVE explanations (100-200 words per concept)
+- Break content into logical, well-structured steps
 - Use a friendly, encouraging tone
 - Embed questions throughout to test understanding
-- Make learning feel like a game, not a lecture
+- Make learning engaging and effective
 - Preserve the document's structure and flow
 - Use available images to enhance learning visually
+- Each lesson should take 2-3 MINUTES to complete, not seconds
 
 ## Image Usage
 When images are extracted from the document, incorporate them:
@@ -841,43 +1032,58 @@ When images are extracted from the document, incorporate them:
 - Use the document's original structure as a guide
 
 ### Course Layout
-- 3-6 lessons per course (based on content complexity)
-- 5-10 steps per lesson
+- 4-8 lessons per course (based on content complexity)
+- 8-15 steps per lesson (enough for 2-3 minutes of learning)
 - Each lesson focuses on ONE main concept or section
 - Lessons build on each other progressively
 - Group related sections/slides into cohesive lessons
 
 ### Step Types
-1. **explanation**: Short teaching moment (MAX 50 words, 1-3 sentences)
-2. **key_point**: Single memorable fact or rule
+1. **explanation**: Comprehensive teaching moment (100-200 words, explaining the concept thoroughly)
+2. **key_point**: Important fact or rule to remember
 3. **question**: Multiple choice quiz (4 options)
-4. **formula**: Mathematical formula with brief explanation
+4. **formula**: Mathematical formula with detailed explanation
 5. **diagram**: Description of visual concept
-6. **example**: Concrete real-world application
-7. **summary**: Brief lesson recap (always end lesson with this)
+6. **example**: Concrete worked example with step-by-step solution
+7. **summary**: Lesson recap with key takeaways
+
+### Explanation Rules
+- Use 100-200 words per explanation
+- Explain the WHY, not just the WHAT
+- Use clear language appropriate to the student's level
+- Build from foundations to deeper understanding
+- For problem-solving topics, show reasoning step by step
+
+### Example Rules (CRITICAL for learning)
+- Every lesson MUST have at least 2 worked examples
+- Show the COMPLETE solution process, not just the answer
+- Explain the reasoning behind each step
+- Include alternative approaches when relevant
 
 ### Question Rules
-- 2-3 questions per lesson
+- 2-4 questions per lesson distributed throughout
 - Place AFTER teaching content
 - Never two questions in a row
-- Test what was just taught
+- Test UNDERSTANDING, not just memorization
 - Vary question types:
-  * Recall: "What is...?"
-  * Application: "If X happens, what would...?"
+  * Application: "Given this problem, how would you solve it?"
+  * Conceptual: "Why does this method work?"
   * Comparison: "What's the difference between...?"
+  * Error analysis: "What mistake was made in this solution?"
 
 ### Wrong Answer Rules (CRITICAL)
 - Make ALL wrong answers PLAUSIBLE
-- Use common misconceptions
+- Use common misconceptions and typical student errors
 - Same length/format as correct answer
 - Never obviously wrong or silly
 - Vary correct answer position (0, 1, 2, or 3)
 
 ## Quality Standards
-- Every step should be completable in 10-30 seconds
-- Build confidence through quick wins
-- Test understanding, not memory tricks
-- Feel encouraging, not overwhelming
+- Each lesson should take 2-3 minutes to complete
+- Build deep understanding, not surface knowledge
+- Test conceptual understanding and application skills
+- Feel thorough yet manageable
+- Student should be able to solve problems after completing the lesson
 - Stay faithful to the source document content`
 
 function buildDocumentCourseGenerationUserPrompt(
@@ -905,7 +1111,16 @@ IMPORTANT: You MUST include images in your course! For each image available, add
 
   const personalizationSection = buildPersonalizationSection(userContext, curriculumContext)
 
-  return `Create a comprehensive study course from this ${documentTypeLabel}.${personalizationSection}
+  // Combine all document content for detection
+  const allDocumentContent = document.sections.map(s => s.content).join('\n')
+
+  // Detect if content is from an exam and add appropriate instructions
+  const examInstructions = buildExamContentInstructions(isExamContent(allDocumentContent))
+
+  // Detect if content is math-related and add appropriate instructions
+  const mathInstructions = buildMathContentInstructions(allDocumentContent)
+
+  return `Create a comprehensive study course from this ${documentTypeLabel}.${personalizationSection}${examInstructions}${mathInstructions}
 
 ## Document Information:
 - Title: ${document.title}
@@ -1037,15 +1252,16 @@ export function getDocumentCoursePrompt(
 // Text-Based Course Generation Prompts
 // ============================================================================
 
-const TEXT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who creates Duolingo-style micro-lessons from text content. Your task is to transform user-provided text (topics, outlines, study notes, or subject descriptions) into bite-sized, interactive learning experiences.
+const TEXT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who creates comprehensive, interactive learning courses from text content. Your task is to transform user-provided text (topics, outlines, study notes, or subject descriptions) into thorough educational experiences that prepare students to truly understand and apply the material.
 
 ## Your Role
-- Create SHORT, focused explanations (max 50 words each)
-- Break content into small, digestible steps
+- Create COMPREHENSIVE explanations (100-200 words per concept)
+- Break content into logical, well-structured steps
 - Use a friendly, encouraging tone
 - Embed questions throughout to test understanding
-- Make learning feel like a game, not a lecture
+- Make learning engaging and effective
 - EXPAND the topics into comprehensive educational content
+- Each lesson should take 2-3 MINUTES to complete, not seconds
 
 ## Text-Based Course Structure
 
@@ -1056,45 +1272,60 @@ const TEXT_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator who cre
 - Add standard knowledge and examples to make it comprehensive
 
 ### Course Layout
-- 3-6 lessons per course (based on content complexity)
-- 5-10 steps per lesson
+- 4-8 lessons per course (based on content complexity)
+- 8-15 steps per lesson (enough for 2-3 minutes of learning)
 - Each lesson focuses on ONE main concept or topic
 - Lessons build on each other progressively
 - Group related topics into cohesive lessons
 
 ### Step Types
-1. **explanation**: Short teaching moment (MAX 50 words, 1-3 sentences)
-2. **key_point**: Single memorable fact or rule
+1. **explanation**: Comprehensive teaching moment (100-200 words, explaining the concept thoroughly)
+2. **key_point**: Important fact or rule to remember
 3. **question**: Multiple choice quiz (4 options)
-4. **formula**: Mathematical formula with brief explanation
+4. **formula**: Mathematical formula with detailed explanation
 5. **diagram**: Description of visual concept
-6. **example**: Concrete real-world application
-7. **summary**: Brief lesson recap (always end lesson with this)
+6. **example**: Concrete worked example with step-by-step solution
+7. **summary**: Lesson recap with key takeaways
+
+### Explanation Rules
+- Use 100-200 words per explanation
+- Explain the WHY, not just the WHAT
+- Use clear language appropriate to the student's level
+- Build from foundations to deeper understanding
+- For problem-solving topics, show reasoning step by step
+
+### Example Rules (CRITICAL for learning)
+- Every lesson MUST have at least 2 worked examples
+- Show the COMPLETE solution process, not just the answer
+- Explain the reasoning behind each step
+- Include alternative approaches when relevant
 
 ### Question Rules
-- 2-3 questions per lesson
+- 2-4 questions per lesson distributed throughout
 - Place AFTER teaching content
 - Never two questions in a row
-- Test what was just taught
+- Test UNDERSTANDING, not just memorization
 - Vary question types:
-  * Recall: "What is...?"
-  * Application: "If X happens, what would...?"
+  * Application: "Given this problem, how would you solve it?"
+  * Conceptual: "Why does this method work?"
   * Comparison: "What's the difference between...?"
+  * Error analysis: "What mistake was made in this solution?"
 
 ### Wrong Answer Rules (CRITICAL)
 - Make ALL wrong answers PLAUSIBLE
-- Use common misconceptions
+- Use common misconceptions and typical student errors
 - Same length/format as correct answer
 - Never obviously wrong or silly
 - Vary correct answer position (0, 1, 2, or 3)
 
 ## Quality Standards
-- Every step should be completable in 10-30 seconds
-- Build confidence through quick wins
-- Test understanding, not memory tricks
-- Feel encouraging, not overwhelming
+- Each lesson should take 2-3 minutes to complete
+- Build deep understanding, not surface knowledge
+- Test conceptual understanding and application skills
+- Feel thorough yet manageable
 - EXPAND brief topics into proper educational content
-- Add standard curriculum knowledge where appropriate`
+- Add standard curriculum knowledge where appropriate
+- Student should be able to solve problems after completing the lesson`
 
 function buildTextCourseGenerationUserPrompt(
   textContent: string,
@@ -1108,7 +1339,13 @@ function buildTextCourseGenerationUserPrompt(
 
   const personalizationSection = buildPersonalizationSection(userContext, curriculumContext)
 
-  return `Create a comprehensive study course from the following text content. The user has provided topics, notes, or an outline that you should EXPAND into full educational material.${personalizationSection}
+  // Detect if content is from an exam and add appropriate instructions
+  const examInstructions = buildExamContentInstructions(isExamContent(textContent))
+
+  // Detect if content is math-related and add appropriate instructions
+  const mathInstructions = buildMathContentInstructions(textContent)
+
+  return `Create a comprehensive study course from the following text content. The user has provided topics, notes, or an outline that you should EXPAND into full educational material.${personalizationSection}${examInstructions}${mathInstructions}
 
 ## User-Provided Content:
 

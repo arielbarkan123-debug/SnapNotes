@@ -1,0 +1,201 @@
+{
+  "systemId": "israeli_bagrut",
+  "subjectId": "math-5-units",
+  "name": "Mathematics 5 Units",
+  "nameHebrew": "מתמטיקה 5 יחידות",
+  "code": "שאלון 806/807",
+  "levels": ["5 units"],
+  "description": "The most advanced level of Bagrut mathematics, covering algebra, calculus, geometry, trigonometry, probability, and statistics. This level is required for students pursuing engineering, science, or mathematics in university. Emphasis is placed on mathematical reasoning, proof techniques, and multi-step problem solving.",
+  "assessmentComponents": [
+    {
+      "name": "Part A (חלק א׳)",
+      "weight": 45,
+      "duration": "Approximately 1.5 hours",
+      "description": "Mandatory questions covering core topics",
+      "structure": "Multiple questions, all mandatory. Tests fundamental skills in algebra, calculus, and geometry.",
+      "markingCriteria": ["Show all work (הצג פתרון מלא)", "Partial credit for correct methodology", "Exact answers unless approximation specified"]
+    },
+    {
+      "name": "Part B (חלק ב׳)",
+      "weight": 55,
+      "duration": "Approximately 2 hours",
+      "description": "Extended questions - choose required number from options",
+      "structure": "Typically choose 3 out of 5 questions. Each question tests deeper understanding of specific topics.",
+      "markingCriteria": ["Extended reasoning required", "Multi-step problem solving", "Integration of multiple concepts"]
+    }
+  ],
+  "assessmentObjectives": [
+    {
+      "id": "AO1",
+      "description": "Basic knowledge and skills - recall formulas, apply standard procedures",
+      "verbs": ["חשב", "פתור", "מצא"],
+      "weight": 25,
+      "cognitiveLevel": 1
+    },
+    {
+      "id": "AO2",
+      "description": "Application - apply knowledge to standard problems",
+      "verbs": ["יישם", "השתמש", "בצע"],
+      "weight": 35,
+      "cognitiveLevel": 2
+    },
+    {
+      "id": "AO3",
+      "description": "Problem solving - solve complex, multi-step problems",
+      "verbs": ["נתח", "פתור בעיה", "מצא דרך"],
+      "weight": 25,
+      "cognitiveLevel": 2
+    },
+    {
+      "id": "AO4",
+      "description": "Mathematical reasoning and proof - construct logical arguments",
+      "verbs": ["הוכח", "נמק", "הסבר"],
+      "weight": 15,
+      "cognitiveLevel": 3
+    }
+  ],
+  "topicList": [
+    {
+      "id": "1",
+      "name": "Algebra (אלגברה)",
+      "nameHebrew": "אלגברה",
+      "hours": 40,
+      "subtopics": [
+        { "id": "1.1", "name": "Linear equations and inequalities (משוואות ואי-שוויונות ליניאריים)" },
+        { "id": "1.2", "name": "Quadratic equations (משוואות ריבועיות)" },
+        { "id": "1.3", "name": "Systems of equations (מערכות משוואות)" },
+        { "id": "1.4", "name": "Polynomials (פולינומים)" },
+        { "id": "1.5", "name": "Algebraic fractions (שברים אלגבריים)" },
+        { "id": "1.6", "name": "Sequences and series (סדרות וטורים)" },
+        { "id": "1.7", "name": "Mathematical induction (אינדוקציה מתמטית)" }
+      ],
+      "commonMistakes": [
+        "Forgetting to check for extraneous solutions",
+        "Sign errors when solving inequalities",
+        "Incorrect factoring of polynomials"
+      ]
+    },
+    {
+      "id": "2",
+      "name": "Functions (פונקציות)",
+      "nameHebrew": "פונקציות",
+      "hours": 45,
+      "subtopics": [
+        { "id": "2.1", "name": "Linear functions (פונקציות ליניאריות)" },
+        { "id": "2.2", "name": "Quadratic functions (פונקציות ריבועיות)" },
+        { "id": "2.3", "name": "Polynomial functions (פונקציות פולינומיאליות)" },
+        { "id": "2.4", "name": "Rational functions (פונקציות רציונליות)" },
+        { "id": "2.5", "name": "Exponential functions (פונקציות מעריכיות)" },
+        { "id": "2.6", "name": "Logarithmic functions (פונקציות לוגריתמיות)" },
+        { "id": "2.7", "name": "Trigonometric functions (פונקציות טריגונומטריות)" },
+        { "id": "2.8", "name": "Composite and inverse functions (הרכבה והפיכה)" }
+      ],
+      "commonMistakes": [
+        "Confusing domain and range",
+        "Incorrect transformation of graphs",
+        "Forgetting asymptotes for rational functions"
+      ]
+    },
+    {
+      "id": "3",
+      "name": "Calculus (חשבון דיפרנציאלי ואינטגרלי)",
+      "nameHebrew": "חשבון דיפרנציאלי ואינטגרלי",
+      "hours": 60,
+      "subtopics": [
+        { "id": "3.1", "name": "Limits (גבולות)" },
+        { "id": "3.2", "name": "Continuity (רציפות)" },
+        { "id": "3.3", "name": "Derivatives - definition and rules (נגזרות - הגדרה וכללים)" },
+        { "id": "3.4", "name": "Applications of derivatives (יישומי נגזרות)" },
+        { "id": "3.5", "name": "Curve sketching (שרטוט גרפים)" },
+        { "id": "3.6", "name": "Optimization problems (בעיות מקסימום ומינימום)" },
+        { "id": "3.7", "name": "Indefinite integrals (אינטגרלים לא מסוימים)" },
+        { "id": "3.8", "name": "Definite integrals and area (אינטגרלים מסוימים ושטחים)" },
+        { "id": "3.9", "name": "Integration techniques (שיטות אינטגרציה)" }
+      ],
+      "commonMistakes": [
+        "Forgetting the chain rule",
+        "Sign errors in integration",
+        "Not checking second derivative for max/min",
+        "Incorrect limits of integration for area problems"
+      ]
+    },
+    {
+      "id": "4",
+      "name": "Geometry (גאומטריה)",
+      "nameHebrew": "גאומטריה",
+      "hours": 40,
+      "subtopics": [
+        { "id": "4.1", "name": "Triangles and their properties (משולשים ותכונותיהם)" },
+        { "id": "4.2", "name": "Congruence and similarity (חפיפה ודמיון)" },
+        { "id": "4.3", "name": "Circles (מעגלים)" },
+        { "id": "4.4", "name": "Coordinate geometry (גאומטריה אנליטית)" },
+        { "id": "4.5", "name": "Vectors in 2D and 3D (וקטורים במישור ובמרחב)" },
+        { "id": "4.6", "name": "Lines and planes (ישרים ומישורים)" }
+      ],
+      "commonMistakes": [
+        "Confusing congruence and similarity criteria",
+        "Incorrect use of circle theorems",
+        "Forgetting to verify solutions in coordinate geometry"
+      ]
+    },
+    {
+      "id": "5",
+      "name": "Trigonometry (טריגונומטריה)",
+      "nameHebrew": "טריגונומטריה",
+      "hours": 35,
+      "subtopics": [
+        { "id": "5.1", "name": "Basic trigonometric ratios (יחסים טריגונומטריים בסיסיים)" },
+        { "id": "5.2", "name": "Trigonometric identities (זהויות טריגונומטריות)" },
+        { "id": "5.3", "name": "Trigonometric equations (משוואות טריגונומטריות)" },
+        { "id": "5.4", "name": "Law of sines and cosines (משפט הסינוסים והקוסינוסים)" },
+        { "id": "5.5", "name": "Area formulas (נוסחאות שטח)" }
+      ],
+      "commonMistakes": [
+        "Forgetting all solutions in given interval",
+        "Incorrect use of inverse trigonometric functions",
+        "Ambiguous case in law of sines"
+      ]
+    },
+    {
+      "id": "6",
+      "name": "Probability and Statistics (הסתברות וסטטיסטיקה)",
+      "nameHebrew": "הסתברות וסטטיסטיקה",
+      "hours": 30,
+      "subtopics": [
+        { "id": "6.1", "name": "Combinatorics - permutations and combinations (קומבינטוריקה)" },
+        { "id": "6.2", "name": "Basic probability (הסתברות בסיסית)" },
+        { "id": "6.3", "name": "Conditional probability (הסתברות מותנית)" },
+        { "id": "6.4", "name": "Random variables (משתנים מקריים)" },
+        { "id": "6.5", "name": "Binomial distribution (התפלגות בינומית)" },
+        { "id": "6.6", "name": "Normal distribution (התפלגות נורמלית)" }
+      ],
+      "commonMistakes": [
+        "Confusing permutations and combinations",
+        "Forgetting to consider all cases",
+        "Incorrect use of conditional probability formula"
+      ]
+    }
+  ],
+  "commandTermsSubset": [
+    "פתור (Solve)", "חשב (Calculate)", "הוכח (Prove)", "מצא (Find)",
+    "הסבר (Explain)", "בדוק (Check)", "שרטט (Sketch)", "קבע (Determine)",
+    "נמק (Justify)", "השווה (Compare)"
+  ],
+  "examTips": [
+    "Always show all your work - partial credit is given for correct methodology",
+    "Check your answers by substituting back into the original equation",
+    "Draw clear, labeled diagrams for geometry problems",
+    "Read all questions in Part B before choosing which to answer",
+    "Manage your time - don't spend too long on one question",
+    "Write clearly and organize your solution in logical steps",
+    "State formulas before using them"
+  ],
+  "formulaSheetTopics": [
+    "Quadratic formula",
+    "Derivative rules",
+    "Integration rules",
+    "Trigonometric identities",
+    "Area and volume formulas",
+    "Probability formulas"
+  ]
+}

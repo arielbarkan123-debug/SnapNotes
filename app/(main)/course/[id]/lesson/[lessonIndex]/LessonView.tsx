@@ -10,8 +10,6 @@ import ProgressBar from '@/components/lesson/ProgressBar'
 import StepContent from '@/components/lesson/StepContent'
 import QuestionStep from '@/components/lesson/QuestionStep'
 import { useFunnelTracking } from '@/lib/analytics'
-import { usePrerequisiteCheck } from '@/hooks'
-import { PrerequisiteCheck } from '@/components/gaps'
 
 // Dynamic imports for components not needed immediately
 const LessonComplete = dynamic(() => import('@/components/lesson/LessonComplete'), {
@@ -108,18 +106,6 @@ export default function LessonView({
     }
     return count
   }, [answers])
-
-  // Prerequisite check for knowledge gaps
-  const {
-    gaps: prerequisiteGaps,
-    shouldShowCheck: showPrerequisiteCheck,
-    dismissCheck: handleDismissPrerequisiteCheck,
-    isLoading: _isCheckingPrerequisites,
-  } = usePrerequisiteCheck({
-    courseId: course.id,
-    lessonIndex,
-    enabled: currentStep === 0, // Only check on first step
-  })
 
   // Help context for floating help button
   const helpContext: HelpContext = useMemo(() => {
@@ -744,18 +730,6 @@ export default function LessonView({
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
       />
-
-      {/* Prerequisite Check Modal */}
-      {showPrerequisiteCheck && prerequisiteGaps.length > 0 && (
-        <PrerequisiteCheck
-          gaps={prerequisiteGaps}
-          courseId={course.id}
-          lessonIndex={lessonIndex}
-          lessonTitle={lesson.title}
-          onContinue={handleDismissPrerequisiteCheck}
-          onClose={handleDismissPrerequisiteCheck}
-        />
-      )}
     </div>
   )
 }
