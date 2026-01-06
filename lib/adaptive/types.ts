@@ -133,6 +133,7 @@ export interface AnswerRecord {
   responseTimeMs?: number
   questionDifficulty?: number
   conceptId?: string
+  usedHint?: boolean
 }
 
 /**

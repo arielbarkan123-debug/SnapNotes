@@ -14,5 +14,8 @@
   "noLessonsAvailable": "No lessons available yet.",
   "lessonOf": "Lesson {current} of {total}",
   "stepsRemaining": "{count} steps remaining",
-  "stepRemaining": "{count} step remaining"
+  "stepRemaining": "{count} step remaining",
+  "generatingLessons": "Generating more lessons...",
+  "generatingProgress": "{ready} of {total} lessons ready",
+  "generating": "Generating..."
 }

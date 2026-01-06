@@ -14,5 +14,8 @@
   "noLessonsAvailable": "אין שיעורים זמינים עדיין.",
   "lessonOf": "שיעור {current} מתוך {total}",
   "stepsRemaining": "{count} צעדים נותרו",
-  "stepRemaining": "צעד {count} נותר"
+  "stepRemaining": "צעד {count} נותר",
+  "generatingLessons": "מייצר שיעורים נוספים...",
+  "generatingProgress": "{ready} מתוך {total} שיעורים מוכנים",
+  "generating": "מייצר..."
 }

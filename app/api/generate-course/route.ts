@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { CourseInsert } from '@/types'
+import { CourseInsert, LessonIntensityMode } from '@/types'
 import {
   generateCourseFromImage,
   generateCourseFromMultipleImages,
   generateCourseFromDocument,
   generateCourseFromText,
+  generateInitialCourse,
   ClaudeAPIError,
   getUserFriendlyError,
 } from '@/lib/ai'
@@ -21,7 +22,9 @@ import { generateCourseImage } from '@/lib/ai/image-generation'
 import { extractAndStoreConcepts } from '@/lib/concepts'
 import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
-import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
+import { checkRateLimit, RATE_LIMITS, getIdentifier } from '@/lib/rate-limit'
+import { validateLearningObjectives, type LearningObjective } from '@/lib/curriculum/learning-objectives'
+import { scoreExtraction, type ExtractionConfidence } from '@/lib/extraction/confidence-scorer'
 
 // ============================================================================
 // Route Configuration
@@ -48,6 +51,8 @@ interface GenerateCourseRequest {
   textContent?: string
   /** Optional user-provided course title */
   title?: string
+  /** Lesson intensity mode: quick (10-15 min), standard (20-30 min), deep_practice (45-60 min) */
+  intensityMode?: LessonIntensityMode
 }
 
 type SourceType = 'image' | 'pdf' | 'pptx' | 'docx' | 'text'
@@ -56,7 +61,7 @@ type SourceType = 'image' | 'pdf' | 'pptx' | 'docx' | 'text'
 type StreamMessage =
   | { type: 'heartbeat'; timestamp: number }
   | { type: 'progress'; stage: string; percent: number }
-  | { type: 'success'; courseId: string; cardsGenerated: number; imagesProcessed: number; sourceType: SourceType }
+  | { type: 'success'; courseId: string; cardsGenerated: number; imagesProcessed: number; sourceType: SourceType; generationStatus?: 'complete' | 'partial'; lessonsReady?: number; totalLessons?: number }
   | { type: 'error'; error: string; code: string; retryable: boolean }
 
 // ============================================================================
@@ -182,7 +187,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         return
       }
 
-      const { imageUrl, imageUrls, documentContent, documentUrl, textContent, title } = body
+      const { imageUrl, imageUrls, documentContent, documentUrl, textContent, title, intensityMode } = body
 
       // 3. Determine source type and validate input
       let sourceType: SourceType = 'image'
@@ -267,7 +272,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         if (sourceType === 'text' && textContent) {
           // Text-based generation - use text directly
           sendMessage({ type: 'progress', stage: 'Analyzing your text', percent: 30 })
-          const result = await generateCourseFromText(textContent, title, userContext)
+          const result = await generateCourseFromText(textContent, title, userContext, intensityMode)
           generatedCourse = result.generatedCourse
           extractedContent = textContent // Use the user's text as extracted content
 
@@ -281,7 +286,7 @@ export async function POST(request: NextRequest): Promise<Response> {
             // Web image search failed, continue without images
           }
         } else if (documentContent) {
-          // Document-based generation - check for extracted images
+          // Document-based generation - use PROGRESSIVE generation for fast response
           let imageUrls: string[] = []
 
           sendMessage({ type: 'progress', stage: 'Processing document', percent: 30 })
@@ -306,24 +311,34 @@ export async function POST(request: NextRequest): Promise<Response> {
             }
           }
 
-          sendMessage({ type: 'progress', stage: 'Generating course content', percent: 45 })
+          sendMessage({ type: 'progress', stage: 'Generating course content (fast mode)', percent: 45 })
 
-          // Generate course with image information
-          const result = await generateCourseFromDocument(documentContent, title, imageUrls, userContext)
+          // Use PROGRESSIVE generation - first 2 lessons + outline (fast ~30s)
+          // Remaining lessons will be generated in background by /api/generate-course/continue
+          const result = await generateInitialCourse(documentContent, title, imageUrls, userContext, intensityMode)
           generatedCourse = result.generatedCourse
-          extractedContent = documentContent.content // Use the already extracted content
+          extractedContent = documentContent.content
+
+          // Store progressive generation metadata for continuation
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ;(generatedCourse as any)._progressiveMetadata = {
+            lessonOutline: result.lessonOutline,
+            documentSummary: result.documentSummary,
+            totalLessons: result.totalLessons,
+            lessonsReady: result.generatedCourse.lessons.length,
+          }
         } else if (urls.length === 1) {
           // Single image - the uploaded image itself can be referenced
           _courseImageUrls = urls
           sendMessage({ type: 'progress', stage: 'Analyzing your image', percent: 35 })
-          const result = await generateCourseFromImage(urls[0], title, userContext)
+          const result = await generateCourseFromImage(urls[0], title, userContext, intensityMode)
           generatedCourse = result.generatedCourse
           extractedContent = result.extractionRawText
         } else {
           // Multiple images - all uploaded images can be referenced
           _courseImageUrls = urls
           sendMessage({ type: 'progress', stage: 'Analyzing your images', percent: 35 })
-          const result = await generateCourseFromMultipleImages(urls, title, userContext)
+          const result = await generateCourseFromMultipleImages(urls, title, userContext, intensityMode)
           generatedCourse = result.generatedCourse
           extractedContent = result.extractionRawText
         }
@@ -344,15 +359,61 @@ export async function POST(request: NextRequest): Promise<Response> {
         return
       }
 
-      sendMessage({ type: 'progress', stage: 'Saving course', percent: 75 })
+      sendMessage({ type: 'progress', stage: 'Processing results', percent: 75 })
 
-      // 6. Save to database
+      // 6a. Parse and validate learning objectives from AI response
+      let learningObjectives: LearningObjective[] = []
+      if (generatedCourse.learningObjectives && Array.isArray(generatedCourse.learningObjectives)) {
+        const validationResult = validateLearningObjectives(generatedCourse.learningObjectives)
+        // Filter to only valid objectives
+        learningObjectives = generatedCourse.learningObjectives.filter(lo =>
+          validationResult.results[lo.id]?.isValid === true
+        )
+        // Log validation summary for debugging
+        if (validationResult.summary.errorCount > 0) {
+          console.warn('Learning objectives validation:', validationResult.summary)
+        }
+      }
+
+      // 6b. Score extraction confidence
+      const hasFormulas = /\$.*\$|\\[.*\\]|\d+\s*[+\-*/÷×=]\s*\d+/i.test(extractedContent)
+      const hasDiagrams = /diagram|figure|chart|graph|image|\[.*\]/i.test(extractedContent)
+      const extractionStartTime = Date.now()
+
+      const extractionConfidence: ExtractionConfidence = scoreExtraction(extractedContent, {
+        hasFormulas,
+        hasDiagrams,
+        extractionMethod: documentContent ? 'pdf_parse' : sourceType === 'text' ? 'ocr' : 'vision',
+        processingTimeMs: extractionStartTime - Date.now(),
+        pageCount: documentContent?.metadata?.pageCount,
+      })
+
+      sendMessage({ type: 'progress', stage: 'Saving course', percent: 80 })
+
+      // Log extraction confidence for monitoring
+      console.log('[GenerateCourse] Extraction confidence:', extractionConfidence.overall)
+      console.log('[GenerateCourse] Learning objectives:', learningObjectives.length)
+
+      // 6c. Save to database
+      // Check for progressive generation metadata
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const progressiveMetadata = (generatedCourse as any)._progressiveMetadata
+      const isProgressiveGeneration = !!progressiveMetadata
+
       const courseData: CourseInsert = {
         user_id: user.id,
         title: generatedCourse.title,
         extracted_content: extractedContent,
         generated_course: generatedCourse,
         source_type: sourceType,
+        // Intensity mode for lesson structure
+        intensity_mode: intensityMode || 'standard',
+        // Progressive generation fields
+        generation_status: isProgressiveGeneration ? 'partial' : 'complete',
+        lessons_ready: isProgressiveGeneration ? progressiveMetadata.lessonsReady : generatedCourse.lessons?.length || 0,
+        total_lessons: isProgressiveGeneration ? progressiveMetadata.totalLessons : generatedCourse.lessons?.length || 0,
+        document_summary: isProgressiveGeneration ? progressiveMetadata.documentSummary : null,
+        lesson_outline: isProgressiveGeneration ? progressiveMetadata.lessonOutline : null,
       }
 
       // Set source-specific fields
@@ -431,7 +492,11 @@ export async function POST(request: NextRequest): Promise<Response> {
         courseId: course.id,
         cardsGenerated,
         imagesProcessed: documentContent ? 0 : urls.length,
-        sourceType
+        sourceType,
+        // Progressive generation info - client will trigger /api/generate-course/continue if partial
+        generationStatus: isProgressiveGeneration ? 'partial' : 'complete',
+        lessonsReady: isProgressiveGeneration ? progressiveMetadata.lessonsReady : undefined,
+        totalLessons: isProgressiveGeneration ? progressiveMetadata.totalLessons : undefined,
       })
       stopHeartbeat()
       closeStream()

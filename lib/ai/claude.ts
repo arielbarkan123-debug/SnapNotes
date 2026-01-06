@@ -15,6 +15,10 @@ import {
   getCombinedAnalysisPrompt,
   getDocumentCoursePrompt,
   getTextCoursePrompt,
+  getExamCoursePrompt,
+  getInitialCoursePrompt,
+  getContinuationPrompt,
+  isExamContent,
   cleanJsonResponse,
   validateExtractedContent,
   formatExtractedContentForPrompt,
@@ -22,7 +26,8 @@ import {
   UserLearningContext,
 } from './prompts'
 import type { ExtractedDocument } from '@/lib/documents'
-import { GeneratedCourse } from '@/types'
+import { GeneratedCourse, Lesson, LessonOutline, LessonIntensityMode } from '@/types'
+import { filterForbiddenContent } from './course-validator'
 
 // ============================================================================
 // Configuration
@@ -32,7 +37,7 @@ import { GeneratedCourse } from '@/types'
 const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514'
 const AI_MODEL_FAST = process.env.ANTHROPIC_MODEL_FAST || 'claude-3-5-haiku-20241022'
 const MAX_TOKENS_EXTRACTION = 4096
-const MAX_TOKENS_GENERATION = 8192
+const MAX_TOKENS_GENERATION = 16384  // Increased for large documents (31 slides needs more tokens)
 const MAX_IMAGES_PER_REQUEST = 5 // Claude's recommended limit for optimal performance
 const API_TIMEOUT_MS = 210000 // 3.5 minute timeout for AI operations (documents need more time)
 
@@ -155,6 +160,165 @@ async function withRetry<T>(
 }
 
 // ============================================================================
+// JSON Extraction Utility
+// ============================================================================
+
+/**
+ * Extracts JSON from AI response, handling various formats:
+ * - Plain JSON
+ * - JSON wrapped in markdown code blocks
+ * - JSON with extra text before/after
+ * - JSON with thinking tags
+ */
+function extractJsonFromResponse(text: string): string {
+  let cleaned = text.trim()
+
+  // Remove thinking tags if present (Opus sometimes uses these)
+  cleaned = cleaned.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
+  cleaned = cleaned.replace(/<antThinking>[\s\S]*?<\/antThinking>/gi, '')
+
+  // Remove markdown code blocks
+  cleaned = cleaned.replace(/^```json\s*/i, '')
+  cleaned = cleaned.replace(/^```\s*/i, '')
+  cleaned = cleaned.replace(/\s*```$/i, '')
+
+  // Try to find JSON object in the response
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
+  if (jsonMatch) {
+    cleaned = jsonMatch[0]
+  }
+
+  // Clean up any remaining issues
+  cleaned = cleaned.trim()
+
+  return cleaned
+}
+
+/**
+ * Attempts to repair truncated JSON by closing open brackets and braces.
+ * This handles cases where AI response is cut off due to max_tokens.
+ */
+function repairTruncatedJson(json: string): string {
+  let repaired = json.trim()
+
+  // Count open brackets and braces
+  let openBraces = 0
+  let openBrackets = 0
+  let inString = false
+  let escape = false
+
+  for (const char of repaired) {
+    if (escape) {
+      escape = false
+      continue
+    }
+    if (char === '\\') {
+      escape = true
+      continue
+    }
+    if (char === '"') {
+      inString = !inString
+      continue
+    }
+    if (inString) continue
+
+    if (char === '{') openBraces++
+    else if (char === '}') openBraces--
+    else if (char === '[') openBrackets++
+    else if (char === ']') openBrackets--
+  }
+
+  // If we're in a string, try to close it
+  if (inString) {
+    repaired += '"'
+  }
+
+  // Remove trailing comma if present (common in truncated arrays/objects)
+  repaired = repaired.replace(/,\s*$/, '')
+
+  // Close open brackets and braces
+  while (openBrackets > 0) {
+    repaired += ']'
+    openBrackets--
+  }
+  while (openBraces > 0) {
+    repaired += '}'
+    openBraces--
+  }
+
+  console.log(`[repairTruncatedJson] Added ${json.length !== repaired.length ? repaired.length - json.length : 0} closing chars`)
+
+  return repaired
+}
+
+// ============================================================================
+// Parallel Web Image Fetching
+// ============================================================================
+
+interface WebImageQuery {
+  lessonIndex: number
+  stepIndex: number
+  query: string
+  alt: string
+}
+
+/**
+ * Fetches web images in parallel instead of sequentially.
+ * This reduces image fetch time from 4-5 minutes to ~20 seconds.
+ */
+async function fetchWebImagesParallel(
+  webImageQueries: WebImageQuery[],
+  course: GeneratedCourse,
+  subject: string
+): Promise<void> {
+  if (webImageQueries.length === 0) return
+
+  const { searchEducationalImages } = await import('@/lib/images')
+
+  // Process 20 images at a time for faster finalization
+  const BATCH_SIZE = 20
+  const batches: WebImageQuery[][] = []
+
+  for (let i = 0; i < webImageQueries.length; i += BATCH_SIZE) {
+    batches.push(webImageQueries.slice(i, i + BATCH_SIZE))
+  }
+
+  console.log(`[fetchWebImagesParallel] Fetching ${webImageQueries.length} images in ${batches.length} batches`)
+
+  for (const batch of batches) {
+    const results = await Promise.all(
+      batch.map(async (query) => {
+        try {
+          const searchQuery = `${query.query} ${subject}`.slice(0, 100)
+          const webImages = await searchEducationalImages(searchQuery)
+          return { query, webImages }
+        } catch {
+          return { query, webImages: [] }
+        }
+      })
+    )
+
+    // Apply results to course steps
+    for (const { query, webImages } of results) {
+      if (webImages.length > 0) {
+        const webImage = webImages[0]
+        const step = course.lessons[query.lessonIndex]?.steps[query.stepIndex]
+        if (step) {
+          step.imageUrl = webImage.url
+          step.imageAlt = query.alt
+          step.imageSource = 'web'
+          step.imageCaption = query.alt
+          step.imageCredit = webImage.credit
+          step.imageCreditUrl = webImage.creditUrl
+        }
+      }
+    }
+  }
+
+  console.log(`[fetchWebImagesParallel] Done fetching images`)
+}
+
+// ============================================================================
 // Security: Input Sanitization
 // ============================================================================
 
@@ -194,7 +358,16 @@ export class ClaudeAPIError extends Error {
   }
 
   static fromAnthropicError(error: unknown): ClaudeAPIError {
+    // Log the actual error for debugging
+    console.error('[ClaudeAPIError] Raw error:', error instanceof Error ? error.message : error)
+
     if (error instanceof Anthropic.APIError) {
+      console.error('[ClaudeAPIError] Anthropic API error:', {
+        status: error.status,
+        message: error.message,
+        name: error.name
+      })
+
       if (error.status === 429) {
         return new ClaudeAPIError(
           'API rate limit exceeded. Please wait a moment and try again.',
@@ -203,9 +376,23 @@ export class ClaudeAPIError extends Error {
         )
       }
       if (error.status === 400) {
+        // Check actual error message to determine type
+        const errorMessage = error.message || ''
+        const isImageError = errorMessage.toLowerCase().includes('image') ||
+                            errorMessage.toLowerCase().includes('media')
+
+        if (isImageError) {
+          return new ClaudeAPIError(
+            'Could not process the image. The image may be corrupted or in an unsupported format.',
+            'INVALID_IMAGE',
+            400
+          )
+        }
+
+        // For other 400 errors, preserve the original message
         return new ClaudeAPIError(
-          'Could not process the image. The image may be corrupted or in an unsupported format.',
-          'INVALID_IMAGE',
+          `Bad request: ${errorMessage || 'Invalid request format'}`,
+          'API_ERROR',
           400
         )
       }
@@ -417,6 +604,7 @@ export async function analyzeNotebookImage(imageUrl: string): Promise<AnalysisRe
  * @param userTitle - Optional user-provided title
  * @param imageUrls - Optional array of image URLs available for the course
  * @param userContext - Optional user learning context for personalization
+ * @param intensityMode - Lesson intensity mode (quick, standard, deep_practice)
  * @returns Generated course object and raw response text
  * @throws ClaudeAPIError on failure
  */
@@ -424,7 +612,8 @@ export async function generateStudyCourse(
   extractedContent: ExtractedContent,
   userTitle?: string,
   imageUrls?: string[],
-  userContext?: UserLearningContext
+  userContext?: UserLearningContext,
+  intensityMode?: LessonIntensityMode
 ): Promise<CourseGenerationResult> {
   const client = getAnthropicClient()
 
@@ -433,7 +622,7 @@ export async function generateStudyCourse(
   const imageCount = imageUrls?.length || 0
   // SECURITY: Sanitize user input before passing to prompt
   const safeTitle = sanitizeUserInput(userTitle)
-  const { systemPrompt, userPrompt } = getCourseGenerationPrompt(formattedContent, safeTitle, imageCount, userContext)
+  const { systemPrompt, userPrompt } = getCourseGenerationPrompt(formattedContent, safeTitle, imageCount, userContext, undefined, intensityMode)
 
   try {
     const response = await withRetry(
@@ -493,32 +682,9 @@ export async function generateStudyCourse(
     const { normalizedCourse, webImageQueries } = normalizeGeneratedCourse(course, imageUrls)
     course = normalizedCourse
 
-    // Fetch web images if needed
-    if (webImageQueries.length > 0) {
-      const { searchEducationalImages } = await import('@/lib/images')
-      const subject = course.title.split(':')[0].trim()
-
-      for (const query of webImageQueries) {
-        try {
-          const searchQuery = `${query.query} ${subject}`
-          const webImages = await searchEducationalImages(searchQuery.slice(0, 100))
-          if (webImages.length > 0) {
-            const webImage = webImages[0]
-            const step = course.lessons[query.lessonIndex]?.steps[query.stepIndex]
-            if (step) {
-              step.imageUrl = webImage.url
-              step.imageAlt = query.alt
-              step.imageSource = 'web'
-              step.imageCaption = query.alt
-              step.imageCredit = webImage.credit
-              step.imageCreditUrl = webImage.creditUrl
-            }
-          }
-        } catch {
-          // Continue without this image
-        }
-      }
-    }
+    // Fetch web images in parallel (much faster than sequential)
+    const subject = course.title.split(':')[0].trim()
+    await fetchWebImagesParallel(webImageQueries, course, subject)
 
     return { course, rawText }
   } catch (error) {
@@ -535,13 +701,15 @@ export async function generateStudyCourse(
  * @param imageUrl - URL of the image to process
  * @param userTitle - Optional user-provided title
  * @param userContext - Optional user learning context for personalization
+ * @param intensityMode - Lesson intensity mode (quick, standard, deep_practice)
  * @returns Both extracted content and generated course
  * @throws ClaudeAPIError on failure
  */
 export async function generateCourseFromImage(
   imageUrl: string,
   userTitle?: string,
-  userContext?: UserLearningContext
+  userContext?: UserLearningContext,
+  intensityMode?: LessonIntensityMode
 ): Promise<FullPipelineResult> {
   // Step 1: Extract content from image
   const { extractedContent, rawText: extractionRawText } = await analyzeNotebookImage(imageUrl)
@@ -551,7 +719,8 @@ export async function generateCourseFromImage(
     extractedContent,
     userTitle,
     undefined,
-    userContext
+    userContext,
+    intensityMode
   )
 
   return {
@@ -650,32 +819,9 @@ export async function generateCourseFromImageSingleCall(
     const { normalizedCourse, webImageQueries } = normalizeGeneratedCourse(course)
     course = normalizedCourse
 
-    // Fetch web images if requested
-    if (webImageQueries.length > 0) {
-      const { searchEducationalImages } = await import('@/lib/images')
-      const subject = course.title.split(':')[0].trim()
-
-      for (const query of webImageQueries) {
-        try {
-          const searchQuery = `${query.query} ${subject}`
-          const webImages = await searchEducationalImages(searchQuery.slice(0, 100))
-          if (webImages.length > 0) {
-            const webImage = webImages[0]
-            const step = course.lessons[query.lessonIndex]?.steps[query.stepIndex]
-            if (step) {
-              step.imageUrl = webImage.url
-              step.imageAlt = query.alt
-              step.imageSource = 'web'
-              step.imageCaption = query.alt
-              step.imageCredit = webImage.credit
-              step.imageCreditUrl = webImage.creditUrl
-            }
-          }
-        } catch {
-          // Continue without this image
-        }
-      }
-    }
+    // Fetch web images in parallel (much faster than sequential)
+    const subject = course.title.split(':')[0].trim()
+    await fetchWebImagesParallel(webImageQueries, course, subject)
 
     return { course, rawText }
   } catch (error) {
@@ -902,13 +1048,15 @@ async function analyzeImagesInBatches(imageUrls: string[]): Promise<AnalysisResu
  * @param imageUrls - Array of URLs of images to process
  * @param userTitle - Optional user-provided title
  * @param userContext - Optional user learning context for personalization
+ * @param intensityMode - Lesson intensity mode (quick, standard, deep_practice)
  * @returns Both extracted content and generated course
  * @throws ClaudeAPIError on failure
  */
 export async function generateCourseFromMultipleImages(
   imageUrls: string[],
   userTitle?: string,
-  userContext?: UserLearningContext
+  userContext?: UserLearningContext,
+  intensityMode?: LessonIntensityMode
 ): Promise<FullPipelineResult> {
   // Step 1: Extract content from all images
   const { extractedContent, rawText: extractionRawText } =
@@ -916,7 +1064,7 @@ export async function generateCourseFromMultipleImages(
 
   // Step 2: Generate course from combined extracted content
   const { course: generatedCourse, rawText: generationRawText } =
-    await generateStudyCourse(extractedContent, userTitle, undefined, userContext)
+    await generateStudyCourse(extractedContent, userTitle, undefined, userContext, intensityMode)
 
   return {
     extractedContent,
@@ -943,6 +1091,7 @@ export interface DocumentCourseResult {
  * @param userTitle - Optional user-provided title
  * @param imageUrls - Optional array of image URLs extracted from the document
  * @param userContext - Optional user learning context for personalization
+ * @param intensityMode - Lesson intensity mode (quick, standard, deep_practice)
  * @returns Generated course and raw response text
  * @throws ClaudeAPIError on failure
  */
@@ -950,13 +1099,25 @@ export async function generateCourseFromDocument(
   document: ExtractedDocument,
   userTitle?: string,
   imageUrls?: string[],
-  userContext?: UserLearningContext
+  userContext?: UserLearningContext,
+  intensityMode?: LessonIntensityMode
 ): Promise<DocumentCourseResult> {
   const client = getAnthropicClient()
   const imageCount = imageUrls?.length || 0
   // SECURITY: Sanitize user input before passing to prompt
   const safeTitle = sanitizeUserInput(userTitle)
-  const { systemPrompt, userPrompt } = getDocumentCoursePrompt(document, safeTitle, imageCount, userContext)
+
+  // Check if content is exam-based and use appropriate prompt
+  const allContent = document.sections.map(s => s.content).join('\n')
+  const isExam = isExamContent(allContent)
+
+  // Use exam-specific prompt for exam content (derives lessons from actual exam questions)
+  // Use regular document prompt for educational materials (lectures, notes, etc.)
+  const { systemPrompt, userPrompt } = isExam
+    ? getExamCoursePrompt(document, safeTitle, imageCount, userContext)
+    : getDocumentCoursePrompt(document, safeTitle, imageCount, userContext, undefined, intensityMode)
+
+  console.log(`[generateCourseFromDocument] Using ${isExam ? 'EXAM' : 'DOCUMENT'} prompt for content`)
 
   try {
     const response = await withRetry(
@@ -982,13 +1143,22 @@ export async function generateCourseFromDocument(
 
     const rawText = textContent.text
 
-    // Parse JSON response
-    const jsonText = cleanJsonResponse(rawText)
+    // Log raw response length for debugging
+    console.log(`[generateCourseFromDocument] Raw response length: ${rawText.length} characters`)
+    console.log(`[generateCourseFromDocument] First 500 chars: ${rawText.substring(0, 500)}`)
+
+    // Parse JSON response with improved extraction
+    const jsonText = extractJsonFromResponse(rawText)
     let course: GeneratedCourse
 
     try {
       course = JSON.parse(jsonText)
-    } catch {
+    } catch (parseError) {
+      // Log the actual error and response for debugging
+      console.error(`[generateCourseFromDocument] JSON parse error:`, parseError)
+      console.error(`[generateCourseFromDocument] Cleaned text (first 1000 chars): ${jsonText.substring(0, 1000)}`)
+      console.error(`[generateCourseFromDocument] Cleaned text (last 500 chars): ${jsonText.substring(Math.max(0, jsonText.length - 500))}`)
+
       throw new ClaudeAPIError(
         'Failed to parse course structure as JSON. The AI response format was unexpected.',
         'PARSE_ERROR'
@@ -1014,36 +1184,9 @@ export async function generateCourseFromDocument(
     const { normalizedCourse, webImageQueries } = normalizeGeneratedCourse(course, imageUrls)
     course = normalizedCourse
 
-    // Fetch web images for any webImageQuery requests
-    if (webImageQueries.length > 0) {
-      const { searchEducationalImages } = await import('@/lib/images')
-
-      // Use course title as subject context for better searches
-      const subject = course.title.split(':')[0].trim()
-
-      for (const query of webImageQueries) {
-        try {
-          // Search with the specific query + subject context
-          const searchQuery = `${query.query} ${subject}`
-          const webImages = await searchEducationalImages(searchQuery.slice(0, 100)) // Limit query length
-
-          if (webImages.length > 0) {
-            const webImage = webImages[0]
-            const step = course.lessons[query.lessonIndex]?.steps[query.stepIndex]
-            if (step) {
-              step.imageUrl = webImage.url
-              step.imageAlt = query.alt
-              step.imageSource = 'web'
-              step.imageCaption = query.alt
-              step.imageCredit = webImage.credit
-              step.imageCreditUrl = webImage.creditUrl
-            }
-          }
-        } catch {
-          // Continue without this image
-        }
-      }
-    }
+    // Fetch web images in parallel (much faster than sequential)
+    const subject = course.title.split(':')[0].trim()
+    await fetchWebImagesParallel(webImageQueries, course, subject)
 
     return {
       generatedCourse: course,
@@ -1073,13 +1216,15 @@ export interface TextCourseResult {
  * @param textContent - Plain text content provided by the user
  * @param userTitle - Optional user-provided title
  * @param userContext - Optional user learning context for personalization
+ * @param intensityMode - Lesson intensity mode (quick, standard, deep_practice)
  * @returns Generated course and raw response text
  * @throws ClaudeAPIError on failure
  */
 export async function generateCourseFromText(
   textContent: string,
   userTitle?: string,
-  userContext?: UserLearningContext
+  userContext?: UserLearningContext,
+  intensityMode?: LessonIntensityMode
 ): Promise<TextCourseResult> {
   // Validate text content
   if (!textContent || textContent.trim().length === 0) {
@@ -1100,7 +1245,17 @@ export async function generateCourseFromText(
   const client = getAnthropicClient()
   // SECURITY: Sanitize user input before passing to prompt
   const safeTitle = sanitizeUserInput(userTitle)
-  const { systemPrompt, userPrompt } = getTextCoursePrompt(textContent, safeTitle, userContext)
+
+  // Check if content is exam-based and use appropriate prompt
+  const isExam = isExamContent(textContent)
+
+  // Use exam-specific prompt for exam content (derives lessons from actual exam questions)
+  // Use regular text prompt for general content (topics, notes, etc.)
+  const { systemPrompt, userPrompt } = isExam
+    ? getExamCoursePrompt(textContent, safeTitle, undefined, userContext)
+    : getTextCoursePrompt(textContent, safeTitle, userContext, undefined, intensityMode)
+
+  console.log(`[generateCourseFromText] Using ${isExam ? 'EXAM' : 'TEXT'} prompt for content (intensity: ${intensityMode || 'standard'})`)
 
   try {
     const response = await withRetry(
@@ -1158,32 +1313,9 @@ export async function generateCourseFromText(
     const { normalizedCourse, webImageQueries } = normalizeGeneratedCourse(course)
     course = normalizedCourse
 
-    // Fetch web images if requested (text courses often need web images)
-    if (webImageQueries.length > 0) {
-      const { searchEducationalImages } = await import('@/lib/images')
-      const subject = course.title.split(':')[0].trim()
-
-      for (const query of webImageQueries) {
-        try {
-          const searchQuery = `${query.query} ${subject}`
-          const webImages = await searchEducationalImages(searchQuery.slice(0, 100))
-          if (webImages.length > 0) {
-            const webImage = webImages[0]
-            const step = course.lessons[query.lessonIndex]?.steps[query.stepIndex]
-            if (step) {
-              step.imageUrl = webImage.url
-              step.imageAlt = query.alt
-              step.imageSource = 'web'
-              step.imageCaption = query.alt
-              step.imageCredit = webImage.credit
-              step.imageCreditUrl = webImage.creditUrl
-            }
-          }
-        } catch {
-          // Continue without this image
-        }
-      }
-    }
+    // Fetch web images in parallel (much faster than sequential)
+    const subject = course.title.split(':')[0].trim()
+    await fetchWebImagesParallel(webImageQueries, course, subject)
 
     return {
       generatedCourse: course,
@@ -1271,7 +1403,10 @@ function normalizeGeneratedCourse(
     })),
   }
 
-  return { normalizedCourse, webImageQueries }
+  // Apply post-generation content validation to filter forbidden exam logistics
+  const filteredCourse = filterForbiddenContent(normalizedCourse)
+
+  return { normalizedCourse: filteredCourse, webImageQueries }
 }
 
 /**
@@ -1309,6 +1444,263 @@ export function getUserFriendlyError(error: unknown): string {
     }
   }
   return 'An unexpected error occurred. Please try again.'
+}
+
+// ============================================================================
+// Progressive Course Generation
+// Fast initial (2 lessons) + background continuation
+// ============================================================================
+
+/**
+ * Result from initial fast course generation
+ */
+export interface InitialCourseResult {
+  /** Partial course with only first 2 lessons */
+  generatedCourse: GeneratedCourse
+  /** Full outline of all planned lessons */
+  lessonOutline: LessonOutline[]
+  /** Document summary for continuation calls */
+  documentSummary: string
+  /** Total number of planned lessons */
+  totalLessons: number
+  /** Raw AI response text */
+  generationRawText: string
+}
+
+/**
+ * Result from continuation lesson generation
+ */
+export interface ContinuationResult {
+  /** Newly generated lessons */
+  newLessons: Lesson[]
+  /** Raw AI response text */
+  generationRawText: string
+}
+
+/**
+ * Generates initial course structure with first 2 lessons only.
+ * Returns outline + summary for background continuation.
+ * This is the FAST path - returns in ~30 seconds instead of 2-5 minutes.
+ *
+ * @param document - ExtractedDocument from PDF, PPTX, or DOCX
+ * @param userTitle - Optional user-provided title
+ * @param imageUrls - Optional array of image URLs extracted from document
+ * @param userContext - Optional user learning context
+ * @param intensityMode - Lesson intensity mode (quick, standard, deep_practice)
+ * @returns Partial course (2 lessons), full outline, and document summary
+ */
+export async function generateInitialCourse(
+  document: ExtractedDocument,
+  userTitle?: string,
+  imageUrls?: string[],
+  userContext?: UserLearningContext,
+  intensityMode?: LessonIntensityMode
+): Promise<InitialCourseResult> {
+  const client = getAnthropicClient()
+  const imageCount = imageUrls?.length || 0
+  const safeTitle = sanitizeUserInput(userTitle)
+
+  const { systemPrompt, userPrompt } = getInitialCoursePrompt(
+    document,
+    safeTitle,
+    imageCount,
+    userContext,
+    intensityMode
+  )
+
+  console.log(`[generateInitialCourse] Starting fast initial generation`)
+
+  try {
+    const response = await withRetry(
+      () => client.messages.create({
+        model: AI_MODEL,
+        max_tokens: 16384, // Enough for 2 lessons + full outline + summary
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+      'generateInitialCourse'
+    )
+
+    const textContent = response.content.find((block) => block.type === 'text')
+    if (!textContent || textContent.type !== 'text') {
+      throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
+    }
+
+    const rawText = textContent.text
+    const stopReason = response.stop_reason
+    console.log(`[generateInitialCourse] Response length: ${rawText.length} chars, stop_reason: ${stopReason}`)
+
+    // Check if response was truncated
+    if (stopReason === 'max_tokens') {
+      console.warn(`[generateInitialCourse] Response was truncated due to max_tokens`)
+    }
+
+    let jsonText = extractJsonFromResponse(rawText)
+
+    // Try to repair truncated JSON by closing open brackets
+    if (stopReason === 'max_tokens' || !jsonText.trim().endsWith('}')) {
+      console.log(`[generateInitialCourse] Attempting JSON repair...`)
+      jsonText = repairTruncatedJson(jsonText)
+    }
+    let parsed: {
+      title: string
+      overview: string
+      learningObjectives?: any[]
+      documentSummary: string
+      lessonOutline: LessonOutline[]
+      lessons: any[]
+    }
+
+    try {
+      parsed = JSON.parse(jsonText)
+    } catch (parseError) {
+      console.error(`[generateInitialCourse] JSON parse error:`, parseError)
+      throw new ClaudeAPIError(
+        'Failed to parse initial course as JSON',
+        'PARSE_ERROR'
+      )
+    }
+
+    // Validate required fields
+    if (!parsed.title || !parsed.overview || !parsed.lessons || !parsed.lessonOutline || !parsed.documentSummary) {
+      throw new ClaudeAPIError(
+        'Initial course response missing required fields (title, overview, lessons, lessonOutline, documentSummary)',
+        'PARSE_ERROR'
+      )
+    }
+
+    // Build partial GeneratedCourse with only first 2 lessons
+    const partialCourse: GeneratedCourse = {
+      title: safeTitle || parsed.title,
+      overview: parsed.overview,
+      lessons: parsed.lessons.map((lesson: any) => ({
+        title: lesson.title || 'Untitled Lesson',
+        steps: (lesson.steps || []).map((step: any) => ({
+          type: step.type || 'explanation',
+          content: step.type === 'question' ? (step.question || step.content || '') : (step.content || ''),
+          title: step.title,
+          options: step.options,
+          correct_answer: step.correctIndex ?? step.correct_answer,
+          explanation: step.explanation,
+        })),
+      })),
+      learningObjectives: parsed.learningObjectives,
+    }
+
+    // Apply content filter
+    const filteredCourse = filterForbiddenContent(partialCourse)
+
+    console.log(`[generateInitialCourse] Generated ${filteredCourse.lessons.length} lessons, outline has ${parsed.lessonOutline.length} total`)
+
+    return {
+      generatedCourse: filteredCourse,
+      lessonOutline: parsed.lessonOutline,
+      documentSummary: parsed.documentSummary,
+      totalLessons: parsed.lessonOutline.length,
+      generationRawText: rawText,
+    }
+  } catch (error) {
+    if (error instanceof ClaudeAPIError) {
+      throw error
+    }
+    throw ClaudeAPIError.fromAnthropicError(error)
+  }
+}
+
+/**
+ * Generates continuation lessons using document summary and outline.
+ * Called in background to generate remaining lessons after initial fast response.
+ *
+ * @param documentSummary - Summary of document content (from initial generation)
+ * @param lessonOutline - Full lesson outline (from initial generation)
+ * @param previousLessons - Already generated lessons (for style consistency)
+ * @param targetLessonIndices - Which lessons to generate (0-indexed)
+ * @param userContext - Optional user learning context
+ * @returns Newly generated lessons
+ */
+export async function generateContinuationLessons(
+  documentSummary: string,
+  lessonOutline: LessonOutline[],
+  previousLessons: Lesson[],
+  targetLessonIndices: number[],
+  userContext?: UserLearningContext
+): Promise<ContinuationResult> {
+  const client = getAnthropicClient()
+
+  const { systemPrompt, userPrompt } = getContinuationPrompt(
+    documentSummary,
+    lessonOutline,
+    previousLessons,
+    targetLessonIndices,
+    userContext
+  )
+
+  console.log(`[generateContinuationLessons] Generating lessons ${targetLessonIndices.map(i => i + 1).join(', ')}`)
+
+  try {
+    const response = await withRetry(
+      () => client.messages.create({
+        model: AI_MODEL,
+        max_tokens: 8192, // 2 lessons at a time
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+      'generateContinuationLessons'
+    )
+
+    const textContent = response.content.find((block) => block.type === 'text')
+    if (!textContent || textContent.type !== 'text') {
+      throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
+    }
+
+    const rawText = textContent.text
+    console.log(`[generateContinuationLessons] Response length: ${rawText.length} chars`)
+
+    const jsonText = extractJsonFromResponse(rawText)
+    let parsed: { lessons: any[] }
+
+    try {
+      parsed = JSON.parse(jsonText)
+    } catch (parseError) {
+      console.error(`[generateContinuationLessons] JSON parse error:`, parseError)
+      throw new ClaudeAPIError(
+        'Failed to parse continuation lessons as JSON',
+        'PARSE_ERROR'
+      )
+    }
+
+    if (!parsed.lessons || !Array.isArray(parsed.lessons)) {
+      throw new ClaudeAPIError(
+        'Continuation response missing lessons array',
+        'PARSE_ERROR'
+      )
+    }
+
+    // Normalize the lessons
+    const newLessons: Lesson[] = parsed.lessons.map((lesson: any) => ({
+      title: lesson.title || 'Untitled Lesson',
+      steps: (lesson.steps || []).map((step: any) => ({
+        type: step.type || 'explanation',
+        content: step.type === 'question' ? (step.question || step.content || '') : (step.content || ''),
+        title: step.title,
+        options: step.options,
+        correct_answer: step.correctIndex ?? step.correct_answer,
+        explanation: step.explanation,
+      })),
+    }))
+
+    console.log(`[generateContinuationLessons] Generated ${newLessons.length} new lessons`)
+
+    return {
+      newLessons,
+      generationRawText: rawText,
+    }
+  } catch (error) {
+    if (error instanceof ClaudeAPIError) {
+      throw error
+    }
+    throw ClaudeAPIError.fromAnthropicError(error)
+  }
 }
 
 // ============================================================================

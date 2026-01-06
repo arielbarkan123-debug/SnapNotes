@@ -19,6 +19,9 @@ interface ProcessingState {
   retryable?: boolean
   courseId?: string
   cardsGenerated?: number
+  generationStatus?: 'complete' | 'partial'
+  lessonsReady?: number
+  totalLessons?: number
 }
 
 interface ProgressStage {
@@ -178,6 +181,9 @@ function ProcessingContent() {
   // Text params
   const textContent = searchParams.get('textContent')
 
+  // Intensity mode param
+  const intensityMode = searchParams.get('intensityMode') || 'standard'
+
   // State to hold document content loaded from sessionStorage
   const [documentContent, setDocumentContent] = useState<ExtractedDocument | null>(null)
 
@@ -320,6 +326,9 @@ function ProcessingContent() {
         requestBody.title = title
       }
 
+      // Pass intensity mode for lesson generation
+      requestBody.intensityMode = intensityMode
+
       const response = await fetch('/api/generate-course', {
         method: 'POST',
         headers: {
@@ -376,6 +385,9 @@ function ProcessingContent() {
                   status: 'success',
                   courseId: message.courseId,
                   cardsGenerated: message.cardsGenerated || 0,
+                  generationStatus: message.generationStatus || 'complete',
+                  lessonsReady: message.lessonsReady,
+                  totalLessons: message.totalLessons,
                 })
 
                 // Track course created (step 5 - final step of course creation funnel)
@@ -509,7 +521,14 @@ function ProcessingContent() {
         )}
 
         {state.status === 'success' && (
-          <SuccessView cardsGenerated={state.cardsGenerated || 0} xpAwarded={xpAwarded} t={t} />
+          <SuccessView
+            cardsGenerated={state.cardsGenerated || 0}
+            xpAwarded={xpAwarded}
+            generationStatus={state.generationStatus}
+            lessonsReady={state.lessonsReady}
+            totalLessons={state.totalLessons}
+            t={t}
+          />
         )}
 
         {state.status === 'error' && (
@@ -676,10 +695,14 @@ function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPrevie
 interface SuccessViewProps {
   cardsGenerated: number
   xpAwarded: number
+  generationStatus?: 'complete' | 'partial'
+  lessonsReady?: number
+  totalLessons?: number
   t: ReturnType<typeof useTranslations<'processing'>>
 }
 
-function SuccessView({ cardsGenerated, xpAwarded, t }: SuccessViewProps) {
+function SuccessView({ cardsGenerated, xpAwarded, generationStatus, lessonsReady, totalLessons, t }: SuccessViewProps) {
+  const isPartial = generationStatus === 'partial'
   return (
     <div className="text-center">
       {/* Success Icon */}
@@ -727,8 +750,18 @@ function SuccessView({ cardsGenerated, xpAwarded, t }: SuccessViewProps) {
         </div>
       )}
 
+      {/* Partial generation info */}
+      {isPartial && lessonsReady !== undefined && totalLessons !== undefined && (
+        <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-full">
+          <span className="text-2xl">🚀</span>
+          <span className="text-blue-700 dark:text-blue-300 font-medium">
+            {t('success.partialReady', { ready: lessonsReady, total: totalLessons })}
+          </span>
+        </div>
+      )}
+
       <p className="text-gray-500 dark:text-gray-400 mb-4">
-        {t('success.redirecting')}
+        {isPartial ? t('success.redirectingPartial') : t('success.redirecting')}
       </p>
 
       {/* Loading dots */}

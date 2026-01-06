@@ -16,6 +16,7 @@ import processing from './processing.json'
 import chat from './chat.json'
 import course from './course.json'
 import pastExams from './pastExams.json'
+import deepPractice from './deepPractice.json'
 
 const messages = {
   common,
@@ -36,6 +37,7 @@ const messages = {
   chat,
   course,
   pastExams,
+  deepPractice,
 }
 
 export default messages

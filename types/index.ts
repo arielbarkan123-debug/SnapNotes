@@ -4,6 +4,102 @@
 // ============================================
 
 /**
+ * GenerationStatus - Status of progressive course generation
+ */
+export type GenerationStatus = 'processing' | 'partial' | 'generating' | 'complete' | 'failed'
+
+// ============================================
+// LESSON INTENSITY TYPES
+// User-selected learning intensity for adaptive lesson duration
+// ============================================
+
+/**
+ * LessonIntensityMode - User-selected learning intensity
+ * - quick: 10-15 min, key concepts overview
+ * - standard: 20-30 min, balanced learning (default)
+ * - deep_practice: 45-60 min, mastery-focused with extensive practice
+ */
+export type LessonIntensityMode = 'quick' | 'standard' | 'deep_practice'
+
+/**
+ * IntensityConfig - Configuration for each intensity mode
+ */
+export interface IntensityConfig {
+  id: LessonIntensityMode
+  targetDurationMinutes: { min: number; max: number }
+  stepsPerLesson: { min: number; max: number }
+  practiceRatio: number // 0-1, percentage of lesson that is practice
+  workedExamplesRequired: number
+  practiceProblemsTarget: number
+  masteryThreshold: number // 0-1, accuracy needed to complete (e.g., 0.85 = 85%)
+  allowRetryUntilMastery: boolean
+}
+
+/**
+ * WorkedExampleStep - A single step in a worked example
+ */
+export interface WorkedExampleStep {
+  step: number
+  action: string
+  why: string
+  result: string
+}
+
+/**
+ * WorkedExample - Detailed step-by-step example for deep practice
+ */
+export interface WorkedExample {
+  problem: string
+  steps: WorkedExampleStep[]
+  finalAnswer: string
+  keyInsight: string
+}
+
+/**
+ * PracticeProblem - A practice problem with hints and solution
+ */
+export interface PracticeProblem {
+  id: string
+  problemNumber: number
+  question: string
+  options?: string[]
+  correctAnswer: string | number
+  hints: string[] // 3 progressive hints
+  workedSolution: string
+  difficulty: number // 1-5
+  commonMistake?: string
+}
+
+/**
+ * DeepPracticeProgress - Tracks mastery progress for deep practice lessons
+ */
+export interface DeepPracticeProgress {
+  id: string
+  user_id: string
+  course_id: string
+  lesson_index: number
+  concept_id: string
+  current_mastery: number // 0-1
+  problems_attempted: number
+  problems_correct: number
+  current_difficulty: number
+  completed: boolean
+  completed_at?: string
+  created_at: string
+}
+
+/**
+ * LessonOutline - Brief outline of a lesson for continuation context
+ */
+export interface LessonOutline {
+  index: number
+  title: string
+  description: string
+  estimatedSteps: number
+  topics: string[]
+}
+
+/**
  * Course - Represents a course record from the database
  * Maps directly to the `courses` table in Supabase
  */
@@ -28,10 +124,63 @@ export interface Course {
   generated_course: GeneratedCourse
   /** AI-generated cover image URL */
   cover_image_url?: string | null
+  /** Phase 2: AI-generated learning objectives with Bloom's taxonomy */
+  learning_objectives?: LearningObjective[] | null
+  /** Phase 2: Curriculum alignment data */
+  curriculum_alignment?: Record<string, unknown> | null
+  /** Phase 4: Overall extraction confidence score (0-1) */
+  extraction_confidence?: number | null
+  /** Phase 4: Detailed extraction confidence metadata */
+  extraction_metadata?: ExtractionConfidenceMetadata | null
+  /** Progressive generation: current status */
+  generation_status?: GenerationStatus
+  /** Progressive generation: number of lessons ready */
+  lessons_ready?: number
+  /** Progressive generation: total expected lessons */
+  total_lessons?: number
+  /** Progressive generation: AI-generated document summary for continuation */
+  document_summary?: string | null
+  /** Progressive generation: lesson outline for context in continuation */
+  lesson_outline?: LessonOutline[] | null
+  /** User-selected lesson intensity mode (quick, standard, deep_practice) */
+  intensity_mode?: LessonIntensityMode
   /** Timestamp when the course was created */
   created_at: string
   /** Timestamp when the course was last updated */
   updated_at: string
+}
+
+/**
+ * LearningObjective - AI-generated learning objective with Bloom's taxonomy
+ */
+export interface LearningObjective {
+  id: string
+  objective: string
+  bloomLevel: 'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create'
+  actionVerb: string
+  curriculumStandard?: string
+}
+
+/**
+ * ExtractionConfidenceMetadata - Metadata about extraction quality
+ */
+export interface ExtractionConfidenceMetadata {
+  overall: number
+  textConfidence: number
+  structureConfidence: number
+  formulaConfidence: number
+  diagramConfidence: number
+  extractionMethod: 'ocr' | 'pdf_parse' | 'vision' | 'hybrid'
+  processingTimeMs: number
+  contentLength: number
+  pageCount?: number
+  lowConfidenceAreas?: Array<{
+    contentType: string
+    location: string
+    reason: string
+    suggestion: string
+    confidence: number
+  }>
 }
 
 /**
@@ -55,6 +204,26 @@ export interface CourseInsert {
   extracted_content?: string | null
   /** The AI-generated course structure */
   generated_course: GeneratedCourse
+  /** Phase 2: AI-generated learning objectives with Bloom's taxonomy */
+  learning_objectives?: LearningObjective[] | null
+  /** Phase 2: Curriculum alignment data */
+  curriculum_alignment?: Record<string, unknown> | null
+  /** Phase 4: Overall extraction confidence score (0-1) */
+  extraction_confidence?: number | null
+  /** Phase 4: Detailed extraction confidence metadata */
+  extraction_metadata?: ExtractionConfidenceMetadata | null
+  /** Progressive generation: current status */
+  generation_status?: GenerationStatus
+  /** Progressive generation: number of lessons ready */
+  lessons_ready?: number
+  /** Progressive generation: total expected lessons */
+  total_lessons?: number
+  /** Progressive generation: AI-generated document summary for continuation */
+  document_summary?: string | null
+  /** Progressive generation: lesson outline for context in continuation */
+  lesson_outline?: LessonOutline[] | null
+  /** User-selected lesson intensity mode (quick, standard, deep_practice) */
+  intensity_mode?: LessonIntensityMode
 }
 
 /**
@@ -185,6 +354,8 @@ export interface GeneratedCourse {
   lessons: Lesson[]
   /** Images used in the course (extracted from documents or fetched from web) */
   images?: CourseImage[]
+  /** AI-generated learning objectives with Bloom's taxonomy (Phase 2) */
+  learningObjectives?: LearningObjective[]
 }
 
 /**

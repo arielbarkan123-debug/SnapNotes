@@ -65,5 +65,20 @@
     "pdf": "PDF",
     "pptx": "Presentation",
     "docx": "Document"
+  },
+  "intensityMode": {
+    "title": "Lesson Mode",
+    "quick": {
+      "label": "Quick",
+      "description": "Fast overview of key concepts. Great for review or browsing new topics."
+    },
+    "standard": {
+      "label": "Standard",
+      "description": "Balanced learning with explanations and practice questions."
+    },
+    "deep_practice": {
+      "label": "Deep Practice",
+      "description": "Mastery-focused with extensive practice. Perfect for math, physics, and exam prep."
+    }
   }
 }

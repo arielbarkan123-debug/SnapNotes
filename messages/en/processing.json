@@ -105,7 +105,9 @@
     "xpAwarded": "+{xp} XP",
     "flashcardsReady": "{count} flashcard ready for review",
     "flashcardsReadyPlural": "{count} flashcards ready for review",
-    "redirecting": "Redirecting you to your new study course..."
+    "redirecting": "Redirecting you to your new study course...",
+    "partialReady": "{ready} of {total} lessons ready - more generating in background",
+    "redirectingPartial": "Start learning now - more lessons generating in background..."
   },
 
   "error": {

@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
+import { useAgeAdaptiveSettings } from '@/hooks/useAgeAdaptiveSettings'
+import type { AnswerFeedback } from '@/lib/feedback/age-adaptive-feedback'
 
 // =============================================================================
 // Types
@@ -37,10 +39,20 @@ export default function QuestionFeedback({
   const t = useTranslations('lesson')
   const [isVisible, setIsVisible] = useState(false)
 
-  // Trigger entrance animation on mount
+  // Get age-adaptive feedback settings
+  const { getAnswerFeedback, feedbackSettings } = useAgeAdaptiveSettings()
+
+  // Generate age-appropriate feedback
+  const adaptiveFeedback = useMemo(
+    () => getAnswerFeedback(isCorrect, explanation),
+    [isCorrect, explanation, getAnswerFeedback]
+  )
+
+  // Trigger entrance animation on mount (with age-appropriate delay)
   useEffect(() => {
-    // Small delay to ensure animation plays
-    const timer = setTimeout(() => setIsVisible(true), 50)
+    // Use age-appropriate feedback delay
+    const delay = Math.max(50, feedbackSettings.feedbackDelay)
+    const timer = setTimeout(() => setIsVisible(true), delay)
 
     // Call onAnswer callback if provided
     if (onAnswer) {
@@ -48,7 +60,7 @@ export default function QuestionFeedback({
     }
 
     return () => clearTimeout(timer)
-  }, [isCorrect, onAnswer])
+  }, [isCorrect, onAnswer, feedbackSettings.feedbackDelay])
 
   // Handle continue click with exit animation
   const handleContinue = () => {
@@ -94,6 +106,8 @@ export default function QuestionFeedback({
               correctAnswer={correctAnswer}
               onContinue={handleContinue}
               t={t}
+              adaptiveFeedback={adaptiveFeedback}
+              showAnimation={feedbackSettings.showAnimations}
             />
           ) : (
             <IncorrectFeedback
@@ -102,6 +116,8 @@ export default function QuestionFeedback({
               explanation={explanation}
               onContinue={handleContinue}
               t={t}
+              adaptiveFeedback={adaptiveFeedback}
+              showExplanation={feedbackSettings.showExplanations}
             />
           )}
         </div>
@@ -119,34 +135,56 @@ interface CorrectFeedbackProps {
   correctAnswer: string
   onContinue: () => void
   t: ReturnType<typeof useTranslations<'lesson'>>
+  adaptiveFeedback: AnswerFeedback
+  showAnimation: boolean
 }
 
-function CorrectFeedback({ explanation, correctAnswer, onContinue, t }: CorrectFeedbackProps) {
+function CorrectFeedback({
+  explanation,
+  correctAnswer,
+  onContinue,
+  t,
+  adaptiveFeedback,
+  showAnimation,
+}: CorrectFeedbackProps) {
   return (
     <div className="space-y-4">
-      {/* Header */}
+      {/* Header - uses age-adaptive message */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+        <div
+          className={`
+            w-10 h-10 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0
+            ${showAnimation ? 'animate-bounce' : ''}
+          `}
+        >
           <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
           </svg>
         </div>
         <div>
           <h3 className="text-xl font-bold text-green-700 dark:text-green-400">
-            {t('correct')}
+            {/* Use age-adaptive message with emoji if present */}
+            {adaptiveFeedback.message}
+            {adaptiveFeedback.emoji && (
+              <span className="ml-2">{adaptiveFeedback.emoji.slice(0, 2)}</span>
+            )}
           </h3>
-          <p className="text-sm text-green-600 dark:text-green-500">
-            {t('greatJob')}
-          </p>
+          {adaptiveFeedback.tone === 'enthusiastic' && (
+            <p className="text-sm text-green-600 dark:text-green-500">
+              {t('greatJob')}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Explanation */}
-      <div className="bg-white/60 dark:bg-gray-800/60 rounded-xl p-4">
-        <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-          {explanation}
-        </p>
-      </div>
+      {/* Explanation - only show if age-appropriate */}
+      {adaptiveFeedback.showExplanation && (
+        <div className="bg-white/60 dark:bg-gray-800/60 rounded-xl p-4">
+          <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
+            {explanation}
+          </p>
+        </div>
+      )}
 
       {/* Remember box */}
       <div className="bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-xl p-4">
@@ -184,6 +222,8 @@ interface IncorrectFeedbackProps {
   explanation: string
   onContinue: () => void
   t: ReturnType<typeof useTranslations<'lesson'>>
+  adaptiveFeedback: AnswerFeedback
+  showExplanation: boolean
 }
 
 function IncorrectFeedback({
@@ -192,10 +232,12 @@ function IncorrectFeedback({
   explanation,
   onContinue,
   t,
+  adaptiveFeedback,
+  showExplanation,
 }: IncorrectFeedbackProps) {
   return (
     <div className="space-y-4">
-      {/* Header */}
+      {/* Header - uses age-adaptive message */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0">
           <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,11 +246,16 @@ function IncorrectFeedback({
         </div>
         <div>
           <h3 className="text-xl font-bold text-orange-700 dark:text-orange-400">
-            {t('notQuite')}
+            {adaptiveFeedback.message}
+            {adaptiveFeedback.emoji && (
+              <span className="ml-2">{adaptiveFeedback.emoji.slice(0, 2)}</span>
+            )}
           </h3>
-          <p className="text-sm text-orange-600 dark:text-orange-500">
-            {t('letsLearnFromThis')}
-          </p>
+          {adaptiveFeedback.encouragement && (
+            <p className="text-sm text-orange-600 dark:text-orange-500">
+              {adaptiveFeedback.encouragement}
+            </p>
+          )}
         </div>
       </div>
 
@@ -253,20 +300,22 @@ function IncorrectFeedback({
         </div>
       </div>
 
-      {/* Explanation */}
-      <div className="bg-white/60 dark:bg-gray-800/60 rounded-xl p-4">
-        <div className="flex items-start gap-2">
-          <span className="text-lg flex-shrink-0">📚</span>
-          <div>
-            <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1">
-              {t('why')}
-            </p>
-            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-              {explanation}
-            </p>
+      {/* Explanation - controlled by age setting */}
+      {showExplanation && (
+        <div className="bg-white/60 dark:bg-gray-800/60 rounded-xl p-4">
+          <div className="flex items-start gap-2">
+            <span className="text-lg flex-shrink-0">📚</span>
+            <div>
+              <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1">
+                {t('why')}
+              </p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                {explanation}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Got it button */}
       <button

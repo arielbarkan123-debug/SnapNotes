@@ -18,6 +18,7 @@ import type {
   PerformanceUpdateResult,
   QuestionSource,
 } from './types'
+import { processLearningSignal, type QuestionSignal } from '@/lib/profile'
 
 // =============================================================================
 // Configuration
@@ -116,6 +117,12 @@ export async function recordAnswer(record: AnswerRecord): Promise<PerformanceUpd
     record.isCorrect,
     record.responseTimeMs
   )
+
+  // Emit signal to profile refinement engine (RLPA-style dynamic profiling)
+  // This runs asynchronously and doesn't block the response
+  emitProfileRefinementSignal(record).catch((err) => {
+    console.error('Failed to emit profile refinement signal:', err)
+  })
 
   // Generate feedback
   const feedback = generateFeedback(state, updatedState as UserPerformanceState, record.isCorrect)
@@ -434,6 +441,29 @@ export async function savePerformanceSnapshot(
       estimated_ability: state.estimated_ability,
       questions_answered: state.questions_answered,
     })
+}
+
+// =============================================================================
+// Profile Refinement Integration
+// =============================================================================
+
+/**
+ * Emit a question signal to the profile refinement engine
+ * This enables RLPA-style dynamic profile adaptation based on learning signals
+ */
+async function emitProfileRefinementSignal(record: AnswerRecord): Promise<void> {
+  const signal: QuestionSignal = {
+    wasCorrect: record.isCorrect,
+    timeMs: record.responseTimeMs || 0,
+    usedHint: record.usedHint || false,
+    questionDifficulty: record.questionDifficulty || 3,
+    conceptId: record.conceptId,
+  }
+
+  await processLearningSignal(record.userId, {
+    type: 'question_answered',
+    data: signal,
+  })
 }
 
 // =============================================================================

@@ -12,6 +12,10 @@ import type {
   PracticeQuestionType,
 } from './types'
 import type { CognitiveLevel, DifficultyLevel } from '@/lib/adaptive/types'
+import {
+  getAgeGroupConfig,
+  getAppropriateQuestionTypes,
+} from '@/lib/learning/age-config'
 
 // -----------------------------------------------------------------------------
 // Constants
@@ -42,14 +46,109 @@ const COGNITIVE_LEVEL_DESCRIPTIONS: Record<CognitiveLevel, string> = {
 // Prompts
 // -----------------------------------------------------------------------------
 
+/**
+ * Build age-specific instructions for question generation
+ */
+function buildAgeSpecificQuestionInstructions(educationLevel?: string): string {
+  if (!educationLevel) return ''
+
+  const config = getAgeGroupConfig(educationLevel)
+
+  const ageInstructions: Record<string, string> = {
+    elementary: `
+## Age-Appropriate Instructions (Elementary, Ages 6-12)
+- Use SIMPLE vocabulary - words a child would know
+- Keep question sentences SHORT (max 15 words)
+- Use fun, relatable examples (toys, games, animals, food)
+- Make wrong answers clearly different but not silly
+- Focus on basic recall and simple understanding
+- Avoid complex reasoning or abstract thinking
+- Use encouraging language`,
+
+    middle_school: `
+## Age-Appropriate Instructions (Middle School, Ages 11-14)
+- Use clear, accessible language
+- Introduce technical terms when needed with context
+- Use relatable scenarios (school, hobbies, friends)
+- Include some application-based questions
+- Balance recall with understanding questions
+- Avoid overly abstract or theoretical questions`,
+
+    high_school: `
+## Age-Appropriate Instructions (High School, Ages 14-18)
+- Use age-appropriate academic vocabulary
+- Include application and analysis questions
+- Test conceptual understanding, not just memorization
+- Use exam-style question formats
+- Include some multi-step reasoning
+- Focus on exam preparation relevance`,
+
+    university: `
+## Age-Appropriate Instructions (University, Ages 18-22)
+- Use academic and technical terminology
+- Include analysis, evaluation, and synthesis questions
+- Test deeper conceptual understanding
+- Include complex reasoning and multi-step problems
+- Reference theoretical frameworks where appropriate
+- Challenge critical thinking abilities`,
+
+    professional: `
+## Age-Appropriate Instructions (Professional/Adult, Ages 22+)
+- Use professional/technical terminology
+- Focus on practical application scenarios
+- Include case study style questions
+- Test ability to apply knowledge to real situations
+- Efficient, practical question design
+- Avoid trivial recall questions`,
+  }
+
+  return ageInstructions[config.id] || ''
+}
+
+/**
+ * Select appropriate question types based on education level
+ */
+function selectAgeAppropriateQuestionTypes(
+  requestedTypes: PracticeQuestionType[] | undefined,
+  educationLevel?: string,
+  difficulty?: number
+): PracticeQuestionType[] {
+  // If specific types requested, filter for age-appropriateness
+  if (requestedTypes?.length && educationLevel) {
+    const appropriateTypes = getAppropriateQuestionTypes(
+      educationLevel,
+      difficulty || 5
+    )
+    // Return intersection of requested and appropriate
+    const filtered = requestedTypes.filter((t) =>
+      appropriateTypes.includes(t)
+    ) as PracticeQuestionType[]
+    return filtered.length > 0 ? filtered : (appropriateTypes as PracticeQuestionType[])
+  }
+
+  // If education level provided, get age-appropriate types
+  if (educationLevel) {
+    return getAppropriateQuestionTypes(
+      educationLevel,
+      difficulty || 5
+    ) as PracticeQuestionType[]
+  }
+
+  // Default fallback
+  return ['multiple_choice', 'true_false', 'fill_blank']
+}
+
 function buildGenerationPrompt(
   courseContent: string,
   concepts: { name: string; description: string }[],
   request: GenerateQuestionsRequest
 ): string {
-  const questionTypes = request.questionTypes?.length
-    ? request.questionTypes
-    : ['multiple_choice', 'true_false', 'fill_blank']
+  // Get age-appropriate question types
+  const questionTypes = selectAgeAppropriateQuestionTypes(
+    request.questionTypes,
+    request.educationLevel,
+    request.difficulty
+  )
 
   const typeDescriptions = questionTypes
     .map((t) => `- ${t}: ${QUESTION_TYPE_DESCRIPTIONS[t as PracticeQuestionType]}`)
@@ -59,11 +158,20 @@ function buildGenerationPrompt(
     ? concepts.map((c) => `- ${c.name}: ${c.description}`).join('\n')
     : 'No specific concepts provided. Extract key concepts from the content.'
 
+  // Get age-appropriate difficulty range
+  const ageConfig = request.educationLevel
+    ? getAgeGroupConfig(request.educationLevel)
+    : null
   const difficultyGuidance = request.difficulty
     ? `Target difficulty level: ${request.difficulty}/5`
-    : 'Vary difficulty levels from 1 (easy) to 5 (hard)'
+    : ageConfig
+      ? `Difficulty range: ${ageConfig.difficultyRange.min} to ${ageConfig.difficultyRange.max} (on 1-10 scale, convert to 1-5 for output)`
+      : 'Vary difficulty levels from 1 (easy) to 5 (hard)'
 
-  return `You are an expert educational content creator. Generate ${request.count} practice questions based on the following course content.
+  // Add age-specific instructions
+  const ageInstructions = buildAgeSpecificQuestionInstructions(request.educationLevel)
+
+  return `You are an expert educational content creator. Generate ${request.count} practice questions based on the following course content.${ageInstructions}
 
 ## Question Types to Generate:
 ${typeDescriptions}

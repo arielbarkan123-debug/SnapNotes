@@ -1,6 +1,7 @@
 'use client'
 
 import { ReactNode } from 'react'
+import { useTranslations } from 'next-intl'
 
 // ============================================================================
 // Types
@@ -350,12 +351,15 @@ interface LoadingOverlayProps {
   message?: string
 }
 
-export function LoadingOverlay({ message = 'Loading...' }: LoadingOverlayProps) {
+export function LoadingOverlay({ message }: LoadingOverlayProps) {
+  const t = useTranslations('processing')
+  const displayMessage = message ?? t('loading')
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
       <div className="text-center">
         <Spinner size="lg" className="mx-auto mb-4 text-indigo-600 dark:text-indigo-400" />
-        <p className="text-gray-600 dark:text-gray-400">{message}</p>
+        <p className="text-gray-600 dark:text-gray-400">{displayMessage}</p>
       </div>
     </div>
   )

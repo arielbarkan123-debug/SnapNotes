@@ -1,7 +1,8 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Course, UserProgress, GeneratedCourse, Lesson } from '@/types'
+import { Course, UserProgress, GeneratedCourse, Lesson, LessonIntensityMode } from '@/types'
 import LessonView from './LessonView'
+import DeepPracticeLessonView from '@/components/lesson/DeepPracticeLessonView'
 import LockedLessonRedirect from './LockedLessonRedirect'
 
 interface LessonPageProps {
@@ -18,6 +19,7 @@ interface LessonDataResult {
   lessonIndex: number
   lesson: Lesson
   totalLessons: number
+  intensityMode: LessonIntensityMode
 }
 
 interface LessonDataError {
@@ -109,6 +111,7 @@ async function getLessonData(courseId: string, lessonIndex: number): Promise<Get
     lessonIndex,
     lesson: lessons[lessonIndex],
     totalLessons: lessons.length,
+    intensityMode: (course.intensity_mode as LessonIntensityMode) || 'standard',
   }
 }
 
@@ -154,6 +157,20 @@ export default async function LessonPage({ params }: LessonPageProps) {
     }
   }
 
+  // Use DeepPracticeLessonView for deep_practice mode
+  if (data.intensityMode === 'deep_practice') {
+    return (
+      <DeepPracticeLessonView
+        course={data.course}
+        progress={data.progress}
+        lessonIndex={data.lessonIndex}
+        lesson={data.lesson}
+        totalLessons={data.totalLessons}
+      />
+    )
+  }
+
+  // Standard and Quick modes use the regular LessonView
   return (
     <LessonView
       course={data.course}

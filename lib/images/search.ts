@@ -66,7 +66,7 @@ interface UnsplashSearchResponse {
 const UNSPLASH_API_URL = 'https://api.unsplash.com'
 const DEFAULT_PER_PAGE = 5
 const MAX_PER_PAGE = 30
-const IMAGE_SEARCH_TIMEOUT_MS = 5000 // 5 second timeout per search
+const IMAGE_SEARCH_TIMEOUT_MS = 3000 // 3 second timeout per search (faster finalization)
 
 // =============================================================================
 // Main Functions
@@ -158,7 +158,7 @@ export async function searchImages(
 
 /**
  * Search for educational images related to a course topic
- * Adds educational keywords to improve results
+ * Makes a SINGLE API call for speed (no retries with different keywords)
  *
  * @param topic - Main topic (e.g., "photosynthesis", "quadratic equations")
  * @param subject - Optional subject context (e.g., "biology", "math")
@@ -168,35 +168,14 @@ export async function searchEducationalImages(
   topic: string,
   subject?: string
 ): Promise<SearchedImage[]> {
-  // Build a search query optimized for educational content
-  const educationalKeywords = ['diagram', 'illustration', 'educational', 'concept']
+  // Build a simple search query - only ONE API call for speed
   const baseQuery = subject ? `${subject} ${topic}` : topic
 
-  // Try different query variations to get the best results
-  const queries = [
-    `${baseQuery} ${educationalKeywords[0]}`,
-    `${baseQuery} ${educationalKeywords[1]}`,
-    baseQuery,
-  ]
-
-  // Try the first query
-  let results = await searchImages(queries[0], {
+  // Single API call - no retries to avoid slow finalization
+  return searchImages(baseQuery, {
     perPage: 3,
     orientation: 'landscape',
   })
-
-  // If no results, try alternate queries
-  if (results.length === 0 && queries.length > 1) {
-    for (let i = 1; i < queries.length; i++) {
-      results = await searchImages(queries[i], {
-        perPage: 3,
-        orientation: 'landscape',
-      })
-      if (results.length > 0) break
-    }
-  }
-
-  return results
 }
 
 /**

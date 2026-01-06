@@ -105,7 +105,9 @@
     "xpAwarded": "+{xp} XP",
     "flashcardsReady": "כרטיסיית למידה אחת מוכנה לסקירה",
     "flashcardsReadyPlural": "{count} כרטיסיות למידה מוכנות לסקירה",
-    "redirecting": "מעביר אותך לקורס הלימוד החדש שלך..."
+    "redirecting": "מעביר אותך לקורס הלימוד החדש שלך...",
+    "partialReady": "{ready} מתוך {total} שיעורים מוכנים - השאר מיוצרים ברקע",
+    "redirectingPartial": "התחל ללמוד עכשיו - שיעורים נוספים מיוצרים ברקע..."
   },
 
   "error": {

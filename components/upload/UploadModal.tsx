@@ -14,6 +14,8 @@ import {
   validateFile as validateDirectUpload,
   type FileType as DirectUploadFileType,
 } from '@/lib/upload/direct-upload'
+import type { LessonIntensityMode } from '@/types'
+import { getIntensityModes } from '@/lib/learning/intensity-config'
 
 // ============================================================================
 // Types & Constants
@@ -156,18 +158,7 @@ function _getButtonText(files: SelectedFile[]): string {
   return 'Generate Course'
 }
 
-function getUploadingText(files: SelectedFile[]): string {
-  if (files.length === 0) return 'Uploading...'
-
-  const categories = new Set(files.map(f => f.category))
-  if (categories.size === 1) {
-    const category = files[0].category
-    const label = FILE_TYPE_LABELS[category].toLowerCase()
-    return `Uploading ${files.length} ${label} file${files.length !== 1 ? 's' : ''}...`
-  }
-
-  return `Uploading ${files.length} file${files.length !== 1 ? 's' : ''}...`
-}
+// getUploadingText removed - now using translations directly via t('uploadingFile') and t('uploadingFiles')
 
 function getErrorMessage(error: unknown, code?: string): UploadError {
   // Network errors
@@ -253,6 +244,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([])
   const [textContent, setTextContent] = useState('')
   const [title, setTitle] = useState('')
+  const [intensityMode, setIntensityMode] = useState<LessonIntensityMode>('standard')
   const [error, setError] = useState<UploadError | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -298,6 +290,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
       setSelectedFiles([])
       setTextContent('')
       setTitle('')
+      setIntensityMode('standard')
       setError(null)
       setIsDragging(false)
       setIsUploading(false)
@@ -578,6 +571,9 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
           params.set('title', title.trim())
         }
 
+        // Pass intensity mode for lesson generation
+        params.set('intensityMode', intensityMode)
+
         router.push(`/processing?${params.toString()}`)
         return
       } catch (err) {
@@ -754,6 +750,9 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
           params.set('title', title.trim())
         }
 
+        // Pass intensity mode for lesson generation
+        params.set('intensityMode', intensityMode)
+
         router.push(`/processing?${params.toString()}`)
         return
       }
@@ -846,6 +845,9 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
       if (title.trim()) {
         params.set('title', title.trim())
       }
+
+      // Pass intensity mode for lesson generation
+      params.set('intensityMode', intensityMode)
 
       router.push(`/processing?${params.toString()}`)
     } catch (err) {
@@ -955,7 +957,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
                       onClick={handleRetry}
                       className="mt-2 text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium underline"
                     >
-                      Try again
+                      {t('tryAgain')}
                     </button>
                   )}
                 </div>
@@ -972,7 +974,9 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 </svg>
                 <div className="flex-1">
                   <p className="text-amber-700 dark:text-amber-400 text-sm font-medium">
-                    {failedFiles.length} file{failedFiles.length !== 1 ? 's' : ''} failed to upload
+                    {failedFiles.length === 1
+                      ? t('failedFile', { count: failedFiles.length })
+                      : t('failedFiles', { count: failedFiles.length })}
                   </p>
                   <ul className="mt-1 text-xs text-amber-600 dark:text-amber-500 space-y-0.5">
                     {failedFiles.map((f, i) => (
@@ -985,7 +989,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
                     onClick={() => setFailedFiles([])}
                     className="mt-2 text-xs text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium"
                   >
-                    Dismiss
+                    {t('dismiss')}
                   </button>
                 </div>
               </div>
@@ -1001,6 +1005,61 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
             onChange={handleInputChange}
             className="hidden"
           />
+
+          {/* Intensity Mode Selector - Shared between both tabs */}
+          <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('intensityMode.title')}
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {getIntensityModes().map((mode) => (
+                <button
+                  key={mode.id}
+                  type="button"
+                  onClick={() => setIntensityMode(mode.id)}
+                  disabled={isUploading}
+                  className={`
+                    relative flex flex-col items-center p-2.5 rounded-xl border-2 transition-all
+                    ${intensityMode === mode.id
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
+                      : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-700'
+                    }
+                    disabled:opacity-50
+                  `}
+                >
+                  {/* Icon */}
+                  <span className="text-lg mb-0.5">
+                    {mode.icon === 'zap' && '⚡'}
+                    {mode.icon === 'book-open' && '📖'}
+                    {mode.icon === 'target' && '🎯'}
+                  </span>
+                  {/* Name */}
+                  <span className={`text-xs font-medium ${
+                    intensityMode === mode.id
+                      ? 'text-indigo-700 dark:text-indigo-300'
+                      : 'text-gray-700 dark:text-gray-300'
+                  }`}>
+                    {t(`intensityMode.${mode.id}.label`)}
+                  </span>
+                  {/* Duration */}
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                    {mode.duration}
+                  </span>
+                  {/* Selected indicator */}
+                  {intensityMode === mode.id && (
+                    <div className="absolute top-1 right-1">
+                      <svg className="w-3.5 h-3.5 text-indigo-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+              {t(`intensityMode.${intensityMode}.description`)}
+            </p>
+          </div>
 
           {/* Text Input Mode */}
           {inputMode === 'text' ? (
@@ -1058,6 +1117,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
                   {t('courseTitleHintText')}
                 </p>
               </div>
+
             </div>
           ) : selectedFiles.length === 0 ? (
             /* Drop Zone - No files selected */
@@ -1294,7 +1354,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
                     <svg className="w-8 h-8 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Add more</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t('addMore')}</span>
                   </button>
                 )}
               </div>
@@ -1302,19 +1362,19 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
               {/* Title Input */}
               <div>
                 <label htmlFor="course-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Course Title
+                  {t('courseTitle')}
                 </label>
                 <input
                   id="course-title"
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Course title (optional)"
+                  placeholder={t('courseTitlePlaceholder')}
                   disabled={isUploading}
                   className="w-full px-4 py-3 sm:py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl sm:rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition disabled:opacity-50 text-base"
                 />
                 <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  Leave blank to auto-generate from your notes
+                  {t('courseTitleHintFiles')}
                 </p>
               </div>
             </div>
@@ -1332,25 +1392,27 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
               <div className="flex-1">
                 <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
                   {uploadProgress.status === 'uploading' && (
-                    <>{getUploadingText(selectedFiles)}</>
+                    <>{selectedFiles.length === 1
+                      ? t('uploadingFile', { count: selectedFiles.length })
+                      : t('uploadingFiles', { count: selectedFiles.length })}</>
                   )}
                   {uploadProgress.status === 'processing' && (
-                    <>Processing your content...</>
+                    <>{t('processing')}</>
                   )}
                   {uploadProgress.status === 'complete' && (
-                    <>Upload complete! Redirecting...</>
+                    <>{t('uploadComplete')}</>
                   )}
                 </p>
                 {uploadProgress.status === 'uploading' && (
                   <p className="text-xs text-indigo-600 dark:text-indigo-400">
                     {selectedFiles.reduce((acc, f) => acc + f.file.size, 0) > 5 * 1024 * 1024
-                      ? 'Large files may take a minute to upload...'
-                      : 'Please wait while your files are being uploaded'}
+                      ? t('largeFileHint')
+                      : t('uploadWait')}
                   </p>
                 )}
                 {uploadProgress.status === 'processing' && (
                   <p className="text-xs text-indigo-600 dark:text-indigo-400">
-                    This may take a moment...
+                    {t('processingWait')}
                   </p>
                 )}
               </div>
@@ -1369,7 +1431,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
             {/* File count indicator */}
             {uploadProgress.status === 'uploading' && selectedFiles.length > 1 && (
               <p className="mt-1.5 text-xs text-indigo-500 dark:text-indigo-400 text-center">
-                {selectedFiles.length} files &bull; {formatFileSize(selectedFiles.reduce((acc, f) => acc + f.file.size, 0))} total
+                {t('fileCount', { count: selectedFiles.length })} &bull; {t('totalSize', { size: formatFileSize(selectedFiles.reduce((acc, f) => acc + f.file.size, 0)) })}
               </p>
             )}
           </div>
@@ -1395,10 +1457,10 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
             isLoading={isUploading}
             loadingText={
               inputMode === 'text'
-                ? 'Processing...'
+                ? t('processing')
                 : uploadProgress?.status === 'uploading'
-                  ? getUploadingText(selectedFiles)
-                  : 'Processing...'
+                  ? (selectedFiles.length === 1 ? t('uploadingFile', { count: 1 }) : t('uploadingFiles', { count: selectedFiles.length }))
+                  : t('processing')
             }
             className="w-full sm:w-auto min-h-[48px] sm:min-h-[44px]"
           >

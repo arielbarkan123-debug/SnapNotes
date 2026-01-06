@@ -14,6 +14,8 @@ export {
   generateCourseFromImageSingleCall,
   generateCourseFromDocument,
   generateCourseFromText,
+  generateInitialCourse,
+  generateContinuationLessons,
   fetchImageAsBase64,
   ClaudeAPIError,
   isRetryableError,
@@ -30,6 +32,8 @@ export type {
   FullPipelineResult,
   DocumentCourseResult,
   TextCourseResult,
+  InitialCourseResult,
+  ContinuationResult,
   ClaudeErrorCode,
 } from './claude'
 
@@ -41,6 +45,8 @@ export {
   getCombinedAnalysisPrompt,
   getDocumentCoursePrompt,
   getTextCoursePrompt,
+  getExamCoursePrompt,
+  isExamContent,
   cleanJsonResponse,
   validateExtractedContent,
   formatExtractedContentForPrompt,

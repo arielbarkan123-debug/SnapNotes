@@ -227,6 +227,8 @@ export interface GenerateQuestionsRequest {
   conceptIds?: string[]
   difficulty?: DifficultyLevel
   questionTypes?: PracticeQuestionType[]
+  /** Education level for age-appropriate question generation */
+  educationLevel?: 'elementary' | 'middle_school' | 'high_school' | 'university' | 'graduate' | 'professional'
 }
 
 export interface GeneratedQuestion {
