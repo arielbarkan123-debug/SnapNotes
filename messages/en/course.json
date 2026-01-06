@@ -3,6 +3,8 @@
   "courseProgress": "Course Progress",
   "lessonsCompleted": "{completed} of {total} lessons completed",
   "overview": "Overview",
+  "untitledCourse": "Untitled Course",
+  "noOverviewAvailable": "No overview available yet. The course content is still being generated.",
   "conceptMastery": "Concept Mastery",
   "gaps": "Gaps",
   "gap": "Gap",

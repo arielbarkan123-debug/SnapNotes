@@ -3,6 +3,8 @@
   "courseProgress": "התקדמות בקורס",
   "lessonsCompleted": "{completed} מתוך {total} שיעורים הושלמו",
   "overview": "סקירה",
+  "untitledCourse": "קורס ללא שם",
+  "noOverviewAvailable": "אין סקירה זמינה עדיין. תוכן הקורס עדיין נוצר.",
   "conceptMastery": "שליטה במושגים",
   "gaps": "פערים",
   "gap": "פער",

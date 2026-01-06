@@ -19,9 +19,11 @@ export default function CourseView({ course, progress }: CourseViewProps) {
   const t = useTranslations('lesson')
   const tc = useTranslations('course')
   const [isChatOpen, setIsChatOpen] = useState(false)
-  const generatedCourse = course.generated_course as GeneratedCourse & { sections?: Lesson[] }
+
+  // Safely parse generated_course - handle null/undefined cases
+  const generatedCourse = (course.generated_course || {}) as GeneratedCourse & { sections?: Lesson[] }
   // Handle both "lessons" and legacy "sections" from AI response
-  const lessons = generatedCourse.lessons || generatedCourse.sections || []
+  const lessons = generatedCourse?.lessons || generatedCourse?.sections || []
 
   // Track progressive generation status
   const onGenerationComplete = useCallback(() => {
@@ -87,7 +89,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
 
           {/* Title */}
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            {generatedCourse.title || course.title}
+            {generatedCourse?.title || course.title || tc('untitledCourse')}
           </h1>
 
           {/* Progress bar */}
@@ -119,7 +121,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
             {tc('overview')}
           </h2>
           <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-            {generatedCourse.overview}
+            {generatedCourse?.overview || tc('noOverviewAvailable')}
           </p>
 
           {/* Course Mastery Summary */}
@@ -265,7 +267,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
       {/* Chat Tutor Modal */}
       <ChatTutor
         courseId={course.id}
-        courseName={generatedCourse.title || course.title}
+        courseName={generatedCourse?.title || course.title || ''}
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
       />
