@@ -7,6 +7,7 @@ import { XPProvider } from '@/contexts/XPContext'
 import { SWRProvider } from './providers/SWRProvider'
 import { AnalyticsProvider } from './providers/AnalyticsProvider'
 import { PWAProvider } from './providers/PWAProvider'
+import { MonitoringProvider } from './providers/MonitoringProvider'
 
 interface ProvidersProps {
   children: ReactNode
@@ -15,17 +16,19 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   return (
     <ErrorBoundary>
-      <SWRProvider>
-        <AnalyticsProvider>
-          <PWAProvider>
-            <ToastProvider>
-              <XPProvider>
-                {children}
-              </XPProvider>
-            </ToastProvider>
-          </PWAProvider>
-        </AnalyticsProvider>
-      </SWRProvider>
+      <MonitoringProvider>
+        <SWRProvider>
+          <AnalyticsProvider>
+            <PWAProvider>
+              <ToastProvider>
+                <XPProvider>
+                  {children}
+                </XPProvider>
+              </ToastProvider>
+            </PWAProvider>
+          </AnalyticsProvider>
+        </SWRProvider>
+      </MonitoringProvider>
     </ErrorBoundary>
   )
 }

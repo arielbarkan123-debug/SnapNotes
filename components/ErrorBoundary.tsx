@@ -4,6 +4,7 @@ import { Component, ErrorInfo, ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
 import Button from './ui/Button'
 import { analytics } from '@/lib/analytics'
+import { errorReporter } from '@/lib/monitoring'
 
 // ============================================================================
 // Types
@@ -61,6 +62,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       context: {
         componentStack: errorInfo.componentStack,
       },
+    })
+
+    // Report error to monitoring system
+    errorReporter.reportError(error, 'ErrorBoundary', {
+      componentStack: errorInfo.componentStack,
     })
   }
 
