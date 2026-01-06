@@ -330,16 +330,32 @@ export default function HomeworkHelpPage() {
   const [whatTried, setWhatTried] = useState('')
   const [comfortLevel, setComfortLevel] = useState<ComfortLevel>('some_idea')
 
+  // Safe URL creation for iOS Safari compatibility
+  const createSafeObjectURL = useCallback((file: File): string | null => {
+    try {
+      return URL.createObjectURL(file)
+    } catch (err) {
+      console.error('Failed to create object URL:', err)
+      setError('Failed to preview image. Please try a different image or format.')
+      return null
+    }
+  }, [])
+
   // Handlers
   const handleQuestionUpload = useCallback((file: File) => {
-    setQuestionImage({ file, preview: URL.createObjectURL(file) })
+    const preview = createSafeObjectURL(file)
+    if (!preview) return
+    setQuestionImage({ file, preview })
+    setError(null)
     trackStep('question_uploaded', 2)
     trackFeature('homework_question_upload', { fileType: file.type, fileSize: file.size })
-  }, [trackStep, trackFeature])
+  }, [trackStep, trackFeature, createSafeObjectURL])
 
   const handleReferenceUpload = useCallback((file: File) => {
-    setReferenceImages(prev => [...prev, { file, preview: URL.createObjectURL(file) }])
-  }, [])
+    const preview = createSafeObjectURL(file)
+    if (!preview) return
+    setReferenceImages(prev => [...prev, { file, preview }])
+  }, [createSafeObjectURL])
 
   const handleSubmit = async () => {
     if (!questionImage) {

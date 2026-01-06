@@ -283,26 +283,47 @@ export default function HomeworkCheckPage() {
   const [referenceImages, setReferenceImages] = useState<UploadedImage[]>([])
   const [teacherReviews, setTeacherReviews] = useState<UploadedImage[]>([])
 
+  // Safe URL creation for iOS Safari compatibility
+  const createSafeObjectURL = useCallback((file: File): string | null => {
+    try {
+      return URL.createObjectURL(file)
+    } catch (err) {
+      console.error('Failed to create object URL:', err)
+      setError('Failed to preview image. Please try a different image or format.')
+      return null
+    }
+  }, [])
+
   // Handlers
   const handleTaskUpload = useCallback((file: File) => {
-    setTaskImage({ file, preview: URL.createObjectURL(file) })
+    const preview = createSafeObjectURL(file)
+    if (!preview) return
+    setTaskImage({ file, preview })
+    setError(null)
     trackStep('task_uploaded', 2)
     trackFeature('homework_task_upload', { fileType: file.type, fileSize: file.size })
-  }, [trackStep, trackFeature])
+  }, [trackStep, trackFeature, createSafeObjectURL])
 
   const handleAnswerUpload = useCallback((file: File) => {
-    setAnswerImage({ file, preview: URL.createObjectURL(file) })
+    const preview = createSafeObjectURL(file)
+    if (!preview) return
+    setAnswerImage({ file, preview })
+    setError(null)
     trackStep('answer_uploaded', 3)
     trackFeature('homework_answer_upload', { fileType: file.type, fileSize: file.size })
-  }, [trackStep, trackFeature])
+  }, [trackStep, trackFeature, createSafeObjectURL])
 
   const handleReferenceUpload = useCallback((file: File) => {
-    setReferenceImages(prev => [...prev, { file, preview: URL.createObjectURL(file) }])
-  }, [])
+    const preview = createSafeObjectURL(file)
+    if (!preview) return
+    setReferenceImages(prev => [...prev, { file, preview }])
+  }, [createSafeObjectURL])
 
   const handleTeacherReviewUpload = useCallback((file: File) => {
-    setTeacherReviews(prev => [...prev, { file, preview: URL.createObjectURL(file) }])
-  }, [])
+    const preview = createSafeObjectURL(file)
+    if (!preview) return
+    setTeacherReviews(prev => [...prev, { file, preview }])
+  }, [createSafeObjectURL])
 
   const handleSubmit = async () => {
     if (!taskImage || !answerImage) {
