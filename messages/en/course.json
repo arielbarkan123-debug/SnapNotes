@@ -17,5 +17,11 @@
   "stepRemaining": "{count} step remaining",
   "generatingLessons": "Generating more lessons...",
   "generatingProgress": "{ready} of {total} lessons ready",
-  "generating": "Generating..."
+  "generating": "Generating...",
+  "mistakes": {
+    "whereYouWentWrong": "Where you went wrong",
+    "yourApproach": "Your approach",
+    "correctApproach": "Correct approach",
+    "commonMistake": "Common Mistake"
+  }
 }

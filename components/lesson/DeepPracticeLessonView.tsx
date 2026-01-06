@@ -3,9 +3,11 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Course, UserProgress, Lesson, PracticeProblem } from '@/types'
+import { Course, UserProgress, Lesson, PracticeProblem, StructuredWorkedSolution } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { hasMasteredConcept, calculateMasteryLevel, getNextDifficulty } from '@/lib/learning/intensity-config'
+import { MathSolutionRenderer, isStructuredMathSolution } from './MathSolutionRenderer'
+import { MathText } from '@/components/ui/MathRenderer'
 
 // ============================================================================
 // Types
@@ -41,10 +43,10 @@ export default function DeepPracticeLessonView({
   progress: initialProgress,
   lessonIndex,
   lesson,
-  totalLessons,
+  totalLessons: _totalLessons,
 }: DeepPracticeLessonViewProps) {
   const router = useRouter()
-  const t = useTranslations('lesson')
+  const _t = useTranslations('lesson')
   const tDeep = useTranslations('deepPractice')
   const supabase = createClient()
 
@@ -64,7 +66,7 @@ export default function DeepPracticeLessonView({
       .filter(s => s.type === 'question' || s.type === 'practice_problem')
       .map((s, idx) => {
         // Handle both formats - deep practice uses different field names
-        const stepAny = s as Record<string, unknown>
+        const stepAny = s as unknown as Record<string, unknown>
         return {
           id: `problem_${idx}`,
           problemNumber: (stepAny.problemNumber as number) || idx + 1,
@@ -72,7 +74,7 @@ export default function DeepPracticeLessonView({
           options: s.options || [],
           correctAnswer: (stepAny.correctIndex as number) ?? s.correct_answer ?? 0,
           hints: (stepAny.hints as string[]) || [],
-          workedSolution: (stepAny.workedSolution as string) || s.explanation || '',
+          workedSolution: (stepAny.workedSolution as string | StructuredWorkedSolution) || s.explanation || '',
           difficulty: (stepAny.difficulty as number) || Math.min(3, Math.floor(idx / 5) + 1),
         }
       })
@@ -80,7 +82,7 @@ export default function DeepPracticeLessonView({
     // Extract worked example - handle deep practice nested format
     let workedExample = null
     if (workedExampleStep) {
-      const stepAny = workedExampleStep as Record<string, unknown>
+      const stepAny = workedExampleStep as unknown as Record<string, unknown>
       const nestedExample = stepAny.workedExample as Record<string, unknown> | undefined
 
       workedExample = {
@@ -124,7 +126,7 @@ export default function DeepPracticeLessonView({
   const [isSaving, setIsSaving] = useState(false)
 
   // Session tracking
-  const sessionStartRef = useRef<number>(Date.now())
+  const _sessionStartRef = useRef<number>(Date.now())
 
   // Current problem
   const currentProblem = lessonData.practiceProblems[state.currentProblemIndex]
@@ -211,8 +213,8 @@ export default function DeepPracticeLessonView({
     }))
   }, [])
 
-  // Handle show worked solution
-  const handleShowSolution = useCallback(() => {
+  // Handle show worked solution (available for future use)
+  const _handleShowSolution = useCallback(() => {
     setState(prev => ({
       ...prev,
       showingWorkedSolution: true,
@@ -510,7 +512,13 @@ export default function DeepPracticeLessonView({
                 </div>
 
                 {!isCorrect && currentProblem.workedSolution && (
-                  <p className="text-gray-700 dark:text-gray-300 text-sm">{currentProblem.workedSolution}</p>
+                  <div className="text-gray-700 dark:text-gray-300 text-sm">
+                    {isStructuredMathSolution(currentProblem.workedSolution) ? (
+                      <MathSolutionRenderer solution={currentProblem.workedSolution} />
+                    ) : typeof currentProblem.workedSolution === 'string' ? (
+                      <MathText>{currentProblem.workedSolution}</MathText>
+                    ) : null}
+                  </div>
                 )}
               </div>
             )}

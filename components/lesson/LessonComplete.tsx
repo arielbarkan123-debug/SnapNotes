@@ -132,16 +132,16 @@ export default function LessonComplete({
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 flex items-center justify-center z-50 overflow-hidden">
+    <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 flex items-start sm:items-center justify-center z-50 overflow-y-auto">
       {/* Subtle background pattern */}
-      <div className="absolute inset-0 opacity-5">
+      <div className="absolute inset-0 opacity-5 pointer-events-none">
         <div className="absolute inset-0" style={{
           backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)`,
           backgroundSize: '40px 40px'
         }} />
       </div>
 
-      <div className="relative z-10 w-full max-w-lg mx-auto px-6 py-8 max-h-screen overflow-y-auto">
+      <div className="relative z-10 w-full max-w-lg mx-auto px-4 xs:px-6 py-6 xs:py-8" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
         {/* Success Icon */}
         <div className={`flex justify-center mb-8 transition-all duration-500 ${animationStage >= 1 ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
           <div className="relative">

@@ -123,13 +123,16 @@ export default function LessonRecap({
       </main>
 
       {/* Footer with navigation */}
-      <footer className="flex-shrink-0 p-4 border-t border-white/20">
-        <div className="max-w-xl mx-auto flex items-center justify-between gap-4">
+      <footer
+        className="flex-shrink-0 p-3 xs:p-4 border-t border-white/20"
+        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+      >
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-2 xs:gap-4">
           <button
             onClick={handlePrev}
             disabled={currentIndex === 0}
             className={`
-              flex items-center gap-2 px-4 py-3 rounded-xl font-medium transition-all
+              flex items-center gap-1 xs:gap-2 px-3 xs:px-4 py-2.5 xs:py-3 rounded-xl font-medium transition-all min-h-[44px]
               ${currentIndex === 0
                 ? 'opacity-40 cursor-not-allowed text-white/60'
                 : 'bg-white/20 text-white hover:bg-white/30 active:bg-white/40'
@@ -139,12 +142,12 @@ export default function LessonRecap({
             <svg className="w-5 h-5 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            {t('previous')}
+            <span className="hidden xs:inline">{t('previous')}</span>
           </button>
 
           <button
             onClick={handleNext}
-            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-white text-cyan-600 font-bold rounded-xl shadow-lg hover:bg-gray-100 active:bg-gray-200 transition-all"
+            className="flex-1 flex items-center justify-center gap-2 px-4 xs:px-6 py-2.5 xs:py-3 bg-white text-cyan-600 font-bold rounded-xl shadow-lg hover:bg-gray-100 active:bg-gray-200 transition-all min-h-[44px]"
           >
             {isLastItem ? (
               <>

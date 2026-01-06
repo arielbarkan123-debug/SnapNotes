@@ -14,6 +14,10 @@ const config: Config = {
         background: "var(--background)",
         foreground: "var(--foreground)",
       },
+      screens: {
+        'xs': '375px',  // iPhone SE and larger
+        '3xl': '1920px', // Large desktop
+      },
     },
   },
   plugins: [rtl],

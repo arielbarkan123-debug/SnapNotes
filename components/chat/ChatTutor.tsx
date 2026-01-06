@@ -140,7 +140,8 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
     return (
       <button
         onClick={() => setIsMinimized(false)}
-        className="fixed bottom-4 right-4 z-50 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 transition-all hover:scale-105"
+        className="fixed bottom-20 md:bottom-6 right-4 z-50 bg-indigo-600 text-white p-3 xs:p-4 rounded-full shadow-lg hover:bg-indigo-700 transition-all hover:scale-105 min-h-[48px] min-w-[48px]"
+        style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
         aria-label={t('openChat')}
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -156,7 +157,10 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-96 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col max-h-[600px]">
+    <div
+      className="fixed bottom-20 md:bottom-4 right-2 left-2 xs:left-auto xs:right-4 z-50 xs:w-[360px] sm:w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col max-h-[70vh] xs:max-h-[500px] sm:max-h-[600px]"
+      style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+    >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-indigo-600 text-white rounded-t-2xl">
         <div className="flex items-center gap-3">
@@ -209,7 +213,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[300px]">
+      <div className="flex-1 overflow-y-auto p-3 xs:p-4 space-y-3 xs:space-y-4 min-h-[200px] xs:min-h-[300px]">
         {messages.map((message) => (
           <div
             key={message.id}
@@ -241,7 +245,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="p-3 xs:p-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex gap-2">
           <textarea
             ref={inputRef}
@@ -250,13 +254,13 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
             onKeyDown={handleKeyDown}
             placeholder={t('askQuestion')}
             rows={1}
-            className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+            className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 xs:px-4 py-2 xs:py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white min-h-[44px]"
             disabled={isLoading}
           />
           <button
             onClick={sendMessage}
             disabled={!input.trim() || isLoading}
-            className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-3 xs:px-4 py-2 xs:py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
             aria-label={t('sendMessage')}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -264,7 +268,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
             </svg>
           </button>
         </div>
-        <p className="text-xs text-gray-400 mt-2 text-center">
+        <p className="text-xs text-gray-400 mt-2 text-center hidden xs:block">
           {t('enterToSend')}
         </p>
       </div>

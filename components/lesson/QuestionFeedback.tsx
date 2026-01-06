@@ -4,6 +4,10 @@ import { useEffect, useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useAgeAdaptiveSettings } from '@/hooks/useAgeAdaptiveSettings'
 import type { AnswerFeedback } from '@/lib/feedback/age-adaptive-feedback'
+import type { StructuredWorkedSolution, MistakeExplanation, MathVisual } from '@/types'
+import { MathSolutionRenderer, isStructuredMathSolution } from './MathSolutionRenderer'
+import { MathText } from '@/components/ui/MathRenderer'
+import { MistakeVisualizer } from './MistakeVisualizer'
 
 // =============================================================================
 // Types
@@ -18,6 +22,14 @@ interface QuestionFeedbackProps {
   correctAnswer: string
   /** Explanation of why the correct answer is right */
   explanation: string
+  /** Optional structured worked solution (for math problems) */
+  workedSolution?: StructuredWorkedSolution | string
+  /** Optional visual explanation of the mistake (for wrong answers) */
+  mistakeExplanation?: MistakeExplanation
+  /** Optional visual showing the wrong approach */
+  wrongVisual?: MathVisual
+  /** Optional visual showing the correct approach */
+  correctVisual?: MathVisual
   /** Callback when user clicks continue/got it */
   onContinue: () => void
   /** Optional callback to track the answer */
@@ -33,6 +45,10 @@ export default function QuestionFeedback({
   userAnswer,
   correctAnswer,
   explanation,
+  workedSolution,
+  mistakeExplanation,
+  wrongVisual,
+  correctVisual,
   onContinue,
   onAnswer,
 }: QuestionFeedbackProps) {
@@ -103,6 +119,7 @@ export default function QuestionFeedback({
           {isCorrect ? (
             <CorrectFeedback
               explanation={explanation}
+              workedSolution={workedSolution}
               correctAnswer={correctAnswer}
               onContinue={handleContinue}
               t={t}
@@ -114,6 +131,10 @@ export default function QuestionFeedback({
               userAnswer={userAnswer}
               correctAnswer={correctAnswer}
               explanation={explanation}
+              workedSolution={workedSolution}
+              mistakeExplanation={mistakeExplanation}
+              wrongVisual={wrongVisual}
+              correctVisual={correctVisual}
               onContinue={handleContinue}
               t={t}
               adaptiveFeedback={adaptiveFeedback}
@@ -132,6 +153,7 @@ export default function QuestionFeedback({
 
 interface CorrectFeedbackProps {
   explanation: string
+  workedSolution?: StructuredWorkedSolution | string
   correctAnswer: string
   onContinue: () => void
   t: ReturnType<typeof useTranslations<'lesson'>>
@@ -141,6 +163,7 @@ interface CorrectFeedbackProps {
 
 function CorrectFeedback({
   explanation,
+  workedSolution,
   correctAnswer,
   onContinue,
   t,
@@ -180,9 +203,18 @@ function CorrectFeedback({
       {/* Explanation - only show if age-appropriate */}
       {adaptiveFeedback.showExplanation && (
         <div className="bg-white/60 dark:bg-gray-800/60 rounded-xl p-4">
-          <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-            {explanation}
-          </p>
+          {/* Check if we have a structured math solution */}
+          {workedSolution && isStructuredMathSolution(workedSolution) ? (
+            <MathSolutionRenderer solution={workedSolution} />
+          ) : typeof workedSolution === 'string' ? (
+            <MathText className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
+              {workedSolution}
+            </MathText>
+          ) : (
+            <MathText className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
+              {explanation}
+            </MathText>
+          )}
         </div>
       )}
 
@@ -220,6 +252,10 @@ interface IncorrectFeedbackProps {
   userAnswer: string
   correctAnswer: string
   explanation: string
+  workedSolution?: StructuredWorkedSolution | string
+  mistakeExplanation?: MistakeExplanation
+  wrongVisual?: MathVisual
+  correctVisual?: MathVisual
   onContinue: () => void
   t: ReturnType<typeof useTranslations<'lesson'>>
   adaptiveFeedback: AnswerFeedback
@@ -230,6 +266,10 @@ function IncorrectFeedback({
   userAnswer,
   correctAnswer,
   explanation,
+  workedSolution,
+  mistakeExplanation,
+  wrongVisual,
+  correctVisual,
   onContinue,
   t,
   adaptiveFeedback,
@@ -300,18 +340,36 @@ function IncorrectFeedback({
         </div>
       </div>
 
+      {/* Visual mistake explanation (if available) */}
+      {mistakeExplanation && (
+        <MistakeVisualizer
+          explanation={mistakeExplanation}
+          wrongVisual={wrongVisual}
+          correctVisual={correctVisual}
+        />
+      )}
+
       {/* Explanation - controlled by age setting */}
       {showExplanation && (
         <div className="bg-white/60 dark:bg-gray-800/60 rounded-xl p-4">
           <div className="flex items-start gap-2">
             <span className="text-lg flex-shrink-0">📚</span>
-            <div>
+            <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1">
                 {t('why')}
               </p>
-              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                {explanation}
-              </p>
+              {/* Check if we have a structured math solution */}
+              {workedSolution && isStructuredMathSolution(workedSolution) ? (
+                <MathSolutionRenderer solution={workedSolution} />
+              ) : typeof workedSolution === 'string' ? (
+                <MathText className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {workedSolution}
+                </MathText>
+              ) : (
+                <MathText className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {explanation}
+                </MathText>
+              )}
             </div>
           </div>
         </div>
@@ -336,12 +394,14 @@ interface QuestionFeedbackCompactProps {
   isCorrect: boolean
   correctAnswer: string
   explanation: string
+  workedSolution?: StructuredWorkedSolution | string
 }
 
 export function QuestionFeedbackCompact({
   isCorrect,
   correctAnswer,
   explanation,
+  workedSolution,
 }: QuestionFeedbackCompactProps) {
   const t = useTranslations('lesson')
   return (
@@ -388,9 +448,18 @@ export function QuestionFeedbackCompact({
               <span className="font-medium">{t('answer')}</span> {correctAnswer}
             </p>
           )}
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {explanation}
-          </p>
+          {/* Check if we have a structured math solution */}
+          {workedSolution && isStructuredMathSolution(workedSolution) ? (
+            <MathSolutionRenderer solution={workedSolution} />
+          ) : typeof workedSolution === 'string' ? (
+            <MathText className="text-sm text-gray-600 dark:text-gray-400">
+              {workedSolution}
+            </MathText>
+          ) : (
+            <MathText className="text-sm text-gray-600 dark:text-gray-400">
+              {explanation}
+            </MathText>
+          )}
         </div>
       </div>
     </div>

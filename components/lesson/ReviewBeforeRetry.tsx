@@ -54,7 +54,7 @@ export default function ReviewBeforeRetry({
       </header>
 
       {/* Main content */}
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-2xl">
+      <main className="flex-1 container mx-auto px-3 xs:px-4 py-4 xs:py-6 sm:py-8 max-w-2xl overflow-y-auto">
         {/* The question explanation (if available) */}
         {questionStep.explanation && (
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm mb-6">
@@ -117,11 +117,14 @@ export default function ReviewBeforeRetry({
       </main>
 
       {/* Footer with ready button */}
-      <footer className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg">
-        <div className="container mx-auto px-4 py-4 max-w-4xl">
+      <footer
+        className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="container mx-auto px-3 xs:px-4 py-3 xs:py-4 max-w-4xl">
           <button
             onClick={onReady}
-            className="w-full py-4 rounded-xl font-semibold text-lg bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white transition-all duration-200"
+            className="w-full py-3 xs:py-4 rounded-xl font-semibold text-base xs:text-lg bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white transition-all duration-200 min-h-[48px]"
           >
             {t('readyToTryAgain')}
           </button>

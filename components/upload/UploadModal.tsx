@@ -877,7 +877,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
     >
       <div
         ref={modalRef}
-        className="relative w-full sm:max-w-lg bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300"
+        className="relative w-full sm:max-w-lg md:max-w-xl bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[95vh] sm:max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300"
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
@@ -1011,7 +1011,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {t('intensityMode.title')}
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-1.5 xs:gap-2">
               {getIntensityModes().map((mode) => (
                 <button
                   key={mode.id}
@@ -1019,7 +1019,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
                   onClick={() => setIntensityMode(mode.id)}
                   disabled={isUploading}
                   className={`
-                    relative flex flex-col items-center p-2.5 rounded-xl border-2 transition-all
+                    relative flex flex-col items-center p-2 xs:p-2.5 rounded-lg xs:rounded-xl border-2 transition-all min-h-[72px] xs:min-h-[80px]
                     ${intensityMode === mode.id
                       ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
                       : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-700'
@@ -1229,7 +1229,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 className={`
-                  grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 rounded-xl border-2 border-dashed transition-colors
+                  grid grid-cols-2 xs:grid-cols-3 md:grid-cols-4 gap-2 xs:gap-3 p-2 xs:p-3 rounded-xl border-2 border-dashed transition-colors
                   ${isDragging
                     ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
                     : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50'

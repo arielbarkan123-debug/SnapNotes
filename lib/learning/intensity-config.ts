@@ -105,7 +105,7 @@ export function getIntensityModes(): Array<{
  */
 export function calculatePracticeProblems(
   mode: LessonIntensityMode,
-  baseDifficulty: number // 1-10
+  _baseDifficulty: number // 1-10, reserved for future adaptive difficulty
 ): { easy: number; medium: number; hard: number } {
   const config = INTENSITY_CONFIGS[mode]
   const total = config.practiceProblemsTarget

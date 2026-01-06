@@ -288,6 +288,16 @@ const HINT_VARIATIONS: Record<StepType | 'default', Hint[]> = {
     { type: 'reminder', content: 'Try to recall these points before reading them.', icon: '📝' },
     { type: 'tip', content: 'Make sure you understand each point before moving on.', icon: '✅' },
   ],
+  worked_example: [
+    { type: 'tip', content: 'Follow along with each step carefully.', icon: '👀' },
+    { type: 'reminder', content: 'Understand the reasoning before moving on.', icon: '🧠' },
+    { type: 'tip', content: 'Try to predict the next step before reading it.', icon: '💭' },
+  ],
+  practice_problem: [
+    { type: 'tip', content: 'Try solving this on paper first.', icon: '✏️' },
+    { type: 'reminder', content: 'Apply what you learned from the worked example.', icon: '📝' },
+    { type: 'simplification', content: 'Break the problem into smaller steps.', icon: '🔢' },
+  ],
   default: [
     { type: 'tip', content: 'Take your time. Understanding is key.', icon: '💡' },
     { type: 'reminder', content: 'Don\'t hesitate to review previous steps.', icon: '↩️' },

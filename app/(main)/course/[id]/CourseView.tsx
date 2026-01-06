@@ -30,11 +30,11 @@ export default function CourseView({ course, progress }: CourseViewProps) {
   }, [])
 
   const {
-    status: generationStatus,
+    status: _generationStatus,
     lessonsReady,
     totalLessons,
     isGenerating,
-    isContinuing,
+    isContinuing: _isContinuing,
   } = useGenerationStatus(course.id, {
     autoTriggerContinuation: true,
     onComplete: onGenerationComplete,
@@ -247,14 +247,15 @@ export default function CourseView({ course, progress }: CourseViewProps) {
         </div>
       </main>
 
-      {/* AI Chat Tutor Button */}
+      {/* AI Chat Tutor Button - positioned above mobile bottom nav */}
       {!isChatOpen && (
         <button
           onClick={() => setIsChatOpen(true)}
-          className="fixed bottom-4 right-4 z-50 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 transition-all hover:scale-105 flex items-center gap-2"
+          className="fixed bottom-20 md:bottom-6 right-4 z-50 bg-indigo-600 text-white p-3 xs:p-4 rounded-full shadow-lg hover:bg-indigo-700 transition-all hover:scale-105 flex items-center gap-2 min-h-[48px] min-w-[48px]"
+          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
           aria-label={t('askAI')}
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 xs:w-6 xs:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
           </svg>
           <span className="hidden sm:inline font-medium">{t('askAI')}</span>
@@ -319,7 +320,7 @@ function LessonCard({
   const content = (
     <div
       className={`
-        relative flex items-center gap-4 p-4 rounded-xl border transition-all duration-200
+        relative flex items-center gap-3 xs:gap-4 p-3 xs:p-4 rounded-xl border transition-all duration-200
         ${status === 'completed'
           ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
           : status === 'current'
@@ -332,7 +333,7 @@ function LessonCard({
       {/* Status icon */}
       <div
         className={`
-          flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold
+          flex-shrink-0 w-10 h-10 xs:w-12 xs:h-12 rounded-full flex items-center justify-center text-base xs:text-lg font-bold
           ${status === 'completed'
             ? 'bg-green-500 text-white'
             : status === 'current'

@@ -494,10 +494,10 @@ function ProcessingContent() {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="mb-6 flex justify-center">
-            <div className="w-16 h-16 border-4 border-indigo-100 dark:border-indigo-900/50 rounded-full border-t-indigo-600 dark:border-t-indigo-400 animate-spin" />
+          <div className="mb-4 xs:mb-6 flex justify-center">
+            <div className="w-12 h-12 xs:w-16 xs:h-16 border-4 border-indigo-100 dark:border-indigo-900/50 rounded-full border-t-indigo-600 dark:border-t-indigo-400 animate-spin" />
           </div>
-          <p className="text-gray-500 dark:text-gray-400">{t('loadingDocument')}</p>
+          <p className="text-sm xs:text-base text-gray-500 dark:text-gray-400">{t('loadingDocument')}</p>
         </div>
       </div>
     )
@@ -565,12 +565,12 @@ function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPrevie
   return (
     <div className="text-center">
       {/* Preview - Image, Document Icon, or Text Preview */}
-      <div className="mb-8 flex justify-center">
+      <div className="mb-6 xs:mb-8 flex justify-center">
         {isText ? (
           /* Text Preview */
-          <div className="relative w-40 h-40 rounded-lg overflow-hidden shadow-lg bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 ring-4 ring-indigo-100 dark:ring-indigo-900/50 flex flex-col items-center justify-center p-4">
-            <span className="text-4xl mb-2">{SOURCE_TYPE_ICONS[sourceType]}</span>
-            <span className="text-xs text-gray-600 dark:text-gray-300 text-center line-clamp-3 leading-tight">
+          <div className="relative w-32 h-32 xs:w-40 xs:h-40 rounded-lg overflow-hidden shadow-lg bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 ring-4 ring-indigo-100 dark:ring-indigo-900/50 flex flex-col items-center justify-center p-3 xs:p-4">
+            <span className="text-3xl xs:text-4xl mb-1 xs:mb-2">{SOURCE_TYPE_ICONS[sourceType]}</span>
+            <span className="text-[10px] xs:text-xs text-gray-600 dark:text-gray-300 text-center line-clamp-3 leading-tight">
               {textPreview ? `"${textPreview}..."` : t('yourTextContent')}
             </span>
             {/* Pulse animation overlay */}
@@ -578,13 +578,13 @@ function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPrevie
           </div>
         ) : isDocument ? (
           /* Document Preview */
-          <div className="relative w-32 h-40 rounded-lg overflow-hidden shadow-lg bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 ring-4 ring-indigo-100 dark:ring-indigo-900/50 flex flex-col items-center justify-center">
-            <span className="text-5xl mb-2">{SOURCE_TYPE_ICONS[sourceType]}</span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 uppercase font-medium px-2 text-center truncate max-w-full">
+          <div className="relative w-28 h-36 xs:w-32 xs:h-40 rounded-lg overflow-hidden shadow-lg bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 ring-4 ring-indigo-100 dark:ring-indigo-900/50 flex flex-col items-center justify-center">
+            <span className="text-4xl xs:text-5xl mb-1 xs:mb-2">{SOURCE_TYPE_ICONS[sourceType]}</span>
+            <span className="text-[10px] xs:text-xs text-gray-500 dark:text-gray-400 uppercase font-medium px-2 text-center truncate max-w-full">
               {SOURCE_TYPE_LABELS[sourceType]}
             </span>
             {documentTitle && (
-              <span className="text-[10px] text-gray-400 dark:text-gray-500 px-2 text-center truncate max-w-full mt-1">
+              <span className="text-[9px] xs:text-[10px] text-gray-400 dark:text-gray-500 px-2 text-center truncate max-w-full mt-1">
                 {documentTitle.length > 20 ? documentTitle.slice(0, 20) + '...' : documentTitle}
               </span>
             )}
@@ -593,7 +593,7 @@ function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPrevie
           </div>
         ) : imageUrl ? (
           /* Image Preview */
-          <div className="relative w-32 h-40 rounded-lg overflow-hidden shadow-lg bg-gray-100 dark:bg-gray-700 ring-4 ring-indigo-100 dark:ring-indigo-900/50">
+          <div className="relative w-28 h-36 xs:w-32 xs:h-40 rounded-lg overflow-hidden shadow-lg bg-gray-100 dark:bg-gray-700 ring-4 ring-indigo-100 dark:ring-indigo-900/50">
             <Image
               src={imageUrl}
               alt="Your notebook page"
@@ -605,26 +605,26 @@ function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPrevie
           </div>
         ) : (
           /* Fallback - no preview */
-          <div className="relative w-32 h-40 rounded-lg overflow-hidden shadow-lg bg-gray-100 dark:bg-gray-700 ring-4 ring-indigo-100 dark:ring-indigo-900/50 flex items-center justify-center">
-            <span className="text-4xl">📝</span>
+          <div className="relative w-28 h-36 xs:w-32 xs:h-40 rounded-lg overflow-hidden shadow-lg bg-gray-100 dark:bg-gray-700 ring-4 ring-indigo-100 dark:ring-indigo-900/50 flex items-center justify-center">
+            <span className="text-3xl xs:text-4xl">📝</span>
             <div className="absolute inset-0 bg-indigo-500/10 animate-pulse" />
           </div>
         )}
       </div>
 
       {/* Spinner */}
-      <div className="mb-6 flex justify-center">
+      <div className="mb-4 xs:mb-6 flex justify-center">
         <div className="relative">
-          <div className="w-16 h-16 border-4 border-indigo-100 dark:border-indigo-900/50 rounded-full" />
-          <div className="absolute top-0 left-0 w-16 h-16 border-4 border-indigo-600 dark:border-indigo-400 rounded-full border-t-transparent animate-spin" />
+          <div className="w-12 h-12 xs:w-16 xs:h-16 border-4 border-indigo-100 dark:border-indigo-900/50 rounded-full" />
+          <div className="absolute top-0 left-0 w-12 h-12 xs:w-16 xs:h-16 border-4 border-indigo-600 dark:border-indigo-400 rounded-full border-t-transparent animate-spin" />
         </div>
       </div>
 
       {/* Progress Text */}
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 transition-all duration-500">
+      <h2 className="text-lg xs:text-xl font-semibold text-gray-900 dark:text-white mb-1 xs:mb-2 transition-all duration-500 px-2">
         {stage.message}
       </h2>
-      <p className="text-gray-500 dark:text-gray-400 mb-6 transition-all duration-500">
+      <p className="text-sm xs:text-base text-gray-500 dark:text-gray-400 mb-4 xs:mb-6 transition-all duration-500 px-2">
         {stage.submessage}
       </p>
 
@@ -659,14 +659,14 @@ function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPrevie
       </div>
 
       {/* Tips with time estimate */}
-      <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 text-sm text-indigo-700 dark:text-indigo-300">
-        <p className="font-medium mb-1 flex items-center gap-2">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-3 xs:p-4 text-xs xs:text-sm text-indigo-700 dark:text-indigo-300">
+        <p className="font-medium mb-1 flex items-center justify-center xs:justify-start gap-2">
+          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          {isText ? t('tips.textTime') : isDocument ? t('tips.documentTime') : t('tips.imageTime')}
+          <span>{isText ? t('tips.textTime') : isDocument ? t('tips.documentTime') : t('tips.imageTime')}</span>
         </p>
-        <p className="text-indigo-600 dark:text-indigo-400">
+        <p className="text-indigo-600 dark:text-indigo-400 text-center xs:text-start">
           {isText
             ? t('tips.textDescription')
             : isDocument
@@ -676,10 +676,10 @@ function ProcessingView({ stage, imageUrl, sourceType, documentTitle, textPrevie
       </div>
 
       {/* Cancel Link */}
-      <div className="mt-6">
+      <div className="mt-4 xs:mt-6">
         <Link
           href="/dashboard"
-          className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+          className="text-xs xs:text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors min-h-[44px] inline-flex items-center px-4"
         >
           {t('cancelAndReturn')}
         </Link>

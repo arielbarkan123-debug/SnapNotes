@@ -17,5 +17,11 @@
   "stepRemaining": "צעד {count} נותר",
   "generatingLessons": "מייצר שיעורים נוספים...",
   "generatingProgress": "{ready} מתוך {total} שיעורים מוכנים",
-  "generating": "מייצר..."
+  "generating": "מייצר...",
+  "mistakes": {
+    "whereYouWentWrong": "איפה טעית",
+    "yourApproach": "הגישה שלך",
+    "correctApproach": "הגישה הנכונה",
+    "commonMistake": "טעות נפוצה"
+  }
 }

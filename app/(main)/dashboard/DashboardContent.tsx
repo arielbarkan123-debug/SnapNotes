@@ -433,10 +433,11 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
         )}
       </div>
 
-      {/* Mobile Floating Action Button */}
+      {/* Mobile Floating Action Button - positioned above bottom nav */}
       <button
         onClick={handleOpenUploadModal}
-        className="sm:hidden fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-full shadow-lg flex items-center justify-center z-40 transition-colors"
+        className="sm:hidden fixed bottom-20 right-4 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-full shadow-lg flex items-center justify-center z-40 transition-colors"
+        style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
         aria-label="Upload notebook page"
       >
         <svg

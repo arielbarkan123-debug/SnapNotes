@@ -161,7 +161,7 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
 
       {/* Mobile Slide-out Menu */}
       <div
-        className={`fixed top-14 right-0 bottom-0 z-50 w-72 bg-white dark:bg-gray-800 shadow-xl md:hidden transform transition-transform duration-300 ease-out ${
+        className={`fixed top-14 right-0 bottom-0 z-50 w-[85vw] max-w-72 bg-white dark:bg-gray-800 shadow-xl md:hidden transform transition-transform duration-300 ease-out ${
           isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
@@ -228,8 +228,8 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
       </div>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 md:hidden safe-area-pb">
-        <div className="flex items-center justify-around h-16">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 md:hidden pb-[env(safe-area-inset-bottom)]">
+        <div className="flex items-center justify-around h-14 xs:h-16">
           <BottomNavLink href="/dashboard" icon={CoursesIcon} label={t('nav.courses')} active={isActive('/dashboard')} />
           <BottomNavLink href="/review" icon={ReviewIcon} label={t('nav.review')} active={isActive('/review')} />
           <BottomNavLink href="/practice" icon={PracticeIcon} label={t('nav.practice')} active={isActive('/practice')} />
@@ -238,8 +238,8 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
         </div>
       </nav>
 
-      {/* Spacer for bottom nav on mobile */}
-      <div className="h-16 md:hidden" />
+      {/* Spacer for bottom nav on mobile - accounts for safe area */}
+      <div className="h-14 xs:h-16 md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
     </>
   )
 }
@@ -292,14 +292,14 @@ function BottomNavLink({ href, icon: Icon, label, active }: { href: string; icon
   return (
     <Link
       href={href}
-      className={`flex flex-col items-center justify-center gap-1 px-3 py-2 min-w-[64px] transition-colors ${
+      className={`flex flex-col items-center justify-center gap-0.5 px-2 xs:px-3 py-1.5 min-w-[56px] xs:min-w-[64px] min-h-[44px] transition-colors ${
         active
           ? 'text-indigo-600 dark:text-indigo-400'
           : 'text-gray-500 dark:text-gray-400'
       }`}
     >
-      <Icon className="w-5 h-5" />
-      <span className="text-xs font-medium">{label}</span>
+      <Icon className="w-5 h-5 xs:w-6 xs:h-6" />
+      <span className="text-[10px] xs:text-xs font-medium truncate max-w-full">{label}</span>
     </Link>
   )
 }

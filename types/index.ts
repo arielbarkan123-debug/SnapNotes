@@ -65,9 +65,427 @@ export interface PracticeProblem {
   options?: string[]
   correctAnswer: string | number
   hints: string[] // 3 progressive hints
-  workedSolution: string
+  workedSolution: string | StructuredWorkedSolution
   difficulty: number // 1-5
   commonMistake?: string
+  /** Visual showing WHERE the error occurs for wrong answers */
+  mistakeVisual?: MathVisual
+  /** Specific error explanations for each wrong answer option */
+  errorExplanations?: Record<number, MistakeExplanation>
+}
+
+// ============================================
+// MATH RENDERING TYPES
+// Types for subject-aware math step-by-step solutions
+// ============================================
+
+/**
+ * MathStep - A single step in a math solution
+ */
+export interface MathStep {
+  stepNumber: number
+  /** Description of the action taken (e.g., "Identify coefficients", "Apply formula") */
+  action: string
+  /** LaTeX formula (e.g., "x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}") */
+  formula?: string
+  /** LaTeX with values substituted */
+  substitution?: string
+  /** LaTeX result */
+  result?: string
+  /** Brief text explanation */
+  explanation?: string
+}
+
+/**
+ * MathVisualType - Types of visual representations for math problems
+ */
+export type MathVisualType =
+  | 'number_line'
+  | 'coordinate_plane'
+  | 'triangle'
+  | 'circle'
+  | 'unit_circle'
+  | 'table'
+  | 'tree_diagram'
+
+/**
+ * NumberLinePoint - A point on a number line
+ */
+export interface NumberLinePoint {
+  value: number
+  label?: string
+  style: 'filled' | 'open' // filled = ● (≤,≥), open = ○ (<,>)
+}
+
+/**
+ * NumberLineInterval - An interval on a number line
+ */
+export interface NumberLineInterval {
+  start: number | null // null = negative infinity
+  end: number | null // null = positive infinity
+  startInclusive: boolean
+  endInclusive: boolean
+  color?: string
+}
+
+/**
+ * NumberLineData - Data for number line visual
+ */
+export interface NumberLineData {
+  min: number
+  max: number
+  points?: NumberLinePoint[]
+  intervals?: NumberLineInterval[]
+  title?: string
+}
+
+/**
+ * CoordinatePoint - A point on a coordinate plane
+ */
+export interface CoordinatePoint {
+  x: number
+  y: number
+  label?: string
+  color?: string
+}
+
+/**
+ * CoordinateLine - A line on a coordinate plane
+ */
+export interface CoordinateLine {
+  type: 'line' | 'ray' | 'segment'
+  points: [CoordinatePoint, CoordinatePoint]
+  color?: string
+  dashed?: boolean
+}
+
+/**
+ * CoordinateCurve - A curve on a coordinate plane (for parabolas, etc.)
+ */
+export interface CoordinateCurve {
+  /** Function expression (e.g., "x^2 - 5x + 6") */
+  expression: string
+  /** Color of the curve */
+  color?: string
+  /** Domain restriction */
+  domain?: { min: number; max: number }
+}
+
+/**
+ * CoordinateRegion - A shaded region on a coordinate plane
+ */
+export interface CoordinateRegion {
+  /** Inequality expression (e.g., "y > x + 2") */
+  inequality: string
+  color?: string
+  opacity?: number
+}
+
+/**
+ * CoordinatePlaneData - Data for coordinate plane visual
+ */
+export interface CoordinatePlaneData {
+  xMin: number
+  xMax: number
+  yMin: number
+  yMax: number
+  points?: CoordinatePoint[]
+  lines?: CoordinateLine[]
+  curves?: CoordinateCurve[]
+  regions?: CoordinateRegion[]
+  title?: string
+  xLabel?: string
+  yLabel?: string
+  showGrid?: boolean
+}
+
+/**
+ * TriangleVertex - A vertex of a triangle
+ */
+export interface TriangleVertex {
+  x: number
+  y: number
+  label: string // e.g., "A", "B", "C"
+}
+
+/**
+ * TriangleSide - A side of a triangle with optional measurement
+ */
+export interface TriangleSide {
+  from: string // vertex label
+  to: string // vertex label
+  length?: string // e.g., "5", "a", "√2"
+  highlight?: boolean
+}
+
+/**
+ * TriangleAngle - An angle of a triangle
+ */
+export interface TriangleAngle {
+  vertex: string // vertex label where angle is located
+  measure?: string // e.g., "60°", "θ", "90°"
+  highlight?: boolean
+  rightAngle?: boolean
+}
+
+/**
+ * TriangleData - Data for triangle visual
+ */
+export interface TriangleData {
+  vertices: [TriangleVertex, TriangleVertex, TriangleVertex]
+  sides?: TriangleSide[]
+  angles?: TriangleAngle[]
+  altitude?: { from: string; to: string } // Show altitude line
+  title?: string
+}
+
+/**
+ * CircleData - Data for circle visual
+ */
+export interface CircleData {
+  centerX: number
+  centerY: number
+  radius: number
+  centerLabel?: string
+  showRadius?: boolean
+  radiusLabel?: string
+  showDiameter?: boolean
+  chords?: Array<{
+    start: { x: number; y: number; label?: string }
+    end: { x: number; y: number; label?: string }
+  }>
+  tangentPoint?: { x: number; y: number; label?: string }
+  centralAngle?: { start: number; end: number; label?: string }
+  inscribedAngle?: { vertex: { x: number; y: number }; arc: { start: number; end: number }; label?: string }
+  title?: string
+}
+
+/**
+ * UnitCircleAngle - An angle shown on the unit circle
+ */
+export interface UnitCircleAngle {
+  degrees: number
+  radians: string // e.g., "π/6", "π/4"
+  highlight?: boolean
+  showCoordinates?: boolean
+  label?: string
+}
+
+/**
+ * UnitCircleData - Data for unit circle visual
+ */
+export interface UnitCircleData {
+  angles: UnitCircleAngle[]
+  showStandardAngles?: boolean // Show all standard angles (30°, 45°, 60°, etc.)
+  highlightQuadrant?: 1 | 2 | 3 | 4
+  showSinCos?: boolean // Show sin/cos values
+  title?: string
+}
+
+/**
+ * TableCell - A cell in a math table
+ */
+export interface TableCell {
+  content: string
+  isHeader?: boolean
+  highlight?: boolean
+  color?: string
+}
+
+/**
+ * TableData - Data for table visual
+ */
+export interface TableData {
+  rows: TableCell[][]
+  title?: string
+  caption?: string
+}
+
+/**
+ * TreeNode - A node in a tree diagram
+ */
+export interface TreeNode {
+  id: string
+  label: string
+  value?: string // e.g., probability value "1/3"
+  children?: TreeNode[]
+  highlight?: boolean
+}
+
+/**
+ * TreeDiagramData - Data for tree diagram visual
+ */
+export interface TreeDiagramData {
+  root: TreeNode
+  showProbabilities?: boolean
+  title?: string
+}
+
+// ============================================
+// ERROR HIGHLIGHTING TYPES
+// For visual mistake explanations
+// ============================================
+
+/**
+ * VisualErrorHighlight - Describes an error in a visual
+ */
+export interface VisualErrorHighlight {
+  type: 'wrong_value' | 'wrong_step' | 'sign_error' | 'missing_step' | 'wrong_operation'
+  description: string
+  color?: string // Defaults to red for errors
+}
+
+/**
+ * ErrorPoint - A point marked as error or correct
+ */
+export interface ErrorPoint {
+  isError?: boolean
+  isCorrect?: boolean
+  errorLabel?: string
+  correctLabel?: string
+}
+
+/**
+ * NumberLineErrorHighlight - Error highlighting for number line
+ */
+export interface NumberLineErrorHighlight {
+  wrongPoints?: Array<NumberLinePoint & ErrorPoint>
+  correctPoints?: Array<NumberLinePoint & ErrorPoint>
+  wrongIntervals?: Array<NumberLineInterval & ErrorPoint>
+  correctIntervals?: Array<NumberLineInterval & ErrorPoint>
+}
+
+/**
+ * CoordinatePlaneErrorHighlight - Error highlighting for coordinate plane
+ */
+export interface CoordinatePlaneErrorHighlight {
+  wrongPoints?: Array<CoordinatePoint & ErrorPoint>
+  correctPoints?: Array<CoordinatePoint & ErrorPoint>
+  wrongCurves?: Array<CoordinateCurve & ErrorPoint>
+  correctCurves?: Array<CoordinateCurve & ErrorPoint>
+}
+
+/**
+ * TriangleErrorHighlight - Error highlighting for triangle
+ */
+export interface TriangleErrorHighlight {
+  wrongSides?: string[] // Side labels that are wrong
+  wrongAngles?: string[] // Angle vertex labels that are wrong
+  corrections?: Record<string, string> // Map of wrong label to correction text
+}
+
+/**
+ * CircleErrorHighlight - Error highlighting for circle
+ */
+export interface CircleErrorHighlight {
+  wrongRadius?: boolean
+  wrongCenter?: boolean
+  wrongChord?: number // Index of wrong chord
+  corrections?: Record<string, string>
+}
+
+/**
+ * UnitCircleErrorHighlight - Error highlighting for unit circle
+ */
+export interface UnitCircleErrorHighlight {
+  wrongAngles?: number[] // Degrees of wrong angles
+  correctAngles?: number[] // Degrees of correct angles
+  wrongValues?: Array<{ angle: number; wrongSin?: string; wrongCos?: string }>
+}
+
+/**
+ * TreeDiagramErrorHighlight - Error highlighting for tree diagram
+ */
+export interface TreeDiagramErrorHighlight {
+  wrongNodes?: string[] // IDs of wrong nodes
+  wrongPaths?: string[] // IDs of wrong path endpoints
+  correctPath?: string[] // IDs of correct path
+  corrections?: Record<string, string>
+}
+
+/**
+ * Extended visual data types with error highlighting
+ */
+export interface NumberLineDataWithErrors extends NumberLineData {
+  errorHighlight?: NumberLineErrorHighlight
+}
+
+export interface CoordinatePlaneDataWithErrors extends CoordinatePlaneData {
+  errorHighlight?: CoordinatePlaneErrorHighlight
+}
+
+export interface TriangleDataWithErrors extends TriangleData {
+  errorHighlight?: TriangleErrorHighlight
+}
+
+export interface CircleDataWithErrors extends CircleData {
+  errorHighlight?: CircleErrorHighlight
+}
+
+export interface UnitCircleDataWithErrors extends UnitCircleData {
+  errorHighlight?: UnitCircleErrorHighlight
+}
+
+export interface TreeDiagramDataWithErrors extends TreeDiagramData {
+  errorHighlight?: TreeDiagramErrorHighlight
+}
+
+/**
+ * MistakeExplanation - Visual explanation of a mistake
+ */
+export interface MistakeExplanation {
+  description: string
+  visual?: MathVisual
+  commonMistake?: string
+  tip?: string
+}
+
+/**
+ * MathVisual - Visual representation for a math solution
+ */
+export type MathVisual =
+  | { type: 'number_line'; data: NumberLineData }
+  | { type: 'coordinate_plane'; data: CoordinatePlaneData }
+  | { type: 'triangle'; data: TriangleData }
+  | { type: 'circle'; data: CircleData }
+  | { type: 'unit_circle'; data: UnitCircleData }
+  | { type: 'table'; data: TableData }
+  | { type: 'tree_diagram'; data: TreeDiagramData }
+
+/**
+ * MathSolution - A complete math solution using one method
+ */
+export interface MathSolution {
+  /** Method name (e.g., "Quadratic Formula", "Factoring", "Completing Square") */
+  method: string
+  /** Method type for categorization */
+  methodType?: 'formula' | 'factoring' | 'graphical' | 'table' | 'elimination' | 'substitution' | 'other'
+  /** When this method is best to use */
+  whenToUse?: string
+  /** Identified coefficients (e.g., { a: "1", b: "5", c: "-6" }) */
+  coefficients?: Record<string, string>
+  /** Step-by-step solution */
+  steps: MathStep[]
+  /** Final answer in LaTeX (e.g., "x = 1 \\text{ or } x = -6") */
+  finalAnswer: string
+  /** Optional verification/check work */
+  verification?: string
+  /** Optional visual representation */
+  visual?: MathVisual
+}
+
+/**
+ * StructuredWorkedSolution - Subject-aware worked solution
+ * For math: contains structured step-by-step methods with LaTeX
+ * For other subjects: contains text explanation
+ */
+export interface StructuredWorkedSolution {
+  /** Subject type for appropriate rendering */
+  subject: 'math' | 'other'
+  /** Multiple solving methods for math problems */
+  methods?: MathSolution[]
+  /** Fallback text explanation for non-math subjects */
+  textExplanation?: string
 }
 
 /**
@@ -285,7 +703,7 @@ export interface CourseSection {
 /**
  * StepType - The type of content in a lesson step
  */
-export type StepType = 'explanation' | 'key_point' | 'question' | 'formula' | 'diagram' | 'example' | 'summary'
+export type StepType = 'explanation' | 'key_point' | 'question' | 'formula' | 'diagram' | 'example' | 'summary' | 'worked_example' | 'practice_problem'
 
 /**
  * Step - A single step in a lesson

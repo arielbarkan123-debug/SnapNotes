@@ -525,15 +525,15 @@ export default function LessonView({
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
         {/* Retry Header */}
         <header className="sticky top-0 z-30 bg-amber-500 text-white shadow-sm">
-          <div className="container mx-auto px-4 py-3 max-w-4xl">
+          <div className="container mx-auto px-3 xs:px-4 py-2 xs:py-3 max-w-4xl">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-400 rounded-full flex items-center justify-center">
-                  <span className="text-xl">🔄</span>
+              <div className="flex items-center gap-2 xs:gap-3">
+                <div className="w-8 h-8 xs:w-10 xs:h-10 bg-amber-400 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-base xs:text-xl">🔄</span>
                 </div>
-                <div>
-                  <p className="font-semibold">Let&apos;s Try Again!</p>
-                  <p className="text-amber-100 text-sm">
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm xs:text-base">Let&apos;s Try Again!</p>
+                  <p className="text-amber-100 text-xs xs:text-sm truncate">
                     {failedQuestions.length} question{failedQuestions.length !== 1 ? 's' : ''} remaining
                     {attemptNumber > 1 && ` • Attempt ${attemptNumber}`}
                   </p>
@@ -541,10 +541,10 @@ export default function LessonView({
               </div>
               <button
                 onClick={handleExit}
-                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-amber-400 transition-colors"
+                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-amber-400 transition-colors flex-shrink-0 min-w-[44px] min-h-[44px]"
                 aria-label="Exit lesson"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 xs:w-6 xs:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -553,8 +553,8 @@ export default function LessonView({
         </header>
 
         {/* Retry Question */}
-        <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl flex flex-col">
-          <div className="flex-1 flex items-center justify-center">
+        <main className="flex-1 container mx-auto px-3 xs:px-4 py-4 xs:py-6 sm:py-8 max-w-4xl flex flex-col overflow-y-auto">
+          <div className="flex-1 flex items-start sm:items-center justify-center py-4">
             <div className="w-full max-w-xl">
               <QuestionStep
                 key={`retry-${failedStepIndex}-${attemptNumber}`}
@@ -615,8 +615,8 @@ export default function LessonView({
       </header>
 
       {/* Main content */}
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl flex flex-col">
-        <div className="flex-1 flex items-center justify-center">
+      <main className="flex-1 container mx-auto px-3 xs:px-4 py-4 xs:py-6 sm:py-8 max-w-4xl flex flex-col overflow-y-auto">
+        <div className="flex-1 flex items-start sm:items-center justify-center py-4">
           <div className="w-full max-w-xl">
             {isQuestion ? (
               <QuestionStep
@@ -647,13 +647,16 @@ export default function LessonView({
 
       {/* Footer with continue button - only show for non-question steps */}
       {!isQuestion && (
-        <footer className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg">
-          <div className="container mx-auto px-4 py-4 max-w-4xl">
+        <footer
+          className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          <div className="container mx-auto px-3 xs:px-4 py-3 xs:py-4 max-w-4xl">
             <button
               onClick={() => handleAdvance()}
               disabled={isSaving}
               className={`
-                w-full py-4 rounded-xl font-semibold text-lg transition-all duration-200
+                w-full py-3 xs:py-4 rounded-xl font-semibold text-base xs:text-lg transition-all duration-200 min-h-[48px]
                 ${!isSaving
                   ? isLastStep
                     ? 'bg-green-600 hover:bg-green-700 active:bg-green-800 text-white'
@@ -693,12 +696,13 @@ export default function LessonView({
       {!isQuestion && (
         <button
           onClick={() => setShowHelp(true)}
-          className="fixed bottom-24 right-4 md:bottom-8 md:right-8 w-12 h-12 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-200 dark:hover:bg-indigo-900 transition-all hover:scale-110 z-40"
+          className="fixed bottom-28 xs:bottom-24 right-3 xs:right-4 md:bottom-8 md:right-8 w-11 h-11 xs:w-12 xs:h-12 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-200 dark:hover:bg-indigo-900 transition-all hover:scale-110 z-40"
+          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
           aria-label={t('getHelp')}
           title={t('needHelpPressH')}
           type="button"
         >
-          <span className="text-xl">❓</span>
+          <span className="text-lg xs:text-xl">❓</span>
         </button>
       )}
 
@@ -713,11 +717,12 @@ export default function LessonView({
       {!isQuestion && !isChatOpen && (
         <button
           onClick={() => setIsChatOpen(true)}
-          className="fixed bottom-40 right-4 md:bottom-24 md:right-8 w-12 h-12 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-all hover:scale-110 z-40"
+          className="fixed bottom-44 xs:bottom-40 right-3 xs:right-4 md:bottom-24 md:right-8 w-11 h-11 xs:w-12 xs:h-12 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-all hover:scale-110 z-40"
+          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
           aria-label={t('askAI')}
           title={t('askAI')}
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 xs:w-6 xs:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
           </svg>
         </button>

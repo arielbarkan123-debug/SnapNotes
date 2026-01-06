@@ -219,13 +219,13 @@ export default function QuestionStep({
   const showHintButton = !hasChecked && wrongAttempts > 0 && !currentHint && !hintDismissed
 
   return (
-    <div className="animate-fadeIn space-y-6">
+    <div className="animate-fadeIn space-y-4 xs:space-y-6">
       {/* Question badge and text */}
       <div className="text-center">
-        <span className="inline-block px-3 py-1 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 text-xs font-bold uppercase tracking-wider rounded-full mb-4">
+        <span className="inline-block px-2 xs:px-3 py-1 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 text-xs font-bold uppercase tracking-wider rounded-full mb-3 xs:mb-4">
           {t('question')}
         </span>
-        <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white leading-relaxed">
+        <h2 className="text-lg xs:text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white leading-relaxed">
           {question}
         </h2>
       </div>
@@ -246,7 +246,7 @@ export default function QuestionStep({
       )}
 
       {/* Answer options */}
-      <div className="space-y-3">
+      <div className="space-y-2 xs:space-y-3">
         {options.map((option, index) => {
           const isSelected = selectedAnswer === index
           const isCorrectAnswer = index === correct_answer
@@ -259,7 +259,7 @@ export default function QuestionStep({
               onClick={() => handleSelect(index)}
               disabled={hasChecked}
               className={`
-                w-full p-4 rounded-2xl border-2 text-start transition-all duration-200
+                w-full p-3 xs:p-4 rounded-xl xs:rounded-2xl border-2 text-start transition-all duration-200 min-h-[48px]
                 ${hasChecked
                   ? showCorrect
                     ? 'bg-green-50 dark:bg-green-900/30 border-green-500 dark:border-green-500'
@@ -273,11 +273,11 @@ export default function QuestionStep({
                 ${!hasChecked && 'cursor-pointer active:scale-[0.98]'}
               `}
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 xs:gap-4">
                 {/* Letter indicator (A, B, C, D) */}
                 <div
                   className={`
-                    flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold text-base transition-all duration-200
+                    flex-shrink-0 w-8 h-8 xs:w-10 xs:h-10 rounded-full flex items-center justify-center font-bold text-sm xs:text-base transition-all duration-200
                     ${hasChecked
                       ? showCorrect
                         ? 'bg-green-500 text-white'
@@ -455,7 +455,7 @@ export default function QuestionStep({
           onClick={handleCheck}
           disabled={selectedAnswer === null}
           className={`
-            w-full py-4 rounded-2xl font-semibold text-lg transition-all duration-200
+            w-full py-3 xs:py-4 rounded-xl xs:rounded-2xl font-semibold text-base xs:text-lg transition-all duration-200 min-h-[48px]
             ${selectedAnswer !== null
               ? 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30 cursor-pointer'
               : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
@@ -468,7 +468,7 @@ export default function QuestionStep({
         <button
           onClick={handleContinue}
           className={`
-            w-full py-4 rounded-2xl font-semibold text-lg transition-all duration-200 animate-fadeIn
+            w-full py-3 xs:py-4 rounded-xl xs:rounded-2xl font-semibold text-base xs:text-lg transition-all duration-200 animate-fadeIn min-h-[48px]
             ${isCorrect
               ? 'bg-green-600 hover:bg-green-700 active:bg-green-800 text-white shadow-lg shadow-green-200 dark:shadow-green-900/30'
               : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30'

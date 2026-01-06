@@ -4,7 +4,7 @@ import { CourseInsert, LessonIntensityMode } from '@/types'
 import {
   generateCourseFromImage,
   generateCourseFromMultipleImages,
-  generateCourseFromDocument,
+  generateCourseFromDocument as _generateCourseFromDocument,
   generateCourseFromText,
   generateInitialCourse,
   ClaudeAPIError,

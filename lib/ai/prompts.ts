@@ -17,6 +17,8 @@ import {
 } from '@/lib/learning/age-config'
 import type { LessonIntensityMode } from '@/types'
 import { getIntensityConfig } from '@/lib/learning/intensity-config'
+import { detectMathTopic, getMathMethodsPromptInstructions, ALL_MATH_METHODS } from './math-methods'
+import { getVisualGuidanceForPrompt, getFullVisualGuidance, ERROR_VISUAL_GUIDANCE } from './visual-guidance'
 
 // ============================================================================
 // User Context Types for Personalization
@@ -493,9 +495,9 @@ The goal: Student learns to SOLVE PROBLEMS, not learn ABOUT the exam.
 }
 
 /**
- * Builds math-specific teaching instructions
+ * Builds math-specific teaching instructions with methods library
  */
-function buildMathContentInstructions(content: string): string {
+function buildMathContentInstructions(content: string, language: 'en' | 'he' = 'en'): string {
   const mathIndicators = [
     // Hebrew math terms
     'משוואה', 'פונקציה', 'גאומטריה', 'חשבון', 'אלגברה',
@@ -513,19 +515,78 @@ function buildMathContentInstructions(content: string): string {
 
   if (!isMath) return ''
 
+  // Detect specific math topic and get relevant methods
+  const detectedTopic = detectMathTopic(content)
+  const topicMethods = detectedTopic ? getMathMethodsPromptInstructions(detectedTopic, language) : ''
+
+  // Get topic-specific visual guidance
+  const topicVisualGuidance = detectedTopic ? getVisualGuidanceForPrompt(detectedTopic) : getFullVisualGuidance()
+
   return `
 
 ## Mathematics Content
 
 ### Key Principles:
-- Show REASONING behind each step
-- Include step-by-step solutions
+- Show REASONING behind each step with visual language of math
+- Include step-by-step solutions using LaTeX notation
+- Provide MULTIPLE solving methods when applicable
+- Include visual representations (graphs, number lines, tables) where helpful
 - Verify answers where applicable
 
-### Solution Format:
-1. Problem statement
-2. Step-by-step solution with reasoning
-3. Final answer
+### Solution Structure:
+For each math problem, provide:
+1. **Problem identification** - What type of problem is this?
+2. **Multiple methods** - Provide at least 2 solving methods if applicable
+3. **Step-by-step solution** - With LaTeX formulas and reasoning
+4. **Visual representation** - Include "visual" field when helpful:
+   - number_line: For inequalities, solution sets
+   - coordinate_plane: For functions, graphs, intersections
+   - triangle: For geometry problems
+   - circle: For circle problems
+   - unit_circle: For trigonometry
+   - table: For sign tables, value tables, factoring
+   - tree_diagram: For probability, counting
+5. **Final answer** - Clearly stated in LaTeX
+
+${topicVisualGuidance}
+
+### Solution Format (JSON):
+\`\`\`json
+{
+  "subject": "math",
+  "methods": [
+    {
+      "method": "Method Name",
+      "methodType": "formula|factoring|graphical|table|elimination|substitution|other",
+      "whenToUse": "When this method is best",
+      "coefficients": { "a": "1", "b": "-5", "c": "6" },
+      "steps": [
+        {
+          "stepNumber": 1,
+          "action": "Description of what we're doing",
+          "formula": "LaTeX formula (optional)",
+          "substitution": "Values substituted (optional)",
+          "result": "Step result in LaTeX (optional)",
+          "explanation": "Why this step (optional)"
+        }
+      ],
+      "finalAnswer": "x = 2 \\\\text{ or } x = 3",
+      "visual": {
+        "type": "coordinate_plane",
+        "data": { /* visual data */ }
+      }
+    }
+  ]
+}
+\`\`\`
+${topicMethods}
+
+${ERROR_VISUAL_GUIDANCE}
+
+### Available Methods by Topic:
+${Object.entries(ALL_MATH_METHODS).slice(0, 6).map(([_key, topic]) =>
+  `- **${topic.topicName}**: ${topic.methods.map(m => m.name).join(', ')}`
+).join('\n')}
 `
 }
 
@@ -1077,6 +1138,99 @@ Return ONLY the JSON object, no additional text, markdown formatting, or code bl
 }
 
 // ============================================================================
+// Math Solution Instructions for Subject-Aware Rendering
+// ============================================================================
+
+/**
+ * Returns instructions for generating structured math solutions with LaTeX
+ * Used when content is detected as mathematics
+ */
+export function getMathSolutionInstructions(): string {
+  return `
+## MATH PROBLEM SOLUTION FORMAT
+
+For MATH problems, the "workedSolution" field must be a STRUCTURED OBJECT (not a string) with this format:
+
+"workedSolution": {
+  "subject": "math",
+  "methods": [
+    {
+      "method": "Method Name (e.g., Quadratic Formula, Factoring)",
+      "coefficients": { "a": "1", "b": "5", "c": "-6" },
+      "steps": [
+        {
+          "stepNumber": 1,
+          "action": "Identify coefficients from ax² + bx + c = 0",
+          "result": "a = 1, b = 5, c = -6"
+        },
+        {
+          "stepNumber": 2,
+          "action": "Write the quadratic formula",
+          "formula": "x = \\\\frac{-b \\\\pm \\\\sqrt{b^2-4ac}}{2a}"
+        },
+        {
+          "stepNumber": 3,
+          "action": "Substitute values",
+          "substitution": "x = \\\\frac{-5 \\\\pm \\\\sqrt{25+24}}{2}"
+        },
+        {
+          "stepNumber": 4,
+          "action": "Simplify the discriminant",
+          "result": "x = \\\\frac{-5 \\\\pm \\\\sqrt{49}}{2} = \\\\frac{-5 \\\\pm 7}{2}"
+        },
+        {
+          "stepNumber": 5,
+          "action": "Calculate both solutions",
+          "result": "x_1 = \\\\frac{-5+7}{2} = 1, \\\\quad x_2 = \\\\frac{-5-7}{2} = -6"
+        }
+      ],
+      "finalAnswer": "x = 1 \\\\text{ or } x = -6"
+    }
+  ]
+}
+
+### LaTeX Format Rules:
+- Use DOUBLE backslashes (\\\\) for LaTeX commands (\\\\frac, \\\\sqrt, \\\\pm, \\\\quad)
+- For fractions: \\\\frac{numerator}{denominator}
+- For square roots: \\\\sqrt{expression}
+- For plus/minus: \\\\pm
+- For subscripts: x_1, a_n
+- For superscripts: x^2, a^{n+1}
+- For text in math: \\\\text{ or }
+- For Greek letters: \\\\alpha, \\\\beta, \\\\theta
+
+### Multiple Methods (when applicable):
+Provide 2+ methods when possible:
+1. Primary method (e.g., Quadratic Formula)
+2. Alternative method (e.g., Factoring, Completing the Square)
+
+Each method should have:
+- "method": Name of the solving approach
+- "coefficients": Key values identified (if applicable)
+- "steps": Array of step objects with stepNumber, action, and optional formula/substitution/result
+- "finalAnswer": The answer in LaTeX format
+
+### Step Object Properties:
+- stepNumber: (required) Number of the step
+- action: (required) What is being done in this step
+- formula: (optional) The formula being applied (in LaTeX)
+- substitution: (optional) The formula with values substituted (in LaTeX)
+- result: (optional) The result of this step (in LaTeX)
+- explanation: (optional) Brief text explanation
+
+### For Non-Math Subjects:
+Use a simple string for workedSolution:
+"workedSolution": "Step 1: ... Step 2: ... Answer: ..."
+
+Or use structured format for other subjects:
+"workedSolution": {
+  "subject": "other",
+  "textExplanation": "Step 1: ... Step 2: ... Answer: ..."
+}
+`
+}
+
+// ============================================================================
 // Deep Practice Course Generation Prompt
 // ============================================================================
 
@@ -1138,10 +1292,27 @@ Similar to worked example but different numbers/scenarios. Format:
       "Start by identifying the known values",
       "Use the formula: X = Y * Z, substitute the values"
     ],
-    "workedSolution": "Step 1: Identify... Step 2: Apply... Step 3: Calculate... Answer: ...",
+    "workedSolution": {
+      "subject": "math",
+      "methods": [
+        {
+          "method": "Primary Method Name",
+          "coefficients": { "a": "value", "b": "value" },
+          "steps": [
+            { "stepNumber": 1, "action": "...", "formula": "LaTeX formula" },
+            { "stepNumber": 2, "action": "...", "substitution": "LaTeX with values" },
+            { "stepNumber": 3, "action": "...", "result": "LaTeX result" }
+          ],
+          "finalAnswer": "LaTeX answer"
+        }
+      ]
+    },
     "commonMistake": "Many students forget to [specific error]...",
     "explanation": "The correct answer is A because..."
   }
+
+NOTE: For MATH content, workedSolution MUST be a structured object with LaTeX formulas.
+For non-math subjects, use a plain string: "workedSolution": "Step 1: ... Step 2: ..."
 
 ### 4. CONCEPT SUMMARY (1 step)
 - Key formula/rule to remember

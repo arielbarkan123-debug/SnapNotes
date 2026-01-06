@@ -34,7 +34,7 @@ export default async function MainLayout({
         userName={user?.user_metadata?.name}
         isAdmin={isAdmin}
       />
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1">
         {children}
       </main>
       <OfflineIndicator />

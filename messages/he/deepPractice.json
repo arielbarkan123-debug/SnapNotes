@@ -24,5 +24,26 @@
   "tryAgain": "נסה שוב",
   "hint": "רמז",
   "checkAnswer": "בדוק תשובה",
-  "showSolution": "הצג פתרון"
+  "showSolution": "הצג פתרון",
+  "math": {
+    "method": "שיטה",
+    "coefficients": "מקדמים",
+    "step": "שלב",
+    "answer": "תשובה",
+    "alternativeMethod": "שיטה חלופית",
+    "showOtherMethods": "הצג שיטות פתרון נוספות",
+    "bestFor": "הכי טוב עבור",
+    "visual": "הדגמה ויזואלית",
+    "showVisual": "הצג הדגמה",
+    "hideVisual": "הסתר הדגמה",
+    "showGraph": "הצג גרף",
+    "showTable": "הצג טבלה",
+    "numberLine": "ציר מספרים",
+    "coordinatePlane": "מערכת צירים",
+    "triangle": "משולש",
+    "circle": "מעגל",
+    "unitCircle": "מעגל היחידה",
+    "table": "טבלה",
+    "treeDiagram": "דיאגרמת עץ"
+  }
 }

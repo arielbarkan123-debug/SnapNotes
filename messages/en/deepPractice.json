@@ -24,5 +24,26 @@
   "tryAgain": "Try Again",
   "hint": "Hint",
   "checkAnswer": "Check Answer",
-  "showSolution": "Show Solution"
+  "showSolution": "Show Solution",
+  "math": {
+    "method": "Method",
+    "coefficients": "Coefficients",
+    "step": "Step",
+    "answer": "Answer",
+    "alternativeMethod": "Alternative Method",
+    "showOtherMethods": "Show other solving methods",
+    "bestFor": "Best for",
+    "visual": "Visual",
+    "showVisual": "Show Visual",
+    "hideVisual": "Hide Visual",
+    "showGraph": "Show Graph",
+    "showTable": "Show Table",
+    "numberLine": "Number Line",
+    "coordinatePlane": "Coordinate Plane",
+    "triangle": "Triangle",
+    "circle": "Circle",
+    "unitCircle": "Unit Circle",
+    "table": "Table",
+    "treeDiagram": "Tree Diagram"
+  }
 }

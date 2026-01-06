@@ -1,6 +1,6 @@
 {
   "name": "studysnap-app",
-  "version": "2.8.0",
+  "version": "3.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -19,7 +19,9 @@
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.84.0",
     "clsx": "^2.1.1",
+    "dompurify": "^3.3.1",
     "jszip": "^3.10.1",
+    "katex": "^0.16.27",
     "lucide-react": "^0.562.0",
     "mammoth": "^1.11.0",
     "next": "14.2.33",
@@ -27,6 +29,7 @@
     "pptx-parser": "^1.1.7-beta.9",
     "react": "^18",
     "react-dom": "^18",
+    "react-katex": "^3.1.0",
     "sharp": "^0.34.5",
     "swr": "^2.3.7",
     "tailwind-merge": "^3.4.0",
@@ -35,7 +38,9 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
+    "@types/dompurify": "^3.0.5",
     "@types/jest": "^30.0.0",
+    "@types/katex": "^0.16.7",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
