@@ -21,6 +21,31 @@ import { getDeviceInfo, getUTMParams, getReferrer } from './device'
 const SESSION_KEY = 'notesnap_analytics_session'
 const SESSION_TIMEOUT_KEY = 'notesnap_analytics_session_timeout'
 
+// Safe localStorage wrapper for mobile/private mode compatibility
+const safeStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      return localStorage.getItem(key)
+    } catch {
+      return null
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      localStorage.setItem(key, value)
+    } catch {
+      // Silently fail - storage not available
+    }
+  },
+  removeItem: (key: string): void => {
+    try {
+      localStorage.removeItem(key)
+    } catch {
+      // Silently fail
+    }
+  }
+}
+
 // Batching configuration
 const BATCH_SIZE = 10
 const BATCH_INTERVAL_MS = 5000 // 5 seconds
@@ -119,8 +144,8 @@ class AnalyticsClient {
       return 'admin-no-tracking'
     }
 
-    const stored = localStorage.getItem(SESSION_KEY)
-    const timeout = localStorage.getItem(SESSION_TIMEOUT_KEY)
+    const stored = safeStorage.getItem(SESSION_KEY)
+    const timeout = safeStorage.getItem(SESSION_TIMEOUT_KEY)
 
     const now = Date.now()
 
@@ -133,7 +158,7 @@ class AnalyticsClient {
 
     // Create new session
     const newSessionId = this.generateId()
-    localStorage.setItem(SESSION_KEY, newSessionId)
+    safeStorage.setItem(SESSION_KEY, newSessionId)
     this.extendSessionTimeout()
 
     // Create session in backend
@@ -147,7 +172,7 @@ class AnalyticsClient {
 
   private extendSessionTimeout(): void {
     const newTimeout = Date.now() + SESSION_TIMEOUT_MS
-    localStorage.setItem(SESSION_TIMEOUT_KEY, newTimeout.toString())
+    safeStorage.setItem(SESSION_TIMEOUT_KEY, newTimeout.toString())
   }
 
   private async createSession(sessionId: string): Promise<void> {
@@ -176,7 +201,7 @@ class AnalyticsClient {
   private startSessionChecker(): void {
     // Check session validity every minute
     this.sessionCheckInterval = setInterval(() => {
-      const timeout = localStorage.getItem(SESSION_TIMEOUT_KEY)
+      const timeout = safeStorage.getItem(SESSION_TIMEOUT_KEY)
       if (timeout && parseInt(timeout) < Date.now()) {
         // Session expired, create new one
         this.endCurrentSession()

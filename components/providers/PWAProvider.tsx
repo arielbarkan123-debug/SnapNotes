@@ -43,13 +43,17 @@ export function PWAProvider({ children }: PWAProviderProps) {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    // Check if already dismissed
-    const dismissedTime = localStorage.getItem('pwa-install-dismissed')
-    if (dismissedTime) {
-      const daysSince = (Date.now() - parseInt(dismissedTime)) / (1000 * 60 * 60 * 24)
-      if (daysSince < 7) {
-        setDismissed(true)
+    // Check if already dismissed (with safe localStorage access for mobile/private mode)
+    try {
+      const dismissedTime = localStorage.getItem('pwa-install-dismissed')
+      if (dismissedTime) {
+        const daysSince = (Date.now() - parseInt(dismissedTime)) / (1000 * 60 * 60 * 24)
+        if (daysSince < 7) {
+          setDismissed(true)
+        }
       }
+    } catch {
+      // localStorage not available (private mode, etc.) - continue without checking
     }
 
     const handleBeforeInstall = (e: Event) => {
@@ -82,7 +86,11 @@ export function PWAProvider({ children }: PWAProviderProps) {
   const dismissInstallPrompt = () => {
     setShowInstallPrompt(false)
     setDismissed(true)
-    localStorage.setItem('pwa-install-dismissed', Date.now().toString())
+    try {
+      localStorage.setItem('pwa-install-dismissed', Date.now().toString())
+    } catch {
+      // localStorage not available - dismiss will only last for current session
+    }
   }
 
   return (

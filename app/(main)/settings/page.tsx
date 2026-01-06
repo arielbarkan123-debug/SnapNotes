@@ -144,10 +144,14 @@ export default function SettingsPage() {
           language: savedLanguage,
         })
 
-        // Load theme preference
-        const savedTheme = localStorage.getItem('theme') as Theme | null
-        if (savedTheme) {
-          setTheme(savedTheme)
+        // Load theme preference (safe access for mobile/private mode)
+        try {
+          const savedTheme = localStorage.getItem('theme') as Theme | null
+          if (savedTheme) {
+            setTheme(savedTheme)
+          }
+        } catch {
+          // localStorage not available
         }
       } catch {
         toast.error(t('toast.loadError'))
@@ -186,7 +190,11 @@ export default function SettingsPage() {
     }
 
     applyTheme(theme)
-    localStorage.setItem('theme', theme)
+    try {
+      localStorage.setItem('theme', theme)
+    } catch {
+      // localStorage not available
+    }
 
     // Listen for system theme changes
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')

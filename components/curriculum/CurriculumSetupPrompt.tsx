@@ -22,7 +22,11 @@ export function CurriculumSetupPrompt({
   const t = useTranslations('dashboard.curriculumSetup')
   const [dismissed, setDismissed] = useState(() => {
     if (typeof window === 'undefined') return false
-    return localStorage.getItem(storageKey) === 'true'
+    try {
+      return localStorage.getItem(storageKey) === 'true'
+    } catch {
+      return false
+    }
   })
 
   // Don't show if complete or dismissed
@@ -32,7 +36,11 @@ export function CurriculumSetupPrompt({
 
   const handleDismiss = () => {
     setDismissed(true)
-    localStorage.setItem(storageKey, 'true')
+    try {
+      localStorage.setItem(storageKey, 'true')
+    } catch {
+      // Storage not available
+    }
   }
 
   // Determine what's missing (translated)
