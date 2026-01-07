@@ -98,12 +98,16 @@ export function useAdaptiveDifficulty(
         }),
       })
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to record answer')
+      let data
+      try {
+        data = await response.json()
+      } catch {
+        throw new Error('Server response error')
       }
 
-      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to record answer')
+      }
 
       setState(prev => ({
         accuracy: data.accuracy,
@@ -172,7 +176,12 @@ export function useAdaptiveDifficulty(
         throw new Error('Failed to fetch state')
       }
 
-      const data: PerformanceSummary = await response.json()
+      let data: PerformanceSummary
+      try {
+        data = await response.json()
+      } catch {
+        throw new Error('Server response error')
+      }
 
       setState({
         accuracy: data.accuracy,

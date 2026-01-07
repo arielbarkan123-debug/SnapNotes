@@ -80,11 +80,16 @@ function clearPracticeState(sessionId: string): void {
 
 const fetcher = async (url: string) => {
   const res = await fetch(url)
-  if (!res.ok) {
-    const error = await res.json()
-    throw new Error(error.message || 'Failed to fetch')
+  let data
+  try {
+    data = await res.json()
+  } catch {
+    throw new Error('Server response error')
   }
-  return res.json()
+  if (!res.ok) {
+    throw new Error(data?.message || 'Failed to fetch')
+  }
+  return data
 }
 
 // -----------------------------------------------------------------------------
@@ -208,13 +213,18 @@ export function usePracticeSession(sessionId?: string): UsePracticeSessionReturn
           body: JSON.stringify(options),
         })
 
-        if (!res.ok) {
-          const error = await res.json()
-          throw new Error(error.message || 'Failed to create session')
+        let data
+        try {
+          data = await res.json()
+        } catch {
+          throw new Error('Server response error')
         }
 
-        const { sessionId } = await res.json()
-        return sessionId
+        if (!res.ok) {
+          throw new Error(data?.message || 'Failed to create session')
+        }
+
+        return data.sessionId
       } finally {
         setIsSubmitting(false)
       }
@@ -245,12 +255,16 @@ export function usePracticeSession(sessionId?: string): UsePracticeSessionReturn
           }),
         })
 
-        if (!res.ok) {
-          const error = await res.json()
-          throw new Error(error.message || 'Failed to submit answer')
+        let result
+        try {
+          result = await res.json()
+        } catch {
+          throw new Error('Server response error')
         }
 
-        const result = await res.json()
+        if (!res.ok) {
+          throw new Error(result?.message || 'Failed to submit answer')
+        }
 
         // Refresh session data
         mutateSession()
@@ -284,12 +298,17 @@ export function usePracticeSession(sessionId?: string): UsePracticeSessionReturn
         body: JSON.stringify({ action: 'complete' }),
       })
 
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.message || 'Failed to complete session')
+      let sessionResult
+      try {
+        sessionResult = await res.json()
+      } catch {
+        throw new Error('Server response error')
       }
 
-      const sessionResult = await res.json()
+      if (!res.ok) {
+        throw new Error(sessionResult?.message || 'Failed to complete session')
+      }
+
       setResult(sessionResult)
 
       // Clear localStorage since session is complete
@@ -315,8 +334,13 @@ export function usePracticeSession(sessionId?: string): UsePracticeSessionReturn
     })
 
     if (!res.ok) {
-      const error = await res.json()
-      throw new Error(error.message || 'Failed to pause session')
+      let data
+      try {
+        data = await res.json()
+      } catch {
+        throw new Error('Server response error')
+      }
+      throw new Error(data?.message || 'Failed to pause session')
     }
 
     mutateSession()
@@ -333,8 +357,13 @@ export function usePracticeSession(sessionId?: string): UsePracticeSessionReturn
     })
 
     if (!res.ok) {
-      const error = await res.json()
-      throw new Error(error.message || 'Failed to resume session')
+      let data
+      try {
+        data = await res.json()
+      } catch {
+        throw new Error('Server response error')
+      }
+      throw new Error(data?.message || 'Failed to resume session')
     }
 
     mutateSession()
@@ -351,8 +380,13 @@ export function usePracticeSession(sessionId?: string): UsePracticeSessionReturn
     })
 
     if (!res.ok) {
-      const error = await res.json()
-      throw new Error(error.message || 'Failed to abandon session')
+      let data
+      try {
+        data = await res.json()
+      } catch {
+        throw new Error('Server response error')
+      }
+      throw new Error(data?.message || 'Failed to abandon session')
     }
 
     // Clear localStorage since session is abandoned

@@ -64,10 +64,16 @@ export function useGenerationStatus(
         body: JSON.stringify({ courseId }),
       })
 
-      const data = await response.json()
+      let data
+      try {
+        data = await response.json()
+      } catch {
+        setError('Server response error. Please try again.')
+        return
+      }
 
       if (!response.ok) {
-        setError(data.error || 'Failed to continue generation')
+        setError(data?.error || 'Failed to continue generation')
         return
       }
 
