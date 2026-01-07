@@ -149,11 +149,20 @@ class AnalyticsClient {
 
     const now = Date.now()
 
-    // Check if session is still valid
-    if (stored && timeout && parseInt(timeout) > now) {
+    // UUID v4 regex for validation
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+    // Check if session is still valid AND has proper UUID format
+    if (stored && timeout && parseInt(timeout) > now && uuidRegex.test(stored)) {
       // Extend session timeout
       this.extendSessionTimeout()
       return stored
+    }
+
+    // Clear any invalid stored session
+    if (stored && !uuidRegex.test(stored)) {
+      safeStorage.removeItem(SESSION_KEY)
+      safeStorage.removeItem(SESSION_TIMEOUT_KEY)
     }
 
     // Create new session

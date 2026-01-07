@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
+// UUID v4 regex pattern
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 interface BatchEvent {
   name: string
   category: string
@@ -85,6 +88,12 @@ export async function POST(request: NextRequest) {
 
     if (!sessionId) {
       return NextResponse.json({ error: 'Session ID is required' }, { status: 400 })
+    }
+
+    // Validate UUID format to prevent database errors
+    if (!UUID_REGEX.test(sessionId)) {
+      // Silently ignore invalid sessions (likely old format or admin sessions)
+      return NextResponse.json({ success: true, skipped: true })
     }
 
     const supabase = await createClient()
