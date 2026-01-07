@@ -51,7 +51,13 @@ export default function QuestionUploader({
         return
       }
       setError(null)
-      const previewUrl = URL.createObjectURL(file)
+      // Wrap in try-catch for iOS Safari compatibility
+      let previewUrl = ''
+      try {
+        previewUrl = URL.createObjectURL(file)
+      } catch {
+        // iOS Safari may fail - continue without preview but still process the file
+      }
       onImageSelected(file, previewUrl)
     },
     [validateFile, onImageSelected]

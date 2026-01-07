@@ -362,7 +362,15 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
       }
 
       // Create preview - use object URL for images, empty for documents
-      const preview = category === 'image' ? URL.createObjectURL(file) : ''
+      // Wrap in try-catch for iOS Safari compatibility
+      let preview = ''
+      if (category === 'image') {
+        try {
+          preview = URL.createObjectURL(file)
+        } catch {
+          // iOS Safari may fail with certain files - continue without preview
+        }
+      }
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
 
       validFiles.push({ file, preview, id, category })

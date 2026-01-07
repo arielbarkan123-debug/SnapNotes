@@ -67,10 +67,17 @@ export default function ReferenceUploader({
           if (validationError) {
             errors.push(`${file.name}: ${validationError}`)
           } else {
+            // Wrap in try-catch for iOS Safari compatibility
+            let previewUrl = ''
+            try {
+              previewUrl = URL.createObjectURL(file)
+            } catch {
+              // iOS Safari may fail - continue without preview
+            }
             newImages.push({
               id: `ref-${Date.now()}-${Math.random().toString(36).slice(2)}`,
               file,
-              previewUrl: URL.createObjectURL(file),
+              previewUrl,
             })
           }
         })
