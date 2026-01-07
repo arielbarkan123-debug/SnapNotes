@@ -1028,8 +1028,9 @@ export default function PracticePage() {
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="mt-4 pb-4 max-w-2xl mx-auto px-4">
+      {/* Action Buttons - sticky at bottom for mobile visibility */}
+      <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-900 pt-2 pb-4 border-t border-gray-100 dark:border-gray-800">
+        <div className="max-w-2xl mx-auto px-4">
         {(() => {
           // For interactive cards that have been answered
           if (interactiveResult !== null) {
@@ -1090,6 +1091,7 @@ export default function PracticePage() {
           // Interactive card not yet answered - no buttons (component handles it)
           return null
         })()}
+        </div>
       </div>
 
       {/* Help Modal */}
