@@ -8,8 +8,10 @@ interface CourseContentProps {
 }
 
 export default function CourseContent({ sections }: CourseContentProps) {
+  // Safely handle null/undefined sections
+  const safeSections = sections || []
   const [expandedSections, setExpandedSections] = useState<Set<number>>(
-    new Set(sections.map((_, i) => i)) // All expanded by default
+    new Set(safeSections.map((_, i) => i)) // All expanded by default
   )
 
   const toggleSection = (index: number) => {
@@ -23,14 +25,14 @@ export default function CourseContent({ sections }: CourseContentProps) {
   }
 
   const expandAll = () => {
-    setExpandedSections(new Set(sections.map((_, i) => i)))
+    setExpandedSections(new Set(safeSections.map((_, i) => i)))
   }
 
   const collapseAll = () => {
     setExpandedSections(new Set())
   }
 
-  if (!sections || sections.length === 0) {
+  if (safeSections.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8 border border-gray-100 dark:border-gray-700 text-center">
         <p className="text-gray-500 dark:text-gray-400">No sections available</p>
@@ -59,14 +61,14 @@ export default function CourseContent({ sections }: CourseContentProps) {
 
       {/* Sections */}
       <div className="space-y-4">
-        {sections.map((section, index) => (
+        {safeSections.map((section, index) => (
           <SectionCard
             key={index}
             section={section}
             index={index}
             isExpanded={expandedSections.has(index)}
             onToggle={() => toggleSection(index)}
-            totalSections={sections.length}
+            totalSections={safeSections.length}
           />
         ))}
       </div>

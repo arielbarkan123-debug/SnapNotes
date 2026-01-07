@@ -227,7 +227,9 @@ export default function DeepPracticeLessonView({
 
     setIsSaving(true)
     try {
-      const completedLessons = [...new Set([...initialProgress.completed_lessons, lessonIndex])]
+      // Safely handle null/undefined completed_lessons from database
+      const existingCompleted = initialProgress.completed_lessons || []
+      const completedLessons = [...new Set([...existingCompleted, lessonIndex])]
 
       await supabase
         .from('user_progress')

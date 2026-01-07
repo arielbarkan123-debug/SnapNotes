@@ -74,7 +74,8 @@ function estimateDifficulty(generatedCourse: GeneratedCourse | null): Difficulty
     }
   }
 
-  const lessons = generatedCourse.lessons
+  // Safely handle null/undefined lessons array
+  const lessons = generatedCourse.lessons || []
   let score = 0
 
   // Factor 1: Number of lessons (more lessons = more complex)

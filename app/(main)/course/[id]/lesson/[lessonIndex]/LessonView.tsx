@@ -226,9 +226,11 @@ export default function LessonView({
 
     setIsSaving(true)
     try {
+      // Safely handle null/undefined completed_lessons from database
+      const existingCompleted = initialProgress.completed_lessons || []
       const completedLessons = completed
-        ? [...new Set([...initialProgress.completed_lessons, lessonIndex])]
-        : initialProgress.completed_lessons
+        ? [...new Set([...existingCompleted, lessonIndex])]
+        : existingCompleted
 
       await supabase
         .from('user_progress')
@@ -243,7 +245,7 @@ export default function LessonView({
     } finally {
       setIsSaving(false)
     }
-  }, [supabase, initialProgress.id, initialProgress.completed_lessons, lessonIndex])
+  }, [supabase, initialProgress.id, initialProgress.completed_lessons, lessonIndex]) // completed_lessons safely handled above
 
   // Save question stats on lesson completion
   const saveQuestionStats = useCallback(async (answered: number, correct: number) => {

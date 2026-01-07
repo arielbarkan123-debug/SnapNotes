@@ -97,8 +97,8 @@ export default function QuestionStep({
     stepIndex: stepIndex ?? 0,
     stepContent: question || '',
     stepType: 'question',
-    userAnswer: selectedAnswer !== null ? options[selectedAnswer] : '',
-    correctAnswer: options[correct_answer] || '',
+    userAnswer: selectedAnswer !== null && selectedAnswer < options.length ? options[selectedAnswer] : '',
+    correctAnswer: correct_answer < options.length ? options[correct_answer] : '',
     wasCorrect: false,
   }
 

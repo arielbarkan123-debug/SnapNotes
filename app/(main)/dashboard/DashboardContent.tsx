@@ -77,8 +77,8 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
   const [isGeneratingCovers, setIsGeneratingCovers] = useState(false)
   const { status: curriculumStatus } = useCurriculumStatus()
 
-  // Check if any courses are missing covers
-  const coursesWithoutCovers = initialCourses.filter(c => !c.cover_image_url).length
+  // Check if any courses are missing covers (safely handle null/undefined)
+  const coursesWithoutCovers = (initialCourses || []).filter(c => !c.cover_image_url).length
 
   // Track if auto-generation has been attempted this session
   const autoGenerationAttempted = useRef(false)

@@ -252,7 +252,8 @@ interface SummaryStepProps {
 
 function SummaryStep({ content, lessonTitle, t }: SummaryStepProps) {
   // Split content by newlines or periods for bullet points
-  const points = content
+  // Safely handle null/undefined content
+  const points = (content || '')
     .split(/[.\n]/)
     .map(s => s.trim())
     .filter(s => s.length > 0)
