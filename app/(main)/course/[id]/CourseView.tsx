@@ -25,6 +25,9 @@ export default function CourseView({ course, progress }: CourseViewProps) {
   // Handle both "lessons" and legacy "sections" from AI response
   const lessons = generatedCourse?.lessons || generatedCourse?.sections || []
 
+  // Safely access completed_lessons - handle null/undefined from database
+  const completedLessons = progress?.completed_lessons || []
+
   // Track progressive generation status
   const onGenerationComplete = useCallback(() => {
     // Refresh the page to get updated lessons
@@ -50,17 +53,17 @@ export default function CourseView({ course, progress }: CourseViewProps) {
   // Calculate overall progress percentage
   const progressPercentage = useMemo(() => {
     if (lessons.length === 0) return 0
-    return Math.round((progress.completed_lessons.length / lessons.length) * 100)
-  }, [lessons.length, progress.completed_lessons.length])
+    return Math.round((completedLessons.length / lessons.length) * 100)
+  }, [lessons.length, completedLessons.length])
 
   // Determine lesson status
   const getLessonStatus = (lessonIndex: number): LessonStatus => {
-    if (progress.completed_lessons.includes(lessonIndex)) {
+    if (completedLessons.includes(lessonIndex)) {
       return 'completed'
     }
     // Lesson is current if it's the first incomplete lesson
     // or if the previous lesson is completed
-    if (lessonIndex === 0 || progress.completed_lessons.includes(lessonIndex - 1)) {
+    if (lessonIndex === 0 || completedLessons.includes(lessonIndex - 1)) {
       return 'current'
     }
     return 'locked'
@@ -107,7 +110,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
               />
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-500">
-              {tc('lessonsCompleted', { completed: progress.completed_lessons.length, total: lessons.length })}
+              {tc('lessonsCompleted', { completed: completedLessons.length, total: lessons.length })}
             </p>
           </div>
         </div>
