@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { analyzeHomework } from '@/lib/homework/checker-engine'
 import type { CreateCheckRequest } from '@/lib/homework/types'
 
+// Allow 2 minutes for homework analysis (vision AI + analysis)
+export const maxDuration = 120
+
 // ============================================================================
 // POST - Create and analyze homework check
 // ============================================================================
@@ -22,7 +25,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse request
-    const body: CreateCheckRequest = await request.json()
+    let body: CreateCheckRequest
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
 
     if (!body.taskImageUrl || !body.answerImageUrl) {
       return NextResponse.json(

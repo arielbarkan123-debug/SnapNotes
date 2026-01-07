@@ -47,7 +47,16 @@ export function PracticeMore({ courseId, lessonIndex, wrongQuestion, onClose }: 
         }),
       })
 
-      const data = await res.json()
+      let data
+      try {
+        data = await res.json()
+      } catch {
+        throw new Error('Server response error')
+      }
+
+      if (!res.ok) {
+        throw new Error(data?.error || 'Request failed')
+      }
 
       if (data.success && data.questions.length > 0) {
         setQuestions(data.questions)

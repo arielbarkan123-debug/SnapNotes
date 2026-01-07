@@ -5,6 +5,9 @@ import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum
 import type { StudySystem } from '@/lib/curriculum/types'
 import type { GeneratedCourse } from '@/types'
 
+// Allow 2 minutes for concept extraction (involves AI processing)
+export const maxDuration = 120
+
 /**
  * POST /api/concepts/extract
  *
@@ -22,7 +25,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { courseId } = await request.json()
+    let courseId: string
+    try {
+      const body = await request.json()
+      courseId = body.courseId
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
 
     if (!courseId) {
       return NextResponse.json({ error: 'courseId is required' }, { status: 400 })

@@ -5,6 +5,9 @@ import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum
 import type { StudySystem } from '@/lib/curriculum/types'
 import { getAnthropicApiKey } from '@/lib/env'
 
+// Allow 90 seconds for question generation (Claude API with curriculum context)
+export const maxDuration = 90
+
 // Initialize Anthropic client with validated API key
 const anthropic = new Anthropic({
   apiKey: getAnthropicApiKey(),

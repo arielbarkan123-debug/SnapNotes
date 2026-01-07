@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { processDocument, type ExtractedDocument } from '@/lib/documents'
 import { ErrorCodes, createErrorResponse, logError } from '@/lib/api/errors'
 
+// Allow 2 minutes for document processing (PPTX/DOCX extraction is CPU-intensive)
+export const maxDuration = 120
+
 // ============================================================================
 // Types
 // ============================================================================

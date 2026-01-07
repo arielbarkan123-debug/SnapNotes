@@ -86,7 +86,16 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
         }),
       })
 
-      const data = await response.json()
+      let data
+      try {
+        data = await response.json()
+      } catch {
+        throw new Error('Invalid server response')
+      }
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'Request failed')
+      }
 
       if (data.success) {
         const assistantMessage: Message = {

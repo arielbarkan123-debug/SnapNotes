@@ -29,7 +29,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // 2. Parse request body
-    const { courseId } = await request.json()
+    let courseId: string
+    try {
+      const body = await request.json()
+      courseId = body.courseId
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid request body', code: 'INVALID_INPUT' },
+        { status: 400 }
+      )
+    }
 
     if (!courseId) {
       return NextResponse.json(

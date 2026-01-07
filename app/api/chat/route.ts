@@ -7,6 +7,9 @@ import { getAnthropicApiKey } from '@/lib/env'
 import { createErrorResponse, ErrorCodes, mapClaudeAPIError } from '@/lib/api/errors'
 import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 
+// Allow 90 seconds for chat responses (Claude API can be slow with long context)
+export const maxDuration = 90
+
 // Initialize Anthropic client with validated API key
 const anthropic = new Anthropic({
   apiKey: getAnthropicApiKey(),

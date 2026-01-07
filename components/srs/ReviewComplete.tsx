@@ -66,28 +66,36 @@ export default function ReviewComplete({
         })
 
         if (xpResponse.ok) {
-          const xpData = await xpResponse.json()
-          totalXP = xpData.xpAwarded
-          setTotalXpEarned(totalXP)
+          try {
+            const xpData = await xpResponse.json()
+            totalXP = xpData.xpAwarded
+            setTotalXpEarned(totalXP)
 
-          if (xpData.levelUp && xpData.newLevel) {
-            setLevelUp({ level: xpData.newLevel, title: xpData.newTitle })
+            if (xpData.levelUp && xpData.newLevel) {
+              setLevelUp({ level: xpData.newLevel, title: xpData.newTitle })
+            }
+          } catch {
+            // JSON parse failed - continue without XP data
           }
         }
 
         // Update streak
         const streakResponse = await fetch('/api/gamification/streak', { method: 'POST' })
         if (streakResponse.ok) {
-          const streakData = await streakResponse.json()
-          setStreakInfo({
-            current: streakData.streak.current,
-            maintained: streakData.streak.maintained,
-          })
+          try {
+            const streakData = await streakResponse.json()
+            setStreakInfo({
+              current: streakData.streak.current,
+              maintained: streakData.streak.maintained,
+            })
 
-          // Add streak XP to total
-          if (streakData.bonusXP > 0) {
-            totalXP += streakData.bonusXP
-            setTotalXpEarned(totalXP)
+            // Add streak XP to total
+            if (streakData.bonusXP > 0) {
+              totalXP += streakData.bonusXP
+              setTotalXpEarned(totalXP)
+            }
+          } catch {
+            // JSON parse failed - continue without streak data
           }
         }
 
@@ -101,8 +109,8 @@ export default function ReviewComplete({
           }, 500)
         }
 
-        // Check for new achievements
-        await fetch('/api/gamification/check', { method: 'POST' })
+        // Check for new achievements (fire-and-forget, ignore errors)
+        fetch('/api/gamification/check', { method: 'POST' }).catch(() => {})
 
         // Trigger reflection after a meaningful session (3+ cards)
         if (!hasTriggeredReflection.current && cardsReviewed >= 3) {
