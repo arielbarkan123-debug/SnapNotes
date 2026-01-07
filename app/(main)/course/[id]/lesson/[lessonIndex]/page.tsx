@@ -51,12 +51,13 @@ async function getLessonData(courseId: string, lessonIndex: number): Promise<Get
     return { success: false, reason: 'no_course' }
   }
 
-  const generatedCourse = course.generated_course as GeneratedCourse & { sections?: Lesson[] }
-  // Handle both "lessons" and legacy "sections" from AI response
-  const lessons = generatedCourse.lessons || generatedCourse.sections || []
+  // Safely handle null/undefined generated_course
+  const generatedCourse = (course.generated_course || {}) as GeneratedCourse & { sections?: Lesson[] }
+  // Handle both "lessons" and legacy "sections" from AI response, filter out any null entries
+  const lessons = (generatedCourse.lessons || generatedCourse.sections || []).filter(Boolean)
 
-  // Validate lesson index
-  if (lessonIndex < 0 || lessonIndex >= lessons.length) {
+  // Validate lesson index AND check that lesson exists (not null in sparse array)
+  if (lessonIndex < 0 || lessonIndex >= lessons.length || !lessons[lessonIndex]) {
     return { success: false, reason: 'invalid_index', courseId }
   }
 

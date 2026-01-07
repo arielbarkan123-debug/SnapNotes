@@ -22,8 +22,8 @@ export default function CourseView({ course, progress }: CourseViewProps) {
 
   // Safely parse generated_course - handle null/undefined cases
   const generatedCourse = (course.generated_course || {}) as GeneratedCourse & { sections?: Lesson[] }
-  // Handle both "lessons" and legacy "sections" from AI response
-  const lessons = generatedCourse?.lessons || generatedCourse?.sections || []
+  // Handle both "lessons" and legacy "sections" from AI response, filter out null entries
+  const lessons = (generatedCourse?.lessons || generatedCourse?.sections || []).filter(Boolean)
 
   // Safely access completed_lessons - handle null/undefined from database
   const completedLessons = progress?.completed_lessons || []
