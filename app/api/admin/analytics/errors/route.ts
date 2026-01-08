@@ -14,17 +14,21 @@ export async function DELETE() {
 
   try {
     // Delete all errors from the analytics_errors table
-    // Use neq with a non-existent UUID to match all rows
-    const { error: deleteError } = await supabase
+    // Use a date filter that matches all records (any date before year 3000)
+    const { error: deleteError, count } = await supabase
       .from('analytics_errors')
-      .delete()
-      .not('id', 'is', null)
+      .delete({ count: 'exact' })
+      .lt('occurred_at', '3000-01-01')
 
-    if (deleteError) throw deleteError
+    if (deleteError) {
+      console.error('[Admin Analytics] Delete error details:', deleteError)
+      throw deleteError
+    }
 
     return NextResponse.json({
       success: true,
       message: 'All errors have been cleared',
+      deleted: count || 0,
     })
   } catch (err) {
     console.error('[Admin Analytics] Clear errors error:', err)
