@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import {
@@ -79,28 +79,42 @@ export default function ProfileContent({
   const [selectedCategory, setSelectedCategory] = useState<AchievementCategory | 'all'>('all')
   const [selectedAchievement, setSelectedAchievement] = useState<string | null>(null)
 
+  // Client-side only date calculations to prevent hydration mismatch
+  const [clientDateInfo, setClientDateInfo] = useState<{
+    activeToday: boolean
+    isAtRisk: boolean
+    hoursRemaining: number
+  } | null>(null)
+
   // Calculate XP progress
   const xpProgress = getXPProgress(gamification.total_xp)
   const earnedCodes = new Set(achievements.map((a) => a.achievement_code))
 
-  // Check if active today
-  const today = new Date().toISOString().split('T')[0]
-  const activeToday = gamification.last_activity_date === today
+  // Calculate date-based values on client only to avoid hydration mismatch
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0]
+    const activeToday = gamification.last_activity_date === today
 
-  // Calculate streak at risk
-  const yesterday = new Date()
-  yesterday.setDate(yesterday.getDate() - 1)
-  const yesterdayStr = yesterday.toISOString().split('T')[0]
-  const isAtRisk =
-    gamification.current_streak > 0 &&
-    !activeToday &&
-    gamification.last_activity_date === yesterdayStr
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayStr = yesterday.toISOString().split('T')[0]
+    const isAtRisk =
+      gamification.current_streak > 0 &&
+      !activeToday &&
+      gamification.last_activity_date === yesterdayStr
 
-  // Calculate hours remaining in day
-  const now = new Date()
-  const midnight = new Date(now)
-  midnight.setHours(24, 0, 0, 0)
-  const hoursRemaining = (midnight.getTime() - now.getTime()) / (1000 * 60 * 60)
+    const now = new Date()
+    const midnight = new Date(now)
+    midnight.setHours(24, 0, 0, 0)
+    const hoursRemaining = (midnight.getTime() - now.getTime()) / (1000 * 60 * 60)
+
+    setClientDateInfo({ activeToday, isAtRisk, hoursRemaining })
+  }, [gamification.last_activity_date, gamification.current_streak])
+
+  // Use safe defaults until client-side calculation is done
+  const activeToday = clientDateInfo?.activeToday ?? false
+  const isAtRisk = clientDateInfo?.isAtRisk ?? false
+  const hoursRemaining = clientDateInfo?.hoursRemaining ?? 12
 
   // Get recent activity for streak widget (last 7 days)
   const recentActivity = useMemo(() => {
