@@ -3,6 +3,35 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { checkAdminAccess, parseDateRange } from '@/lib/admin/utils'
 
 /**
+ * DELETE /api/admin/analytics/errors
+ * Clear all error tracking data
+ */
+export async function DELETE() {
+  const { isAdmin, error } = await checkAdminAccess()
+  if (!isAdmin) return error!
+
+  const supabase = createServiceClient()
+
+  try {
+    // Delete all errors from the analytics_errors table
+    const { error: deleteError } = await supabase
+      .from('analytics_errors')
+      .delete()
+      .gte('id', 0) // This matches all rows
+
+    if (deleteError) throw deleteError
+
+    return NextResponse.json({
+      success: true,
+      message: 'All errors have been cleared',
+    })
+  } catch (err) {
+    console.error('[Admin Analytics] Clear errors error:', err)
+    return NextResponse.json({ error: 'Failed to clear errors' }, { status: 500 })
+  }
+}
+
+/**
  * GET /api/admin/analytics/errors
  * Get error tracking data
  */
