@@ -14,10 +14,11 @@ export async function DELETE() {
 
   try {
     // Delete all errors from the analytics_errors table
+    // Use neq with a non-existent UUID to match all rows
     const { error: deleteError } = await supabase
       .from('analytics_errors')
       .delete()
-      .gte('id', 0) // This matches all rows
+      .not('id', 'is', null)
 
     if (deleteError) throw deleteError
 
