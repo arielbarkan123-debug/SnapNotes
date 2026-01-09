@@ -20,7 +20,8 @@ import { sanitizeError } from '@/lib/utils/error-sanitizer'
 
 interface UploadedImage {
   file: File
-  preview: string
+  preview: string | null  // null for HEIC files (Chrome can't preview them)
+  isHeic: boolean  // Track if conversion needed at submit time
 }
 
 // ============================================================================
@@ -91,7 +92,6 @@ function ImageUploader({
   onRemove,
   required = false,
   icon,
-  isProcessing = false,
 }: {
   label: string
   description: string
@@ -100,7 +100,6 @@ function ImageUploader({
   onRemove: () => void
   required?: boolean
   icon: string
-  isProcessing?: boolean
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -137,7 +136,7 @@ function ImageUploader({
     [onUpload]
   )
 
-  // Show uploaded image
+  // Show uploaded image (with preview or placeholder for HEIC)
   if (image) {
     return (
       <div className="relative">
@@ -146,12 +145,25 @@ function ImageUploader({
         </label>
         <div className="relative rounded-xl overflow-hidden border-2 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20">
           <div className="relative aspect-[4/3]">
-            <Image
-              src={image.preview}
-              alt={label}
-              fill
-              className="object-contain"
-            />
+            {image.preview ? (
+              <Image
+                src={image.preview}
+                alt={label}
+                fill
+                className="object-contain"
+              />
+            ) : (
+              // Placeholder for HEIC files (Chrome can't preview them)
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800">
+                <div className="text-5xl mb-2">📷</div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  {image.file.name}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                  Image ready
+                </p>
+              </div>
+            )}
           </div>
           <button
             onClick={onRemove}
@@ -165,32 +177,7 @@ function ImageUploader({
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            Uploaded
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Show processing state (for HEIC conversion)
-  if (isProcessing) {
-    return (
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {label} {required && <span className="text-red-500">*</span>}
-        </label>
-        <div className="rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-8 text-center">
-          <div className="flex flex-col items-center gap-3">
-            <svg className="animate-spin h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
-              Processing your image...
-            </p>
-            <p className="text-xs text-blue-600 dark:text-blue-400">
-              This may take a few seconds
-            </p>
+            Ready
           </div>
         </div>
       </div>
@@ -300,12 +287,22 @@ function MultiImageUploader({
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-3">
           {images.map((image, index) => (
             <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 group">
-              <Image
-                src={image.preview}
-                alt={`Reference ${index + 1}`}
-                fill
-                className="object-cover"
-              />
+              {image.preview ? (
+                <Image
+                  src={image.preview}
+                  alt={`Reference ${index + 1}`}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                // Placeholder for HEIC files
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800">
+                  <div className="text-2xl">📷</div>
+                  <p className="text-[10px] text-gray-500 mt-1 truncate px-1 w-full text-center">
+                    {image.file.name}
+                  </p>
+                </div>
+              )}
               <button
                 onClick={() => onRemove(index)}
                 className="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
@@ -374,10 +371,8 @@ export default function HomeworkCheckPage() {
   const [answerImage, setAnswerImage] = useState<UploadedImage | null>(null)
   const [referenceImages, setReferenceImages] = useState<UploadedImage[]>([])
   const [teacherReviews, setTeacherReviews] = useState<UploadedImage[]>([])
-  // Track which specific upload is processing (for better UX)
-  const [processingTask, setProcessingTask] = useState(false)
-  const [processingAnswer, setProcessingAnswer] = useState(false)
-  const [processingOther, setProcessingOther] = useState(false)
+  // Status message during submission (for HEIC conversion + upload + analysis)
+  const [submissionStatus, setSubmissionStatus] = useState<string | null>(null)
 
   // Safe URL creation for iOS Safari compatibility
   const createSafeObjectURL = useCallback((file: File): string | null => {
@@ -385,80 +380,42 @@ export default function HomeworkCheckPage() {
       return URL.createObjectURL(file)
     } catch (err) {
       console.error('Failed to create object URL:', err)
-      setError('Failed to preview image. Please try a different image or format.')
       return null
     }
   }, [])
 
-  // Handlers - with HEIC conversion
-  const handleTaskUpload = useCallback(async (file: File) => {
-    // Convert HEIC to JPEG if needed
-    if (isHeicFile(file)) {
-      setProcessingTask(true)
-      try {
-        file = await convertHeicToJpeg(file)
-      } finally {
-        setProcessingTask(false)
-      }
-    }
-
-    const preview = createSafeObjectURL(file)
-    if (!preview) return
-    setTaskImage({ file, preview })
+  // INSTANT upload handlers - no conversion, just store file
+  // HEIC files get a placeholder preview (Chrome can't display HEIC)
+  // Conversion happens at submit time
+  const handleTaskUpload = useCallback((file: File) => {
+    const heic = isHeicFile(file)
+    // For HEIC, preview is null (show placeholder). For others, create preview URL.
+    const preview = heic ? null : createSafeObjectURL(file)
+    setTaskImage({ file, preview, isHeic: heic })
     setError(null)
     trackStep('task_uploaded', 2)
-    trackFeature('homework_task_upload', { fileType: file.type, fileSize: file.size })
+    trackFeature('homework_task_upload', { fileType: file.type, fileSize: file.size, isHeic: heic })
   }, [trackStep, trackFeature, createSafeObjectURL])
 
-  const handleAnswerUpload = useCallback(async (file: File) => {
-    // Convert HEIC to JPEG if needed
-    if (isHeicFile(file)) {
-      setProcessingAnswer(true)
-      try {
-        file = await convertHeicToJpeg(file)
-      } finally {
-        setProcessingAnswer(false)
-      }
-    }
-
-    const preview = createSafeObjectURL(file)
-    if (!preview) return
-    setAnswerImage({ file, preview })
+  const handleAnswerUpload = useCallback((file: File) => {
+    const heic = isHeicFile(file)
+    const preview = heic ? null : createSafeObjectURL(file)
+    setAnswerImage({ file, preview, isHeic: heic })
     setError(null)
     trackStep('answer_uploaded', 3)
-    trackFeature('homework_answer_upload', { fileType: file.type, fileSize: file.size })
+    trackFeature('homework_answer_upload', { fileType: file.type, fileSize: file.size, isHeic: heic })
   }, [trackStep, trackFeature, createSafeObjectURL])
 
-  const handleReferenceUpload = useCallback(async (file: File) => {
-    // Convert HEIC to JPEG if needed
-    if (isHeicFile(file)) {
-      setProcessingOther(true)
-      try {
-        file = await convertHeicToJpeg(file)
-      } finally {
-        setProcessingOther(false)
-      }
-    }
-
-    const preview = createSafeObjectURL(file)
-    if (!preview) return
-    setReferenceImages(prev => [...prev, { file, preview }])
+  const handleReferenceUpload = useCallback((file: File) => {
+    const heic = isHeicFile(file)
+    const preview = heic ? null : createSafeObjectURL(file)
+    setReferenceImages(prev => [...prev, { file, preview, isHeic: heic }])
   }, [createSafeObjectURL])
 
-  const handleTeacherReviewUpload = useCallback(async (file: File) => {
-    // Convert HEIC to JPEG if needed
-    if (isHeicFile(file)) {
-      setProcessingOther(true)
-      try {
-        file = await convertHeicToJpeg(file)
-      } finally {
-        setProcessingOther(false)
-      }
-    }
-
-    const preview = createSafeObjectURL(file)
-    if (!preview) return
-    setTeacherReviews(prev => [...prev, { file, preview }])
+  const handleTeacherReviewUpload = useCallback((file: File) => {
+    const heic = isHeicFile(file)
+    const preview = heic ? null : createSafeObjectURL(file)
+    setTeacherReviews(prev => [...prev, { file, preview, isHeic: heic }])
   }, [createSafeObjectURL])
 
   const handleSubmit = async () => {
@@ -469,6 +426,7 @@ export default function HomeworkCheckPage() {
 
     setIsSubmitting(true)
     setError(null)
+    setSubmissionStatus(null)
 
     // Track submission
     trackStep('check_submitted', 4)
@@ -480,17 +438,37 @@ export default function HomeworkCheckPage() {
     })
 
     try {
-      // Step 1: Upload all images to storage
-      // Note: HEIC conversion happens server-side for better mobile performance
-      const allImages = [
-        { file: taskImage.file, type: 'task' },
-        { file: answerImage.file, type: 'answer' },
-        ...referenceImages.map((img, i) => ({ file: img.file, type: `ref_${i}` })),
-        ...teacherReviews.map((img, i) => ({ file: img.file, type: `review_${i}` })),
+      // Step 1: Convert any HEIC images to JPEG (happens client-side)
+      // This is deferred to submit time for faster uploads
+      const allImages: { file: File; type: string; isHeic: boolean }[] = [
+        { file: taskImage.file, type: 'task', isHeic: taskImage.isHeic },
+        { file: answerImage.file, type: 'answer', isHeic: answerImage.isHeic },
+        ...referenceImages.map((img, i) => ({ file: img.file, type: `ref_${i}`, isHeic: img.isHeic })),
+        ...teacherReviews.map((img, i) => ({ file: img.file, type: `review_${i}`, isHeic: img.isHeic })),
       ]
 
+      const hasHeicImages = allImages.some(img => img.isHeic)
+      if (hasHeicImages) {
+        setSubmissionStatus('Preparing images...')
+        console.log('[Submit] Converting HEIC images...')
+      }
+
+      // Convert HEIC files in parallel
+      const convertedImages = await Promise.all(
+        allImages.map(async (img) => {
+          if (img.isHeic) {
+            const converted = await convertHeicToJpeg(img.file)
+            return { file: converted, type: img.type }
+          }
+          return { file: img.file, type: img.type }
+        })
+      )
+
+      // Step 2: Upload all images to storage
+      setSubmissionStatus('Uploading images...')
+
       const formData = new FormData()
-      allImages.forEach(({ file }) => {
+      convertedImages.forEach(({ file }) => {
         formData.append('files', file)
       })
 
@@ -537,8 +515,9 @@ export default function HomeworkCheckPage() {
         throw new Error('Failed to upload required images')
       }
 
-      // Step 2: Submit to homework check API (streaming response)
+      // Step 3: Submit to homework check API (streaming response)
       // The API sends heartbeats every 5 seconds to keep mobile connections alive
+      setSubmissionStatus('Analyzing homework...')
       const response = await fetch('/api/homework/check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -634,8 +613,7 @@ export default function HomeworkCheckPage() {
     }
   }
 
-  const isProcessing = processingTask || processingAnswer || processingOther
-  const canSubmit = taskImage && answerImage && !isSubmitting && !isProcessing
+  const canSubmit = taskImage && answerImage && !isSubmitting
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
@@ -721,7 +699,6 @@ export default function HomeworkCheckPage() {
                 onRemove={() => setTaskImage(null)}
                 required
                 icon="📋"
-                isProcessing={processingTask}
               />
               <ImageUploader
                 label="Your Answer"
@@ -731,7 +708,6 @@ export default function HomeworkCheckPage() {
                 onRemove={() => setAnswerImage(null)}
                 required
                 icon="✍️"
-                isProcessing={processingAnswer}
               />
             </div>
           </div>
@@ -777,7 +753,7 @@ export default function HomeworkCheckPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Analyzing...
+                  {submissionStatus || 'Processing...'}
                 </>
               ) : (
                 <>
