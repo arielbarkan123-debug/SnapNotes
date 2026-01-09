@@ -13,6 +13,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
+import heicConvert from 'heic-convert'
 import type {
   HomeworkFeedback,
   GradeLevel,
@@ -66,28 +67,44 @@ async function fetchImageAsBase64(url: string): Promise<FetchedImage> {
     }
 
     const contentType = response.headers.get('content-type') || 'image/jpeg'
-    const buffer = await response.arrayBuffer()
+    const arrayBuffer = await response.arrayBuffer()
     const bufferTime = Date.now() - startTime
 
-    // Determine media type
+    // Determine media type and handle HEIC conversion
     let mediaType: MediaType = 'image/jpeg'
-    if (contentType.includes('png')) {
+    let imageBuffer = Buffer.from(arrayBuffer)
+
+    if (contentType.includes('heic') || contentType.includes('heif')) {
+      // HEIC/HEIF not supported by Claude - convert to JPEG
+      console.log('[Checker] HEIC/HEIF image detected, converting to JPEG...')
+      const convertStart = Date.now()
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const jpegData = await heicConvert({
+          buffer: arrayBuffer as any,
+          format: 'JPEG',
+          quality: 0.9,
+        })
+        imageBuffer = Buffer.from(jpegData)
+        mediaType = 'image/jpeg'
+        console.log('[Checker] HEIC conversion completed in', Date.now() - convertStart, 'ms')
+      } catch (convertError) {
+        console.error('[Checker] HEIC conversion failed:', convertError)
+        throw new Error('Failed to convert HEIC image. Please upload a JPEG or PNG instead.')
+      }
+    } else if (contentType.includes('png')) {
       mediaType = 'image/png'
     } else if (contentType.includes('gif')) {
       mediaType = 'image/gif'
     } else if (contentType.includes('webp')) {
       mediaType = 'image/webp'
-    } else if (contentType.includes('heic') || contentType.includes('heif')) {
-      // HEIC/HEIF not supported by Claude - this will cause issues
-      console.error('[Checker] HEIC/HEIF image detected! Claude does not support this format.')
-      throw new Error('HEIC/HEIF images are not supported. Please convert to JPEG or PNG.')
     }
 
-    const base64 = Buffer.from(buffer).toString('base64')
+    const base64 = imageBuffer.toString('base64')
     const totalTime = Date.now() - startTime
 
     console.log('[Checker] Image processed:', {
-      size: buffer.byteLength,
+      size: imageBuffer.byteLength,
       type: mediaType,
       fetchTime: fetchTime + 'ms',
       bufferTime: bufferTime + 'ms',
