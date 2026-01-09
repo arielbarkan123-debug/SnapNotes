@@ -102,45 +102,21 @@ async function convertHeicToJpeg(file: File): Promise<HeicConversionResult> {
 
 function ImageUploader({
   label,
-  description,
   image,
   onUpload,
   onRemove,
   required = false,
-  icon,
 }: {
   label: string
-  description: string
+  description?: string  // No longer used but kept for compatibility
   image: UploadedImage | null
   onUpload: (file: File) => void
   onRemove: () => void
   required?: boolean
-  icon: string
+  icon?: string  // No longer used but kept for compatibility
 }) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [isDragging, setIsDragging] = useState(false)
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      setIsDragging(false)
-      const file = e.dataTransfer.files[0]
-      if (file && file.type.startsWith('image/')) {
-        onUpload(file)
-      }
-    },
-    [onUpload]
-  )
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }, [])
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }, [])
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -148,6 +124,8 @@ function ImageUploader({
       if (file) {
         onUpload(file)
       }
+      // Reset input so same file can be selected again
+      e.target.value = ''
     },
     [onUpload]
   )
@@ -200,40 +178,60 @@ function ImageUploader({
     )
   }
 
-  // Show default upload area
+  // Show two-button upload area (Take Photo / From Gallery)
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
-      <div
-        onClick={() => inputRef.current?.click()}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        className={`
-          relative cursor-pointer rounded-xl border-2 border-dashed p-8
-          transition-all duration-200 text-center
-          ${isDragging
-            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-            : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-          }
-        `}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-        <div className="text-4xl mb-3">{icon}</div>
-        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {description}
-        </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Drag & drop or click to upload
-        </p>
+
+      {/* Hidden file inputs */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
+      {/* Two-button layout */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Take Photo Button */}
+        <button
+          type="button"
+          onClick={() => cameraInputRef.current?.click()}
+          className="flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 active:bg-indigo-100 dark:active:bg-indigo-900/30 transition-colors min-h-[120px]"
+        >
+          <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
+            <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Take Photo</span>
+        </button>
+
+        {/* From Gallery Button */}
+        <button
+          type="button"
+          onClick={() => galleryInputRef.current?.click()}
+          className="flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 active:bg-indigo-100 dark:active:bg-indigo-900/30 transition-colors min-h-[120px]"
+        >
+          <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
+            <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">From Gallery</span>
+        </button>
       </div>
     </div>
   )
@@ -245,43 +243,21 @@ function ImageUploader({
 
 function MultiImageUploader({
   label,
-  description,
   images,
   onUpload,
   onRemove,
   maxImages = 5,
-  icon,
 }: {
   label: string
-  description: string
+  description?: string  // No longer used but kept for compatibility
   images: UploadedImage[]
   onUpload: (file: File) => void
   onRemove: (index: number) => void
   maxImages?: number
-  icon: string
+  icon?: string  // No longer used but kept for compatibility
 }) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [isDragging, setIsDragging] = useState(false)
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      setIsDragging(false)
-      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
-      files.slice(0, maxImages - images.length).forEach(onUpload)
-    },
-    [onUpload, images.length, maxImages]
-  )
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }, [])
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }, [])
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -298,6 +274,24 @@ function MultiImageUploader({
         {label}
         <span className="text-gray-400 font-normal ml-2">({images.length}/{maxImages})</span>
       </label>
+
+      {/* Hidden file inputs */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFileSelect}
+        className="hidden"
+      />
 
       {images.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-3">
@@ -333,30 +327,31 @@ function MultiImageUploader({
       )}
 
       {images.length < maxImages && (
-        <div
-          onClick={() => inputRef.current?.click()}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          className={`
-            cursor-pointer rounded-xl border-2 border-dashed p-6
-            transition-all duration-200 text-center
-            ${isDragging
-              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-              : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-            }
-          `}
-        >
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-          <div className="text-3xl mb-2">{icon}</div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">{description}</p>
+        <div className="grid grid-cols-2 gap-2">
+          {/* Take Photo Button */}
+          <button
+            type="button"
+            onClick={() => cameraInputRef.current?.click()}
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 active:bg-indigo-100 transition-colors"
+          >
+            <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Take Photo</span>
+          </button>
+
+          {/* From Gallery Button */}
+          <button
+            type="button"
+            onClick={() => galleryInputRef.current?.click()}
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 active:bg-indigo-100 transition-colors"
+          >
+            <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">From Gallery</span>
+          </button>
         </div>
       )}
     </div>
