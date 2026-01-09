@@ -91,6 +91,7 @@ function ImageUploader({
   onRemove,
   required = false,
   icon,
+  isProcessing = false,
 }: {
   label: string
   description: string
@@ -99,6 +100,7 @@ function ImageUploader({
   onRemove: () => void
   required?: boolean
   icon: string
+  isProcessing?: boolean
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -135,6 +137,7 @@ function ImageUploader({
     [onUpload]
   )
 
+  // Show uploaded image
   if (image) {
     return (
       <div className="relative">
@@ -169,6 +172,32 @@ function ImageUploader({
     )
   }
 
+  // Show processing state (for HEIC conversion)
+  if (isProcessing) {
+    return (
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+        <div className="rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-8 text-center">
+          <div className="flex flex-col items-center gap-3">
+            <svg className="animate-spin h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+              Processing your image...
+            </p>
+            <p className="text-xs text-blue-600 dark:text-blue-400">
+              This may take a few seconds
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show default upload area
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -345,7 +374,10 @@ export default function HomeworkCheckPage() {
   const [answerImage, setAnswerImage] = useState<UploadedImage | null>(null)
   const [referenceImages, setReferenceImages] = useState<UploadedImage[]>([])
   const [teacherReviews, setTeacherReviews] = useState<UploadedImage[]>([])
-  const [isConverting, setIsConverting] = useState(false)
+  // Track which specific upload is processing (for better UX)
+  const [processingTask, setProcessingTask] = useState(false)
+  const [processingAnswer, setProcessingAnswer] = useState(false)
+  const [processingOther, setProcessingOther] = useState(false)
 
   // Safe URL creation for iOS Safari compatibility
   const createSafeObjectURL = useCallback((file: File): string | null => {
@@ -362,11 +394,11 @@ export default function HomeworkCheckPage() {
   const handleTaskUpload = useCallback(async (file: File) => {
     // Convert HEIC to JPEG if needed
     if (isHeicFile(file)) {
-      setIsConverting(true)
+      setProcessingTask(true)
       try {
         file = await convertHeicToJpeg(file)
       } finally {
-        setIsConverting(false)
+        setProcessingTask(false)
       }
     }
 
@@ -381,11 +413,11 @@ export default function HomeworkCheckPage() {
   const handleAnswerUpload = useCallback(async (file: File) => {
     // Convert HEIC to JPEG if needed
     if (isHeicFile(file)) {
-      setIsConverting(true)
+      setProcessingAnswer(true)
       try {
         file = await convertHeicToJpeg(file)
       } finally {
-        setIsConverting(false)
+        setProcessingAnswer(false)
       }
     }
 
@@ -400,11 +432,11 @@ export default function HomeworkCheckPage() {
   const handleReferenceUpload = useCallback(async (file: File) => {
     // Convert HEIC to JPEG if needed
     if (isHeicFile(file)) {
-      setIsConverting(true)
+      setProcessingOther(true)
       try {
         file = await convertHeicToJpeg(file)
       } finally {
-        setIsConverting(false)
+        setProcessingOther(false)
       }
     }
 
@@ -416,11 +448,11 @@ export default function HomeworkCheckPage() {
   const handleTeacherReviewUpload = useCallback(async (file: File) => {
     // Convert HEIC to JPEG if needed
     if (isHeicFile(file)) {
-      setIsConverting(true)
+      setProcessingOther(true)
       try {
         file = await convertHeicToJpeg(file)
       } finally {
-        setIsConverting(false)
+        setProcessingOther(false)
       }
     }
 
@@ -602,7 +634,8 @@ export default function HomeworkCheckPage() {
     }
   }
 
-  const canSubmit = taskImage && answerImage && !isSubmitting && !isConverting
+  const isProcessing = processingTask || processingAnswer || processingOther
+  const canSubmit = taskImage && answerImage && !isSubmitting && !isProcessing
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
@@ -667,17 +700,6 @@ export default function HomeworkCheckPage() {
           </div>
         </div>
 
-        {/* HEIC Conversion Indicator */}
-        {isConverting && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6 flex items-center gap-3">
-            <svg className="animate-spin h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            <p className="text-blue-600 dark:text-blue-400 text-sm">Converting image format...</p>
-          </div>
-        )}
-
         {/* Error Message */}
         {error && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6">
@@ -699,6 +721,7 @@ export default function HomeworkCheckPage() {
                 onRemove={() => setTaskImage(null)}
                 required
                 icon="📋"
+                isProcessing={processingTask}
               />
               <ImageUploader
                 label="Your Answer"
@@ -708,6 +731,7 @@ export default function HomeworkCheckPage() {
                 onRemove={() => setAnswerImage(null)}
                 required
                 icon="✍️"
+                isProcessing={processingAnswer}
               />
             </div>
           </div>
