@@ -33,7 +33,8 @@ const IMAGE_FETCH_TIMEOUT_MS = 30000 // 30 second timeout for fetching images
 // Image Fetching
 // ============================================================================
 
-type MediaType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
+// Claude Vision API supports these media types including PDF
+type MediaType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' | 'application/pdf'
 
 interface FetchedImage {
   base64: string
@@ -78,6 +79,9 @@ async function fetchImageAsBase64(url: string): Promise<FetchedImage> {
       // Client-side conversion should have handled this, but if it got through:
       console.error('[Checker] HEIC/HEIF image received - client conversion may have failed')
       throw new Error('This image format is not supported. Please try uploading again or use a JPEG/PNG image.')
+    } else if (contentType.includes('pdf')) {
+      // PDF is supported by Claude Vision API
+      mediaType = 'application/pdf'
     } else if (contentType.includes('png')) {
       mediaType = 'image/png'
     } else if (contentType.includes('gif')) {
@@ -350,19 +354,31 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
     // Build message content with base64 images
     const content: Anthropic.MessageParam['content'] = []
 
-    // Add task image
+    // Add task image (PDF uses document block, images use image block)
     content.push({
       type: 'text',
       text: '## HOMEWORK TASK:\nAnalyze this homework assignment/task:',
     })
-    content.push({
-      type: 'image',
-      source: {
-        type: 'base64',
-        media_type: taskImage.mediaType,
-        data: taskImage.base64,
-      },
-    })
+    if (taskImage.mediaType === 'application/pdf') {
+      // Use document block for PDFs (Claude Vision API supports this)
+      content.push({
+        type: 'document',
+        source: {
+          type: 'base64',
+          media_type: 'application/pdf',
+          data: taskImage.base64,
+        },
+      } as Anthropic.DocumentBlockParam)
+    } else {
+      content.push({
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: taskImage.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+          data: taskImage.base64,
+        },
+      })
+    }
 
     // Add answer image (if provided)
     if (answerImage) {
@@ -370,14 +386,25 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
         type: 'text',
         text: '\n## STUDENT\'S ANSWER:\nHere is the student\'s submitted work:',
       })
-      content.push({
-        type: 'image',
-        source: {
-          type: 'base64',
-          media_type: answerImage.mediaType,
-          data: answerImage.base64,
-        },
-      })
+      if (answerImage.mediaType === 'application/pdf') {
+        content.push({
+          type: 'document',
+          source: {
+            type: 'base64',
+            media_type: 'application/pdf',
+            data: answerImage.base64,
+          },
+        } as Anthropic.DocumentBlockParam)
+      } else {
+        content.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: answerImage.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+            data: answerImage.base64,
+          },
+        })
+      }
     } else {
       content.push({
         type: 'text',
@@ -392,14 +419,25 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
         text: '\n## REFERENCE MATERIALS:\nThe student provided these reference materials:',
       })
       for (const img of referenceImages) {
-        content.push({
-          type: 'image',
-          source: {
-            type: 'base64',
-            media_type: img.mediaType,
-            data: img.base64,
-          },
-        })
+        if (img.mediaType === 'application/pdf') {
+          content.push({
+            type: 'document',
+            source: {
+              type: 'base64',
+              media_type: 'application/pdf',
+              data: img.base64,
+            },
+          } as Anthropic.DocumentBlockParam)
+        } else {
+          content.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: img.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+              data: img.base64,
+            },
+          })
+        }
       }
     }
 
@@ -411,14 +449,25 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
         text: '\n## PREVIOUS TEACHER REVIEWS:\nAnalyze these past graded assignments to understand the teacher\'s expectations and grading style:',
       })
       for (const img of teacherImages) {
-        content.push({
-          type: 'image',
-          source: {
-            type: 'base64',
-            media_type: img.mediaType,
-            data: img.base64,
-          },
-        })
+        if (img.mediaType === 'application/pdf') {
+          content.push({
+            type: 'document',
+            source: {
+              type: 'base64',
+              media_type: 'application/pdf',
+              data: img.base64,
+            },
+          } as Anthropic.DocumentBlockParam)
+        } else {
+          content.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: img.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+              data: img.base64,
+            },
+          })
+        }
       }
       teacherStyleContext = `
 IMPORTANT: Based on the previous teacher reviews provided, pay attention to:

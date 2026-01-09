@@ -22,6 +22,8 @@ interface UploadedImage {
   file: File
   preview: string | null  // null for HEIC files (Chrome can't preview them)
   isHeic: boolean  // Track if conversion needed at submit time
+  isDocument?: boolean  // True for PDF/DOCX files
+  docType?: 'pdf' | 'docx'  // Document type if isDocument is true
 }
 
 interface HeicWarning {
@@ -96,6 +98,23 @@ async function convertHeicToJpeg(file: File): Promise<HeicConversionResult> {
   }
 }
 
+/**
+ * Check if a file is a document (PDF or DOCX)
+ * Returns the document type or null if it's not a document
+ */
+function isDocumentFile(file: File): 'pdf' | 'docx' | null {
+  const name = file.name.toLowerCase()
+  const type = file.type.toLowerCase()
+
+  if (name.endsWith('.pdf') || type === 'application/pdf') {
+    return 'pdf'
+  }
+  if (name.endsWith('.docx') || name.endsWith('.doc') || type.includes('wordprocessingml')) {
+    return 'docx'
+  }
+  return null
+}
+
 // ============================================================================
 // Image Uploader Component
 // ============================================================================
@@ -139,7 +158,20 @@ function ImageUploader({
         </label>
         <div className="relative rounded-xl overflow-hidden border-2 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20">
           <div className="relative aspect-[4/3]">
-            {image.preview ? (
+            {image.isDocument ? (
+              // Placeholder for PDF/DOCX documents
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800">
+                <div className="text-5xl mb-2">
+                  {image.docType === 'pdf' ? '📄' : '📝'}
+                </div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 text-center px-4 truncate max-w-full">
+                  {image.file.name}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                  {image.docType?.toUpperCase()} Document
+                </p>
+              </div>
+            ) : image.preview ? (
               <Image
                 src={image.preview}
                 alt={label}
@@ -189,7 +221,7 @@ function ImageUploader({
       <input
         ref={cameraInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,.pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         capture="environment"
         onChange={handleFileSelect}
         className="hidden"
@@ -197,7 +229,7 @@ function ImageUploader({
       <input
         ref={galleryInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,.pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -279,7 +311,7 @@ function MultiImageUploader({
       <input
         ref={cameraInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,.pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         capture="environment"
         onChange={handleFileSelect}
         className="hidden"
@@ -287,7 +319,7 @@ function MultiImageUploader({
       <input
         ref={galleryInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,.pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         multiple
         onChange={handleFileSelect}
         className="hidden"
@@ -297,7 +329,15 @@ function MultiImageUploader({
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-3">
           {images.map((image, index) => (
             <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 group">
-              {image.preview ? (
+              {image.isDocument ? (
+                // Placeholder for PDF/DOCX documents
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800">
+                  <div className="text-2xl">{image.docType === 'pdf' ? '📄' : '📝'}</div>
+                  <p className="text-[10px] text-gray-500 mt-1 truncate px-1 w-full text-center">
+                    {image.file.name}
+                  </p>
+                </div>
+              ) : image.preview ? (
                 <Image
                   src={image.preview}
                   alt={`Reference ${index + 1}`}
@@ -400,7 +440,19 @@ export default function HomeworkCheckPage() {
 
   // Upload handlers - show HEIC warning if needed, otherwise store file immediately
   // HEIC files show a warning modal asking user to convert or export as JPEG
+  // Documents (PDF/DOCX) are handled without preview
   const handleTaskUpload = useCallback((file: File) => {
+    // Check for document files first
+    const docType = isDocumentFile(file)
+    if (docType) {
+      // Documents don't have image previews
+      setTaskImage({ file, preview: null, isHeic: false, isDocument: true, docType })
+      setError(null)
+      trackStep('task_uploaded', 2)
+      trackFeature('homework_task_upload', { fileType: file.type, fileSize: file.size, isDocument: true, docType })
+      return
+    }
+
     const heic = isHeicFile(file)
     if (heic) {
       // Show warning for HEIC files - user must confirm before proceeding
@@ -417,6 +469,16 @@ export default function HomeworkCheckPage() {
   }, [trackStep, trackFeature, createSafeObjectURL])
 
   const handleAnswerUpload = useCallback((file: File) => {
+    // Check for document files first
+    const docType = isDocumentFile(file)
+    if (docType) {
+      setAnswerImage({ file, preview: null, isHeic: false, isDocument: true, docType })
+      setError(null)
+      trackStep('answer_uploaded', 3)
+      trackFeature('homework_answer_upload', { fileType: file.type, fileSize: file.size, isDocument: true, docType })
+      return
+    }
+
     const heic = isHeicFile(file)
     if (heic) {
       setError(null) // Clear any previous error
@@ -431,6 +493,13 @@ export default function HomeworkCheckPage() {
   }, [trackStep, trackFeature, createSafeObjectURL])
 
   const handleReferenceUpload = useCallback((file: File) => {
+    // Check for document files first
+    const docType = isDocumentFile(file)
+    if (docType) {
+      setReferenceImages(prev => [...prev, { file, preview: null, isHeic: false, isDocument: true, docType }])
+      return
+    }
+
     const heic = isHeicFile(file)
     if (heic) {
       setError(null) // Clear any previous error
@@ -442,6 +511,13 @@ export default function HomeworkCheckPage() {
   }, [createSafeObjectURL, referenceImages.length])
 
   const handleTeacherReviewUpload = useCallback((file: File) => {
+    // Check for document files first
+    const docType = isDocumentFile(file)
+    if (docType) {
+      setTeacherReviews(prev => [...prev, { file, preview: null, isHeic: false, isDocument: true, docType }])
+      return
+    }
+
     const heic = isHeicFile(file)
     if (heic) {
       setError(null) // Clear any previous error

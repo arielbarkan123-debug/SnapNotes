@@ -50,8 +50,12 @@ const ACCEPTED_FILE_TYPES = [
   'image/heic',
   'image/heif',
   'image/gif',
+  // Document types for homework checker
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/msword',
 ]
-const ACCEPTED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif', 'gif']
+const ACCEPTED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif', 'gif', 'pdf', 'docx', 'doc']
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB per file
 const MAX_TOTAL_SIZE = 50 * 1024 * 1024 // 50MB total payload limit
 const MAX_FILES = 10
@@ -79,7 +83,7 @@ function getFileExtension(filename: string): string {
  * Validates file content by checking magic bytes (file signatures)
  * This prevents users from uploading malicious files with renamed extensions
  */
-async function validateImageMagicBytes(file: File): Promise<boolean> {
+async function validateFileMagicBytes(file: File): Promise<boolean> {
   try {
     // Read first 12 bytes for signature checking
     const slice = file.slice(0, 12)
@@ -115,6 +119,22 @@ async function validateImageMagicBytes(file: File): Promise<boolean> {
       return true
     }
 
+    // Check PDF signature (%PDF-)
+    if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46 && bytes[4] === 0x2D) {
+      return true
+    }
+
+    // Check DOCX/ZIP signature (PK..)
+    // DOCX files are ZIP archives starting with PK
+    if (bytes[0] === 0x50 && bytes[1] === 0x4B && bytes[2] === 0x03 && bytes[3] === 0x04) {
+      return true
+    }
+
+    // Check DOC signature (D0 CF 11 E0 - OLE compound document)
+    if (bytes[0] === 0xD0 && bytes[1] === 0xCF && bytes[2] === 0x11 && bytes[3] === 0xE0) {
+      return true
+    }
+
     // Allow if MIME type or extension suggests image (for edge cases)
     // This handles rare formats or browser-specific issues
     return false
@@ -139,6 +159,12 @@ function isValidFileType(file: File): boolean {
 
   // Check if it's an image type we might have missed (e.g., image/pjpeg)
   if (file.type.startsWith('image/')) {
+    const ext = getFileExtension(file.name)
+    return ACCEPTED_EXTENSIONS.includes(ext)
+  }
+
+  // Check for document types by extension
+  if (file.type.startsWith('application/')) {
     const ext = getFileExtension(file.name)
     return ACCEPTED_EXTENSIONS.includes(ext)
   }
@@ -181,7 +207,7 @@ async function validateFile(file: File, index: number): Promise<UploadError | nu
   }
 
   // Validate magic bytes (actual file content) to prevent spoofed files
-  const hasValidSignature = await validateImageMagicBytes(file)
+  const hasValidSignature = await validateFileMagicBytes(file)
   if (!hasValidSignature) {
     // Allow if MIME type is correct (some edge cases with HEIC on certain devices)
     if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
