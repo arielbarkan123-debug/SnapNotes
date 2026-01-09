@@ -83,8 +83,13 @@ export async function POST(request: NextRequest) {
         .eq('id', check.id)
         .eq('user_id', user.id)
 
+      // Return more specific error message
+      const errorMessage = analysisError instanceof Error
+        ? analysisError.message
+        : 'Failed to analyze homework. Please try again.'
+
       return NextResponse.json(
-        { error: 'Failed to analyze homework. Please try again.' },
+        { error: errorMessage },
         { status: 500 }
       )
     }
@@ -127,13 +132,16 @@ export async function POST(request: NextRequest) {
     } catch (saveError) {
       console.error('[Homework Check] Save threw error:', saveError)
 
-      // Try to mark as error
-      await supabase
-        .from('homework_checks')
-        .update({ status: 'error' })
-        .eq('id', check.id)
-        .eq('user_id', user.id)
-        .catch(() => {}) // Ignore if this also fails
+      // Try to mark as error (ignore if this also fails)
+      try {
+        await supabase
+          .from('homework_checks')
+          .update({ status: 'error' })
+          .eq('id', check.id)
+          .eq('user_id', user.id)
+      } catch {
+        // Ignore secondary failure
+      }
 
       return NextResponse.json(
         { error: 'Failed to save results. Please try again.' },

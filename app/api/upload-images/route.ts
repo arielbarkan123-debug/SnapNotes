@@ -124,6 +124,35 @@ async function validateImageMagicBytes(file: File): Promise<boolean> {
   }
 }
 
+/**
+ * Detect HEIC/HEIF from magic bytes (more reliable than MIME type on iOS)
+ * iOS Safari sometimes reports HEIC files with image/jpeg MIME type
+ */
+async function detectHeicFromMagicBytes(file: File): Promise<boolean> {
+  try {
+    // Read first 12 bytes for HEIC signature checking
+    const slice = file.slice(0, 12)
+    const buffer = await slice.arrayBuffer()
+    const bytes = new Uint8Array(buffer)
+
+    // HEIC/HEIF files have 'ftyp' box at offset 4
+    if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) {
+      // Check for common HEIC brands at offset 8: heic, mif1, msf1, heix, hevc
+      const brand = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11])
+      const heicBrands = ['heic', 'heix', 'hevc', 'hevx', 'mif1', 'msf1', 'MIF1', 'MSF1']
+      if (heicBrands.some(b => brand.startsWith(b.substring(0, 4)))) {
+        console.log(`[Upload] Detected HEIC via magic bytes, brand: ${brand}`)
+        return true
+      }
+    }
+
+    return false
+  } catch (err) {
+    console.warn('[Upload] Failed to read magic bytes:', err)
+    return false
+  }
+}
+
 function isValidFileType(file: File): boolean {
   // Check MIME type
   if (ACCEPTED_FILE_TYPES.includes(file.type)) {
@@ -174,19 +203,19 @@ async function convertHeicToJpeg(file: File): Promise<{ buffer: Buffer; extensio
   try {
     console.log('[Upload] Starting HEIC conversion for:', file.name)
     const arrayBuffer = await file.arrayBuffer()
-    const inputBuffer = Buffer.from(arrayBuffer)
 
     // Convert to JPEG using heic-convert (pure JS - works on serverless)
-    const jpegBuffer = await heicConvert({
-      buffer: inputBuffer,
+    // heic-convert expects ArrayBufferLike, so pass arrayBuffer directly
+    const jpegArrayBuffer = await heicConvert({
+      buffer: arrayBuffer,
       format: 'JPEG',
       quality: 0.9
     })
 
-    console.log('[Upload] HEIC conversion successful, output size:', jpegBuffer.length)
+    console.log('[Upload] HEIC conversion successful, output size:', jpegArrayBuffer.byteLength)
 
     return {
-      buffer: Buffer.from(jpegBuffer),
+      buffer: Buffer.from(jpegArrayBuffer),
       extension: 'jpg',
       contentType: 'image/jpeg'
     }
@@ -354,7 +383,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Debug logging for file info
         console.log(`[Upload] Processing file: name=${file.name}, type=${file.type}, size=${file.size}, ext=${extension}`)
 
-        const needsConversion = isHeicFile(file)
+        // Check HEIC using both extension/MIME and magic bytes (for iOS Safari reliability)
+        let needsConversion = isHeicFile(file)
+
+        // Also check magic bytes - iOS Safari sometimes misreports HEIC as JPEG
+        if (!needsConversion) {
+          const heicFromMagicBytes = await detectHeicFromMagicBytes(file)
+          if (heicFromMagicBytes) {
+            console.log(`[Upload] Detected HEIC via magic bytes (MIME type was ${file.type})`)
+            needsConversion = true
+          }
+        }
+
         console.log(`[Upload] HEIC check result: ${needsConversion}`)
 
         if (needsConversion) {

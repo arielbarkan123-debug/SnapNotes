@@ -9,6 +9,59 @@ import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
 
 // ============================================================================
+// HEIC Conversion Helpers (for iOS compatibility)
+// ============================================================================
+
+/**
+ * Check if file is HEIC/HEIF format
+ */
+function isHeicFile(file: File): boolean {
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  return ext === 'heic' || ext === 'heif' ||
+         file.type === 'image/heic' || file.type === 'image/heif'
+}
+
+/**
+ * Convert HEIC to JPEG using heic2any library (loaded dynamically)
+ */
+async function convertHeicToJpeg(file: File): Promise<File> {
+  try {
+    console.log('[HomeworkCheck] Converting HEIC to JPEG:', file.name)
+    // Dynamically import heic2any to avoid SSR issues
+    const heic2any = (await import('heic2any')).default
+
+    const jpegBlob = await heic2any({
+      blob: file,
+      toType: 'image/jpeg',
+      quality: 0.9
+    })
+
+    // heic2any can return single blob or array
+    const resultBlob = Array.isArray(jpegBlob) ? jpegBlob[0] : jpegBlob
+
+    // Create new File with .jpg extension
+    const newFileName = file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg')
+    const convertedFile = new File([resultBlob], newFileName, { type: 'image/jpeg' })
+
+    console.log('[HomeworkCheck] HEIC conversion successful:', newFileName, 'size:', convertedFile.size)
+    return convertedFile
+  } catch (error) {
+    console.error('[HomeworkCheck] HEIC conversion failed:', error)
+    throw new Error('Failed to convert HEIC image. Please use JPEG or PNG format.')
+  }
+}
+
+/**
+ * Process file - convert HEIC to JPEG if needed
+ */
+async function processFile(file: File): Promise<File> {
+  if (isHeicFile(file)) {
+    return convertHeicToJpeg(file)
+  }
+  return file
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -345,14 +398,23 @@ export default function HomeworkCheckPage() {
     })
 
     try {
-      // Step 1: Upload all images to storage
-      const allImages = [
+      // Step 1: Process and convert HEIC files to JPEG (for iOS compatibility)
+      const rawImages = [
         { file: taskImage.file, type: 'task' },
         { file: answerImage.file, type: 'answer' },
         ...referenceImages.map((img, i) => ({ file: img.file, type: `ref_${i}` })),
         ...teacherReviews.map((img, i) => ({ file: img.file, type: `review_${i}` })),
       ]
 
+      // Convert any HEIC files to JPEG before uploading
+      const allImages = await Promise.all(
+        rawImages.map(async ({ file, type }) => ({
+          file: await processFile(file),
+          type
+        }))
+      )
+
+      // Step 2: Upload all images to storage
       const formData = new FormData()
       allImages.forEach(({ file }) => {
         formData.append('files', file)

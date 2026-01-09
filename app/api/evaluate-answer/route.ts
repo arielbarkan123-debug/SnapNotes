@@ -102,7 +102,7 @@ function parseNumericAnswer(text: string): number | null {
   if (!text || typeof text !== 'string') return null
 
   // Clean the text
-  let cleaned = text.trim()
+  const cleaned = text.trim()
     .replace(/,/g, '') // Remove thousands separators
     .replace(/\s+/g, '') // Remove spaces
     .replace(/^[$€£¥₹]/g, '') // Remove currency symbols at start
