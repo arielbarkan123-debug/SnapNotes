@@ -409,6 +409,7 @@ export default function HomeworkCheckPage() {
     const heic = isHeicFile(file)
     if (heic) {
       // Show warning for HEIC files - user must confirm before proceeding
+      setError(null) // Clear any previous error
       setHeicWarning({ type: 'task', file })
       return
     }
@@ -423,6 +424,7 @@ export default function HomeworkCheckPage() {
   const handleAnswerUpload = useCallback((file: File) => {
     const heic = isHeicFile(file)
     if (heic) {
+      setError(null) // Clear any previous error
       setHeicWarning({ type: 'answer', file })
       return
     }
@@ -436,6 +438,7 @@ export default function HomeworkCheckPage() {
   const handleReferenceUpload = useCallback((file: File) => {
     const heic = isHeicFile(file)
     if (heic) {
+      setError(null) // Clear any previous error
       setHeicWarning({ type: 'reference', file, index: referenceImages.length })
       return
     }
@@ -446,6 +449,7 @@ export default function HomeworkCheckPage() {
   const handleTeacherReviewUpload = useCallback((file: File) => {
     const heic = isHeicFile(file)
     if (heic) {
+      setError(null) // Clear any previous error
       setHeicWarning({ type: 'review', file, index: teacherReviews.length })
       return
     }
