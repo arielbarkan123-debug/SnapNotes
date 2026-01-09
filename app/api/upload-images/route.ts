@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import sharp from 'sharp'
+import heicConvert from 'heic-convert'
 import {
   ErrorCodes,
   createErrorResponse,
@@ -164,21 +164,26 @@ function isHeicFile(file: File): boolean {
 }
 
 /**
- * Convert HEIC/HEIF to JPEG using sharp
+ * Convert HEIC/HEIF to JPEG using heic-convert (pure JS, works on Vercel)
  * Returns the converted buffer and new extension
  */
 async function convertHeicToJpeg(file: File): Promise<{ buffer: Buffer; extension: string; contentType: string }> {
   try {
+    console.log('[Upload] Starting HEIC conversion for:', file.name)
     const arrayBuffer = await file.arrayBuffer()
     const inputBuffer = Buffer.from(arrayBuffer)
 
-    // Convert to JPEG with good quality
-    const jpegBuffer = await sharp(inputBuffer)
-      .jpeg({ quality: 90 })
-      .toBuffer()
+    // Convert to JPEG using heic-convert (pure JS - works on serverless)
+    const jpegBuffer = await heicConvert({
+      buffer: inputBuffer,
+      format: 'JPEG',
+      quality: 0.9
+    })
+
+    console.log('[Upload] HEIC conversion successful, output size:', jpegBuffer.length)
 
     return {
-      buffer: jpegBuffer,
+      buffer: Buffer.from(jpegBuffer),
       extension: 'jpg',
       contentType: 'image/jpeg'
     }
