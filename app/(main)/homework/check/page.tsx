@@ -8,8 +8,11 @@ import Button from '@/components/ui/Button'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
 
-// Note: HEIC conversion is handled server-side to avoid slow mobile performance
-// The server validates and converts images before sending to Claude
+// HEIC conversion is done client-side before upload because:
+// - Vercel's sharp doesn't have HEIC codec support
+// - Server-side heic-convert also fails on Vercel
+// - heic2any works in browser via WASM
+// Note: heic2any is dynamically imported to avoid SSR issues (window not defined)
 
 // ============================================================================
 // Types
@@ -18,6 +21,62 @@ import { sanitizeError } from '@/lib/utils/error-sanitizer'
 interface UploadedImage {
   file: File
   preview: string
+}
+
+// ============================================================================
+// HEIC Conversion Helper
+// ============================================================================
+
+/**
+ * Check if a file is HEIC/HEIF format
+ */
+function isHeicFile(file: File): boolean {
+  const type = file.type.toLowerCase()
+  const name = file.name.toLowerCase()
+  return (
+    type.includes('heic') ||
+    type.includes('heif') ||
+    name.endsWith('.heic') ||
+    name.endsWith('.heif')
+  )
+}
+
+/**
+ * Convert HEIC file to JPEG
+ * Returns the original file if not HEIC or if conversion fails
+ * Uses dynamic import to avoid SSR issues with heic2any
+ */
+async function convertHeicToJpeg(file: File): Promise<File> {
+  if (!isHeicFile(file)) {
+    return file
+  }
+
+  console.log('[HEIC] Converting HEIC to JPEG:', file.name)
+
+  try {
+    // Dynamic import to avoid window not defined errors during SSR
+    const heic2any = (await import('heic2any')).default
+
+    const blob = await heic2any({
+      blob: file,
+      toType: 'image/jpeg',
+      quality: 0.9,
+    })
+
+    // heic2any can return a single blob or array of blobs
+    const resultBlob = Array.isArray(blob) ? blob[0] : blob
+
+    // Create a new File with .jpg extension
+    const newFileName = file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg')
+    const convertedFile = new File([resultBlob], newFileName, { type: 'image/jpeg' })
+
+    console.log('[HEIC] Conversion successful:', newFileName)
+    return convertedFile
+  } catch (error) {
+    console.error('[HEIC] Conversion failed:', error)
+    // Return original file - server will show appropriate error
+    return file
+  }
 }
 
 // ============================================================================
@@ -286,6 +345,7 @@ export default function HomeworkCheckPage() {
   const [answerImage, setAnswerImage] = useState<UploadedImage | null>(null)
   const [referenceImages, setReferenceImages] = useState<UploadedImage[]>([])
   const [teacherReviews, setTeacherReviews] = useState<UploadedImage[]>([])
+  const [isConverting, setIsConverting] = useState(false)
 
   // Safe URL creation for iOS Safari compatibility
   const createSafeObjectURL = useCallback((file: File): string | null => {
@@ -298,8 +358,18 @@ export default function HomeworkCheckPage() {
     }
   }, [])
 
-  // Handlers
-  const handleTaskUpload = useCallback((file: File) => {
+  // Handlers - with HEIC conversion
+  const handleTaskUpload = useCallback(async (file: File) => {
+    // Convert HEIC to JPEG if needed
+    if (isHeicFile(file)) {
+      setIsConverting(true)
+      try {
+        file = await convertHeicToJpeg(file)
+      } finally {
+        setIsConverting(false)
+      }
+    }
+
     const preview = createSafeObjectURL(file)
     if (!preview) return
     setTaskImage({ file, preview })
@@ -308,7 +378,17 @@ export default function HomeworkCheckPage() {
     trackFeature('homework_task_upload', { fileType: file.type, fileSize: file.size })
   }, [trackStep, trackFeature, createSafeObjectURL])
 
-  const handleAnswerUpload = useCallback((file: File) => {
+  const handleAnswerUpload = useCallback(async (file: File) => {
+    // Convert HEIC to JPEG if needed
+    if (isHeicFile(file)) {
+      setIsConverting(true)
+      try {
+        file = await convertHeicToJpeg(file)
+      } finally {
+        setIsConverting(false)
+      }
+    }
+
     const preview = createSafeObjectURL(file)
     if (!preview) return
     setAnswerImage({ file, preview })
@@ -317,13 +397,33 @@ export default function HomeworkCheckPage() {
     trackFeature('homework_answer_upload', { fileType: file.type, fileSize: file.size })
   }, [trackStep, trackFeature, createSafeObjectURL])
 
-  const handleReferenceUpload = useCallback((file: File) => {
+  const handleReferenceUpload = useCallback(async (file: File) => {
+    // Convert HEIC to JPEG if needed
+    if (isHeicFile(file)) {
+      setIsConverting(true)
+      try {
+        file = await convertHeicToJpeg(file)
+      } finally {
+        setIsConverting(false)
+      }
+    }
+
     const preview = createSafeObjectURL(file)
     if (!preview) return
     setReferenceImages(prev => [...prev, { file, preview }])
   }, [createSafeObjectURL])
 
-  const handleTeacherReviewUpload = useCallback((file: File) => {
+  const handleTeacherReviewUpload = useCallback(async (file: File) => {
+    // Convert HEIC to JPEG if needed
+    if (isHeicFile(file)) {
+      setIsConverting(true)
+      try {
+        file = await convertHeicToJpeg(file)
+      } finally {
+        setIsConverting(false)
+      }
+    }
+
     const preview = createSafeObjectURL(file)
     if (!preview) return
     setTeacherReviews(prev => [...prev, { file, preview }])
@@ -502,7 +602,7 @@ export default function HomeworkCheckPage() {
     }
   }
 
-  const canSubmit = taskImage && answerImage && !isSubmitting
+  const canSubmit = taskImage && answerImage && !isSubmitting && !isConverting
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
@@ -566,6 +666,17 @@ export default function HomeworkCheckPage() {
             </div>
           </div>
         </div>
+
+        {/* HEIC Conversion Indicator */}
+        {isConverting && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6 flex items-center gap-3">
+            <svg className="animate-spin h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            <p className="text-blue-600 dark:text-blue-400 text-sm">Converting image format...</p>
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (

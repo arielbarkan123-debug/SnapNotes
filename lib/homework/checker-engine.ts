@@ -13,7 +13,6 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
-import sharp from 'sharp'
 import type {
   HomeworkFeedback,
   GradeLevel,
@@ -70,25 +69,15 @@ async function fetchImageAsBase64(url: string): Promise<FetchedImage> {
     const arrayBuffer = await response.arrayBuffer()
     const bufferTime = Date.now() - startTime
 
-    // Determine media type and handle HEIC conversion
+    // Determine media type and handle HEIC detection
     let mediaType: MediaType = 'image/jpeg'
-    let finalImageData: Buffer = Buffer.from(arrayBuffer)
+    const finalImageData: Buffer = Buffer.from(arrayBuffer)
 
     if (contentType.includes('heic') || contentType.includes('heif')) {
-      // HEIC/HEIF not supported by Claude - convert to JPEG using sharp
-      console.log('[Checker] HEIC/HEIF image detected, converting to JPEG with sharp...')
-      const convertStart = Date.now()
-      try {
-        const convertedBuffer = await sharp(Buffer.from(arrayBuffer))
-          .jpeg({ quality: 90 })
-          .toBuffer()
-        finalImageData = convertedBuffer
-        mediaType = 'image/jpeg'
-        console.log('[Checker] HEIC conversion completed in', Date.now() - convertStart, 'ms')
-      } catch (convertError) {
-        console.error('[Checker] HEIC conversion failed:', convertError)
-        throw new Error('Failed to convert HEIC image. Please upload a JPEG or PNG instead.')
-      }
+      // HEIC/HEIF not supported by Claude
+      // Client-side conversion should have handled this, but if it got through:
+      console.error('[Checker] HEIC/HEIF image received - client conversion may have failed')
+      throw new Error('This image format is not supported. Please try uploading again or use a JPEG/PNG image.')
     } else if (contentType.includes('png')) {
       mediaType = 'image/png'
     } else if (contentType.includes('gif')) {
