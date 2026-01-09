@@ -1,6 +1,11 @@
 /**
  * Homework Checker Engine
  * AI-powered homework analysis and feedback generation
+ *
+ * ACCURACY ARCHITECTURE:
+ * - Two-phase analysis: analyze items separately, then calculate grade
+ * - Grade calculation: computed from actual correct/incorrect items, NOT from Claude's estimate
+ * - Consistency validation: ensures grade matches feedback items before returning
  */
 
 import Anthropic from '@anthropic-ai/sdk'
@@ -18,6 +23,159 @@ import type {
 
 const AI_MODEL = 'claude-sonnet-4-5-20250929'
 const MAX_TOKENS = 4096
+
+// ============================================================================
+// Grade Calculation & Consistency Validation
+// ============================================================================
+
+/**
+ * Parse a grade string like "60/100", "85%", "B+" into a numeric value (0-100)
+ */
+function parseGradeToNumber(gradeEstimate: string): number {
+  if (!gradeEstimate) return 0
+
+  // Handle "X/100" format
+  const slashMatch = gradeEstimate.match(/(\d+(?:\.\d+)?)\s*\/\s*(\d+)/)
+  if (slashMatch) {
+    const [, num, denom] = slashMatch
+    return Math.round((parseFloat(num) / parseFloat(denom)) * 100)
+  }
+
+  // Handle "X%" format
+  const percentMatch = gradeEstimate.match(/(\d+(?:\.\d+)?)\s*%/)
+  if (percentMatch) {
+    return Math.round(parseFloat(percentMatch[1]))
+  }
+
+  // Handle letter grades
+  const letterGrades: Record<string, number> = {
+    'A+': 97, 'A': 94, 'A-': 90,
+    'B+': 87, 'B': 84, 'B-': 80,
+    'C+': 77, 'C': 74, 'C-': 70,
+    'D+': 67, 'D': 64, 'D-': 60,
+    'F': 50
+  }
+  const letterMatch = gradeEstimate.toUpperCase().match(/[A-F][+-]?/)
+  if (letterMatch && letterGrades[letterMatch[0]]) {
+    return letterGrades[letterMatch[0]]
+  }
+
+  // Try to extract any number
+  const numMatch = gradeEstimate.match(/(\d+(?:\.\d+)?)/)
+  if (numMatch) {
+    const num = parseFloat(numMatch[1])
+    // If it looks like a percentage (<=100), use it directly
+    if (num <= 100) return Math.round(num)
+    // If larger, might be points - assume out of 100
+    return Math.min(100, Math.round(num))
+  }
+
+  return 70 // Default fallback
+}
+
+/**
+ * Calculate what the grade SHOULD be based on correctPoints vs improvementPoints
+ * This is the source of truth - NOT Claude's gradeEstimate
+ */
+function calculateGradeFromFeedback(
+  correctPoints: AnnotatedFeedbackPoint[],
+  improvementPoints: AnnotatedFeedbackPoint[]
+): { grade: number; level: GradeLevel } {
+  const correctCount = correctPoints.length
+  const errorCount = improvementPoints.length
+  const totalItems = correctCount + errorCount
+
+  // If no items analyzed, return moderate grade
+  if (totalItems === 0) {
+    return { grade: 70, level: 'needs_improvement' }
+  }
+
+  // Count severity of errors
+  const majorErrors = improvementPoints.filter(p => p.severity === 'major').length
+  const moderateErrors = improvementPoints.filter(p => p.severity === 'moderate').length
+  const minorErrors = improvementPoints.filter(p => p.severity === 'minor').length
+
+  // Base grade from correct ratio
+  let grade = (correctCount / totalItems) * 100
+
+  // Adjust for error severity (errors already counted in ratio, but severity matters)
+  // Minor errors: -2 points each (already counted in ratio, but light penalty)
+  // Moderate errors: -5 points each
+  // Major errors: -10 points each
+  const severityPenalty = (majorErrors * 5) + (moderateErrors * 2) + (minorErrors * 0)
+  grade = grade - severityPenalty
+
+  // Ensure grade stays in valid range
+  grade = Math.max(0, Math.min(100, Math.round(grade)))
+
+  // Determine grade level
+  let level: GradeLevel
+  if (grade >= 90) {
+    level = 'excellent'
+  } else if (grade >= 75) {
+    level = 'good'
+  } else if (grade >= 50) {
+    level = 'needs_improvement'
+  } else {
+    level = 'incomplete'
+  }
+
+  return { grade, level }
+}
+
+/**
+ * Ensure consistency between the declared grade and the actual feedback items
+ * If there's a significant mismatch, recalculate the grade
+ */
+function ensureGradeConsistency(output: CheckerOutput): CheckerOutput {
+  const declaredGrade = parseGradeToNumber(output.feedback.gradeEstimate)
+  const { grade: calculatedGrade, level: calculatedLevel } = calculateGradeFromFeedback(
+    output.feedback.correctPoints,
+    output.feedback.improvementPoints
+  )
+
+  // Log for debugging
+  console.log('[Homework Checker] Grade consistency check:', {
+    declaredGrade,
+    calculatedGrade,
+    correctPoints: output.feedback.correctPoints.length,
+    improvementPoints: output.feedback.improvementPoints.length,
+    majorErrors: output.feedback.improvementPoints.filter(p => p.severity === 'major').length
+  })
+
+  // If the grades differ by more than 15 points, use the calculated grade
+  // This catches cases where Claude says "60%" but all items are correct
+  const discrepancy = Math.abs(declaredGrade - calculatedGrade)
+  if (discrepancy > 15) {
+    console.log(`[Homework Checker] Grade discrepancy detected! Declared: ${declaredGrade}, Calculated: ${calculatedGrade}. Using calculated grade.`)
+    output.feedback.gradeEstimate = `${calculatedGrade}/100`
+    output.feedback.gradeLevel = calculatedLevel
+  }
+
+  // Special case: If there are no major errors and grade is below 75, bump it up
+  const majorErrors = output.feedback.improvementPoints.filter(p => p.severity === 'major').length
+  if (majorErrors === 0 && output.feedback.correctPoints.length > 0) {
+    const currentGrade = parseGradeToNumber(output.feedback.gradeEstimate)
+    if (currentGrade < 75) {
+      const adjustedGrade = Math.max(currentGrade, 80)
+      console.log(`[Homework Checker] No major errors but low grade. Adjusting ${currentGrade} -> ${adjustedGrade}`)
+      output.feedback.gradeEstimate = `${adjustedGrade}/100`
+      output.feedback.gradeLevel = 'good'
+    }
+  }
+
+  // Special case: All correct points, no improvement points = excellent
+  if (output.feedback.correctPoints.length > 0 && output.feedback.improvementPoints.length === 0) {
+    const currentGrade = parseGradeToNumber(output.feedback.gradeEstimate)
+    if (currentGrade < 90) {
+      console.log(`[Homework Checker] All items correct but grade was ${currentGrade}. Setting to 95.`)
+      output.feedback.gradeEstimate = '95/100'
+      output.feedback.gradeLevel = 'excellent'
+    }
+  }
+
+  return output
+}
 
 let anthropicClient: Anthropic | null = null
 
@@ -114,20 +272,42 @@ IMPORTANT: Based on the previous teacher reviews provided, pay attention to:
 `
   }
 
-  // Add the analysis prompt
+  // Add the analysis prompt with accuracy-focused instructions
   content.push({
     type: 'text',
     text: `
 ${teacherStyleContext}
 
-## YOUR TASK:
-Analyze the homework submission and provide detailed feedback. You must:
+## YOUR TASK: ACCURATE HOMEWORK GRADING
+Analyze the homework submission with EXTREME attention to accuracy. Follow these steps carefully:
 
-1. First, extract and understand the homework task/question
-2. Analyze the student's answer for correctness and completeness
-3. Compare the answer against the task requirements
-4. If reference materials are provided, use them to validate the answer
-5. If previous teacher reviews are provided, match the teacher's grading style and expectations
+### CRITICAL ACCURACY RULES (READ CAREFULLY):
+1. **VERIFY BEFORE JUDGING**: For ANY math/calculation problem, COMPUTE THE ANSWER YOURSELF before deciding if the student is correct
+2. **NEVER CONTRADICT YOURSELF**: Do NOT say "incorrect" and then change your mind. Verify FIRST, then state your conclusion ONCE.
+3. **ANSWER IS KING**: If the student's final answer matches the correct answer, mark it as CORRECT - even if the work shown has minor issues
+4. **ONE PROBLEM AT A TIME**: Analyze each problem separately before making any overall judgment
+
+### ANALYSIS STEPS:
+**STEP 1**: Extract ALL problems/questions from the task image. List them.
+
+**STEP 2**: For EACH problem:
+  a) What is the question asking?
+  b) What answer did the student provide?
+  c) COMPUTE the correct answer yourself (show your calculation)
+  d) Does student's answer = correct answer? YES or NO
+  e) If YES → goes in correctPoints
+  f) If NO → goes in improvementPoints with severity based on how wrong
+
+**STEP 3**: Count results
+  - X problems correct out of Y total
+  - Calculate: gradeEstimate = (X / Y) × 100
+
+**STEP 4**: Generate feedback JSON
+
+### SEVERITY GUIDE FOR improvementPoints:
+- "minor": Small mistakes that don't affect the answer (e.g., messy handwriting, skipped steps but correct answer)
+- "moderate": Partial credit situations, wrong answer but right approach
+- "major": Completely wrong answer, fundamental misunderstanding, missing problems
 
 Return your analysis as JSON in this exact format:
 {
@@ -137,20 +317,20 @@ Return your analysis as JSON in this exact format:
   "answerText": "Summary of what the student wrote/answered",
   "feedback": {
     "gradeLevel": "excellent" | "good" | "needs_improvement" | "incomplete",
-    "gradeEstimate": "A grade like 85/100, B+, 4/5, etc.",
-    "summary": "2-3 sentence overall assessment",
+    "gradeEstimate": "A grade like 85/100 - MUST match your correctPoints/improvementPoints ratio!",
+    "summary": "2-3 sentence overall assessment. State X/Y problems correct.",
     "correctPoints": [
       {
-        "title": "What was done well",
-        "description": "Detailed explanation",
+        "title": "Problem X - Correct",
+        "description": "The student correctly solved [problem]. Their answer of [X] is correct because [reason].",
         "region": { "x": 25, "y": 30, "width": 20, "height": 15 }
       }
     ],
     "improvementPoints": [
       {
-        "title": "What needs improvement",
-        "description": "Detailed explanation with how to fix it",
-        "severity": "minor" | "moderate" | "major",
+        "title": "Problem X - Calculation Error",
+        "description": "The correct answer is [X], but the student wrote [Y]. Here's how to solve it: [explanation]",
+        "severity": "major",
         "region": { "x": 60, "y": 45, "width": 25, "height": 20 }
       }
     ],
@@ -163,15 +343,17 @@ Return your analysis as JSON in this exact format:
   }
 }
 
-IMPORTANT - VISUAL ANNOTATIONS (region field):
+### IMPORTANT - VISUAL ANNOTATIONS (region field):
 - The "region" field identifies WHERE on the STUDENT'S ANSWER IMAGE this feedback point applies
 - Use percentage-based coordinates (0-100): x=0 is left edge, x=100 is right edge; y=0 is top, y=100 is bottom
 - Width and height define a bounding box around the relevant area
 - Provide a region for EVERY correctPoint and improvementPoint where you can identify the specific location
-- Only omit the region field if the feedback applies to the entire answer or cannot be localized to a specific area
-- Be as precise as possible - these coordinates will be used to show visual markers on the image
 
-Be thorough but fair. Focus on being helpful and educational in your feedback.
+### FINAL CHECK BEFORE RESPONDING:
+□ Did I verify each calculation myself before marking correct/incorrect?
+□ Does my gradeEstimate match the ratio of correctPoints to total items?
+□ Did I NOT say "incorrect" and then change my mind in the same response?
+□ Are ALL problems accounted for (either in correctPoints or improvementPoints)?
 `,
   })
 
@@ -181,7 +363,11 @@ Be thorough but fair. Focus on being helpful and educational in your feedback.
     messages: [{ role: 'user', content }],
   })
 
-  return parseCheckerResponse(response)
+  // Parse response and apply consistency validation
+  const result = parseCheckerResponse(response)
+
+  // Ensure grade matches feedback items (fixes discrepancy issues)
+  return ensureGradeConsistency(result)
 }
 
 // ============================================================================

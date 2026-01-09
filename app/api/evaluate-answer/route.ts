@@ -95,6 +95,74 @@ function similarityRatio(a: string, b: string): number {
 }
 
 /**
+ * Parse a string as a number, handling various formats
+ * Returns null if the string is not a valid number
+ */
+function parseNumericAnswer(text: string): number | null {
+  if (!text || typeof text !== 'string') return null
+
+  // Clean the text
+  let cleaned = text.trim()
+    .replace(/,/g, '') // Remove thousands separators
+    .replace(/\s+/g, '') // Remove spaces
+    .replace(/^[$€£¥₹]/g, '') // Remove currency symbols at start
+    .replace(/[$€£¥₹]$/g, '') // Remove currency symbols at end
+    .replace(/^[+-]?\s*/, match => match.trim()) // Clean up sign
+
+  // Try to extract a number
+  // Match patterns like: 123, 123.45, -123, +123, 123.456, .5, -.5
+  const numMatch = cleaned.match(/^[+-]?(\d+\.?\d*|\.\d+)$/)
+  if (!numMatch) return null
+
+  const num = parseFloat(cleaned)
+  return isNaN(num) ? null : num
+}
+
+/**
+ * Check if two numeric answers are equal within tolerance
+ * This is the MOST RELIABLE check for math problems
+ */
+function numericMatch(
+  userAnswer: string,
+  correctAnswer: string,
+  acceptableAnswers: string[] = [],
+  tolerance: number = 0.001 // 0.1% tolerance for rounding differences
+): { matches: boolean; method: 'numeric'; userValue?: number; correctValue?: number } | null {
+  const userNum = parseNumericAnswer(userAnswer)
+  if (userNum === null) return null // Not a numeric answer
+
+  // Check against correct answer
+  const correctNum = parseNumericAnswer(correctAnswer)
+  if (correctNum !== null) {
+    // For very small numbers, use absolute tolerance
+    const absTolerance = Math.max(tolerance, Math.abs(correctNum) * tolerance)
+    if (Math.abs(userNum - correctNum) <= absTolerance) {
+      return { matches: true, method: 'numeric', userValue: userNum, correctValue: correctNum }
+    }
+  }
+
+  // Check against acceptable answers
+  for (const alt of acceptableAnswers) {
+    const altNum = parseNumericAnswer(alt)
+    if (altNum !== null) {
+      const absTolerance = Math.max(tolerance, Math.abs(altNum) * tolerance)
+      if (Math.abs(userNum - altNum) <= absTolerance) {
+        return { matches: true, method: 'numeric', userValue: userNum, correctValue: altNum }
+      }
+    }
+  }
+
+  // If user answer is numeric but doesn't match any acceptable numeric answer
+  // Check if the correct answer is also numeric - if so, it's definitely wrong
+  if (correctNum !== null) {
+    return { matches: false, method: 'numeric', userValue: userNum, correctValue: correctNum }
+  }
+
+  // Correct answer isn't numeric, so this check doesn't apply
+  return null
+}
+
+/**
  * Check if answer matches any acceptable answer with fuzzy matching
  */
 function fuzzyMatch(
@@ -291,7 +359,43 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // Silently continue without curriculum context if auth fails
     }
 
-    // Layer 1: Exact match (fastest)
+    // Layer 0: Numeric match (MOST RELIABLE for math answers)
+    // This catches cases where "546" should match "546" regardless of formatting
+    const numericResult = numericMatch(userAnswer, expectedAnswer, acceptableAnswers)
+    if (numericResult !== null) {
+      // This is a numeric answer - use numeric comparison result
+      if (numericResult.matches) {
+        // Record performance for gap detection (fire and forget, but log errors)
+        if (userId && conceptIds.length > 0) {
+          recordPerformanceForGapDetection(userId, conceptIds, true, 100, courseId, lessonIndex, responseTimeMs).catch(err => {
+            console.error('[Evaluate Answer] Gap detection recording failed:', err)
+          })
+        }
+        return NextResponse.json({
+          isCorrect: true,
+          score: 100,
+          feedback: 'Correct!',
+          evaluationMethod: 'numeric',
+          evaluationTimeMs: Date.now() - startTime
+        })
+      } else {
+        // Numeric answer but wrong value - don't send to AI, it's definitively wrong
+        if (userId && conceptIds.length > 0) {
+          recordPerformanceForGapDetection(userId, conceptIds, false, 0, courseId, lessonIndex, responseTimeMs).catch(err => {
+            console.error('[Evaluate Answer] Gap detection recording failed:', err)
+          })
+        }
+        return NextResponse.json({
+          isCorrect: false,
+          score: 0,
+          feedback: `Incorrect. Your answer was ${numericResult.userValue}, but the correct answer is ${numericResult.correctValue}.`,
+          evaluationMethod: 'numeric',
+          evaluationTimeMs: Date.now() - startTime
+        })
+      }
+    }
+
+    // Layer 1: Exact match (fastest for text answers)
     const normalizedUser = normalizeText(userAnswer)
     const normalizedExpected = normalizeText(expectedAnswer)
 
