@@ -10,6 +10,9 @@ import {
 // Allow 2 minutes for uploading multiple images (9 files can take time)
 export const maxDuration = 120
 
+// Version marker for deployment verification
+const UPLOAD_API_VERSION = '2026-01-09-v2-heic-convert'
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -236,6 +239,8 @@ async function validateFile(file: File, index: number): Promise<UploadError | nu
 // ============================================================================
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  console.log(`[Upload API] Version: ${UPLOAD_API_VERSION}`)
+
   try {
     // 0. Validate Content-Length to prevent DOS attacks
     const contentLength = request.headers.get('content-length')
@@ -346,7 +351,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         let extension = getFileExtension(file.name)
         let contentType = file.type || `image/${extension}`
 
-        if (isHeicFile(file)) {
+        // Debug logging for file info
+        console.log(`[Upload] Processing file: name=${file.name}, type=${file.type}, size=${file.size}, ext=${extension}`)
+
+        const needsConversion = isHeicFile(file)
+        console.log(`[Upload] HEIC check result: ${needsConversion}`)
+
+        if (needsConversion) {
           try {
             console.log(`[Upload] Converting HEIC file to JPEG: ${file.name}`)
             const converted = await convertHeicToJpeg(file)
