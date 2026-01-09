@@ -301,7 +301,7 @@ function getAnthropicClient(): Anthropic {
 
 export interface CheckerInput {
   taskImageUrl: string
-  answerImageUrl: string
+  answerImageUrl?: string  // Optional - if not provided, will analyze task only
   referenceImageUrls?: string[]
   teacherReviewUrls?: string[]
 }
@@ -323,10 +323,11 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
     // while this fetch is happening
     console.log('[Checker] Fetching images for analysis...')
 
-    const [taskImage, answerImage] = await Promise.all([
-      fetchImageAsBase64(input.taskImageUrl),
-      fetchImageAsBase64(input.answerImageUrl),
-    ])
+    // Fetch task image (required) and answer image (optional)
+    const taskImage = await fetchImageAsBase64(input.taskImageUrl)
+    const answerImage = input.answerImageUrl
+      ? await fetchImageAsBase64(input.answerImageUrl)
+      : null
 
     // Fetch reference images if provided
     let referenceImages: FetchedImage[] = []
@@ -363,19 +364,26 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
       },
     })
 
-    // Add answer image
-    content.push({
-      type: 'text',
-      text: '\n## STUDENT\'S ANSWER:\nHere is the student\'s submitted work:',
-    })
-    content.push({
-      type: 'image',
-      source: {
-        type: 'base64',
-        media_type: answerImage.mediaType,
-        data: answerImage.base64,
-      },
-    })
+    // Add answer image (if provided)
+    if (answerImage) {
+      content.push({
+        type: 'text',
+        text: '\n## STUDENT\'S ANSWER:\nHere is the student\'s submitted work:',
+      })
+      content.push({
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: answerImage.mediaType,
+          data: answerImage.base64,
+        },
+      })
+    } else {
+      content.push({
+        type: 'text',
+        text: '\n## NOTE: No student answer was provided. Please analyze the task/question and provide guidance on how to approach and solve it.',
+      })
+    }
 
     // Add reference images if provided
     if (referenceImages.length > 0) {

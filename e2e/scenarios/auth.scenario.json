@@ -1,0 +1,64 @@
+{
+  "flow": "auth",
+  "description": "Authentication flow tests - signup, login, onboarding",
+  "scenarios": [
+    {
+      "name": "login_existing_user",
+      "description": "Test login with valid credentials",
+      "steps": [
+        { "id": "nav_login", "action": "navigate", "value": "/login" },
+        { "id": "wait_page", "action": "waitFor", "value": "timeout:2000" },
+        { "id": "fill_email", "action": "type", "target": "Email input", "value": "{testEmail}" },
+        { "id": "fill_password", "action": "type", "target": "Password input", "value": "{testPassword}" },
+        { "id": "submit", "action": "click", "target": "Sign in button", "captureState": true },
+        { "id": "wait_redirect", "action": "waitFor", "value": "urlContains:/dashboard", "timeout": 10000 }
+      ],
+      "expected": [
+        { "type": "navigation", "assertion": { "urlContains": "/dashboard" } },
+        { "type": "console_clean", "assertion": { "noConsoleErrors": true } }
+      ]
+    },
+    {
+      "name": "login_invalid_credentials",
+      "description": "Test login with wrong password shows error",
+      "steps": [
+        { "id": "nav_login", "action": "navigate", "value": "/login" },
+        { "id": "wait_page", "action": "waitFor", "value": "timeout:2000" },
+        { "id": "fill_email", "action": "type", "target": "Email input", "value": "{testEmail}" },
+        { "id": "fill_password", "action": "type", "target": "Password input", "value": "wrongpassword123" },
+        { "id": "submit", "action": "click", "target": "Sign in button", "captureState": true },
+        { "id": "wait_error", "action": "waitFor", "value": "element:error message", "timeout": 5000 }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementVisible": "error message" } },
+        { "type": "navigation", "assertion": { "urlContains": "/login" } }
+      ]
+    },
+    {
+      "name": "logout",
+      "description": "Test user logout",
+      "setup": { "login": true },
+      "steps": [
+        { "id": "nav_dashboard", "action": "navigate", "value": "/dashboard" },
+        { "id": "wait_page", "action": "waitFor", "value": "timeout:2000" },
+        { "id": "open_menu", "action": "click", "target": "User menu button" },
+        { "id": "click_logout", "action": "click", "target": "Sign out button", "captureState": true },
+        { "id": "wait_redirect", "action": "waitFor", "value": "urlContains:/login", "timeout": 5000 }
+      ],
+      "expected": [
+        { "type": "navigation", "assertion": { "urlContains": "/login" } }
+      ]
+    },
+    {
+      "name": "protected_route_redirect",
+      "description": "Test that protected routes redirect to login",
+      "steps": [
+        { "id": "nav_protected", "action": "navigate", "value": "/dashboard" },
+        { "id": "wait_redirect", "action": "waitFor", "value": "urlContains:/login", "timeout": 5000 }
+      ],
+      "expected": [
+        { "type": "navigation", "assertion": { "urlContains": "/login" } }
+      ]
+    }
+  ]
+}

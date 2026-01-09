@@ -1,0 +1,123 @@
+{
+  "flow": "homework",
+  "description": "Homework flow tests - homework checking and help features",
+  "scenarios": [
+    {
+      "name": "view_homework_check_page",
+      "description": "View the homework check page",
+      "setup": { "login": true },
+      "steps": [
+        { "id": "nav_homework", "action": "navigate", "value": "/homework/check" },
+        { "id": "wait_page", "action": "waitFor", "value": "element:homework check page", "timeout": 5000 },
+        { "id": "snapshot", "action": "snapshot", "captureState": true }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "upload area" } },
+        { "type": "console_clean", "assertion": { "noConsoleErrors": true } }
+      ]
+    },
+    {
+      "name": "upload_homework_for_checking",
+      "description": "Upload homework image and get AI feedback",
+      "setup": { "login": true },
+      "steps": [
+        { "id": "nav_homework", "action": "navigate", "value": "/homework/check" },
+        { "id": "wait_page", "action": "waitFor", "value": "element:upload area", "timeout": 5000 },
+        { "id": "upload_file", "action": "upload", "target": "file input", "value": "homework_sample.png" },
+        { "id": "wait_preview", "action": "waitFor", "value": "element:image preview", "timeout": 5000 },
+        { "id": "snapshot_preview", "action": "snapshot", "captureState": true },
+        { "id": "submit_check", "action": "click", "target": "Check Homework button", "captureState": true },
+        { "id": "wait_analysis", "action": "waitFor", "value": "element:AI feedback", "timeout": 60000 }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "AI feedback" } },
+        { "type": "ui_state", "assertion": { "elementExists": "corrections" } },
+        { "type": "network_success", "assertion": { "apiSucceeded": { "endpoint": "/api/homework/check", "statusRange": [200, 299] } } }
+      ]
+    },
+    {
+      "name": "view_homework_help_page",
+      "description": "View the homework help page",
+      "setup": { "login": true },
+      "steps": [
+        { "id": "nav_help", "action": "navigate", "value": "/homework/help" },
+        { "id": "wait_page", "action": "waitFor", "value": "element:homework help page", "timeout": 5000 },
+        { "id": "snapshot", "action": "snapshot", "captureState": true }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "question input" } },
+        { "type": "console_clean", "assertion": { "noConsoleErrors": true } }
+      ]
+    },
+    {
+      "name": "ask_homework_question",
+      "description": "Ask a question about homework and get help",
+      "setup": { "login": true },
+      "steps": [
+        { "id": "nav_help", "action": "navigate", "value": "/homework/help" },
+        { "id": "wait_page", "action": "waitFor", "value": "element:question input", "timeout": 5000 },
+        { "id": "type_question", "action": "type", "target": "Question input field", "value": "How do I solve this quadratic equation: x^2 + 5x + 6 = 0?" },
+        { "id": "submit_question", "action": "click", "target": "Ask button", "captureState": true },
+        { "id": "wait_response", "action": "waitFor", "value": "element:AI response", "timeout": 30000 },
+        { "id": "snapshot_response", "action": "snapshot", "captureState": true }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "AI response" } },
+        { "type": "network_success", "assertion": { "apiSucceeded": { "endpoint": "/api/help", "statusRange": [200, 299] } } }
+      ]
+    },
+    {
+      "name": "homework_help_with_image",
+      "description": "Ask for help with an uploaded homework image",
+      "setup": { "login": true },
+      "steps": [
+        { "id": "nav_help", "action": "navigate", "value": "/homework/help" },
+        { "id": "wait_page", "action": "waitFor", "value": "element:upload option", "timeout": 5000 },
+        { "id": "upload_image", "action": "upload", "target": "file input", "value": "homework_help.png" },
+        { "id": "wait_preview", "action": "waitFor", "value": "element:image preview", "timeout": 5000 },
+        { "id": "type_question", "action": "type", "target": "Question input field", "value": "Can you help me solve 588:3?" },
+        { "id": "submit_question", "action": "click", "target": "Ask button", "captureState": true },
+        { "id": "wait_response", "action": "waitFor", "value": "element:AI response", "timeout": 45000 }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "AI response" } },
+        { "type": "ui_state", "assertion": { "elementContains": { "selector": "AI response", "text": "196", "caseSensitive": false } } }
+      ]
+    },
+    {
+      "name": "homework_follow_up_question",
+      "description": "Ask a follow-up question in the same session",
+      "setup": { "login": true },
+      "steps": [
+        { "id": "nav_help", "action": "navigate", "value": "/homework/help" },
+        { "id": "wait_page", "action": "waitFor", "value": "element:question input", "timeout": 5000 },
+        { "id": "type_question1", "action": "type", "target": "Question input field", "value": "What is photosynthesis?" },
+        { "id": "submit_question1", "action": "click", "target": "Ask button" },
+        { "id": "wait_response1", "action": "waitFor", "value": "element:AI response", "timeout": 30000 },
+        { "id": "snapshot_response1", "action": "snapshot", "captureState": true },
+        { "id": "type_followup", "action": "type", "target": "Question input field", "value": "Can you explain the light reactions in more detail?" },
+        { "id": "submit_followup", "action": "click", "target": "Ask button", "captureState": true },
+        { "id": "wait_response2", "action": "waitFor", "value": "element:second AI response", "timeout": 30000 }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementCount": { "selector": "AI response", "count": 2 } } },
+        { "type": "console_clean", "assertion": { "noConsoleErrors": true } }
+      ]
+    },
+    {
+      "name": "homework_validation_empty_input",
+      "description": "Test validation when submitting empty input",
+      "setup": { "login": true },
+      "steps": [
+        { "id": "nav_help", "action": "navigate", "value": "/homework/help" },
+        { "id": "wait_page", "action": "waitFor", "value": "element:question input", "timeout": 5000 },
+        { "id": "submit_empty", "action": "click", "target": "Ask button" },
+        { "id": "wait_error", "action": "waitFor", "value": "element:validation error", "timeout": 3000 },
+        { "id": "snapshot_error", "action": "snapshot", "captureState": true }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementVisible": "validation error" } }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,119 @@
+{
+  "flow": "exam",
+  "description": "Exam flow tests - creating and taking exams",
+  "scenarios": [
+    {
+      "name": "view_exams_page",
+      "description": "View the exams page with available courses",
+      "setup": { "login": true, "createCourse": true },
+      "steps": [
+        { "id": "nav_exams", "action": "navigate", "value": "/exams" },
+        { "id": "wait_page", "action": "waitFor", "value": "element:exams page", "timeout": 5000 },
+        { "id": "snapshot", "action": "snapshot", "captureState": true }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "course list" } },
+        { "type": "console_clean", "assertion": { "noConsoleErrors": true } }
+      ]
+    },
+    {
+      "name": "create_exam_from_course",
+      "description": "Create a new exam from a course",
+      "setup": { "login": true, "createCourse": true },
+      "steps": [
+        { "id": "nav_exams", "action": "navigate", "value": "/exams" },
+        { "id": "wait_page", "action": "waitFor", "value": "element:course list", "timeout": 5000 },
+        { "id": "select_course", "action": "click", "target": "First course card" },
+        { "id": "wait_options", "action": "waitFor", "value": "element:exam options", "timeout": 3000 },
+        { "id": "set_questions", "action": "click", "target": "10 questions option" },
+        { "id": "create_exam", "action": "click", "target": "Create Exam button", "captureState": true },
+        { "id": "wait_generation", "action": "waitFor", "value": "element:exam ready", "timeout": 60000 }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "Start Exam button" } },
+        { "type": "network_success", "assertion": { "apiSucceeded": { "endpoint": "/api/exams", "statusRange": [200, 299] } } }
+      ]
+    },
+    {
+      "name": "take_exam",
+      "description": "Take a full exam and submit answers",
+      "setup": { "login": true, "createCourse": true, "createExam": true },
+      "steps": [
+        { "id": "nav_exam", "action": "navigate", "value": "/exams/{examId}" },
+        { "id": "wait_exam", "action": "waitFor", "value": "element:exam start screen", "timeout": 5000 },
+        { "id": "start_exam", "action": "click", "target": "Start Exam button" },
+        { "id": "wait_q1", "action": "waitFor", "value": "element:question 1", "timeout": 5000 },
+        { "id": "snapshot_q1", "action": "snapshot", "captureState": true },
+        { "id": "answer_q1", "action": "click", "target": "First answer option" },
+        { "id": "next_question", "action": "click", "target": "Next button" },
+        { "id": "wait_q2", "action": "waitFor", "value": "element:question 2", "timeout": 3000 },
+        { "id": "answer_q2", "action": "click", "target": "Second answer option" },
+        { "id": "next_question2", "action": "click", "target": "Next button" },
+        { "id": "wait_q3", "action": "waitFor", "value": "element:question 3", "timeout": 3000 },
+        { "id": "answer_q3", "action": "click", "target": "First answer option" },
+        { "id": "submit_exam", "action": "click", "target": "Submit Exam button", "captureState": true },
+        { "id": "confirm_submit", "action": "click", "target": "Confirm button", "optional": true },
+        { "id": "wait_results", "action": "waitFor", "value": "element:exam results", "timeout": 10000 }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "score display" } },
+        { "type": "ui_state", "assertion": { "elementExists": "results breakdown" } }
+      ]
+    },
+    {
+      "name": "view_exam_results",
+      "description": "View detailed exam results after completion",
+      "setup": { "login": true, "createCourse": true, "completeExam": true },
+      "steps": [
+        { "id": "nav_results", "action": "navigate", "value": "/exams/{examId}/results" },
+        { "id": "wait_results", "action": "waitFor", "value": "element:results page", "timeout": 5000 },
+        { "id": "snapshot_results", "action": "snapshot", "captureState": true },
+        { "id": "click_review", "action": "click", "target": "Review Answers button" },
+        { "id": "wait_review", "action": "waitFor", "value": "element:answer review", "timeout": 3000 },
+        { "id": "snapshot_review", "action": "snapshot", "captureState": true }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "score percentage" } },
+        { "type": "ui_state", "assertion": { "elementExists": "question breakdown" } },
+        { "type": "console_clean", "assertion": { "noConsoleErrors": true } }
+      ]
+    },
+    {
+      "name": "exam_timer_display",
+      "description": "Verify exam timer is displayed and counts down",
+      "setup": { "login": true, "createCourse": true, "createExam": true },
+      "steps": [
+        { "id": "nav_exam", "action": "navigate", "value": "/exams/{examId}" },
+        { "id": "start_exam", "action": "click", "target": "Start Exam button" },
+        { "id": "wait_timer", "action": "waitFor", "value": "element:exam timer", "timeout": 5000 },
+        { "id": "snapshot_timer1", "action": "snapshot", "captureState": true },
+        { "id": "wait_5sec", "action": "waitFor", "value": "timeout:5000" },
+        { "id": "snapshot_timer2", "action": "snapshot", "captureState": true }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "exam timer" } },
+        { "type": "ui_state", "assertion": { "elementExists": "time remaining" } }
+      ]
+    },
+    {
+      "name": "exam_navigation",
+      "description": "Navigate between exam questions",
+      "setup": { "login": true, "createCourse": true, "createExam": true },
+      "steps": [
+        { "id": "nav_exam", "action": "navigate", "value": "/exams/{examId}" },
+        { "id": "start_exam", "action": "click", "target": "Start Exam button" },
+        { "id": "wait_q1", "action": "waitFor", "value": "element:question 1", "timeout": 5000 },
+        { "id": "click_q3_nav", "action": "click", "target": "Question 3 in navigation" },
+        { "id": "wait_q3", "action": "waitFor", "value": "element:question 3", "timeout": 2000 },
+        { "id": "snapshot_q3", "action": "snapshot", "captureState": true },
+        { "id": "click_prev", "action": "click", "target": "Previous button" },
+        { "id": "wait_q2", "action": "waitFor", "value": "element:question 2", "timeout": 2000 },
+        { "id": "snapshot_q2", "action": "snapshot", "captureState": true }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "question navigation" } },
+        { "type": "console_clean", "assertion": { "noConsoleErrors": true } }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "flow": "learning",
+  "description": "Learning flow tests - viewing and completing lessons",
+  "scenarios": [
+    {
+      "name": "view_course_overview",
+      "description": "View course overview page",
+      "setup": { "login": true, "createCourse": true },
+      "steps": [
+        { "id": "nav_course", "action": "navigate", "value": "/course/{courseId}" },
+        { "id": "wait_load", "action": "waitFor", "value": "element:course title", "timeout": 5000 },
+        { "id": "snapshot", "action": "snapshot", "captureState": true }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "lesson list" } },
+        { "type": "ui_state", "assertion": { "elementExists": "course title" } },
+        { "type": "console_clean", "assertion": { "noConsoleErrors": true } }
+      ]
+    },
+    {
+      "name": "start_lesson",
+      "description": "Start first lesson of a course",
+      "setup": { "login": true, "createCourse": true },
+      "steps": [
+        { "id": "nav_course", "action": "navigate", "value": "/course/{courseId}" },
+        { "id": "wait_load", "action": "waitFor", "value": "element:lesson list", "timeout": 5000 },
+        { "id": "click_lesson", "action": "click", "target": "First lesson card" },
+        { "id": "wait_lesson", "action": "waitFor", "value": "urlContains:/lesson/", "timeout": 5000 },
+        { "id": "snapshot", "action": "snapshot", "captureState": true }
+      ],
+      "expected": [
+        { "type": "navigation", "assertion": { "urlContains": "/lesson/" } },
+        { "type": "ui_state", "assertion": { "elementExists": "lesson content" } }
+      ]
+    },
+    {
+      "name": "navigate_lesson_steps",
+      "description": "Navigate through lesson steps",
+      "setup": { "login": true, "createCourse": true },
+      "steps": [
+        { "id": "nav_lesson", "action": "navigate", "value": "/course/{courseId}/lesson/0" },
+        { "id": "wait_step", "action": "waitFor", "value": "element:step content", "timeout": 5000 },
+        { "id": "click_continue", "action": "click", "target": "Continue button" },
+        { "id": "wait_next", "action": "waitFor", "value": "timeout:1000" },
+        { "id": "snapshot_step2", "action": "snapshot", "captureState": true },
+        { "id": "click_continue2", "action": "click", "target": "Continue button" },
+        { "id": "wait_next2", "action": "waitFor", "value": "timeout:1000" },
+        { "id": "snapshot_step3", "action": "snapshot", "captureState": true }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "step content" } },
+        { "type": "console_clean", "assertion": { "noConsoleErrors": true } }
+      ]
+    },
+    {
+      "name": "answer_lesson_question",
+      "description": "Answer a question within a lesson",
+      "setup": { "login": true, "createCourse": true },
+      "steps": [
+        { "id": "nav_lesson", "action": "navigate", "value": "/course/{courseId}/lesson/0" },
+        { "id": "find_question", "action": "waitFor", "value": "element:question step", "timeout": 30000 },
+        { "id": "select_answer", "action": "click", "target": "First answer option" },
+        { "id": "submit_answer", "action": "click", "target": "Check answer button", "captureState": true },
+        { "id": "wait_feedback", "action": "waitFor", "value": "element:feedback", "timeout": 3000 }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "feedback" } }
+      ]
+    },
+    {
+      "name": "get_help_on_content",
+      "description": "Use help feature during lesson",
+      "setup": { "login": true, "createCourse": true },
+      "steps": [
+        { "id": "nav_lesson", "action": "navigate", "value": "/course/{courseId}/lesson/0" },
+        { "id": "wait_content", "action": "waitFor", "value": "element:step content", "timeout": 5000 },
+        { "id": "click_help", "action": "click", "target": "Help button" },
+        { "id": "wait_modal", "action": "waitFor", "value": "element:help modal", "timeout": 2000 },
+        { "id": "select_explain", "action": "click", "target": "Explain this button", "captureState": true },
+        { "id": "wait_response", "action": "waitFor", "value": "element:help response", "timeout": 30000 }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "help response" } },
+        { "type": "network_success", "assertion": { "apiSucceeded": { "endpoint": "/api/help", "statusRange": [200, 299] } } }
+      ]
+    }
+  ]
+}

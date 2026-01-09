@@ -1,0 +1,119 @@
+{
+  "flow": "practice",
+  "description": "Practice flow tests - practice sessions and SRS review",
+  "scenarios": [
+    {
+      "name": "start_practice_session",
+      "description": "Start a new practice session from course",
+      "setup": { "login": true, "createCourse": true },
+      "steps": [
+        { "id": "nav_course", "action": "navigate", "value": "/course/{courseId}" },
+        { "id": "wait_load", "action": "waitFor", "value": "element:Practice button", "timeout": 5000 },
+        { "id": "click_practice", "action": "click", "target": "Practice button" },
+        { "id": "wait_session", "action": "waitFor", "value": "urlContains:/practice/", "timeout": 5000 },
+        { "id": "snapshot", "action": "snapshot", "captureState": true }
+      ],
+      "expected": [
+        { "type": "navigation", "assertion": { "urlContains": "/practice/" } },
+        { "type": "ui_state", "assertion": { "elementExists": "question display" } },
+        { "type": "console_clean", "assertion": { "noConsoleErrors": true } }
+      ]
+    },
+    {
+      "name": "answer_multiple_choice",
+      "description": "Answer a multiple choice question in practice",
+      "setup": { "login": true, "createCourse": true },
+      "steps": [
+        { "id": "nav_practice", "action": "navigate", "value": "/practice?courseId={courseId}" },
+        { "id": "wait_question", "action": "waitFor", "value": "element:question text", "timeout": 10000 },
+        { "id": "snapshot_question", "action": "snapshot", "captureState": true },
+        { "id": "select_answer", "action": "click", "target": "First answer option" },
+        { "id": "submit_answer", "action": "click", "target": "Check Answer button" },
+        { "id": "wait_feedback", "action": "waitFor", "value": "element:feedback message", "timeout": 5000 },
+        { "id": "snapshot_feedback", "action": "snapshot", "captureState": true }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "feedback message" } },
+        { "type": "ui_state", "assertion": { "elementExists": "Continue button" } }
+      ]
+    },
+    {
+      "name": "answer_short_answer",
+      "description": "Answer a short answer question in practice",
+      "setup": { "login": true, "createCourse": true },
+      "steps": [
+        { "id": "nav_practice", "action": "navigate", "value": "/practice?courseId={courseId}&type=short_answer" },
+        { "id": "wait_question", "action": "waitFor", "value": "element:short answer input", "timeout": 10000 },
+        { "id": "type_answer", "action": "type", "target": "Answer input field", "value": "Test answer for evaluation" },
+        { "id": "submit_answer", "action": "click", "target": "Check Answer button", "captureState": true },
+        { "id": "wait_evaluation", "action": "waitFor", "value": "element:AI feedback", "timeout": 30000 }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "AI feedback" } },
+        { "type": "network_success", "assertion": { "apiSucceeded": { "endpoint": "/api/evaluate-answer", "statusRange": [200, 299] } } }
+      ]
+    },
+    {
+      "name": "complete_practice_session",
+      "description": "Complete a full practice session and view results",
+      "setup": { "login": true, "createCourse": true },
+      "steps": [
+        { "id": "nav_practice", "action": "navigate", "value": "/practice?courseId={courseId}" },
+        { "id": "wait_question", "action": "waitFor", "value": "element:question text", "timeout": 10000 },
+        { "id": "answer_q1", "action": "click", "target": "First answer option" },
+        { "id": "submit_q1", "action": "click", "target": "Check Answer button" },
+        { "id": "wait_feedback1", "action": "waitFor", "value": "element:feedback message", "timeout": 5000 },
+        { "id": "continue_q1", "action": "click", "target": "Continue button" },
+        { "id": "wait_q2", "action": "waitFor", "value": "element:question text", "timeout": 5000 },
+        { "id": "answer_q2", "action": "click", "target": "First answer option" },
+        { "id": "submit_q2", "action": "click", "target": "Check Answer button" },
+        { "id": "wait_feedback2", "action": "waitFor", "value": "element:feedback message", "timeout": 5000 },
+        { "id": "continue_q2", "action": "click", "target": "Continue button" },
+        { "id": "wait_complete", "action": "waitFor", "value": "element:session complete", "timeout": 10000 },
+        { "id": "snapshot_results", "action": "snapshot", "captureState": true }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "session stats" } },
+        { "type": "ui_state", "assertion": { "elementExists": "score display" } }
+      ]
+    },
+    {
+      "name": "srs_review_session",
+      "description": "Complete an SRS review session with card ratings",
+      "setup": { "login": true, "createCourse": true, "waitForSRSCards": true },
+      "steps": [
+        { "id": "nav_review", "action": "navigate", "value": "/review" },
+        { "id": "wait_page", "action": "waitFor", "value": "element:review page", "timeout": 5000 },
+        { "id": "snapshot_queue", "action": "snapshot", "captureState": true },
+        { "id": "start_review", "action": "click", "target": "Start Review button" },
+        { "id": "wait_card", "action": "waitFor", "value": "element:flashcard", "timeout": 5000 },
+        { "id": "show_answer", "action": "click", "target": "Show Answer button" },
+        { "id": "wait_answer", "action": "waitFor", "value": "element:card answer", "timeout": 2000 },
+        { "id": "rate_card", "action": "click", "target": "Good rating button", "captureState": true },
+        { "id": "wait_next", "action": "waitFor", "value": "timeout:1000" },
+        { "id": "snapshot_progress", "action": "snapshot", "captureState": true }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "review progress" } },
+        { "type": "console_clean", "assertion": { "noConsoleErrors": true } }
+      ]
+    },
+    {
+      "name": "practice_hub_navigation",
+      "description": "Navigate through practice hub and select course",
+      "setup": { "login": true, "createCourse": true },
+      "steps": [
+        { "id": "nav_practice", "action": "navigate", "value": "/practice" },
+        { "id": "wait_hub", "action": "waitFor", "value": "element:practice hub", "timeout": 5000 },
+        { "id": "snapshot_hub", "action": "snapshot", "captureState": true },
+        { "id": "select_course", "action": "click", "target": "Course card" },
+        { "id": "wait_options", "action": "waitFor", "value": "element:practice options", "timeout": 3000 },
+        { "id": "snapshot_options", "action": "snapshot", "captureState": true }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementExists": "practice options" } },
+        { "type": "ui_state", "assertion": { "elementExists": "question type selector" } }
+      ]
+    }
+  ]
+}

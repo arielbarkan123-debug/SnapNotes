@@ -1,0 +1,85 @@
+{
+  "flow": "upload",
+  "description": "Upload flow tests - creating courses from study materials",
+  "scenarios": [
+    {
+      "name": "upload_single_image",
+      "description": "Upload single notebook image and create course",
+      "setup": { "login": true },
+      "steps": [
+        { "id": "nav_dashboard", "action": "navigate", "value": "/dashboard" },
+        { "id": "wait_page", "action": "waitFor", "value": "timeout:3000" },
+        { "id": "click_upload", "action": "click", "target": "Upload button" },
+        { "id": "wait_modal", "action": "waitFor", "value": "element:Upload modal", "timeout": 2000 },
+        { "id": "upload_file", "action": "upload", "target": "file input", "value": "notebook_page_1.png" },
+        { "id": "wait_preview", "action": "waitFor", "value": "element:file preview", "timeout": 5000 },
+        { "id": "submit", "action": "click", "target": "Generate Course button", "captureState": true },
+        { "id": "wait_processing", "action": "waitFor", "value": "urlContains:/processing", "timeout": 5000 },
+        { "id": "wait_complete", "action": "waitFor", "value": "element:success indicator", "timeout": 180000 }
+      ],
+      "expected": [
+        { "type": "navigation", "assertion": { "urlContains": "/course/" } },
+        { "type": "network_success", "assertion": { "apiSucceeded": { "endpoint": "/api/upload-images", "statusRange": [200, 299] } } },
+        { "type": "network_success", "assertion": { "apiSucceeded": { "endpoint": "/api/generate-course", "statusRange": [200, 299] } } },
+        { "type": "console_clean", "assertion": { "noConsoleErrors": true } }
+      ]
+    },
+    {
+      "name": "upload_pdf_document",
+      "description": "Upload PDF document and create course",
+      "setup": { "login": true },
+      "steps": [
+        { "id": "nav_dashboard", "action": "navigate", "value": "/dashboard" },
+        { "id": "wait_page", "action": "waitFor", "value": "timeout:3000" },
+        { "id": "click_upload", "action": "click", "target": "Upload button" },
+        { "id": "wait_modal", "action": "waitFor", "value": "element:Upload modal", "timeout": 2000 },
+        { "id": "upload_file", "action": "upload", "target": "file input", "value": "study_notes.pdf" },
+        { "id": "wait_preview", "action": "waitFor", "value": "element:PDF preview", "timeout": 5000 },
+        { "id": "submit", "action": "click", "target": "Generate Course button", "captureState": true },
+        { "id": "wait_processing", "action": "waitFor", "value": "urlContains:/processing", "timeout": 5000 },
+        { "id": "wait_complete", "action": "waitFor", "value": "element:success indicator", "timeout": 180000 }
+      ],
+      "expected": [
+        { "type": "navigation", "assertion": { "urlContains": "/course/" } },
+        { "type": "network_success", "assertion": { "apiSucceeded": { "endpoint": "/api/process-document", "statusRange": [200, 299] } } }
+      ]
+    },
+    {
+      "name": "upload_text_input",
+      "description": "Create course from text input",
+      "setup": { "login": true },
+      "steps": [
+        { "id": "nav_dashboard", "action": "navigate", "value": "/dashboard" },
+        { "id": "wait_page", "action": "waitFor", "value": "timeout:3000" },
+        { "id": "click_upload", "action": "click", "target": "Upload button" },
+        { "id": "wait_modal", "action": "waitFor", "value": "element:Upload modal", "timeout": 2000 },
+        { "id": "switch_to_text", "action": "click", "target": "Text tab" },
+        { "id": "enter_text", "action": "type", "target": "Text input area", "value": "Photosynthesis is the process by which plants convert light energy into chemical energy. The process occurs in chloroplasts and involves two main stages: light-dependent reactions and the Calvin cycle. During light-dependent reactions, water molecules are split and oxygen is released. The Calvin cycle uses CO2 to produce glucose." },
+        { "id": "enter_title", "action": "type", "target": "Course title input", "value": "E2E Test Course - Photosynthesis" },
+        { "id": "submit", "action": "click", "target": "Generate from Text button", "captureState": true },
+        { "id": "wait_processing", "action": "waitFor", "value": "urlContains:/processing", "timeout": 5000 },
+        { "id": "wait_complete", "action": "waitFor", "value": "element:success indicator", "timeout": 120000 }
+      ],
+      "expected": [
+        { "type": "navigation", "assertion": { "urlContains": "/course/" } },
+        { "type": "ui_state", "assertion": { "elementText": { "selector": "h1", "text": "Photosynthesis", "contains": true } } }
+      ]
+    },
+    {
+      "name": "upload_validation_error",
+      "description": "Test file validation - reject invalid file type",
+      "setup": { "login": true },
+      "steps": [
+        { "id": "nav_dashboard", "action": "navigate", "value": "/dashboard" },
+        { "id": "wait_page", "action": "waitFor", "value": "timeout:3000" },
+        { "id": "click_upload", "action": "click", "target": "Upload button" },
+        { "id": "wait_modal", "action": "waitFor", "value": "element:Upload modal", "timeout": 2000 },
+        { "id": "try_invalid", "action": "upload", "target": "file input", "value": "invalid.exe", "optional": true },
+        { "id": "check_error", "action": "waitFor", "value": "element:error message", "timeout": 3000 }
+      ],
+      "expected": [
+        { "type": "ui_state", "assertion": { "elementVisible": "error message" } }
+      ]
+    }
+  ]
+}

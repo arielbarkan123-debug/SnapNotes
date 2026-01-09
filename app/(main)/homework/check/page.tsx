@@ -505,8 +505,8 @@ export default function HomeworkCheckPage() {
   }, [heicWarning, createSafeObjectURL, trackStep, trackFeature])
 
   const handleSubmit = async () => {
-    if (!taskImage || !answerImage) {
-      setError('Please upload both the task and your answer')
+    if (!taskImage && !answerImage) {
+      setError('Please upload at least one image')
       return
     }
 
@@ -526,12 +526,11 @@ export default function HomeworkCheckPage() {
     try {
       // Collect all images - HEIC conversion already happened at upload time
       // via the warning modal, so all files should be safe formats now
-      const allImages = [
-        taskImage.file,
-        answerImage.file,
-        ...referenceImages.map(img => img.file),
-        ...teacherReviews.map(img => img.file),
-      ]
+      const allImages: File[] = []
+      if (taskImage) allImages.push(taskImage.file)
+      if (answerImage) allImages.push(answerImage.file)
+      allImages.push(...referenceImages.map(img => img.file))
+      allImages.push(...teacherReviews.map(img => img.file))
 
       // Upload all images to storage
       setSubmissionStatus('Uploading images...')
@@ -570,29 +569,32 @@ export default function HomeworkCheckPage() {
 
       const uploadedImages = uploadData.images
 
-      // Map uploaded URLs back to their types
-      const taskImageUrl = uploadedImages[0]?.url
-      const answerImageUrl = uploadedImages[1]?.url
+      // Map uploaded URLs back to their types based on what was uploaded
+      let idx = 0
+      const taskImageUrl = taskImage ? uploadedImages[idx++]?.url : undefined
+      const answerImageUrl = answerImage ? uploadedImages[idx++]?.url : undefined
       const referenceImageUrls = uploadedImages
-        .slice(2, 2 + referenceImages.length)
+        .slice(idx, idx + referenceImages.length)
         .map((img: { url: string }) => img.url)
+      idx += referenceImages.length
       const teacherReviewUrls = uploadedImages
-        .slice(2 + referenceImages.length)
+        .slice(idx)
         .map((img: { url: string }) => img.url)
 
-      if (!taskImageUrl || !answerImageUrl) {
-        throw new Error('Failed to upload required images')
+      if (!taskImageUrl && !answerImageUrl) {
+        throw new Error('Failed to upload images')
       }
 
       // Step 3: Submit to homework check API (streaming response)
       // The API sends heartbeats every 5 seconds to keep mobile connections alive
+      // If only one image provided, use it as taskImageUrl (the main image for analysis)
       setSubmissionStatus('Analyzing homework...')
       const response = await fetch('/api/homework/check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          taskImageUrl,
-          answerImageUrl,
+          taskImageUrl: taskImageUrl || answerImageUrl,  // Use answer as task if no task provided
+          answerImageUrl: taskImageUrl ? answerImageUrl : undefined,  // Only include if we have both
           referenceImageUrls,
           teacherReviewUrls,
         }),
@@ -682,7 +684,7 @@ export default function HomeworkCheckPage() {
     }
   }
 
-  const canSubmit = taskImage && answerImage && !isSubmitting
+  const canSubmit = (taskImage || answerImage) && !isSubmitting
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
@@ -803,27 +805,22 @@ export default function HomeworkCheckPage() {
 
         {/* Upload Form */}
         <div className="space-y-8">
-          {/* Required Uploads */}
+          {/* Image Uploads */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-5">Required</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Upload Images</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">At least one image is required</p>
             <div className="grid md:grid-cols-2 gap-6">
               <ImageUploader
                 label="Task / Question"
-                description="Upload the homework task"
                 image={taskImage}
                 onUpload={handleTaskUpload}
                 onRemove={() => setTaskImage(null)}
-                required
-                icon="📋"
               />
               <ImageUploader
                 label="Your Answer"
-                description="Upload your completed work"
                 image={answerImage}
                 onUpload={handleAnswerUpload}
                 onRemove={() => setAnswerImage(null)}
-                required
-                icon="✍️"
               />
             </div>
           </div>

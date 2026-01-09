@@ -67,8 +67,8 @@ export async function POST(request: NextRequest) {
           return
         }
 
-        if (!body.taskImageUrl || !body.answerImageUrl) {
-          send({ type: 'error', error: 'Task image and answer image are required' })
+        if (!body.taskImageUrl) {
+          send({ type: 'error', error: 'At least one image is required' })
           controller.close()
           return
         }
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
           .insert({
             user_id: user.id,
             task_image_url: body.taskImageUrl,
-            answer_image_url: body.answerImageUrl,
+            answer_image_url: body.answerImageUrl || null,  // Optional
             reference_image_urls: body.referenceImageUrls || [],
             teacher_review_urls: body.teacherReviewUrls || [],
             status: 'analyzing',
