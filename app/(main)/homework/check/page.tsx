@@ -24,6 +24,18 @@ interface UploadedImage {
   isHeic: boolean  // Track if conversion needed at submit time
 }
 
+interface HeicWarning {
+  type: 'task' | 'answer' | 'reference' | 'review'
+  file: File
+  index?: number  // For reference/review arrays
+}
+
+interface HeicConversionResult {
+  file: File
+  converted: boolean
+  error?: string
+}
+
 // ============================================================================
 // HEIC Conversion Helper
 // ============================================================================
@@ -44,12 +56,12 @@ function isHeicFile(file: File): boolean {
 
 /**
  * Convert HEIC file to JPEG
- * Returns the original file if not HEIC or if conversion fails
+ * Returns result with converted file, success status, and any error message
  * Uses dynamic import to avoid SSR issues with heic2any
  */
-async function convertHeicToJpeg(file: File): Promise<File> {
+async function convertHeicToJpeg(file: File): Promise<HeicConversionResult> {
   if (!isHeicFile(file)) {
-    return file
+    return { file, converted: false }
   }
 
   console.log('[HEIC] Converting HEIC to JPEG:', file.name)
@@ -72,11 +84,15 @@ async function convertHeicToJpeg(file: File): Promise<File> {
     const convertedFile = new File([resultBlob], newFileName, { type: 'image/jpeg' })
 
     console.log('[HEIC] Conversion successful:', newFileName)
-    return convertedFile
+    return { file: convertedFile, converted: true }
   } catch (error) {
     console.error('[HEIC] Conversion failed:', error)
-    // Return original file - server will show appropriate error
-    return file
+    // Return error info so caller can show user-friendly message
+    return {
+      file,
+      converted: false,
+      error: 'Could not convert this image. Please open the photo in your Gallery app, tap Share or Export, and save as JPEG.'
+    }
   }
 }
 
@@ -373,6 +389,9 @@ export default function HomeworkCheckPage() {
   const [teacherReviews, setTeacherReviews] = useState<UploadedImage[]>([])
   // Status message during submission (for HEIC conversion + upload + analysis)
   const [submissionStatus, setSubmissionStatus] = useState<string | null>(null)
+  // HEIC warning modal - shows when user selects HEIC image
+  const [heicWarning, setHeicWarning] = useState<HeicWarning | null>(null)
+  const [isConverting, setIsConverting] = useState(false)
 
   // Safe URL creation for iOS Safari compatibility
   const createSafeObjectURL = useCallback((file: File): string | null => {
@@ -384,39 +403,107 @@ export default function HomeworkCheckPage() {
     }
   }, [])
 
-  // INSTANT upload handlers - no conversion, just store file
-  // HEIC files get a placeholder preview (Chrome can't display HEIC)
-  // Conversion happens at submit time
+  // Upload handlers - show HEIC warning if needed, otherwise store file immediately
+  // HEIC files show a warning modal asking user to convert or export as JPEG
   const handleTaskUpload = useCallback((file: File) => {
     const heic = isHeicFile(file)
-    // For HEIC, preview is null (show placeholder). For others, create preview URL.
-    const preview = heic ? null : createSafeObjectURL(file)
-    setTaskImage({ file, preview, isHeic: heic })
+    if (heic) {
+      // Show warning for HEIC files - user must confirm before proceeding
+      setHeicWarning({ type: 'task', file })
+      return
+    }
+    // Non-HEIC: proceed immediately
+    const preview = createSafeObjectURL(file)
+    setTaskImage({ file, preview, isHeic: false })
     setError(null)
     trackStep('task_uploaded', 2)
-    trackFeature('homework_task_upload', { fileType: file.type, fileSize: file.size, isHeic: heic })
+    trackFeature('homework_task_upload', { fileType: file.type, fileSize: file.size, isHeic: false })
   }, [trackStep, trackFeature, createSafeObjectURL])
 
   const handleAnswerUpload = useCallback((file: File) => {
     const heic = isHeicFile(file)
-    const preview = heic ? null : createSafeObjectURL(file)
-    setAnswerImage({ file, preview, isHeic: heic })
+    if (heic) {
+      setHeicWarning({ type: 'answer', file })
+      return
+    }
+    const preview = createSafeObjectURL(file)
+    setAnswerImage({ file, preview, isHeic: false })
     setError(null)
     trackStep('answer_uploaded', 3)
-    trackFeature('homework_answer_upload', { fileType: file.type, fileSize: file.size, isHeic: heic })
+    trackFeature('homework_answer_upload', { fileType: file.type, fileSize: file.size, isHeic: false })
   }, [trackStep, trackFeature, createSafeObjectURL])
 
   const handleReferenceUpload = useCallback((file: File) => {
     const heic = isHeicFile(file)
-    const preview = heic ? null : createSafeObjectURL(file)
-    setReferenceImages(prev => [...prev, { file, preview, isHeic: heic }])
-  }, [createSafeObjectURL])
+    if (heic) {
+      setHeicWarning({ type: 'reference', file, index: referenceImages.length })
+      return
+    }
+    const preview = createSafeObjectURL(file)
+    setReferenceImages(prev => [...prev, { file, preview, isHeic: false }])
+  }, [createSafeObjectURL, referenceImages.length])
 
   const handleTeacherReviewUpload = useCallback((file: File) => {
     const heic = isHeicFile(file)
-    const preview = heic ? null : createSafeObjectURL(file)
-    setTeacherReviews(prev => [...prev, { file, preview, isHeic: heic }])
-  }, [createSafeObjectURL])
+    if (heic) {
+      setHeicWarning({ type: 'review', file, index: teacherReviews.length })
+      return
+    }
+    const preview = createSafeObjectURL(file)
+    setTeacherReviews(prev => [...prev, { file, preview, isHeic: false }])
+  }, [createSafeObjectURL, teacherReviews.length])
+
+  // Handle HEIC conversion when user clicks "Try Anyway" in the warning modal
+  const tryHeicConversion = useCallback(async () => {
+    if (!heicWarning) return
+
+    setIsConverting(true)
+    setError(null)
+
+    try {
+      const result = await convertHeicToJpeg(heicWarning.file)
+
+      if (result.error) {
+        // Conversion failed - show error and don't proceed
+        setError(result.error)
+        setHeicWarning(null)
+        setIsConverting(false)
+        trackFeature('heic_conversion_failed', { type: heicWarning.type })
+        return
+      }
+
+      // Conversion succeeded - add the converted file
+      const preview = createSafeObjectURL(result.file)
+
+      switch (heicWarning.type) {
+        case 'task':
+          setTaskImage({ file: result.file, preview, isHeic: false })
+          trackStep('task_uploaded', 2)
+          trackFeature('homework_task_upload', { fileType: result.file.type, fileSize: result.file.size, isHeic: true, converted: true })
+          break
+        case 'answer':
+          setAnswerImage({ file: result.file, preview, isHeic: false })
+          trackStep('answer_uploaded', 3)
+          trackFeature('homework_answer_upload', { fileType: result.file.type, fileSize: result.file.size, isHeic: true, converted: true })
+          break
+        case 'reference':
+          setReferenceImages(prev => [...prev, { file: result.file, preview, isHeic: false }])
+          break
+        case 'review':
+          setTeacherReviews(prev => [...prev, { file: result.file, preview, isHeic: false }])
+          break
+      }
+
+      trackFeature('heic_conversion_success', { type: heicWarning.type })
+    } catch (err) {
+      console.error('[HEIC] Unexpected conversion error:', err)
+      setError('Could not convert this image. Please export it as JPEG from your Gallery app.')
+      trackFeature('heic_conversion_error', { type: heicWarning.type, error: err instanceof Error ? err.message : 'unknown' })
+    } finally {
+      setHeicWarning(null)
+      setIsConverting(false)
+    }
+  }, [heicWarning, createSafeObjectURL, trackStep, trackFeature])
 
   const handleSubmit = async () => {
     if (!taskImage || !answerImage) {
@@ -438,37 +525,20 @@ export default function HomeworkCheckPage() {
     })
 
     try {
-      // Step 1: Convert any HEIC images to JPEG (happens client-side)
-      // This is deferred to submit time for faster uploads
-      const allImages: { file: File; type: string; isHeic: boolean }[] = [
-        { file: taskImage.file, type: 'task', isHeic: taskImage.isHeic },
-        { file: answerImage.file, type: 'answer', isHeic: answerImage.isHeic },
-        ...referenceImages.map((img, i) => ({ file: img.file, type: `ref_${i}`, isHeic: img.isHeic })),
-        ...teacherReviews.map((img, i) => ({ file: img.file, type: `review_${i}`, isHeic: img.isHeic })),
+      // Collect all images - HEIC conversion already happened at upload time
+      // via the warning modal, so all files should be safe formats now
+      const allImages = [
+        taskImage.file,
+        answerImage.file,
+        ...referenceImages.map(img => img.file),
+        ...teacherReviews.map(img => img.file),
       ]
 
-      const hasHeicImages = allImages.some(img => img.isHeic)
-      if (hasHeicImages) {
-        setSubmissionStatus('Preparing images...')
-        console.log('[Submit] Converting HEIC images...')
-      }
-
-      // Convert HEIC files in parallel
-      const convertedImages = await Promise.all(
-        allImages.map(async (img) => {
-          if (img.isHeic) {
-            const converted = await convertHeicToJpeg(img.file)
-            return { file: converted, type: img.type }
-          }
-          return { file: img.file, type: img.type }
-        })
-      )
-
-      // Step 2: Upload all images to storage
+      // Upload all images to storage
       setSubmissionStatus('Uploading images...')
 
       const formData = new FormData()
-      convertedImages.forEach(({ file }) => {
+      allImages.forEach((file) => {
         formData.append('files', file)
       })
 
@@ -617,6 +687,53 @@ export default function HomeworkCheckPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
+      {/* HEIC Warning Modal */}
+      {heicWarning && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-sm w-full shadow-xl">
+            <div className="text-4xl text-center mb-4">⚠️</div>
+            <h3 className="font-semibold text-center text-gray-900 dark:text-white mb-2">
+              HEIC Image Detected
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
+              This image may not work on some devices. For best results:
+            </p>
+            <ol className="text-sm text-gray-600 dark:text-gray-400 mb-6 space-y-2 list-decimal list-inside">
+              <li>Open the photo in your Gallery app</li>
+              <li>Tap Share or Export</li>
+              <li>Save as JPEG</li>
+              <li>Upload the JPEG version</li>
+            </ol>
+            <div className="space-y-3">
+              <button
+                onClick={tryHeicConversion}
+                disabled={isConverting}
+                className="w-full py-3 bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                {isConverting ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Converting...
+                  </>
+                ) : (
+                  'Try Converting Anyway'
+                )}
+              </button>
+              <button
+                onClick={() => setHeicWarning(null)}
+                disabled={isConverting}
+                className="w-full py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="container mx-auto px-4 py-6 max-w-3xl">
