@@ -81,8 +81,12 @@ function calculateGradeFromFeedback(
   correctPoints: AnnotatedFeedbackPoint[],
   improvementPoints: AnnotatedFeedbackPoint[]
 ): { grade: number; level: GradeLevel } {
-  const correctCount = correctPoints.length
-  const errorCount = improvementPoints.length
+  // Safety checks
+  const safeCorrectPoints = Array.isArray(correctPoints) ? correctPoints : []
+  const safeImprovementPoints = Array.isArray(improvementPoints) ? improvementPoints : []
+
+  const correctCount = safeCorrectPoints.length
+  const errorCount = safeImprovementPoints.length
   const totalItems = correctCount + errorCount
 
   // If no items analyzed, return moderate grade
@@ -90,19 +94,17 @@ function calculateGradeFromFeedback(
     return { grade: 70, level: 'needs_improvement' }
   }
 
-  // Count severity of errors
-  const majorErrors = improvementPoints.filter(p => p.severity === 'major').length
-  const moderateErrors = improvementPoints.filter(p => p.severity === 'moderate').length
-  const minorErrors = improvementPoints.filter(p => p.severity === 'minor').length
+  // Count severity of errors (with safety checks)
+  const majorErrors = safeImprovementPoints.filter(p => p?.severity === 'major').length
+  const moderateErrors = safeImprovementPoints.filter(p => p?.severity === 'moderate').length
 
   // Base grade from correct ratio
   let grade = (correctCount / totalItems) * 100
 
   // Adjust for error severity (errors already counted in ratio, but severity matters)
-  // Minor errors: -2 points each (already counted in ratio, but light penalty)
-  // Moderate errors: -5 points each
-  // Major errors: -10 points each
-  const severityPenalty = (majorErrors * 5) + (moderateErrors * 2) + (minorErrors * 0)
+  // Moderate errors: -2 points each
+  // Major errors: -5 points each
+  const severityPenalty = (majorErrors * 5) + (moderateErrors * 2)
   grade = grade - severityPenalty
 
   // Ensure grade stays in valid range
@@ -128,53 +130,68 @@ function calculateGradeFromFeedback(
  * If there's a significant mismatch, recalculate the grade
  */
 function ensureGradeConsistency(output: CheckerOutput): CheckerOutput {
-  const declaredGrade = parseGradeToNumber(output.feedback.gradeEstimate)
-  const { grade: calculatedGrade, level: calculatedLevel } = calculateGradeFromFeedback(
-    output.feedback.correctPoints,
-    output.feedback.improvementPoints
-  )
-
-  // Log for debugging
-  console.log('[Homework Checker] Grade consistency check:', {
-    declaredGrade,
-    calculatedGrade,
-    correctPoints: output.feedback.correctPoints.length,
-    improvementPoints: output.feedback.improvementPoints.length,
-    majorErrors: output.feedback.improvementPoints.filter(p => p.severity === 'major').length
-  })
-
-  // If the grades differ by more than 15 points, use the calculated grade
-  // This catches cases where Claude says "60%" but all items are correct
-  const discrepancy = Math.abs(declaredGrade - calculatedGrade)
-  if (discrepancy > 15) {
-    console.log(`[Homework Checker] Grade discrepancy detected! Declared: ${declaredGrade}, Calculated: ${calculatedGrade}. Using calculated grade.`)
-    output.feedback.gradeEstimate = `${calculatedGrade}/100`
-    output.feedback.gradeLevel = calculatedLevel
-  }
-
-  // Special case: If there are no major errors and grade is below 75, bump it up
-  const majorErrors = output.feedback.improvementPoints.filter(p => p.severity === 'major').length
-  if (majorErrors === 0 && output.feedback.correctPoints.length > 0) {
-    const currentGrade = parseGradeToNumber(output.feedback.gradeEstimate)
-    if (currentGrade < 75) {
-      const adjustedGrade = Math.max(currentGrade, 80)
-      console.log(`[Homework Checker] No major errors but low grade. Adjusting ${currentGrade} -> ${adjustedGrade}`)
-      output.feedback.gradeEstimate = `${adjustedGrade}/100`
-      output.feedback.gradeLevel = 'good'
+  try {
+    // Safety check - ensure we have valid output
+    if (!output?.feedback) {
+      console.error('[Homework Checker] Invalid output in ensureGradeConsistency')
+      return output
     }
-  }
 
-  // Special case: All correct points, no improvement points = excellent
-  if (output.feedback.correctPoints.length > 0 && output.feedback.improvementPoints.length === 0) {
-    const currentGrade = parseGradeToNumber(output.feedback.gradeEstimate)
-    if (currentGrade < 90) {
-      console.log(`[Homework Checker] All items correct but grade was ${currentGrade}. Setting to 95.`)
-      output.feedback.gradeEstimate = '95/100'
-      output.feedback.gradeLevel = 'excellent'
+    const correctPoints = output.feedback.correctPoints || []
+    const improvementPoints = output.feedback.improvementPoints || []
+
+    const declaredGrade = parseGradeToNumber(output.feedback.gradeEstimate || '')
+    const { grade: calculatedGrade, level: calculatedLevel } = calculateGradeFromFeedback(
+      correctPoints,
+      improvementPoints
+    )
+
+    // Log for debugging
+    console.log('[Homework Checker] Grade consistency check:', {
+      declaredGrade,
+      calculatedGrade,
+      correctPoints: correctPoints.length,
+      improvementPoints: improvementPoints.length,
+      majorErrors: improvementPoints.filter(p => p.severity === 'major').length
+    })
+
+    // If the grades differ by more than 15 points, use the calculated grade
+    // This catches cases where Claude says "60%" but all items are correct
+    const discrepancy = Math.abs(declaredGrade - calculatedGrade)
+    if (discrepancy > 15) {
+      console.log(`[Homework Checker] Grade discrepancy detected! Declared: ${declaredGrade}, Calculated: ${calculatedGrade}. Using calculated grade.`)
+      output.feedback.gradeEstimate = `${calculatedGrade}/100`
+      output.feedback.gradeLevel = calculatedLevel
     }
-  }
 
-  return output
+    // Special case: If there are no major errors and grade is below 75, bump it up
+    const majorErrors = improvementPoints.filter(p => p.severity === 'major').length
+    if (majorErrors === 0 && correctPoints.length > 0) {
+      const currentGrade = parseGradeToNumber(output.feedback.gradeEstimate)
+      if (currentGrade < 75) {
+        const adjustedGrade = Math.max(currentGrade, 80)
+        console.log(`[Homework Checker] No major errors but low grade. Adjusting ${currentGrade} -> ${adjustedGrade}`)
+        output.feedback.gradeEstimate = `${adjustedGrade}/100`
+        output.feedback.gradeLevel = 'good'
+      }
+    }
+
+    // Special case: All correct points, no improvement points = excellent
+    if (correctPoints.length > 0 && improvementPoints.length === 0) {
+      const currentGrade = parseGradeToNumber(output.feedback.gradeEstimate)
+      if (currentGrade < 90) {
+        console.log(`[Homework Checker] All items correct but grade was ${currentGrade}. Setting to 95.`)
+        output.feedback.gradeEstimate = '95/100'
+        output.feedback.gradeLevel = 'excellent'
+      }
+    }
+
+    return output
+  } catch (error) {
+    // If consistency check fails, return original output rather than crashing
+    console.error('[Homework Checker] Error in ensureGradeConsistency:', error)
+    return output
+  }
 }
 
 let anthropicClient: Anthropic | null = null
@@ -530,6 +547,11 @@ function getDefaultOutput(): CheckerOutput {
       teacherStyleNotes: null,
       expectationComparison: null,
       encouragement: 'Keep trying! Every attempt is a step toward improvement.',
+      annotations: {
+        correctAnnotations: [],
+        errorAnnotations: [],
+        hasAnnotations: false,
+      },
     },
   }
 }
