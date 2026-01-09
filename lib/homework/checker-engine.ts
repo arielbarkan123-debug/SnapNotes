@@ -227,6 +227,7 @@ export interface CheckerOutput {
 }
 
 export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutput> {
+  try {
   const client = getAnthropicClient()
 
   // Build message content with images
@@ -385,6 +386,13 @@ Return your analysis as JSON in this exact format:
 
   // Ensure grade matches feedback items (fixes discrepancy issues)
   return ensureGradeConsistency(result)
+  } catch (error) {
+    console.error('[Homework Checker] analyzeHomework error:', error)
+    // Return a default output instead of crashing
+    const defaultOutput = getDefaultOutput()
+    defaultOutput.feedback.summary = 'We encountered an issue analyzing your homework. This may be due to image quality or a temporary service issue. Please try again.'
+    return defaultOutput
+  }
 }
 
 // ============================================================================
