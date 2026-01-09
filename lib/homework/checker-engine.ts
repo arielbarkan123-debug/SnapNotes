@@ -13,7 +13,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
-import heicConvert from 'heic-convert'
+import sharp from 'sharp'
 import type {
   HomeworkFeedback,
   GradeLevel,
@@ -72,20 +72,17 @@ async function fetchImageAsBase64(url: string): Promise<FetchedImage> {
 
     // Determine media type and handle HEIC conversion
     let mediaType: MediaType = 'image/jpeg'
-    let imageBuffer = Buffer.from(arrayBuffer)
+    let finalImageData: Buffer = Buffer.from(arrayBuffer)
 
     if (contentType.includes('heic') || contentType.includes('heif')) {
-      // HEIC/HEIF not supported by Claude - convert to JPEG
-      console.log('[Checker] HEIC/HEIF image detected, converting to JPEG...')
+      // HEIC/HEIF not supported by Claude - convert to JPEG using sharp
+      console.log('[Checker] HEIC/HEIF image detected, converting to JPEG with sharp...')
       const convertStart = Date.now()
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const jpegData = await heicConvert({
-          buffer: arrayBuffer as any,
-          format: 'JPEG',
-          quality: 0.9,
-        })
-        imageBuffer = Buffer.from(jpegData)
+        const convertedBuffer = await sharp(Buffer.from(arrayBuffer))
+          .jpeg({ quality: 90 })
+          .toBuffer()
+        finalImageData = convertedBuffer
         mediaType = 'image/jpeg'
         console.log('[Checker] HEIC conversion completed in', Date.now() - convertStart, 'ms')
       } catch (convertError) {
@@ -100,11 +97,11 @@ async function fetchImageAsBase64(url: string): Promise<FetchedImage> {
       mediaType = 'image/webp'
     }
 
-    const base64 = imageBuffer.toString('base64')
+    const base64 = finalImageData.toString('base64')
     const totalTime = Date.now() - startTime
 
     console.log('[Checker] Image processed:', {
-      size: imageBuffer.byteLength,
+      size: finalImageData.byteLength,
       type: mediaType,
       fetchTime: fetchTime + 'ms',
       bufferTime: bufferTime + 'ms',
