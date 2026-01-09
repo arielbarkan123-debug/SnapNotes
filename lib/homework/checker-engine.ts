@@ -6,11 +6,13 @@
  * - Two-phase analysis: analyze items separately, then calculate grade
  * - Grade calculation: computed from actual correct/incorrect items, NOT from Claude's estimate
  * - Consistency validation: ensures grade matches feedback items before returning
- * - Image validation: validates and converts images before sending to Claude
+ *
+ * PERFORMANCE NOTE:
+ * - Images are fetched and converted to base64 before sending to Claude
+ * - The API route uses streaming with heartbeats to keep mobile connections alive
  */
 
 import Anthropic from '@anthropic-ai/sdk'
-import heicConvert from 'heic-convert'
 import type {
   HomeworkFeedback,
   GradeLevel,
@@ -20,100 +22,92 @@ import type {
 } from './types'
 
 // ============================================================================
-// Image Validation & Conversion
-// ============================================================================
-
-/**
- * Fetch image from URL and convert to base64
- * Also handles HEIC conversion if needed
- */
-async function fetchAndValidateImage(url: string): Promise<{
-  base64: string;
-  mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
-} | null> {
-  try {
-    console.log('[Checker] Fetching image from URL:', url.substring(0, 100) + '...')
-
-    const response = await fetch(url, {
-      headers: {
-        'Accept': 'image/*',
-      },
-    })
-
-    if (!response.ok) {
-      console.error('[Checker] Failed to fetch image:', response.status, response.statusText)
-      return null
-    }
-
-    const arrayBuffer = await response.arrayBuffer()
-    const bytes = new Uint8Array(arrayBuffer)
-
-    console.log('[Checker] Image fetched, size:', bytes.length, 'bytes')
-
-    // Check magic bytes to determine format
-    const isJPEG = bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF
-    const isPNG = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47
-    const isGIF = bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38
-    const isWebP = bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
-                   bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50
-    const isHEIC = bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70
-
-    if (isHEIC) {
-      console.log('[Checker] Detected HEIC format, converting to JPEG...')
-      try {
-        // heic-convert expects ArrayBufferLike, pass arrayBuffer directly
-        const jpegArrayBuffer = await heicConvert({
-          buffer: arrayBuffer,
-          format: 'JPEG',
-          quality: 0.9,
-        })
-        const base64 = Buffer.from(jpegArrayBuffer).toString('base64')
-        console.log('[Checker] HEIC conversion successful, output size:', jpegArrayBuffer.byteLength)
-        return { base64, mediaType: 'image/jpeg' }
-      } catch (convErr) {
-        console.error('[Checker] HEIC conversion failed:', convErr)
-        return null
-      }
-    }
-
-    // Already in supported format
-    const base64 = Buffer.from(arrayBuffer).toString('base64')
-
-    if (isJPEG) return { base64, mediaType: 'image/jpeg' }
-    if (isPNG) return { base64, mediaType: 'image/png' }
-    if (isWebP) return { base64, mediaType: 'image/webp' }
-    if (isGIF) return { base64, mediaType: 'image/gif' }
-
-    // Unknown format - try to use content-type header
-    const contentType = response.headers.get('content-type')
-    if (contentType?.includes('jpeg') || contentType?.includes('jpg')) {
-      return { base64, mediaType: 'image/jpeg' }
-    }
-    if (contentType?.includes('png')) {
-      return { base64, mediaType: 'image/png' }
-    }
-    if (contentType?.includes('webp')) {
-      return { base64, mediaType: 'image/webp' }
-    }
-    if (contentType?.includes('gif')) {
-      return { base64, mediaType: 'image/gif' }
-    }
-
-    // Default to JPEG if we can't determine
-    console.warn('[Checker] Unknown image format, assuming JPEG')
-    return { base64, mediaType: 'image/jpeg' }
-  } catch (error) {
-    console.error('[Checker] Error fetching/validating image:', error)
-    return null
-  }
-}
-
-// ============================================================================
 // Configuration
 // ============================================================================
 
 const AI_MODEL = 'claude-sonnet-4-5-20250929'
 const MAX_TOKENS = 4096
+const IMAGE_FETCH_TIMEOUT_MS = 30000 // 30 second timeout for fetching images
+
+// ============================================================================
+// Image Fetching
+// ============================================================================
+
+type MediaType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
+
+interface FetchedImage {
+  base64: string
+  mediaType: MediaType
+}
+
+/**
+ * Fetch an image from URL and convert to base64
+ */
+async function fetchImageAsBase64(url: string): Promise<FetchedImage> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), IMAGE_FETCH_TIMEOUT_MS)
+  const startTime = Date.now()
+
+  try {
+    console.log('[Checker] Fetching image:', url.substring(0, 100) + '...')
+
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'Accept': 'image/*',
+      },
+    })
+
+    const fetchTime = Date.now() - startTime
+    console.log('[Checker] Fetch response received in', fetchTime, 'ms, status:', response.status)
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`)
+    }
+
+    const contentType = response.headers.get('content-type') || 'image/jpeg'
+    const buffer = await response.arrayBuffer()
+    const bufferTime = Date.now() - startTime
+
+    // Determine media type
+    let mediaType: MediaType = 'image/jpeg'
+    if (contentType.includes('png')) {
+      mediaType = 'image/png'
+    } else if (contentType.includes('gif')) {
+      mediaType = 'image/gif'
+    } else if (contentType.includes('webp')) {
+      mediaType = 'image/webp'
+    } else if (contentType.includes('heic') || contentType.includes('heif')) {
+      // HEIC/HEIF not supported by Claude - this will cause issues
+      console.error('[Checker] HEIC/HEIF image detected! Claude does not support this format.')
+      throw new Error('HEIC/HEIF images are not supported. Please convert to JPEG or PNG.')
+    }
+
+    const base64 = Buffer.from(buffer).toString('base64')
+    const totalTime = Date.now() - startTime
+
+    console.log('[Checker] Image processed:', {
+      size: buffer.byteLength,
+      type: mediaType,
+      fetchTime: fetchTime + 'ms',
+      bufferTime: bufferTime + 'ms',
+      totalTime: totalTime + 'ms',
+    })
+
+    return { base64, mediaType }
+  } catch (error) {
+    const elapsed = Date.now() - startTime
+    console.error('[Checker] Image fetch failed after', elapsed, 'ms:', {
+      url: url.substring(0, 100) + '...',
+      error: error instanceof Error ? error.message : String(error),
+      name: error instanceof Error ? error.name : 'Unknown',
+      isAbort: error instanceof Error && error.name === 'AbortError',
+    })
+    throw error
+  } finally {
+    clearTimeout(timeout)
+  }
+}
 
 // ============================================================================
 // Grade Calculation & Consistency Validation
@@ -319,118 +313,103 @@ export interface CheckerOutput {
 
 export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutput> {
   try {
-  const client = getAnthropicClient()
+    const client = getAnthropicClient()
 
-  // Fetch and validate all images first (handles HEIC conversion)
-  console.log('[Checker] Fetching and validating images...')
+    // Fetch images and convert to base64
+    // Note: The API route uses streaming with heartbeats to keep mobile connections alive
+    // while this fetch is happening
+    console.log('[Checker] Fetching images for analysis...')
 
-  const taskImage = await fetchAndValidateImage(input.taskImageUrl)
-  if (!taskImage) {
-    console.error('[Checker] Failed to fetch/validate task image')
-    throw new Error('Could not process the task image. Please try uploading again.')
-  }
+    const [taskImage, answerImage] = await Promise.all([
+      fetchImageAsBase64(input.taskImageUrl),
+      fetchImageAsBase64(input.answerImageUrl),
+    ])
 
-  const answerImage = await fetchAndValidateImage(input.answerImageUrl)
-  if (!answerImage) {
-    console.error('[Checker] Failed to fetch/validate answer image')
-    throw new Error('Could not process the answer image. Please try uploading again.')
-  }
-
-  // Fetch reference images
-  const referenceImages: Array<{ base64: string; mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif' }> = []
-  if (input.referenceImageUrls && input.referenceImageUrls.length > 0) {
-    for (const url of input.referenceImageUrls) {
-      const img = await fetchAndValidateImage(url)
-      if (img) {
-        referenceImages.push(img)
-      } else {
-        console.warn('[Checker] Skipping invalid reference image:', url.substring(0, 50))
-      }
+    // Fetch reference images if provided
+    let referenceImages: FetchedImage[] = []
+    if (input.referenceImageUrls && input.referenceImageUrls.length > 0) {
+      referenceImages = await Promise.all(
+        input.referenceImageUrls.map(url => fetchImageAsBase64(url))
+      )
     }
-  }
 
-  // Fetch teacher review images
-  const teacherReviewImages: Array<{ base64: string; mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif' }> = []
-  if (input.teacherReviewUrls && input.teacherReviewUrls.length > 0) {
-    for (const url of input.teacherReviewUrls) {
-      const img = await fetchAndValidateImage(url)
-      if (img) {
-        teacherReviewImages.push(img)
-      } else {
-        console.warn('[Checker] Skipping invalid teacher review image:', url.substring(0, 50))
-      }
+    // Fetch teacher review images if provided
+    let teacherImages: FetchedImage[] = []
+    if (input.teacherReviewUrls && input.teacherReviewUrls.length > 0) {
+      teacherImages = await Promise.all(
+        input.teacherReviewUrls.map(url => fetchImageAsBase64(url))
+      )
     }
-  }
 
-  console.log('[Checker] All images validated. Building prompt...')
+    console.log('[Checker] All images fetched, building prompt...')
 
-  // Build message content with base64 images (more reliable than URLs)
-  const content: Anthropic.MessageParam['content'] = []
+    // Build message content with base64 images
+    const content: Anthropic.MessageParam['content'] = []
 
-  // Add task image
-  content.push({
-    type: 'text',
-    text: '## HOMEWORK TASK:\nAnalyze this homework assignment/task:',
-  })
-  content.push({
-    type: 'image',
-    source: {
-      type: 'base64',
-      media_type: taskImage.mediaType,
-      data: taskImage.base64,
-    },
-  })
-
-  // Add answer image
-  content.push({
-    type: 'text',
-    text: '\n## STUDENT\'S ANSWER:\nHere is the student\'s submitted work:',
-  })
-  content.push({
-    type: 'image',
-    source: {
-      type: 'base64',
-      media_type: answerImage.mediaType,
-      data: answerImage.base64,
-    },
-  })
-
-  // Add reference images if any were successfully fetched
-  if (referenceImages.length > 0) {
+    // Add task image
     content.push({
       type: 'text',
-      text: '\n## REFERENCE MATERIALS:\nThe student provided these reference materials:',
+      text: '## HOMEWORK TASK:\nAnalyze this homework assignment/task:',
     })
-    for (const img of referenceImages) {
-      content.push({
-        type: 'image',
-        source: {
-          type: 'base64',
-          media_type: img.mediaType,
-          data: img.base64,
-        },
-      })
-    }
-  }
+    content.push({
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: taskImage.mediaType,
+        data: taskImage.base64,
+      },
+    })
 
-  // Add teacher review images if any were successfully fetched
-  let teacherStyleContext = ''
-  if (teacherReviewImages.length > 0) {
+    // Add answer image
     content.push({
       type: 'text',
-      text: '\n## PREVIOUS TEACHER REVIEWS:\nAnalyze these past graded assignments to understand the teacher\'s expectations and grading style:',
+      text: '\n## STUDENT\'S ANSWER:\nHere is the student\'s submitted work:',
     })
-    for (const img of teacherReviewImages) {
+    content.push({
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: answerImage.mediaType,
+        data: answerImage.base64,
+      },
+    })
+
+    // Add reference images if provided
+    if (referenceImages.length > 0) {
       content.push({
-        type: 'image',
-        source: {
-          type: 'base64',
-          media_type: img.mediaType,
-          data: img.base64,
-        },
+        type: 'text',
+        text: '\n## REFERENCE MATERIALS:\nThe student provided these reference materials:',
       })
+      for (const img of referenceImages) {
+        content.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: img.mediaType,
+            data: img.base64,
+          },
+        })
+      }
     }
-    teacherStyleContext = `
+
+    // Add teacher review images if provided
+    let teacherStyleContext = ''
+    if (teacherImages.length > 0) {
+      content.push({
+        type: 'text',
+        text: '\n## PREVIOUS TEACHER REVIEWS:\nAnalyze these past graded assignments to understand the teacher\'s expectations and grading style:',
+      })
+      for (const img of teacherImages) {
+        content.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: img.mediaType,
+            data: img.base64,
+          },
+        })
+      }
+      teacherStyleContext = `
 IMPORTANT: Based on the previous teacher reviews provided, pay attention to:
 - What the teacher typically focuses on when grading
 - The teacher's tone and communication style
@@ -438,12 +417,12 @@ IMPORTANT: Based on the previous teacher reviews provided, pay attention to:
 - The grading standards and expectations evident in past reviews
 - Mirror the teacher's feedback style when generating your assessment
 `
-  }
+    }
 
-  // Add the analysis prompt with accuracy-focused instructions
-  content.push({
-    type: 'text',
-    text: `
+    // Add the analysis prompt with accuracy-focused instructions
+    content.push({
+      type: 'text',
+      text: `
 ${teacherStyleContext}
 
 ## YOUR TASK: ACCURATE HOMEWORK GRADING
@@ -536,24 +515,36 @@ Return your analysis as JSON in this exact format:
 □ Are ALL problems accounted for (either in correctPoints or improvementPoints)?
 □ If all answers are correct, is my grade 95-100%?
 `,
-  })
+    })
 
-  const response = await client.messages.create({
-    model: AI_MODEL,
-    max_tokens: MAX_TOKENS,
-    messages: [{ role: 'user', content }],
-  })
+    console.log('[Checker] Sending request to Claude...')
 
-  // Parse response and apply consistency validation
-  const result = parseCheckerResponse(response)
+    const response = await client.messages.create({
+      model: AI_MODEL,
+      max_tokens: MAX_TOKENS,
+      messages: [{ role: 'user', content }],
+    })
 
-  // Ensure grade matches feedback items (fixes discrepancy issues)
-  return ensureGradeConsistency(result)
+    console.log('[Checker] Response received, parsing...')
+
+    // Parse response and apply consistency validation
+    const result = parseCheckerResponse(response)
+
+    // Ensure grade matches feedback items (fixes discrepancy issues)
+    return ensureGradeConsistency(result)
   } catch (error) {
-    console.error('[Homework Checker] analyzeHomework error:', error)
-    // Return a default output instead of crashing
+    // Detailed error logging for debugging mobile vs desktop issues
+    console.error('[Homework Checker] analyzeHomework error:', {
+      message: error instanceof Error ? error.message : String(error),
+      name: error instanceof Error ? error.name : 'Unknown',
+      stack: error instanceof Error ? error.stack : undefined,
+      cause: error instanceof Error ? (error as Error & { cause?: unknown }).cause : undefined,
+    })
+
+    // Include error details in the response for debugging
     const defaultOutput = getDefaultOutput()
-    defaultOutput.feedback.summary = 'We encountered an issue analyzing your homework. This may be due to image quality or a temporary service issue. Please try again.'
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+    defaultOutput.feedback.summary = `Analysis failed: ${errorMsg}. This may be due to image quality or a temporary service issue. Please try again.`
     return defaultOutput
   }
 }

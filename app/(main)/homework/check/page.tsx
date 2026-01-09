@@ -405,7 +405,8 @@ export default function HomeworkCheckPage() {
         throw new Error('Failed to upload required images')
       }
 
-      // Step 2: Submit to homework check API
+      // Step 2: Submit to homework check API (streaming response)
+      // The API sends heartbeats every 5 seconds to keep mobile connections alive
       const response = await fetch('/api/homework/check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -417,29 +418,67 @@ export default function HomeworkCheckPage() {
         }),
       })
 
-      // Check if response is JSON before parsing
-      const checkContentType = response.headers.get('content-type')
-      if (!checkContentType || !checkContentType.includes('application/json')) {
-        console.error('[HomeworkCheck] Non-JSON check response:', response.status)
-        if (response.status === 504 || response.status === 503 || response.status === 502) {
-          throw new Error('Analysis timeout. Please try again.')
-        }
-        throw new Error('Server error analyzing homework. Please try again.')
+      if (!response.ok && !response.body) {
+        throw new Error('Failed to connect to analysis service. Please try again.')
       }
 
-      let checkData
+      // Read streaming NDJSON response
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error('Failed to start analysis stream. Please try again.')
+      }
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let check = null
+      let streamError: string | null = null
+
       try {
-        checkData = await response.json()
-      } catch (parseError) {
-        console.error('[HomeworkCheck] JSON parse error:', parseError)
-        throw new Error('Server error. Please try again.')
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+
+          // Process complete lines
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || '' // Keep incomplete line in buffer
+
+          for (const line of lines) {
+            if (!line.trim()) continue
+
+            try {
+              const message = JSON.parse(line)
+
+              if (message.type === 'heartbeat') {
+                // Heartbeat received - connection is alive
+                // Could update UI with elapsed time: message.elapsed
+                console.log('[HomeworkCheck] Heartbeat:', message.elapsed, 'seconds')
+              } else if (message.type === 'status') {
+                console.log('[HomeworkCheck] Status:', message.status, message.checkId)
+              } else if (message.type === 'result') {
+                check = message.check
+              } else if (message.type === 'error') {
+                streamError = message.error
+              }
+            } catch (parseErr) {
+              console.error('[HomeworkCheck] Failed to parse stream message:', line, parseErr)
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock()
       }
 
-      if (!response.ok) {
-        throw new Error(checkData.error || 'Failed to check homework')
+      // Handle any error from the stream
+      if (streamError) {
+        throw new Error(streamError)
       }
 
-      const { check } = checkData
+      // Ensure we got a result
+      if (!check) {
+        throw new Error('Analysis did not return a result. Please try again.')
+      }
 
       // Track successful feedback
       trackStep('feedback_received', 5)
