@@ -301,20 +301,24 @@ Analyze the homework submission with EXTREME attention to accuracy. Follow these
 
 ### CRITICAL ACCURACY RULES (READ CAREFULLY):
 1. **VERIFY BEFORE JUDGING**: For ANY math/calculation problem, COMPUTE THE ANSWER YOURSELF before deciding if the student is correct
-2. **NEVER CONTRADICT YOURSELF**: Do NOT say "incorrect" and then change your mind. Verify FIRST, then state your conclusion ONCE.
-3. **ANSWER IS KING**: If the student's final answer matches the correct answer, mark it as CORRECT - even if the work shown has minor issues
-4. **ONE PROBLEM AT A TIME**: Analyze each problem separately before making any overall judgment
+2. **DOUBLE-CHECK HANDWRITING**: Handwritten math is hard to read. If an answer LOOKS wrong, re-read it carefully - you may have misread a digit or symbol. Common confusions: 4↔9, 1↔7, y²↔y⁴, +↔×
+3. **NEVER CONTRADICT YOURSELF**: Do NOT say "incorrect" and then change your mind. Verify FIRST, then state your conclusion ONCE.
+4. **ANSWER IS KING**: If the student's final answer matches the correct answer, the problem is 100% CORRECT. Do NOT penalize for messy work, unclear steps, or presentation style when the answer is right.
+5. **STYLE ≠ ERRORS**: Feedback about work organization, notation clarity, or presentation should NEVER reduce the grade. Only actual WRONG ANSWERS reduce the grade.
+6. **ONE PROBLEM AT A TIME**: Analyze each problem separately before making any overall judgment
 
 ### ANALYSIS STEPS:
 **STEP 1**: Extract ALL problems/questions from the task image. List them.
 
 **STEP 2**: For EACH problem:
   a) What is the question asking?
-  b) What answer did the student provide?
+  b) What answer did the student provide? (Read handwriting VERY carefully - if unclear, consider multiple interpretations)
   c) COMPUTE the correct answer yourself (show your calculation)
-  d) Does student's answer = correct answer? YES or NO
-  e) If YES → goes in correctPoints
-  f) If NO → goes in improvementPoints with severity based on how wrong
+  d) Does student's answer = correct answer?
+     - If handwriting is ambiguous, assume the interpretation that makes it correct
+     - Only mark wrong if you're CERTAIN the answer is wrong after re-checking
+  e) If CORRECT → goes in correctPoints (full marks for this problem)
+  f) If WRONG → goes in improvementPoints with "major" severity
 
 **STEP 3**: Count results
   - X problems correct out of Y total
@@ -323,9 +327,15 @@ Analyze the homework submission with EXTREME attention to accuracy. Follow these
 **STEP 4**: Generate feedback JSON
 
 ### SEVERITY GUIDE FOR improvementPoints:
-- "minor": Small mistakes that don't affect the answer (e.g., messy handwriting, skipped steps but correct answer)
-- "moderate": Partial credit situations, wrong answer but right approach
+- **ONLY include problems with WRONG ANSWERS in improvementPoints**
+- "moderate": Wrong answer but showed correct approach/method
 - "major": Completely wrong answer, fundamental misunderstanding, missing problems
+
+**DO NOT include in improvementPoints:**
+- Style feedback (messy work, unclear notation) when answer is correct
+- Presentation issues when answer is correct
+- "Could be clearer" type feedback when answer is correct
+These can go in "suggestions" instead, but should NOT affect the grade.
 
 Return your analysis as JSON in this exact format:
 {
@@ -369,9 +379,12 @@ Return your analysis as JSON in this exact format:
 
 ### FINAL CHECK BEFORE RESPONDING:
 □ Did I verify each calculation myself before marking correct/incorrect?
-□ Does my gradeEstimate match the ratio of correctPoints to total items?
+□ Did I double-check handwriting for any answer I'm marking as wrong?
+□ Does my gradeEstimate match the ratio of correctPoints to total problems?
+□ Are improvementPoints ONLY for wrong answers (not style issues)?
 □ Did I NOT say "incorrect" and then change my mind in the same response?
 □ Are ALL problems accounted for (either in correctPoints or improvementPoints)?
+□ If all answers are correct, is my grade 95-100%?
 `,
   })
 
