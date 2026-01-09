@@ -62,15 +62,35 @@ export async function POST(request: NextRequest) {
     }
 
     // Analyze the homework
+    console.log('[Homework Check] Starting analysis for check:', check.id)
+
+    let result
     try {
-      const result = await analyzeHomework({
+      result = await analyzeHomework({
         taskImageUrl: body.taskImageUrl,
         answerImageUrl: body.answerImageUrl,
         referenceImageUrls: body.referenceImageUrls,
         teacherReviewUrls: body.teacherReviewUrls,
       })
+      console.log('[Homework Check] Analysis completed, grade:', result.feedback?.gradeEstimate)
+    } catch (analysisError) {
+      console.error('[Homework Check] Analysis threw error:', analysisError)
 
-      // Update check with results
+      // Update check with error status
+      await supabase
+        .from('homework_checks')
+        .update({ status: 'error' })
+        .eq('id', check.id)
+        .eq('user_id', user.id)
+
+      return NextResponse.json(
+        { error: 'Failed to analyze homework. Please try again.' },
+        { status: 500 }
+      )
+    }
+
+    // Update check with results
+    try {
       const { data: updatedCheck, error: updateError } = await supabase
         .from('homework_checks')
         .update({
@@ -88,7 +108,7 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (updateError) {
-        console.error('Update error:', updateError)
+        console.error('[Homework Check] Update error:', updateError)
         // Mark as error so it doesn't stay stuck in 'analyzing'
         await supabase
           .from('homework_checks')
@@ -102,19 +122,21 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      console.log('[Homework Check] Successfully saved check:', check.id)
       return NextResponse.json({ check: updatedCheck })
-    } catch (analysisError) {
-      console.error('Analysis error:', analysisError)
+    } catch (saveError) {
+      console.error('[Homework Check] Save threw error:', saveError)
 
-      // Update check with error status so it doesn't stay stuck in 'analyzing'
+      // Try to mark as error
       await supabase
         .from('homework_checks')
         .update({ status: 'error' })
         .eq('id', check.id)
         .eq('user_id', user.id)
+        .catch(() => {}) // Ignore if this also fails
 
       return NextResponse.json(
-        { error: 'Failed to analyze homework. Please try again.' },
+        { error: 'Failed to save results. Please try again.' },
         { status: 500 }
       )
     }

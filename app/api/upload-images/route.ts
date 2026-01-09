@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import sharp from 'sharp'
 import {
   ErrorCodes,
   createErrorResponse,
@@ -152,6 +153,41 @@ function isStorageQuotaError(error: unknown): boolean {
   return false
 }
 
+/**
+ * Check if file is HEIC/HEIF format (not supported by Claude Vision API)
+ */
+function isHeicFile(file: File): boolean {
+  const ext = getFileExtension(file.name)
+  const isHeicExtension = ext === 'heic' || ext === 'heif'
+  const isHeicMime = file.type === 'image/heic' || file.type === 'image/heif'
+  return isHeicExtension || isHeicMime
+}
+
+/**
+ * Convert HEIC/HEIF to JPEG using sharp
+ * Returns the converted buffer and new extension
+ */
+async function convertHeicToJpeg(file: File): Promise<{ buffer: Buffer; extension: string; contentType: string }> {
+  try {
+    const arrayBuffer = await file.arrayBuffer()
+    const inputBuffer = Buffer.from(arrayBuffer)
+
+    // Convert to JPEG with good quality
+    const jpegBuffer = await sharp(inputBuffer)
+      .jpeg({ quality: 90 })
+      .toBuffer()
+
+    return {
+      buffer: jpegBuffer,
+      extension: 'jpg',
+      contentType: 'image/jpeg'
+    }
+  } catch (error) {
+    console.error('[Upload] HEIC conversion failed:', error)
+    throw new Error('Failed to convert HEIC image. Please convert to JPEG/PNG before uploading.')
+  }
+}
+
 async function validateFile(file: File, index: number): Promise<UploadError | null> {
   // Validate file size first (quick check)
   if (file.size > MAX_FILE_SIZE) {
@@ -300,16 +336,41 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // 7. Upload valid files in parallel
     const uploadPromises = validFiles.map(async ({ file, index }) => {
       try {
+        // Check if HEIC/HEIF - convert to JPEG (Claude Vision doesn't support HEIC)
+        let uploadContent: File | Buffer = file
+        let extension = getFileExtension(file.name)
+        let contentType = file.type || `image/${extension}`
+
+        if (isHeicFile(file)) {
+          try {
+            console.log(`[Upload] Converting HEIC file to JPEG: ${file.name}`)
+            const converted = await convertHeicToJpeg(file)
+            uploadContent = converted.buffer
+            extension = converted.extension
+            contentType = converted.contentType
+            console.log(`[Upload] HEIC conversion successful: ${file.name}`)
+          } catch (conversionError) {
+            console.error(`[Upload] HEIC conversion failed for ${file.name}:`, conversionError)
+            return {
+              type: 'error' as const,
+              error: {
+                index,
+                filename: file.name,
+                error: 'Failed to process HEIC image. Please convert to JPEG/PNG and try again.',
+                code: ErrorCodes.UPLOAD_FAILED,
+              },
+            }
+          }
+        }
+
         // Generate storage path: notebook-images/{user_id}/{course_id}/page-{index}.{ext}
-        const extension = getFileExtension(file.name)
         const storagePath = `${user.id}/${courseId}/page-${index}.${extension}`
 
-        // Upload File directly to Supabase Storage (more memory efficient)
-        // Supabase storage accepts File objects, avoiding Buffer copy in memory
+        // Upload to Supabase Storage
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from(BUCKET_NAME)
-          .upload(storagePath, file, {
-            contentType: file.type || `image/${extension}`,
+          .upload(storagePath, uploadContent, {
+            contentType,
             cacheControl: '3600',
             upsert: false,
           })
