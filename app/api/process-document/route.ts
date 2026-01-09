@@ -15,6 +15,7 @@ interface ProcessDocumentRequest {
   storagePath: string
   fileName: string
   fileType: 'image' | 'pptx' | 'docx'
+  bucket?: string  // Optional: defaults to 'documents', can be 'notebook-images' for homework checker
 }
 
 interface ProcessDocumentSuccessResponse {
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return createErrorResponse(ErrorCodes.INVALID_INPUT, 'Invalid request body')
     }
 
-    const { storagePath, fileName, fileType } = body
+    const { storagePath, fileName, fileType, bucket = 'documents' } = body
 
     // 3. Validate required fields
     if (!storagePath || !fileName || !fileType) {
@@ -68,6 +69,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         ErrorCodes.MISSING_FIELD,
         'Missing required fields: storagePath, fileName, fileType'
       )
+    }
+
+    // Validate bucket name (only allow specific buckets)
+    const allowedBuckets = ['documents', 'notebook-images']
+    if (!allowedBuckets.includes(bucket)) {
+      return createErrorResponse(ErrorCodes.INVALID_INPUT, 'Invalid bucket name')
     }
 
     // 4. SECURITY: Verify path belongs to this user
@@ -84,7 +91,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (fileType === 'image') {
       // Get a signed URL for the image (valid for 1 hour)
       const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-        .from('documents')
+        .from(bucket)
         .createSignedUrl(storagePath, 3600) // 1 hour
 
       if (signedUrlError || !signedUrlData?.signedUrl) {
@@ -105,7 +112,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // 6. Download file from storage for document processing
     console.log('[ProcessDocument] Downloading file from storage:', storagePath)
     const { data: fileData, error: downloadError } = await supabase.storage
-      .from('documents')
+      .from(bucket)
       .download(storagePath)
 
     if (downloadError || !fileData) {

@@ -600,19 +600,19 @@ export default function HomeworkCheckPage() {
     })
 
     try {
-      // Collect all images - HEIC conversion already happened at upload time
+      // Collect all files - HEIC conversion already happened at upload time
       // via the warning modal, so all files should be safe formats now
-      const allImages: File[] = []
-      if (taskImage) allImages.push(taskImage.file)
-      if (answerImage) allImages.push(answerImage.file)
-      allImages.push(...referenceImages.map(img => img.file))
-      allImages.push(...teacherReviews.map(img => img.file))
+      const allFiles: File[] = []
+      if (taskImage) allFiles.push(taskImage.file)
+      if (answerImage) allFiles.push(answerImage.file)
+      allFiles.push(...referenceImages.map(img => img.file))
+      allFiles.push(...teacherReviews.map(img => img.file))
 
-      // Upload all images to storage
-      setSubmissionStatus('Uploading images...')
+      // Upload all files to storage
+      setSubmissionStatus('Uploading files...')
 
       const formData = new FormData()
-      allImages.forEach((file) => {
+      allFiles.forEach((file) => {
         formData.append('files', file)
       })
 
@@ -626,9 +626,9 @@ export default function HomeworkCheckPage() {
       if (!uploadContentType || !uploadContentType.includes('application/json')) {
         console.error('[HomeworkCheck] Non-JSON upload response:', uploadResponse.status)
         if (uploadResponse.status === 504 || uploadResponse.status === 503 || uploadResponse.status === 502) {
-          throw new Error('Upload timeout. Please try again with fewer or smaller images.')
+          throw new Error('Upload timeout. Please try again with fewer or smaller files.')
         }
-        throw new Error('Server error uploading images. Please try again.')
+        throw new Error('Server error uploading files. Please try again.')
       }
 
       let uploadData
@@ -640,26 +640,85 @@ export default function HomeworkCheckPage() {
       }
 
       if (!uploadResponse.ok) {
-        throw new Error(uploadData.error || 'Failed to upload images')
+        throw new Error(uploadData.error || 'Failed to upload files')
       }
 
-      const uploadedImages = uploadData.images
+      const uploadedFiles = uploadData.images
 
       // Map uploaded URLs back to their types based on what was uploaded
       let idx = 0
-      const taskImageUrl = taskImage ? uploadedImages[idx++]?.url : undefined
-      const answerImageUrl = answerImage ? uploadedImages[idx++]?.url : undefined
-      const referenceImageUrls = uploadedImages
+      const taskFileData = taskImage ? uploadedFiles[idx++] : undefined
+      const answerFileData = answerImage ? uploadedFiles[idx++] : undefined
+      const referenceImageUrls = uploadedFiles
         .slice(idx, idx + referenceImages.length)
         .map((img: { url: string }) => img.url)
       idx += referenceImages.length
-      const teacherReviewUrls = uploadedImages
+      const teacherReviewUrls = uploadedFiles
         .slice(idx)
         .map((img: { url: string }) => img.url)
 
-      if (!taskImageUrl && !answerImageUrl) {
-        throw new Error('Failed to upload images')
+      if (!taskFileData && !answerFileData) {
+        throw new Error('Failed to upload files')
       }
+
+      // Extract text from DOCX files (DOCX not supported by Claude Vision directly)
+      let taskDocumentText: string | undefined
+      let answerDocumentText: string | undefined
+
+      if (taskImage?.docType === 'docx' && taskFileData?.storagePath) {
+        setSubmissionStatus('Extracting document text...')
+        try {
+          const docResponse = await fetch('/api/process-document', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              storagePath: taskFileData.storagePath,
+              fileName: taskImage.file.name,
+              fileType: 'docx',
+              bucket: 'notebook-images',  // Homework checker uploads to this bucket
+            }),
+          })
+          if (docResponse.ok) {
+            const docData = await docResponse.json()
+            if (docData.extractedContent?.fullText) {
+              taskDocumentText = docData.extractedContent.fullText
+              console.log('[HomeworkCheck] Extracted task DOCX text, length:', taskDocumentText?.length || 0)
+            }
+          }
+        } catch (err) {
+          console.error('[HomeworkCheck] Failed to extract task DOCX:', err)
+          // Continue without extracted text - will use the file URL
+        }
+      }
+
+      if (answerImage?.docType === 'docx' && answerFileData?.storagePath) {
+        setSubmissionStatus('Extracting document text...')
+        try {
+          const docResponse = await fetch('/api/process-document', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              storagePath: answerFileData.storagePath,
+              fileName: answerImage.file.name,
+              fileType: 'docx',
+              bucket: 'notebook-images',  // Homework checker uploads to this bucket
+            }),
+          })
+          if (docResponse.ok) {
+            const docData = await docResponse.json()
+            if (docData.extractedContent?.fullText) {
+              answerDocumentText = docData.extractedContent.fullText
+              console.log('[HomeworkCheck] Extracted answer DOCX text, length:', answerDocumentText?.length || 0)
+            }
+          }
+        } catch (err) {
+          console.error('[HomeworkCheck] Failed to extract answer DOCX:', err)
+          // Continue without extracted text - will use the file URL
+        }
+      }
+
+      const taskImageUrl = taskFileData?.url
+      const answerImageUrl = answerFileData?.url
 
       // Step 3: Submit to homework check API (streaming response)
       // The API sends heartbeats every 5 seconds to keep mobile connections alive
@@ -673,6 +732,9 @@ export default function HomeworkCheckPage() {
           answerImageUrl: taskImageUrl ? answerImageUrl : undefined,  // Only include if we have both
           referenceImageUrls,
           teacherReviewUrls,
+          // Include extracted DOCX text if available
+          taskDocumentText,
+          answerDocumentText,
         }),
       })
 

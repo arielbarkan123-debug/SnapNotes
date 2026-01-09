@@ -55,7 +55,8 @@ async function fetchImageAsBase64(url: string): Promise<FetchedImage> {
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        'Accept': 'image/*',
+        // Accept images and PDFs for document analysis
+        'Accept': 'image/*, application/pdf',
       },
     })
 
@@ -308,6 +309,9 @@ export interface CheckerInput {
   answerImageUrl?: string  // Optional - if not provided, will analyze task only
   referenceImageUrls?: string[]
   teacherReviewUrls?: string[]
+  // Extracted text from DOCX files (DOCX not supported by Claude Vision directly)
+  taskDocumentText?: string
+  answerDocumentText?: string
 }
 
 export interface CheckerOutput {
@@ -354,12 +358,19 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
     // Build message content with base64 images
     const content: Anthropic.MessageParam['content'] = []
 
-    // Add task image (PDF uses document block, images use image block)
+    // Add task content (DOCX text, PDF document, or image)
     content.push({
       type: 'text',
       text: '## HOMEWORK TASK:\nAnalyze this homework assignment/task:',
     })
-    if (taskImage.mediaType === 'application/pdf') {
+
+    // Check if we have extracted DOCX text (DOCX not supported by Claude Vision)
+    if (input.taskDocumentText) {
+      content.push({
+        type: 'text',
+        text: `\n[Document Content]:\n${input.taskDocumentText}`,
+      })
+    } else if (taskImage.mediaType === 'application/pdf') {
       // Use document block for PDFs (Claude Vision API supports this)
       content.push({
         type: 'document',
@@ -380,8 +391,18 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
       })
     }
 
-    // Add answer image (if provided)
-    if (answerImage) {
+    // Add answer content (if provided)
+    if (input.answerDocumentText) {
+      // DOCX text was extracted
+      content.push({
+        type: 'text',
+        text: '\n## STUDENT\'S ANSWER:\nHere is the student\'s submitted work:',
+      })
+      content.push({
+        type: 'text',
+        text: `\n[Document Content]:\n${input.answerDocumentText}`,
+      })
+    } else if (answerImage) {
       content.push({
         type: 'text',
         text: '\n## STUDENT\'S ANSWER:\nHere is the student\'s submitted work:',

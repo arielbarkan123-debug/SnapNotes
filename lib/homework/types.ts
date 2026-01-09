@@ -111,9 +111,12 @@ export interface AnnotationData {
 
 export interface CreateCheckRequest {
   taskImageUrl: string
-  answerImageUrl: string
+  answerImageUrl?: string
   referenceImageUrls?: string[]
   teacherReviewUrls?: string[]
+  // Extracted text from DOCX files (DOCX not supported by Claude Vision directly)
+  taskDocumentText?: string
+  answerDocumentText?: string
 }
 
 export interface CreateCheckResponse {

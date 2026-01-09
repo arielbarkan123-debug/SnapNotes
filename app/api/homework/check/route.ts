@@ -107,6 +107,9 @@ export async function POST(request: NextRequest) {
             answerImageUrl: body.answerImageUrl,
             referenceImageUrls: body.referenceImageUrls,
             teacherReviewUrls: body.teacherReviewUrls,
+            // Pass extracted document text for DOCX files
+            taskDocumentText: body.taskDocumentText,
+            answerDocumentText: body.answerDocumentText,
           })
           console.log('[Homework Check] Analysis completed, grade:', result.feedback?.gradeEstimate)
         } catch (analysisError) {
