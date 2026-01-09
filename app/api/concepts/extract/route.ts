@@ -119,8 +119,9 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('[Concept Extraction API] Error:', error)
+    // Don't expose raw error messages to users
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Concept extraction failed' },
+      { error: 'Failed to extract concepts. Please try again later.' },
       { status: 500 }
     )
   }

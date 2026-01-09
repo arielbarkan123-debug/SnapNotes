@@ -6,15 +6,17 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type {
   HomeworkFeedback,
-  FeedbackPoint,
   GradeLevel,
+  AnnotatedFeedbackPoint,
+  AnnotationRegion,
+  AnnotationData,
 } from './types'
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
-const AI_MODEL = 'claude-sonnet-4-20250514'
+const AI_MODEL = 'claude-sonnet-4-5-20250929'
 const MAX_TOKENS = 4096
 
 let anthropicClient: Anthropic | null = null
@@ -140,14 +142,16 @@ Return your analysis as JSON in this exact format:
     "correctPoints": [
       {
         "title": "What was done well",
-        "description": "Detailed explanation"
+        "description": "Detailed explanation",
+        "region": { "x": 25, "y": 30, "width": 20, "height": 15 }
       }
     ],
     "improvementPoints": [
       {
         "title": "What needs improvement",
         "description": "Detailed explanation with how to fix it",
-        "severity": "minor" | "moderate" | "major"
+        "severity": "minor" | "moderate" | "major",
+        "region": { "x": 60, "y": 45, "width": 25, "height": 20 }
       }
     ],
     "suggestions": [
@@ -158,6 +162,14 @@ Return your analysis as JSON in this exact format:
     "encouragement": "A positive, encouraging message for the student"
   }
 }
+
+IMPORTANT - VISUAL ANNOTATIONS (region field):
+- The "region" field identifies WHERE on the STUDENT'S ANSWER IMAGE this feedback point applies
+- Use percentage-based coordinates (0-100): x=0 is left edge, x=100 is right edge; y=0 is top, y=100 is bottom
+- Width and height define a bounding box around the relevant area
+- Provide a region for EVERY correctPoint and improvementPoint where you can identify the specific location
+- Only omit the region field if the feedback applies to the entire answer or cannot be localized to a specific area
+- Be as precise as possible - these coordinates will be used to show visual markers on the image
 
 Be thorough but fair. Focus on being helpful and educational in your feedback.
 `,
@@ -190,6 +202,17 @@ function parseCheckerResponse(response: Anthropic.Message): CheckerOutput {
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0])
 
+      // Parse points with annotations
+      const annotatedCorrectPoints = parseAnnotatedCorrectPoints(
+        parsed.feedback?.correctPoints || []
+      )
+      const annotatedImprovementPoints = parseAnnotatedImprovementPoints(
+        parsed.feedback?.improvementPoints || []
+      )
+
+      // Build annotation data
+      const annotations = buildAnnotationData(annotatedCorrectPoints, annotatedImprovementPoints)
+
       return {
         subject: String(parsed.subject || 'General'),
         topic: String(parsed.topic || 'Homework'),
@@ -199,12 +222,13 @@ function parseCheckerResponse(response: Anthropic.Message): CheckerOutput {
           gradeLevel: validateGradeLevel(parsed.feedback?.gradeLevel),
           gradeEstimate: String(parsed.feedback?.gradeEstimate || 'Not graded'),
           summary: String(parsed.feedback?.summary || 'Analysis complete.'),
-          correctPoints: parsePoints(parsed.feedback?.correctPoints || []),
-          improvementPoints: parseImprovementPoints(parsed.feedback?.improvementPoints || []),
+          correctPoints: annotatedCorrectPoints,
+          improvementPoints: annotatedImprovementPoints,
           suggestions: (parsed.feedback?.suggestions || []).map(String),
           teacherStyleNotes: parsed.feedback?.teacherStyleNotes || null,
           expectationComparison: parsed.feedback?.expectationComparison || null,
           encouragement: String(parsed.feedback?.encouragement || 'Keep up the good work!'),
+          annotations,
         },
       }
     }
@@ -223,17 +247,56 @@ function validateGradeLevel(level: unknown): GradeLevel {
   return 'needs_improvement'
 }
 
-function parsePoints(points: unknown[]): FeedbackPoint[] {
-  if (!Array.isArray(points)) return []
-  return points.map((p) => ({
-    title: String((p as Record<string, unknown>).title || 'Point'),
-    description: String((p as Record<string, unknown>).description || ''),
-  }))
+/**
+ * Clamp a value to valid percentage range (0-100)
+ */
+function clampPercent(value: number): number {
+  return Math.min(100, Math.max(0, value))
 }
 
-function parseImprovementPoints(points: unknown[]): FeedbackPoint[] {
+/**
+ * Parse region coordinates from AI response
+ */
+function parseRegion(region: unknown): AnnotationRegion | undefined {
+  if (!region || typeof region !== 'object') return undefined
+
+  const r = region as Record<string, unknown>
+  const x = Number(r.x)
+  const y = Number(r.y)
+
+  // Must have valid x and y
+  if (isNaN(x) || isNaN(y)) return undefined
+
+  return {
+    x: clampPercent(x),
+    y: clampPercent(y),
+    width: r.width !== undefined ? clampPercent(Number(r.width)) : undefined,
+    height: r.height !== undefined ? clampPercent(Number(r.height)) : undefined,
+  }
+}
+
+/**
+ * Parse correct points with region annotations
+ */
+function parseAnnotatedCorrectPoints(points: unknown[]): AnnotatedFeedbackPoint[] {
   if (!Array.isArray(points)) return []
-  return points.map((p) => {
+  return points.map((p, index) => {
+    const point = p as Record<string, unknown>
+    return {
+      title: String(point.title || 'Point'),
+      description: String(point.description || ''),
+      region: parseRegion(point.region),
+      annotationId: `correct-${index}`,
+    }
+  })
+}
+
+/**
+ * Parse improvement points with region annotations
+ */
+function parseAnnotatedImprovementPoints(points: unknown[]): AnnotatedFeedbackPoint[] {
+  if (!Array.isArray(points)) return []
+  return points.map((p, index) => {
     const point = p as Record<string, unknown>
     const severity = point.severity as string
     return {
@@ -242,8 +305,27 @@ function parseImprovementPoints(points: unknown[]): FeedbackPoint[] {
       severity: ['minor', 'moderate', 'major'].includes(severity)
         ? (severity as 'minor' | 'moderate' | 'major')
         : 'moderate',
+      region: parseRegion(point.region),
+      annotationId: `error-${index}`,
     }
   })
+}
+
+/**
+ * Build annotation data from parsed points
+ */
+function buildAnnotationData(
+  correctPoints: AnnotatedFeedbackPoint[],
+  improvementPoints: AnnotatedFeedbackPoint[]
+): AnnotationData {
+  const correctAnnotations = correctPoints.filter((p) => p.region !== undefined)
+  const errorAnnotations = improvementPoints.filter((p) => p.region !== undefined)
+
+  return {
+    correctAnnotations,
+    errorAnnotations,
+    hasAnnotations: correctAnnotations.length > 0 || errorAnnotations.length > 0,
+  }
 }
 
 function getDefaultOutput(): CheckerOutput {

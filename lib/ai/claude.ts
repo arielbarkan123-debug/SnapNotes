@@ -34,7 +34,7 @@ import { filterForbiddenContent } from './course-validator'
 // ============================================================================
 
 // AI model with environment variable fallback
-const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514'
+const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929'
 const AI_MODEL_FAST = process.env.ANTHROPIC_MODEL_FAST || 'claude-3-5-haiku-20241022'
 const MAX_TOKENS_EXTRACTION = 4096
 const MAX_TOKENS_GENERATION = 16384  // Increased for large documents (31 slides needs more tokens)
@@ -378,8 +378,21 @@ export class ClaudeAPIError extends Error {
       if (error.status === 400) {
         // Check actual error message to determine type
         const errorMessage = error.message || ''
-        const isImageError = errorMessage.toLowerCase().includes('image') ||
-                            errorMessage.toLowerCase().includes('media')
+        const errorMessageLower = errorMessage.toLowerCase()
+
+        // Check for API usage limits error (comes as 400, not 429)
+        if (errorMessageLower.includes('api usage limit') ||
+            errorMessageLower.includes('usage limit') ||
+            errorMessageLower.includes('you have reached your')) {
+          return new ClaudeAPIError(
+            'API usage limit reached. Please try again later or contact support.',
+            'RATE_LIMIT',
+            400
+          )
+        }
+
+        const isImageError = errorMessageLower.includes('image') ||
+                            errorMessageLower.includes('media')
 
         if (isImageError) {
           return new ClaudeAPIError(
@@ -389,9 +402,9 @@ export class ClaudeAPIError extends Error {
           )
         }
 
-        // For other 400 errors, preserve the original message
+        // For other 400 errors, return a clean message without raw JSON
         return new ClaudeAPIError(
-          `Bad request: ${errorMessage || 'Invalid request format'}`,
+          'Invalid request. Please try again.',
           'API_ERROR',
           400
         )
@@ -403,8 +416,9 @@ export class ClaudeAPIError extends Error {
           error.status
         )
       }
+      // Don't expose raw error messages to users - they may contain JSON/technical details
       return new ClaudeAPIError(
-        `API error: ${error.message}`,
+        'Something went wrong. Please try again.',
         'API_ERROR',
         error.status
       )
@@ -423,7 +437,10 @@ export class ClaudeAPIError extends Error {
           'TIMEOUT'
         )
       }
-      return new ClaudeAPIError(error.message, 'API_ERROR')
+      // Don't expose raw error messages - they may contain technical details
+      // Log it for debugging but return a user-friendly message
+      console.error('[ClaudeAPIError] Unexpected error:', error.message)
+      return new ClaudeAPIError('Something went wrong. Please try again.', 'API_ERROR')
     }
 
     return new ClaudeAPIError('An unknown error occurred', 'API_ERROR')
@@ -434,8 +451,8 @@ export class ClaudeAPIError extends Error {
 // Image Utilities
 // ============================================================================
 
-// Timeout for image fetching (10 seconds)
-const IMAGE_FETCH_TIMEOUT_MS = 10000
+// Timeout for image fetching (30 seconds - increased for Supabase signed URLs)
+const IMAGE_FETCH_TIMEOUT_MS = 30000
 
 /**
  * Fetches an image from URL and converts it to base64
@@ -625,31 +642,62 @@ export async function generateStudyCourse(
   const { systemPrompt, userPrompt } = getCourseGenerationPrompt(formattedContent, safeTitle, imageCount, userContext, undefined, intensityMode)
 
   try {
-    const response = await withRetry(
-      () => client.messages.create({
-        model: AI_MODEL,
-        max_tokens: MAX_TOKENS_GENERATION,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt,
-          },
-        ],
-      }),
-      'generateStudyCourse'
-    )
+    // Use streaming to avoid timeout for large content
+    // Streaming keeps the connection alive and collects response incrementally
+    console.log('[generateStudyCourse] Starting streaming request for course generation')
 
-    // Extract text from response
-    const textContent = response.content.find(block => block.type === 'text')
-    if (!textContent || textContent.type !== 'text') {
+    const stream = client.messages.stream({
+      model: AI_MODEL,
+      max_tokens: MAX_TOKENS_GENERATION,
+      system: systemPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: userPrompt,
+        },
+      ],
+    })
+
+    // Collect the full response text from the stream with activity logging
+    let rawText = ''
+    let lastActivity = Date.now()
+    let lastLogTime = Date.now()
+    const LOG_INTERVAL_MS = 15000 // Log every 15 seconds of activity
+
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        rawText += event.delta.text
+        lastActivity = Date.now()
+      }
+
+      // Log progress periodically during generation
+      const now = Date.now()
+      if (now - lastLogTime > LOG_INTERVAL_MS) {
+        console.log(`[generateStudyCourse] Streaming in progress: ${rawText.length} chars received`)
+        lastLogTime = now
+      }
+
+      // Warn if no activity for 30 seconds
+      if (now - lastActivity > 30000) {
+        console.warn(`[generateStudyCourse] No activity for 30s at ${rawText.length} chars, still waiting...`)
+        lastActivity = now // Reset to avoid spamming logs
+      }
+    }
+
+    // Ensure the stream completed successfully
+    const finalMessage = await stream.finalMessage()
+    if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
+      console.warn(`[generateStudyCourse] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
+    }
+
+    console.log(`[generateStudyCourse] Streaming complete, received ${rawText.length} characters in ${Date.now() - lastLogTime}ms`)
+
+    if (!rawText || rawText.trim().length === 0) {
       throw new ClaudeAPIError(
         'No text content in AI response',
         'PARSE_ERROR'
       )
     }
-
-    const rawText = textContent.text
 
     // Parse JSON response
     const jsonText = cleanJsonResponse(rawText)
@@ -867,33 +915,60 @@ export async function analyzeMultipleNotebookImages(
 
 /**
  * Analyzes a batch of images (up to MAX_IMAGES_PER_REQUEST) in a single API call
+ * Uses Promise.allSettled for resilient image fetching - continues with successful images
  */
 async function analyzeImageBatch(imageUrls: string[]): Promise<AnalysisResult> {
   const client = getAnthropicClient()
 
-  // Fetch all images in parallel
+  // Fetch all images in parallel with resilient error handling
   const imageDataPromises = imageUrls.map((url) => fetchImageAsBase64(url))
-  const imagesData = await Promise.all(imageDataPromises)
+  const settledResults = await Promise.allSettled(imageDataPromises)
 
-  // Use multi-page prompts for multiple images
-  const { systemPrompt, userPrompt } = getMultiPageImageAnalysisPrompt(imageUrls.length)
+  // Collect successful images and log failures
+  const successfulImages: { data: ImageData; originalIndex: number }[] = []
+  const failedIndices: number[] = []
 
-  // Build message content with all images
+  settledResults.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      successfulImages.push({ data: result.value, originalIndex: index })
+    } else {
+      failedIndices.push(index)
+      console.warn(`[analyzeImageBatch] Failed to fetch image ${index + 1}/${imageUrls.length}: ${result.reason?.message || 'Unknown error'}`)
+    }
+  })
+
+  // If all images failed, throw error
+  if (successfulImages.length === 0) {
+    throw new ClaudeAPIError(
+      'Failed to fetch any images. Please check your images and try again.',
+      'INVALID_IMAGE'
+    )
+  }
+
+  // Log if some images were skipped
+  if (failedIndices.length > 0) {
+    console.warn(`[analyzeImageBatch] Proceeding with ${successfulImages.length}/${imageUrls.length} images. Failed indices: ${failedIndices.join(', ')}`)
+  }
+
+  // Use multi-page prompts for multiple images (based on successful count)
+  const { systemPrompt, userPrompt } = getMultiPageImageAnalysisPrompt(successfulImages.length)
+
+  // Build message content with successful images only
   const messageContent: Anthropic.MessageCreateParams['messages'][0]['content'] = []
 
-  // Add each image with page indicators
-  imagesData.forEach((imageData, index) => {
-    // Add page label before each image
+  // Add each successful image with page indicators
+  successfulImages.forEach((img, idx) => {
+    // Add page label before each image (using sequential numbering for AI context)
     messageContent.push({
       type: 'text',
-      text: `--- Page ${index + 1} of ${imageUrls.length} ---`,
+      text: `--- Page ${idx + 1} of ${successfulImages.length} ---`,
     })
     messageContent.push({
       type: 'image',
       source: {
         type: 'base64',
-        media_type: imageData.mediaType,
-        data: imageData.base64,
+        media_type: img.data.mediaType,
+        data: img.data.base64,
       },
     })
   })
@@ -972,6 +1047,7 @@ async function analyzeImageBatch(imageUrls: string[]): Promise<AnalysisResult> {
 /**
  * Processes images in batches when there are more than MAX_IMAGES_PER_REQUEST
  * Combines extracted content from all batches
+ * Processes batches in PARALLEL for faster performance
  */
 async function analyzeImagesInBatches(imageUrls: string[]): Promise<AnalysisResult> {
   const batches: string[][] = []
@@ -981,11 +1057,42 @@ async function analyzeImagesInBatches(imageUrls: string[]): Promise<AnalysisResu
     batches.push(imageUrls.slice(i, i + MAX_IMAGES_PER_REQUEST))
   }
 
-  // Process each batch
+  console.log(`[analyzeImagesInBatches] Processing ${batches.length} batches in parallel`)
+
+  // Process all batches in PARALLEL for faster performance
+  // Using Promise.allSettled to handle partial failures gracefully
+  const settledBatchResults = await Promise.allSettled(
+    batches.map((batch, index) => {
+      console.log(`[analyzeImagesInBatches] Starting batch ${index + 1}/${batches.length} with ${batch.length} images`)
+      return analyzeImageBatch(batch)
+    })
+  )
+
+  // Collect successful results and log failures
   const batchResults: AnalysisResult[] = []
-  for (let i = 0; i < batches.length; i++) {
-    const result = await analyzeImageBatch(batches[i])
-    batchResults.push(result)
+  const failedBatches: number[] = []
+
+  settledBatchResults.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      batchResults.push(result.value)
+      console.log(`[analyzeImagesInBatches] Batch ${index + 1} completed successfully`)
+    } else {
+      failedBatches.push(index)
+      console.error(`[analyzeImagesInBatches] Batch ${index + 1} failed: ${result.reason?.message || 'Unknown error'}`)
+    }
+  })
+
+  // If all batches failed, throw error
+  if (batchResults.length === 0) {
+    throw new ClaudeAPIError(
+      'Failed to analyze any image batches. Please try again.',
+      'API_ERROR'
+    )
+  }
+
+  // Log warning if some batches failed
+  if (failedBatches.length > 0) {
+    console.warn(`[analyzeImagesInBatches] ${failedBatches.length}/${batches.length} batches failed. Proceeding with ${batchResults.length} successful batches.`)
   }
 
   // Combine results from all batches
@@ -1071,6 +1178,111 @@ export async function generateCourseFromMultipleImages(
     generatedCourse,
     extractionRawText,
     generationRawText,
+  }
+}
+
+// ============================================================================
+// Progressive Image Course Generation
+// ============================================================================
+
+/**
+ * Result from progressive multi-image course generation
+ * Returns quickly with 2 lessons, rest generated in background
+ */
+export interface InitialImageCourseResult {
+  /** Extracted content from all images */
+  extractedContent: ExtractedContent
+  /** Partial course with only first 2 lessons */
+  generatedCourse: GeneratedCourse
+  /** Full outline of all planned lessons */
+  lessonOutline: LessonOutline[]
+  /** Summary for continuation calls */
+  documentSummary: string
+  /** Total number of planned lessons */
+  totalLessons: number
+  /** Raw extraction response text */
+  extractionRawText: string
+  /** Raw generation response text */
+  generationRawText: string
+}
+
+/**
+ * Converts ExtractedContent (from images) to ExtractedDocument format
+ * for use with generateInitialCourse
+ */
+function extractedContentToDocument(
+  extracted: ExtractedContent,
+  imageCount: number
+): ExtractedDocument {
+  const formattedContent = formatExtractedContentForPrompt(extracted, true)
+
+  return {
+    type: 'pdf', // Generic type for images
+    title: extracted.subject || 'Notebook Images',
+    content: formattedContent,
+    sections: [{
+      title: extracted.subject || 'Extracted Content',
+      content: formattedContent,
+      pageNumber: 1
+    }],
+    metadata: {
+      pageCount: extracted.pageCount || imageCount
+    }
+  }
+}
+
+/**
+ * Progressive multi-image course generation.
+ * Returns quickly with 2 lessons, rest generated in background.
+ *
+ * This mirrors the document flow:
+ * 1. Analyze images → ExtractedContent
+ * 2. Convert to ExtractedDocument format
+ * 3. Generate initial course (2 lessons + outline)
+ * 4. Return for immediate display, continue in background
+ *
+ * @param imageUrls - Array of image URLs to process
+ * @param userTitle - Optional user-provided title
+ * @param userContext - Optional user learning context
+ * @param intensityMode - Lesson intensity mode
+ * @returns Initial course result with extracted content, 2 lessons, outline, and summary
+ */
+export async function generateCourseFromMultipleImagesProgressive(
+  imageUrls: string[],
+  userTitle?: string,
+  userContext?: UserLearningContext,
+  intensityMode?: LessonIntensityMode
+): Promise<InitialImageCourseResult> {
+  console.log(`[generateCourseFromMultipleImagesProgressive] Starting progressive generation for ${imageUrls.length} images`)
+
+  // Step 1: Extract content from all images (parallel batch processing)
+  const { extractedContent, rawText: extractionRawText } =
+    await analyzeMultipleNotebookImages(imageUrls)
+
+  console.log(`[generateCourseFromMultipleImagesProgressive] Image analysis complete, generating initial course`)
+
+  // Step 2: Convert extracted content to document format for initial course generation
+  const document = extractedContentToDocument(extractedContent, imageUrls.length)
+
+  // Step 3: Generate initial course (fast - only 2 lessons + outline)
+  const initialResult = await generateInitialCourse(
+    document,
+    userTitle,
+    imageUrls,
+    userContext,
+    intensityMode
+  )
+
+  console.log(`[generateCourseFromMultipleImagesProgressive] Initial course generated: ${initialResult.generatedCourse.lessons.length} lessons ready, ${initialResult.totalLessons} total planned`)
+
+  return {
+    extractedContent,
+    generatedCourse: initialResult.generatedCourse,
+    lessonOutline: initialResult.lessonOutline,
+    documentSummary: initialResult.documentSummary,
+    totalLessons: initialResult.totalLessons,
+    extractionRawText,
+    generationRawText: initialResult.generationRawText,
   }
 }
 
@@ -1440,7 +1652,8 @@ export function getUserFriendlyError(error: unknown): string {
       case 'TIMEOUT':
         return 'The request took too long. Please try again with a smaller file.'
       default:
-        return error.message
+        // Never expose raw error messages - they may contain JSON/technical details
+        return 'Something went wrong. Please try again.'
     }
   }
   return 'An unexpected error occurred. Please try again.'

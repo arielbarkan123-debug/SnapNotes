@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { CourseInsert, LessonIntensityMode } from '@/types'
 import {
   generateCourseFromImage,
-  generateCourseFromMultipleImages,
+  generateCourseFromMultipleImagesProgressive,
   generateCourseFromDocument as _generateCourseFromDocument,
   generateCourseFromText,
   generateInitialCourse,
@@ -335,12 +335,22 @@ export async function POST(request: NextRequest): Promise<Response> {
           generatedCourse = result.generatedCourse
           extractedContent = result.extractionRawText
         } else {
-          // Multiple images - all uploaded images can be referenced
+          // Multiple images - use PROGRESSIVE generation (like documents)
+          // First 2 lessons + outline fast, rest generated in background
           _courseImageUrls = urls
-          sendMessage({ type: 'progress', stage: 'Analyzing your images', percent: 35 })
-          const result = await generateCourseFromMultipleImages(urls, title, userContext, intensityMode)
+          sendMessage({ type: 'progress', stage: 'Analyzing your images (fast mode)', percent: 35 })
+          const result = await generateCourseFromMultipleImagesProgressive(urls, title, userContext, intensityMode)
           generatedCourse = result.generatedCourse
           extractedContent = result.extractionRawText
+
+          // Store progressive generation metadata for continuation
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ;(generatedCourse as any)._progressiveMetadata = {
+            lessonOutline: result.lessonOutline,
+            documentSummary: result.documentSummary,
+            totalLessons: result.totalLessons,
+            lessonsReady: result.generatedCourse.lessons.length,
+          }
         }
       } catch (error) {
         logError('GenerateCourse:AI', error)

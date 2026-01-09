@@ -53,12 +53,56 @@ export interface HomeworkFeedback {
 
   // Encouragement
   encouragement: string
+
+  // Visual annotations on the answer image
+  annotations?: AnnotationData
 }
 
 export interface FeedbackPoint {
   title: string
   description: string
   severity?: 'minor' | 'moderate' | 'major' // For improvement points
+}
+
+// ============================================================================
+// Visual Annotation Types
+// ============================================================================
+
+/**
+ * AnnotationRegion - Defines a region on an image for visual annotation
+ * Uses percentage-based coordinates (0-100) for responsive display
+ */
+export interface AnnotationRegion {
+  /** X coordinate as percentage (0-100) from left edge */
+  x: number
+  /** Y coordinate as percentage (0-100) from top edge */
+  y: number
+  /** Width as percentage for bounding box (optional) */
+  width?: number
+  /** Height as percentage for bounding box (optional) */
+  height?: number
+}
+
+/**
+ * AnnotatedFeedbackPoint - FeedbackPoint with location data for visual markers
+ */
+export interface AnnotatedFeedbackPoint extends FeedbackPoint {
+  /** Location on the answer image where this feedback applies */
+  region?: AnnotationRegion
+  /** Unique ID for linking UI annotations to feedback cards */
+  annotationId?: string
+}
+
+/**
+ * AnnotationData - Container for all visual annotations on an image
+ */
+export interface AnnotationData {
+  /** Annotations for correct points (green checkmarks) */
+  correctAnnotations: AnnotatedFeedbackPoint[]
+  /** Annotations for improvement points (red X marks) */
+  errorAnnotations: AnnotatedFeedbackPoint[]
+  /** Whether any annotations were successfully generated */
+  hasAnnotations: boolean
 }
 
 // ============================================================================

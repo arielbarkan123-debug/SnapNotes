@@ -409,12 +409,29 @@ export default function PracticeSessionContent({
           }),
         })
 
-        if (!res.ok) {
-          const error = await res.json()
-          throw new Error(error.message || 'Failed to submit answer')
+        // Check if response is JSON before parsing
+        const contentType = res.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('[PracticeSession] Non-JSON response:', res.status)
+          if (res.status === 504 || res.status === 503 || res.status === 502) {
+            throw new Error('Server timeout. Please try again.')
+          }
+          throw new Error('Server error. Please try again.')
         }
 
-        const result: AnswerQuestionResponse = await res.json()
+        let data
+        try {
+          data = await res.json()
+        } catch (parseError) {
+          console.error('[PracticeSession] JSON parse error:', parseError)
+          throw new Error('Server error. Please try again.')
+        }
+
+        if (!res.ok) {
+          throw new Error(data.message || 'Failed to submit answer')
+        }
+
+        const result: AnswerQuestionResponse = data
         setSubmitError(null) // Clear any previous error
         setLastResult(result)
         setAnsweredCount(result.sessionProgress.questionsAnswered)

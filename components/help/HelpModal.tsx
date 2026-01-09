@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { HelpContext, HelpRequestType, HelpAPIResponse } from '@/types'
+import { sanitizeError } from '@/lib/utils/error-sanitizer'
 
 interface HelpModalProps {
   isOpen: boolean
@@ -55,7 +56,25 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionType: type, context, customQuestion: question }),
       })
-      const data: HelpAPIResponse = await res.json()
+
+      // Check if response is JSON before parsing
+      const contentType = res.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('[HelpModal] Non-JSON response:', res.status)
+        if (res.status === 504 || res.status === 503 || res.status === 502) {
+          throw new Error('Server is taking too long. Please try again.')
+        }
+        throw new Error('Server error. Please try again.')
+      }
+
+      let data: HelpAPIResponse
+      try {
+        data = await res.json()
+      } catch (parseError) {
+        console.error('[HelpModal] JSON parse error:', parseError)
+        throw new Error('Server error. Please try again.')
+      }
+
       if (data.success && data.response) {
         setResponse(data.response)
         setSourceReference(data.sourceReference || null)
@@ -64,8 +83,8 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
         setError(data.error || 'Something went wrong.')
         setView('buttons')
       }
-    } catch {
-      setError('Connection error. Please try again.')
+    } catch (err) {
+      setError(sanitizeError(err, 'Connection error. Please try again.'))
       setView('buttons')
     }
   }, [context])

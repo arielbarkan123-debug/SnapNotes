@@ -13,6 +13,10 @@ import {
   deleteFileFromStorage,
   validateFile as validateDirectUpload,
   type FileType as DirectUploadFileType,
+  // Image direct upload (bypasses Vercel 4.5MB limit)
+  uploadImagesToStorage,
+  deleteImagesFromStorage,
+  generateCourseId,
 } from '@/lib/upload/direct-upload'
 import type { LessonIntensityMode } from '@/types'
 import { getIntensityModes } from '@/lib/learning/intensity-config'
@@ -692,7 +696,24 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
             }),
           })
 
-          uploadData = await processRes.json()
+          // Check if response is JSON before trying to parse
+          const contentType = processRes.headers.get('content-type')
+          if (!contentType || !contentType.includes('application/json')) {
+            console.error('[UploadModal] Non-JSON response from process-document:', processRes.status)
+            await deleteFileFromStorage(storagePath).catch(() => {})
+            if (processRes.status === 504 || processRes.status === 503 || processRes.status === 502) {
+              throw new Error('Processing timeout. The document is too large. Please try a smaller file.')
+            }
+            throw new Error('Server error processing document. Please try again.')
+          }
+
+          try {
+            uploadData = await processRes.json()
+          } catch (parseError) {
+            console.error('[UploadModal] JSON parse error:', parseError)
+            await deleteFileFromStorage(storagePath).catch(() => {})
+            throw new Error('Invalid server response. Please try again.')
+          }
 
           if (!processRes.ok) {
             // Clean up uploaded file on processing failure
@@ -707,9 +728,13 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
             setUploadProgress(null)
             return
           }
-        } catch {
+        } catch (err) {
           // Clean up uploaded file on processing failure
           await deleteFileFromStorage(storagePath).catch(() => {})
+          // Re-throw with the specific error message if it's already a meaningful error
+          if (err instanceof Error && err.message !== 'Processing failed. Please try again.') {
+            throw err
+          }
           throw new Error('Processing failed. Please try again.')
         }
 
@@ -765,53 +790,57 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         return
       }
 
-      // Handle image uploads (existing flow)
-      const formData = new FormData()
-      imageFiles.forEach((sf) => {
-        formData.append('files', sf.file)
-      })
+      // Handle image uploads - DIRECT TO SUPABASE (bypasses Vercel 4.5MB limit!)
+      // This uploads files directly from browser to Supabase Storage
 
-      // Update progress to show uploading
+      // Step 1: Get user ID for storage path
       setUploadProgress({ current: 0, total: imageFiles.length, status: 'uploading' })
-
-      const uploadResponse = await fetch('/api/upload-images', {
-        method: 'POST',
-        body: formData,
-      })
-
-      let uploadData
+      let userId: string
       try {
-        uploadData = await uploadResponse.json()
-      } catch {
-        throw new Error('Invalid server response. Please try again.')
-      }
-
-      // Handle complete failure
-      if (!uploadResponse.ok && !uploadData.images?.length) {
-        const errorInfo = getErrorMessage(null, uploadData.code)
+        const authRes = await fetch('/api/auth/me')
+        if (!authRes.ok) {
+          throw new Error('Please sign in to upload files')
+        }
+        const authData = await authRes.json()
+        userId = authData.userId
+      } catch (err) {
         setError({
-          message: uploadData.error || errorInfo.message,
-          code: uploadData.code,
-          isRetryable: errorInfo.isRetryable,
+          message: err instanceof Error ? err.message : 'Authentication failed',
+          code: ErrorCodes.UNAUTHORIZED,
+          isRetryable: false,
         })
         setIsUploading(false)
         setUploadProgress(null)
         return
       }
 
-      // Handle partial failure - some files uploaded, some failed
-      if (uploadData.errors && uploadData.errors.length > 0) {
-        setFailedFiles(
-          uploadData.errors.map((e: { index: number; filename: string; error: string }) => ({
-            index: e.index,
-            filename: e.filename,
-            error: e.error,
-          }))
+      // Step 2: Generate course ID for organizing images
+      const courseId = generateCourseId()
+
+      // Step 3: Upload images directly to Supabase (bypasses Vercel!)
+      let uploadResults
+      try {
+        uploadResults = await uploadImagesToStorage(
+          imageFiles.map(sf => sf.file),
+          userId,
+          courseId,
+          (current, total) => {
+            setUploadProgress({ current, total, status: 'uploading' })
+          }
         )
+      } catch (err) {
+        console.error('[UploadModal] Direct upload failed:', err)
+        setError({
+          message: err instanceof Error ? err.message : 'Upload failed. Please try again.',
+          isRetryable: true,
+        })
+        setIsUploading(false)
+        setUploadProgress(null)
+        return
       }
 
       // If no images were successfully uploaded
-      if (!uploadData.images || uploadData.images.length === 0) {
+      if (!uploadResults || uploadResults.length === 0) {
         setError({
           message: 'All files failed to upload. Please try again.',
           isRetryable: true,
@@ -821,15 +850,48 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         return
       }
 
-      // Update progress to processing
+      // Step 4: Get signed URLs from lightweight API (only metadata, no files)
+      setUploadProgress({ current: uploadResults.length, total: imageFiles.length, status: 'processing' })
+      let signedData
+      try {
+        const signRes = await fetch('/api/sign-image-urls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storagePaths: uploadResults.map(r => r.storagePath),
+            courseId,
+          }),
+        })
+
+        if (!signRes.ok) {
+          // Clean up uploaded files on failure
+          await deleteImagesFromStorage(uploadResults.map(r => r.storagePath)).catch(() => {})
+          throw new Error('Failed to process uploaded images')
+        }
+
+        signedData = await signRes.json()
+      } catch (err) {
+        console.error('[UploadModal] Failed to get signed URLs:', err)
+        // Clean up uploaded files
+        await deleteImagesFromStorage(uploadResults.map(r => r.storagePath)).catch(() => {})
+        setError({
+          message: err instanceof Error ? err.message : 'Failed to process uploaded images',
+          isRetryable: true,
+        })
+        setIsUploading(false)
+        setUploadProgress(null)
+        return
+      }
+
+      // Update progress to complete
       setUploadProgress({
-        current: uploadData.images.length,
+        current: signedData.images.length,
         total: imageFiles.length,
         status: 'complete',
       })
 
       // Extract image URLs in order
-      const imageUrls = uploadData.images
+      const imageUrls = signedData.images
         .sort((a: { index: number }, b: { index: number }) => a.index - b.index)
         .map((img: { url: string }) => img.url)
 
@@ -845,10 +907,8 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
       // Pass image URLs as JSON array
       params.set('imageUrls', JSON.stringify(imageUrls))
 
-      // Also pass courseId from upload response for consistency
-      if (uploadData.courseId) {
-        params.set('courseId', uploadData.courseId)
-      }
+      // Pass courseId for consistency
+      params.set('courseId', courseId)
 
       if (title.trim()) {
         params.set('title', title.trim())

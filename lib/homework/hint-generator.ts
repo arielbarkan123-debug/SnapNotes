@@ -11,7 +11,7 @@ import type { HintResponse, HintContext, HintLevel } from './types'
 // Configuration
 // ============================================================================
 
-const AI_MODEL = 'claude-sonnet-4-20250514'
+const AI_MODEL = 'claude-sonnet-4-5-20250929'
 const MAX_TOKENS = 1500
 
 let anthropicClient: Anthropic | null = null

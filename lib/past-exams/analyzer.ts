@@ -158,7 +158,7 @@ export async function analyzeExamImage(
   mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
 ): Promise<ExamAnalysis> {
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250929',
     max_tokens: 4000,
     messages: [
       {
@@ -199,7 +199,7 @@ export async function analyzeExamText(
   extractedText: string
 ): Promise<ExamAnalysis> {
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250929',
     max_tokens: 4000,
     messages: [
       {

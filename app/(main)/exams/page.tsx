@@ -56,7 +56,23 @@ export default function ExamsPage() {
         }),
       })
 
-      const data = await res.json()
+      // Check if response is JSON before parsing
+      const contentType = res.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('[ExamsPage] Non-JSON response:', res.status)
+        if (res.status === 504 || res.status === 503 || res.status === 502) {
+          throw new Error(t('serverTimeout'))
+        }
+        throw new Error(t('serverError'))
+      }
+
+      let data
+      try {
+        data = await res.json()
+      } catch (parseError) {
+        console.error('[ExamsPage] JSON parse error:', parseError)
+        throw new Error(t('serverError'))
+      }
 
       if (data.success && data.examId) {
         // Invalidate exams cache so it refetches

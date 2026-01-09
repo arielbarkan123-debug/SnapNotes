@@ -298,6 +298,13 @@ export function mapClaudeAPIError(error: unknown): { code: ErrorCode; message: s
   if (error instanceof Error) {
     const message = error.message.toLowerCase()
 
+    // Check for API usage limits error (comes as 400, not 429)
+    if (message.includes('api usage limit') ||
+        message.includes('usage limit') ||
+        message.includes('you have reached your')) {
+      return { code: ErrorCodes.RATE_LIMITED, message: 'API usage limit reached. Please try again later or contact support' }
+    }
+
     if (message.includes('rate limit') || message.includes('429')) {
       return { code: ErrorCodes.RATE_LIMITED, message: 'Our AI is receiving many requests. Please wait a moment and try again' }
     }

@@ -151,7 +151,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             'This document appears to be empty or contains no readable text'
           )
         }
-        return createErrorResponse(ErrorCodes.DOCUMENT_PROCESSING_FAILED, error.message)
+        if (message.includes('scanned') || message.includes('mostly images')) {
+          return createErrorResponse(
+            ErrorCodes.DOCUMENT_SCANNED,
+            'This looks like a scanned document. For best results, take photos of each page instead'
+          )
+        }
+        // Don't expose raw error message to users - use generic message
+        return createErrorResponse(ErrorCodes.DOCUMENT_PROCESSING_FAILED, 'Failed to process document. Please try again or use a different file')
       }
       return createErrorResponse(ErrorCodes.DOCUMENT_PROCESSING_FAILED, 'Failed to process document')
     }

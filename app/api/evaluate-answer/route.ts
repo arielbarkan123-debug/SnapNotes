@@ -4,6 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
 
+// Allow 60 seconds for AI evaluation (Claude API call)
+export const maxDuration = 60
+
 // =============================================================================
 // Types
 // =============================================================================

@@ -9,7 +9,10 @@ import { shouldIncludeImages, detectVisualContentMentions } from '@/lib/images/s
 import type { PastExamTemplate, ImageAnalysis } from '@/types/past-exam'
 import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 
-const AI_MODEL = 'claude-sonnet-4-20250514'
+// Allow 3 minutes for exam generation (Claude API call for complex exams)
+export const maxDuration = 180
+
+const AI_MODEL = 'claude-sonnet-4-5-20250929'
 
 export async function GET(request: Request) {
   try {

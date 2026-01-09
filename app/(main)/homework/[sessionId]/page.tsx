@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import Button from '@/components/ui/Button'
+import { AnnotatedImageViewer, TutoringChat } from '@/components/homework'
 import { useToast } from '@/contexts/ToastContext'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
-import type { HomeworkCheck, HomeworkFeedback, GradeLevel } from '@/lib/homework/types'
+import type { HomeworkCheck, HomeworkFeedback, GradeLevel, AnnotatedFeedbackPoint, HomeworkSession } from '@/lib/homework/types'
 
 // ============================================================================
 // Helper Functions
@@ -78,51 +79,204 @@ function getSeverityStyles(severity?: 'minor' | 'moderate' | 'major') {
 export default function HomeworkResultsPage() {
   const router = useRouter()
   const params = useParams()
-  const checkId = params.sessionId as string
+  const searchParams = useSearchParams()
+  const sessionId = params.sessionId as string
+  const sessionType = searchParams.get('type') // 'help' or null (check)
+  const isHelpSession = sessionType === 'help'
   const toast = useToast()
 
   // Analytics
   const { trackFeature } = useEventTracking()
-  const { trackStep } = useFunnelTracking('homework_checker')
+  const { trackStep } = useFunnelTracking(isHelpSession ? 'homework_helper' : 'homework_checker')
 
   const [check, setCheck] = useState<HomeworkCheck | null>(null)
+  const [helpSession, setHelpSession] = useState<HomeworkSession | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showTask, setShowTask] = useState(false)
   const [showAnswer, setShowAnswer] = useState(false)
+  const [showAnnotations, setShowAnnotations] = useState(true)
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
+  // State for loading during chat/hint operations - moved to top level to fix hooks rule
+  const [isChatLoading, setIsChatLoading] = useState(false)
 
   useEffect(() => {
-    async function fetchCheck() {
+    async function fetchData() {
       try {
-        const res = await fetch(`/api/homework/check/${checkId}`)
-        if (!res.ok) {
-          if (res.status === 404) {
-            toast.error('Homework check not found')
-            router.push('/homework')
-            return
+        if (isHelpSession) {
+          // Fetch help session
+          const res = await fetch(`/api/homework/sessions/${sessionId}`)
+          if (!res.ok) {
+            if (res.status === 404) {
+              toast.error('Help session not found')
+              router.push('/homework')
+              return
+            }
+            throw new Error('Failed to load session')
           }
-          throw new Error('Failed to load results')
-        }
-        const { check: fetchedCheck } = await res.json()
-        setCheck(fetchedCheck)
+          const { session } = await res.json()
+          setHelpSession(session)
 
-        // Track feedback review
-        trackStep('feedback_reviewed', 6)
-        trackFeature('homework_results_view', {
-          checkId,
-          subject: fetchedCheck.subject,
-          topic: fetchedCheck.topic,
-          gradeLevel: fetchedCheck.feedback?.gradeLevel,
-          gradeEstimate: fetchedCheck.feedback?.gradeEstimate,
-        })
+          trackFeature('homework_help_session_view', {
+            sessionId,
+            status: session.status,
+          })
+        } else {
+          // Fetch check
+          const res = await fetch(`/api/homework/check/${sessionId}`)
+          if (!res.ok) {
+            if (res.status === 404) {
+              toast.error('Homework check not found')
+              router.push('/homework')
+              return
+            }
+            throw new Error('Failed to load results')
+          }
+          const { check: fetchedCheck } = await res.json()
+          setCheck(fetchedCheck)
+
+          // Track feedback review
+          trackStep('feedback_reviewed', 6)
+          trackFeature('homework_results_view', {
+            checkId: sessionId,
+            subject: fetchedCheck.subject,
+            topic: fetchedCheck.topic,
+            gradeLevel: fetchedCheck.feedback?.gradeLevel,
+            gradeEstimate: fetchedCheck.feedback?.gradeEstimate,
+          })
+        }
       } catch {
-        toast.error('Failed to load results')
+        toast.error('Failed to load')
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchCheck()
-  }, [checkId, router, toast, trackStep, trackFeature])
+    fetchData()
+  }, [sessionId, isHelpSession, router, toast, trackStep, trackFeature])
+
+  // Send message to Socratic tutor
+  const handleSendMessage = useCallback(async (message: string) => {
+    if (isChatLoading) return
+
+    setIsChatLoading(true)
+
+    // Optimistically add student message to UI
+    const studentMessage = {
+      role: 'student' as const,
+      content: message,
+      timestamp: new Date().toISOString(),
+    }
+    setHelpSession((prev) =>
+      prev
+        ? {
+            ...prev,
+            conversation: [...(prev.conversation || []), studentMessage],
+          }
+        : prev
+    )
+
+    try {
+      const res = await fetch(`/api/homework/sessions/${sessionId}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      })
+
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to send message')
+      }
+
+      const { session: updated, solved } = await res.json()
+      setHelpSession(updated)
+
+      if (solved) {
+        toast.success('Congratulations! You solved it!')
+        trackFeature('homework_help_solved', { sessionId })
+      }
+    } catch (error) {
+      console.error('Chat error:', error)
+      toast.error('Failed to send message. Please try again.')
+      // Remove optimistic update on error
+      setHelpSession((prev) =>
+        prev
+          ? {
+              ...prev,
+              conversation: (prev.conversation || []).slice(0, -1),
+            }
+          : prev
+      )
+    } finally {
+      setIsChatLoading(false)
+    }
+  }, [isChatLoading, sessionId, toast, trackFeature])
+
+  // Request a progressive hint
+  const handleRequestHint = useCallback(async (level: number) => {
+    if (isChatLoading) return
+
+    setIsChatLoading(true)
+    try {
+      const res = await fetch(`/api/homework/sessions/${sessionId}/hint`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hintLevel: level }),
+      })
+
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to get hint')
+      }
+
+      const { session: updated, encouragement, hintInfo } = await res.json()
+      setHelpSession(updated)
+
+      // Show encouragement if tutor suggests trying independently
+      if (encouragement) {
+        toast.info(encouragement)
+      }
+
+      trackFeature('homework_help_hint_requested', {
+        sessionId,
+        hintLevel: level,
+        hintName: hintInfo?.name,
+      })
+    } catch (error) {
+      console.error('Hint error:', error)
+      toast.error('Failed to get hint. Please try again.')
+    } finally {
+      setIsChatLoading(false)
+    }
+  }, [isChatLoading, sessionId, toast, trackFeature])
+
+  // Complete the session
+  const handleComplete = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/homework/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+        }),
+      })
+
+      if (res.ok) {
+        trackFeature('homework_help_completed', {
+          sessionId,
+          hintsUsed: helpSession?.hints_used,
+          usedShowAnswer: helpSession?.used_show_answer,
+        })
+        toast.success('Session completed!')
+        router.push('/homework')
+      } else {
+        throw new Error('Failed to complete session')
+      }
+    } catch (error) {
+      console.error('Complete error:', error)
+      toast.error('Failed to complete session. Please try again.')
+    }
+  }, [sessionId, helpSession?.hints_used, helpSession?.used_show_answer, toast, trackFeature, router])
 
   if (isLoading) {
     return (
@@ -135,6 +289,180 @@ export default function HomeworkResultsPage() {
     )
   }
 
+  // Render help session (tutoring interface)
+  if (isHelpSession) {
+    if (!helpSession) {
+      return (
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">Session not found</p>
+            <Link
+              href="/homework"
+              className="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Back to Homework Hub
+            </Link>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="min-h-screen flex flex-col">
+        {/* Header */}
+        <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="container mx-auto px-4 py-4 max-w-2xl">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/homework"
+                className="p-2 -ml-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </Link>
+              <div className="flex-1">
+                <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Homework Helper
+                </h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Socratic tutoring session
+                </p>
+              </div>
+              {helpSession.question_image_url && (
+                <button
+                  onClick={() => setShowTask(true)}
+                  className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  title="View question"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Question Summary Card */}
+        {helpSession.question_text && (
+          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-b border-purple-200 dark:border-purple-800/50">
+            <div className="container mx-auto px-4 py-3 max-w-2xl">
+              <div className="flex items-start gap-3">
+                {/* Question thumbnail */}
+                <button
+                  onClick={() => setShowTask(true)}
+                  className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 border-white dark:border-gray-700 shadow-sm hover:ring-2 hover:ring-purple-400 transition-all"
+                >
+                  <Image
+                    src={helpSession.question_image_url}
+                    alt="Question"
+                    fill
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                    </svg>
+                  </div>
+                </button>
+
+                {/* Question info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    {helpSession.detected_subject && (
+                      <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-800/30 text-purple-700 dark:text-purple-300 text-xs font-medium rounded-full">
+                        {helpSession.detected_subject}
+                      </span>
+                    )}
+                    {helpSession.detected_topic && (
+                      <span className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-800/30 text-indigo-700 dark:text-indigo-300 text-xs font-medium rounded-full">
+                        {helpSession.detected_topic}
+                      </span>
+                    )}
+                    {helpSession.difficulty_estimate && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {'⭐'.repeat(Math.min(5, helpSession.difficulty_estimate))}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
+                    {helpSession.question_text}
+                  </p>
+                </div>
+              </div>
+
+              {/* Progress indicator */}
+              {(helpSession.current_step ?? 0) > 0 && helpSession.total_estimated_steps && (
+                <div className="mt-3">
+                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    <span>Progress</span>
+                    <span>Step {helpSession.current_step} of {helpSession.total_estimated_steps}</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-500"
+                      style={{
+                        width: `${Math.min(100, ((helpSession.current_step ?? 0) / helpSession.total_estimated_steps) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tutoring Chat */}
+        <div className="flex-1">
+          <TutoringChat
+            session={helpSession}
+            onSendMessage={handleSendMessage}
+            onRequestHint={handleRequestHint}
+            onComplete={handleComplete}
+            isLoading={isChatLoading}
+          />
+        </div>
+
+        {/* Question Image Modal */}
+        {showTask && helpSession.question_image_url && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+            onClick={() => setShowTask(false)}
+          >
+            <div
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="font-semibold text-gray-900 dark:text-white">Your Question</h3>
+                <button
+                  onClick={() => setShowTask(false)}
+                  className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="p-4 overflow-y-auto max-h-[70vh]">
+                <div className="relative aspect-[4/3] bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
+                  <Image
+                    src={helpSession.question_image_url}
+                    alt="Question"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Render check results (feedback interface)
   if (!check || !check.feedback) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
@@ -192,7 +520,7 @@ export default function HomeworkResultsPage() {
               <button
                 onClick={() => setShowAnswer(true)}
                 className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                title="View answer"
+                title="View annotated answer"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -230,16 +558,46 @@ export default function HomeworkResultsPage() {
               What You Did Well
             </h2>
             <div className="space-y-3">
-              {feedback.correctPoints.map((point, idx) => (
-                <div key={idx} className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-                  <h3 className="font-medium text-green-800 dark:text-green-300 mb-1">
-                    {point.title}
-                  </h3>
-                  <p className="text-sm text-green-700 dark:text-green-400">
-                    {point.description}
-                  </p>
-                </div>
-              ))}
+              {feedback.correctPoints.map((point, idx) => {
+                const annotatedPoint = point as AnnotatedFeedbackPoint
+                const hasRegion = annotatedPoint.region !== undefined
+                const isSelected = selectedAnnotationId === annotatedPoint.annotationId
+
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      if (hasRegion) {
+                        setSelectedAnnotationId(annotatedPoint.annotationId || null)
+                        setShowAnswer(true)
+                      }
+                    }}
+                    className={`
+                      bg-green-50 dark:bg-green-900/20 rounded-lg p-4 transition-all
+                      ${hasRegion ? 'cursor-pointer hover:ring-2 hover:ring-green-400' : ''}
+                      ${isSelected ? 'ring-2 ring-green-500' : ''}
+                    `}
+                  >
+                    <div className="flex items-start gap-2">
+                      {hasRegion && (
+                        <span className="flex-shrink-0 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mt-0.5">
+                          <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </span>
+                      )}
+                      <div>
+                        <h3 className="font-medium text-green-800 dark:text-green-300 mb-1">
+                          {point.title}
+                        </h3>
+                        <p className="text-sm text-green-700 dark:text-green-400">
+                          {point.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
@@ -252,23 +610,53 @@ export default function HomeworkResultsPage() {
               Areas for Improvement
             </h2>
             <div className="space-y-3">
-              {feedback.improvementPoints.map((point, idx) => (
-                <div key={idx} className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-medium text-amber-800 dark:text-amber-300">
-                      {point.title}
-                    </h3>
-                    {point.severity && (
-                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getSeverityStyles(point.severity)}`}>
-                        {point.severity}
-                      </span>
-                    )}
+              {feedback.improvementPoints.map((point, idx) => {
+                const annotatedPoint = point as AnnotatedFeedbackPoint
+                const hasRegion = annotatedPoint.region !== undefined
+                const isSelected = selectedAnnotationId === annotatedPoint.annotationId
+
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      if (hasRegion) {
+                        setSelectedAnnotationId(annotatedPoint.annotationId || null)
+                        setShowAnswer(true)
+                      }
+                    }}
+                    className={`
+                      bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4 transition-all
+                      ${hasRegion ? 'cursor-pointer hover:ring-2 hover:ring-red-400' : ''}
+                      ${isSelected ? 'ring-2 ring-red-500' : ''}
+                    `}
+                  >
+                    <div className="flex items-start gap-2">
+                      {hasRegion && (
+                        <span className="flex-shrink-0 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center mt-0.5">
+                          <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                        </span>
+                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-medium text-amber-800 dark:text-amber-300">
+                            {point.title}
+                          </h3>
+                          {point.severity && (
+                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getSeverityStyles(point.severity)}`}>
+                              {point.severity}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-amber-700 dark:text-amber-400">
+                          {point.description}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-sm text-amber-700 dark:text-amber-400">
-                    {point.description}
-                  </p>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
@@ -379,20 +767,40 @@ export default function HomeworkResultsPage() {
         </div>
       )}
 
-      {/* Answer Modal */}
+      {/* Answer Modal with Annotations */}
       {showAnswer && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
-          onClick={() => setShowAnswer(false)}
+          onClick={() => {
+            setShowAnswer(false)
+            setSelectedAnnotationId(null)
+          }}
         >
           <div
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Your Answer</h3>
+              <div className="flex items-center gap-3">
+                <h3 className="font-semibold text-gray-900 dark:text-white">Your Answer</h3>
+                {feedback.annotations?.hasAnnotations && (
+                  <button
+                    onClick={() => setShowAnnotations(!showAnnotations)}
+                    className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                      showAnnotations
+                        ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    }`}
+                  >
+                    {showAnnotations ? 'Hide Marks' : 'Show Marks'}
+                  </button>
+                )}
+              </div>
               <button
-                onClick={() => setShowAnswer(false)}
+                onClick={() => {
+                  setShowAnswer(false)
+                  setSelectedAnnotationId(null)
+                }}
                 className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -401,14 +809,26 @@ export default function HomeworkResultsPage() {
               </button>
             </div>
             <div className="p-4 overflow-y-auto max-h-[70vh]">
-              <div className="relative aspect-[4/3] bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
-                <Image
-                  src={check.answer_image_url}
-                  alt="Answer"
-                  fill
-                  className="object-contain"
+              {feedback.annotations?.hasAnnotations ? (
+                <AnnotatedImageViewer
+                  imageUrl={check.answer_image_url}
+                  annotations={feedback.annotations}
+                  showAnnotations={showAnnotations}
+                  selectedAnnotationId={selectedAnnotationId}
+                  onAnnotationClick={(point) => {
+                    setSelectedAnnotationId(point.annotationId || null)
+                  }}
                 />
-              </div>
+              ) : (
+                <div className="relative aspect-[4/3] bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
+                  <Image
+                    src={check.answer_image_url}
+                    alt="Answer"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+              )}
               {check.answer_text && (
                 <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
                   {check.answer_text}

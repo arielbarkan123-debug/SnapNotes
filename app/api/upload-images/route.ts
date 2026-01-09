@@ -6,6 +6,9 @@ import {
   logError
 } from '@/lib/api/errors'
 
+// Allow 2 minutes for uploading multiple images (9 files can take time)
+export const maxDuration = 120
+
 // ============================================================================
 // Types
 // ============================================================================

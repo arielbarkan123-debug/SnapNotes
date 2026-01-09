@@ -11,6 +11,7 @@ export {
   generateStudyCourse,
   generateCourseFromImage,
   generateCourseFromMultipleImages,
+  generateCourseFromMultipleImagesProgressive,
   generateCourseFromImageSingleCall,
   generateCourseFromDocument,
   generateCourseFromText,
@@ -33,6 +34,7 @@ export type {
   DocumentCourseResult,
   TextCourseResult,
   InitialCourseResult,
+  InitialImageCourseResult,
   ContinuationResult,
   ClaudeErrorCode,
 } from './claude'

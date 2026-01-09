@@ -13,3 +13,6 @@ export type {
   APIErrorResponse,
   APISuccessResponse,
 } from './errors'
+
+export { safeFetch, safeFetchFormData } from './safe-fetch'
+export type { SafeFetchOptions, SafeFetchResult } from './safe-fetch'

@@ -16,6 +16,8 @@
   "creatingExam": "יוצר מבחן...",
   "pleaseSelectCourse": "אנא בחר קורס",
   "connectionError": "שגיאת חיבור. נסה שוב.",
+  "serverTimeout": "תם הזמן בשרת. יצירת המבחן לוקחת יותר מדי זמן. נסה שוב.",
+  "serverError": "שגיאת שרת. נסה שוב.",
   "failedToCreate": "יצירת המבחן נכשלה",
   "startExam": "התחל מבחן",
   "continueExam": "המשך מבחן",

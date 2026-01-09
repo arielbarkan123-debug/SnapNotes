@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
 import { Course, GeneratedCourse } from '@/types'
 import { useToast } from '@/contexts/ToastContext'
+import { sanitizeError } from '@/lib/utils/error-sanitizer'
 import DeleteConfirmModal from './DeleteConfirmModal'
 
 interface CourseCardProps {
@@ -210,7 +211,7 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
         router.refresh()
       }
     } catch (err) {
-      showError(err instanceof Error ? err.message : t('deleteFailed'))
+      showError(sanitizeError(err, t('deleteFailed')))
     } finally {
       setIsDeleting(false)
     }

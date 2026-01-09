@@ -21,7 +21,7 @@ import {
 // Constants
 // -----------------------------------------------------------------------------
 
-const ANTHROPIC_MODEL = 'claude-sonnet-4-20250514'
+const ANTHROPIC_MODEL = 'claude-sonnet-4-5-20250929'
 
 const QUESTION_TYPE_DESCRIPTIONS: Record<PracticeQuestionType, string> = {
   multiple_choice: '4 options (A-D) with one correct answer',

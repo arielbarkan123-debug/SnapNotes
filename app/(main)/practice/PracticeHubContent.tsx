@@ -229,12 +229,29 @@ export default function PracticeHubContent({
           }),
         })
 
-        if (!res.ok) {
-          const error = await res.json()
-          throw new Error(error.message || 'Failed to create session')
+        // Check if response is JSON before parsing
+        const contentType = res.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('[PracticeHub] Non-JSON response:', res.status)
+          if (res.status === 504 || res.status === 503 || res.status === 502) {
+            throw new Error('Server timeout. Please try again.')
+          }
+          throw new Error('Server error. Please try again.')
         }
 
-        const { sessionId } = await res.json()
+        let data
+        try {
+          data = await res.json()
+        } catch (parseError) {
+          console.error('[PracticeHub] JSON parse error:', parseError)
+          throw new Error('Server error. Please try again.')
+        }
+
+        if (!res.ok) {
+          throw new Error(data.message || 'Failed to create session')
+        }
+
+        const { sessionId } = data
 
         // Track session created successfully
         trackStep('session_started', 3)
@@ -283,12 +300,29 @@ export default function PracticeHubContent({
         }),
       })
 
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.message || 'Failed to create session')
+      // Check if response is JSON before parsing
+      const contentType = res.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('[PracticeHub] Non-JSON response (custom):', res.status)
+        if (res.status === 504 || res.status === 503 || res.status === 502) {
+          throw new Error('Server timeout. Please try again.')
+        }
+        throw new Error('Server error. Please try again.')
       }
 
-      const { sessionId } = await res.json()
+      let data
+      try {
+        data = await res.json()
+      } catch (parseError) {
+        console.error('[PracticeHub] JSON parse error (custom):', parseError)
+        throw new Error('Server error. Please try again.')
+      }
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to create session')
+      }
+
+      const { sessionId } = data
 
       // Track session started
       trackStep('session_started', 3)

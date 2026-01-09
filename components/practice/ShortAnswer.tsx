@@ -70,10 +70,18 @@ export default function ShortAnswer({
         throw new Error('Evaluation failed')
       }
 
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('[ShortAnswer] Non-JSON response:', response.status)
+        throw new Error('Server error')
+      }
+
       const result: EvaluationResult = await response.json()
       setEvaluationResult(result)
       onAnswer(result.isCorrect, result.score)
-    } catch {
+    } catch (error) {
+      console.error('[ShortAnswer] Evaluation error:', error)
       // Fallback: Show manual grading option
       setEvaluationResult({
         isCorrect: false,

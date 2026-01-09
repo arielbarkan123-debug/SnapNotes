@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl'
 import ReviewCard from '@/components/srs/ReviewCard'
 import RatingButtons from '@/components/srs/RatingButtons'
 import { useEventTracking } from '@/lib/analytics'
+import { sanitizeError } from '@/lib/utils/error-sanitizer'
 import type { Rating, ReviewSession } from '@/types'
 
 // Dynamic import - only loaded when review session completes
@@ -74,7 +75,7 @@ export default function ReviewPage() {
       setSession(data)
       setSessionState(data.cards_due > 0 ? 'start' : 'start')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load review session')
+      setError(sanitizeError(err, 'Failed to load review session'))
       setSessionState('start')
     }
   }, [])

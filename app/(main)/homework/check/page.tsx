@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import Button from '@/components/ui/Button'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
+import { sanitizeError } from '@/lib/utils/error-sanitizer'
 
 // ============================================================================
 // Types
@@ -362,12 +363,29 @@ export default function HomeworkCheckPage() {
         body: formData,
       })
 
-      if (!uploadResponse.ok) {
-        const data = await uploadResponse.json()
-        throw new Error(data.error || 'Failed to upload images')
+      // Check if response is JSON before parsing
+      const uploadContentType = uploadResponse.headers.get('content-type')
+      if (!uploadContentType || !uploadContentType.includes('application/json')) {
+        console.error('[HomeworkCheck] Non-JSON upload response:', uploadResponse.status)
+        if (uploadResponse.status === 504 || uploadResponse.status === 503 || uploadResponse.status === 502) {
+          throw new Error('Upload timeout. Please try again with fewer or smaller images.')
+        }
+        throw new Error('Server error uploading images. Please try again.')
       }
 
-      const { images: uploadedImages } = await uploadResponse.json()
+      let uploadData
+      try {
+        uploadData = await uploadResponse.json()
+      } catch (parseError) {
+        console.error('[HomeworkCheck] JSON parse error:', parseError)
+        throw new Error('Server error. Please try again.')
+      }
+
+      if (!uploadResponse.ok) {
+        throw new Error(uploadData.error || 'Failed to upload images')
+      }
+
+      const uploadedImages = uploadData.images
 
       // Map uploaded URLs back to their types
       const taskImageUrl = uploadedImages[0]?.url
@@ -395,12 +413,29 @@ export default function HomeworkCheckPage() {
         }),
       })
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to check homework')
+      // Check if response is JSON before parsing
+      const checkContentType = response.headers.get('content-type')
+      if (!checkContentType || !checkContentType.includes('application/json')) {
+        console.error('[HomeworkCheck] Non-JSON check response:', response.status)
+        if (response.status === 504 || response.status === 503 || response.status === 502) {
+          throw new Error('Analysis timeout. Please try again.')
+        }
+        throw new Error('Server error analyzing homework. Please try again.')
       }
 
-      const { check } = await response.json()
+      let checkData
+      try {
+        checkData = await response.json()
+      } catch (parseError) {
+        console.error('[HomeworkCheck] JSON parse error:', parseError)
+        throw new Error('Server error. Please try again.')
+      }
+
+      if (!response.ok) {
+        throw new Error(checkData.error || 'Failed to check homework')
+      }
+
+      const { check } = checkData
 
       // Track successful feedback
       trackStep('feedback_received', 5)
@@ -412,11 +447,13 @@ export default function HomeworkCheckPage() {
 
       router.push(`/homework/${check.id}`)
     } catch (err) {
-      // Track error
+      // Track raw error for debugging
       trackFeature('homework_check_error', {
         error: err instanceof Error ? err.message : 'Unknown error',
       })
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+
+      // Show sanitized user-friendly error message
+      setError(sanitizeError(err))
     } finally {
       setIsSubmitting(false)
     }

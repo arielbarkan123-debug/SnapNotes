@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import Button from '@/components/ui/Button'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
+import { sanitizeError } from '@/lib/utils/error-sanitizer'
 
 // ============================================================================
 // Types
@@ -375,22 +376,59 @@ export default function HomeworkHelpPage() {
     })
 
     try {
-      // TODO: Implement actual API call to start tutoring session
-      // For now, redirect to a placeholder session
-      const sessionId = crypto.randomUUID()
+      // Step 1: Upload images
+      const formData = new FormData()
+      formData.append('files', questionImage.file)
+      referenceImages.forEach((img) => {
+        formData.append('files', img.file)
+      })
+
+      const uploadRes = await fetch('/api/upload-images', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const uploadData = await uploadRes.json()
+
+      if (!uploadRes.ok) {
+        throw new Error(uploadData.error || 'Failed to upload images')
+      }
+
+      const { images } = uploadData
+      const questionImageUrl = images[0].url
+      const referenceImageUrls = images.slice(1).map((img: { url: string }) => img.url)
+
+      // Step 2: Create the help session
+      const sessionRes = await fetch('/api/homework/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionImageUrl,
+          referenceImageUrls,
+          comfortLevel,
+          initialAttempt: whatTried || null,
+        }),
+      })
+
+      if (!sessionRes.ok) {
+        const errorData = await sessionRes.json()
+        throw new Error(errorData.error || 'Failed to create session')
+      }
+
+      const { session } = await sessionRes.json()
 
       trackStep('session_started', 4)
       trackFeature('homework_helper_session_start', {
-        sessionId,
+        sessionId: session.id,
         comfortLevel,
       })
 
-      router.push(`/homework/${sessionId}?type=help`)
+      router.push(`/homework/${session.id}?type=help`)
     } catch (err) {
       trackFeature('homework_helper_error', {
         error: err instanceof Error ? err.message : 'Unknown error',
       })
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      setError(sanitizeError(err, 'Something went wrong'))
     } finally {
       setIsSubmitting(false)
     }

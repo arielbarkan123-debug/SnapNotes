@@ -88,9 +88,22 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
 
       let data
       try {
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('[ChatTutor] Non-JSON response:', response.status)
+          if (response.status === 504 || response.status === 503 || response.status === 502) {
+            throw new Error('Server is taking too long. Please try again.')
+          }
+          throw new Error('Server error. Please try again.')
+        }
         data = await response.json()
-      } catch {
-        throw new Error('Invalid server response')
+      } catch (parseError) {
+        if (parseError instanceof SyntaxError) {
+          console.error('[ChatTutor] JSON parse error:', parseError)
+          throw new Error('Server error. Please try again.')
+        }
+        throw parseError
       }
 
       if (!response.ok) {

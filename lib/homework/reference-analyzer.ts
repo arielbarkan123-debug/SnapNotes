@@ -11,7 +11,7 @@ import type { ReferenceAnalysis, QuestionAnalysis, RelevantSection } from './typ
 // Configuration
 // ============================================================================
 
-const AI_MODEL = 'claude-sonnet-4-20250514'
+const AI_MODEL = 'claude-sonnet-4-5-20250929'
 const MAX_TOKENS = 4096
 const MAX_IMAGES_PER_REQUEST = 10
 

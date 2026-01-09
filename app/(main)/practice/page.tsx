@@ -8,6 +8,7 @@ import type { HelpContext } from '@/types'
 import type { ReviewCard as ReviewCardType } from '@/types/srs'
 import { useCourses } from '@/hooks'
 import { useEventTracking } from '@/lib/analytics'
+import { sanitizeError } from '@/lib/utils/error-sanitizer'
 
 // Custom slider styles
 const sliderStyles = `
@@ -266,7 +267,7 @@ export default function PracticePage() {
       const sessionId = await startStudySession()
       sessionIdRef.current = sessionId
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start practice')
+      setError(sanitizeError(err, 'Failed to start practice'))
     }
   }, [courses, selectedCourseIds, questionCount, trackFeature])
 

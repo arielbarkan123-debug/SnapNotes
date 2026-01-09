@@ -103,3 +103,154 @@ export async function deleteFileFromStorage(storagePath: string): Promise<void> 
     console.warn('Failed to delete file from storage:', error)
   }
 }
+
+// ============================================================================
+// Image Upload (for notebook images - bypasses Vercel 4.5MB limit)
+// ============================================================================
+
+const IMAGE_BUCKET = 'notebook-images'
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB per image
+const MAX_TOTAL_IMAGES = 10
+
+const ALLOWED_IMAGE_TYPES: Record<string, boolean> = {
+  'image/jpeg': true,
+  'image/jpg': true,
+  'image/png': true,
+  'image/webp': true,
+  'image/heic': true,
+  'image/heif': true,
+  'image/gif': true,
+}
+
+export interface ImageUploadResult {
+  storagePath: string
+  index: number
+  filename: string
+}
+
+export interface ImageValidationResult {
+  valid: boolean
+  error?: string
+}
+
+export function validateImageFile(file: File): ImageValidationResult {
+  if (file.size > MAX_IMAGE_SIZE) {
+    return { valid: false, error: `File too large. Maximum size is 10MB.` }
+  }
+
+  // Check MIME type
+  if (ALLOWED_IMAGE_TYPES[file.type]) {
+    return { valid: true }
+  }
+
+  // Fallback to extension check
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  if (['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif', 'gif'].includes(ext || '')) {
+    return { valid: true }
+  }
+
+  return { valid: false, error: 'Invalid file type. Use JPG, PNG, WebP, HEIC, or GIF.' }
+}
+
+/**
+ * Upload multiple images directly to Supabase Storage
+ * This bypasses Vercel's 4.5MB body size limit by uploading from browser
+ */
+export async function uploadImagesToStorage(
+  files: File[],
+  userId: string,
+  courseId: string,
+  onProgress?: (current: number, total: number) => void
+): Promise<ImageUploadResult[]> {
+  if (files.length === 0) {
+    throw new Error('No files to upload')
+  }
+
+  if (files.length > MAX_TOTAL_IMAGES) {
+    throw new Error(`Maximum ${MAX_TOTAL_IMAGES} images allowed`)
+  }
+
+  // Validate all files first
+  for (const file of files) {
+    const validation = validateImageFile(file)
+    if (!validation.valid) {
+      throw new Error(`${file.name}: ${validation.error}`)
+    }
+  }
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  const results: ImageUploadResult[] = []
+  const errors: string[] = []
+
+  // Upload files sequentially to show accurate progress
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i]
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+    const storagePath = `${userId}/${courseId}/page-${i}.${ext}`
+
+    try {
+      const { error } = await supabase.storage
+        .from(IMAGE_BUCKET)
+        .upload(storagePath, file, {
+          contentType: file.type || `image/${ext}`,
+          cacheControl: '3600',
+          upsert: false,
+        })
+
+      if (error) {
+        errors.push(`${file.name}: ${error.message}`)
+        continue
+      }
+
+      results.push({
+        storagePath,
+        index: i,
+        filename: file.name,
+      })
+
+      onProgress?.(i + 1, files.length)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Upload failed'
+      errors.push(`${file.name}: ${message}`)
+    }
+  }
+
+  // If all uploads failed, throw error
+  if (results.length === 0 && errors.length > 0) {
+    throw new Error(`All uploads failed: ${errors.join('; ')}`)
+  }
+
+  return results
+}
+
+/**
+ * Delete uploaded images (for cleanup on error)
+ */
+export async function deleteImagesFromStorage(storagePaths: string[]): Promise<void> {
+  if (storagePaths.length === 0) return
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  const { error } = await supabase.storage.from(IMAGE_BUCKET).remove(storagePaths)
+  if (error) {
+    console.warn('Failed to delete images from storage:', error)
+  }
+}
+
+/**
+ * Generate a course ID for organizing uploaded images
+ */
+export function generateCourseId(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}

@@ -16,6 +16,8 @@
   "creatingExam": "Creating Exam...",
   "pleaseSelectCourse": "Please select a course",
   "connectionError": "Connection error. Please try again.",
+  "serverTimeout": "Server timeout. The exam is taking too long to generate. Please try again.",
+  "serverError": "Server error. Please try again.",
   "failedToCreate": "Failed to create exam",
   "startExam": "Start Exam",
   "continueExam": "Continue Exam",
