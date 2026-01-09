@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import heicConvert from 'heic-convert'
 import {
   ErrorCodes,
   createErrorResponse,
@@ -11,7 +10,8 @@ import {
 export const maxDuration = 120
 
 // Version marker for deployment verification
-const UPLOAD_API_VERSION = '2026-01-09-v2-heic-convert'
+// Note: HEIC conversion moved to checker-engine.ts for better mobile performance
+const UPLOAD_API_VERSION = '2026-01-09-v3-no-upload-conversion'
 
 // ============================================================================
 // Types
@@ -124,35 +124,6 @@ async function validateImageMagicBytes(file: File): Promise<boolean> {
   }
 }
 
-/**
- * Detect HEIC/HEIF from magic bytes (more reliable than MIME type on iOS)
- * iOS Safari sometimes reports HEIC files with image/jpeg MIME type
- */
-async function detectHeicFromMagicBytes(file: File): Promise<boolean> {
-  try {
-    // Read first 12 bytes for HEIC signature checking
-    const slice = file.slice(0, 12)
-    const buffer = await slice.arrayBuffer()
-    const bytes = new Uint8Array(buffer)
-
-    // HEIC/HEIF files have 'ftyp' box at offset 4
-    if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) {
-      // Check for common HEIC brands at offset 8: heic, mif1, msf1, heix, hevc
-      const brand = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11])
-      const heicBrands = ['heic', 'heix', 'hevc', 'hevx', 'mif1', 'msf1', 'MIF1', 'MSF1']
-      if (heicBrands.some(b => brand.startsWith(b.substring(0, 4)))) {
-        console.log(`[Upload] Detected HEIC via magic bytes, brand: ${brand}`)
-        return true
-      }
-    }
-
-    return false
-  } catch (err) {
-    console.warn('[Upload] Failed to read magic bytes:', err)
-    return false
-  }
-}
-
 function isValidFileType(file: File): boolean {
   // Check MIME type
   if (ACCEPTED_FILE_TYPES.includes(file.type)) {
@@ -185,45 +156,8 @@ function isStorageQuotaError(error: unknown): boolean {
   return false
 }
 
-/**
- * Check if file is HEIC/HEIF format (not supported by Claude Vision API)
- */
-function isHeicFile(file: File): boolean {
-  const ext = getFileExtension(file.name)
-  const isHeicExtension = ext === 'heic' || ext === 'heif'
-  const isHeicMime = file.type === 'image/heic' || file.type === 'image/heif'
-  return isHeicExtension || isHeicMime
-}
-
-/**
- * Convert HEIC/HEIF to JPEG using heic-convert (pure JS, works on Vercel)
- * Returns the converted buffer and new extension
- */
-async function convertHeicToJpeg(file: File): Promise<{ buffer: Buffer; extension: string; contentType: string }> {
-  try {
-    console.log('[Upload] Starting HEIC conversion for:', file.name)
-    const arrayBuffer = await file.arrayBuffer()
-
-    // Convert to JPEG using heic-convert (pure JS - works on serverless)
-    // heic-convert expects ArrayBufferLike, so pass arrayBuffer directly
-    const jpegArrayBuffer = await heicConvert({
-      buffer: arrayBuffer,
-      format: 'JPEG',
-      quality: 0.9
-    })
-
-    console.log('[Upload] HEIC conversion successful, output size:', jpegArrayBuffer.byteLength)
-
-    return {
-      buffer: Buffer.from(jpegArrayBuffer),
-      extension: 'jpg',
-      contentType: 'image/jpeg'
-    }
-  } catch (error) {
-    console.error('[Upload] HEIC conversion failed:', error)
-    throw new Error('Failed to convert HEIC image. Please convert to JPEG/PNG before uploading.')
-  }
-}
+// Note: HEIC conversion functions removed - conversion now happens in checker-engine.ts
+// This improves upload speed, especially on mobile devices
 
 async function validateFile(file: File, index: number): Promise<UploadError | null> {
   // Validate file size first (quick check)
@@ -375,49 +309,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // 7. Upload valid files in parallel
     const uploadPromises = validFiles.map(async ({ file, index }) => {
       try {
-        // Check if HEIC/HEIF - convert to JPEG (Claude Vision doesn't support HEIC)
-        let uploadContent: File | Buffer = file
-        let extension = getFileExtension(file.name)
-        let contentType = file.type || `image/${extension}`
+        // Note: HEIC conversion is handled in checker-engine.ts when analyzing images
+        // Skipping conversion here to improve upload speed, especially on mobile
+        const extension = getFileExtension(file.name)
+        const contentType = file.type || `image/${extension}`
 
         // Debug logging for file info
         console.log(`[Upload] Processing file: name=${file.name}, type=${file.type}, size=${file.size}, ext=${extension}`)
-
-        // Check HEIC using both extension/MIME and magic bytes (for iOS Safari reliability)
-        let needsConversion = isHeicFile(file)
-
-        // Also check magic bytes - iOS Safari sometimes misreports HEIC as JPEG
-        if (!needsConversion) {
-          const heicFromMagicBytes = await detectHeicFromMagicBytes(file)
-          if (heicFromMagicBytes) {
-            console.log(`[Upload] Detected HEIC via magic bytes (MIME type was ${file.type})`)
-            needsConversion = true
-          }
-        }
-
-        console.log(`[Upload] HEIC check result: ${needsConversion}`)
-
-        if (needsConversion) {
-          try {
-            console.log(`[Upload] Converting HEIC file to JPEG: ${file.name}`)
-            const converted = await convertHeicToJpeg(file)
-            uploadContent = converted.buffer
-            extension = converted.extension
-            contentType = converted.contentType
-            console.log(`[Upload] HEIC conversion successful: ${file.name}`)
-          } catch (conversionError) {
-            console.error(`[Upload] HEIC conversion failed for ${file.name}:`, conversionError)
-            return {
-              type: 'error' as const,
-              error: {
-                index,
-                filename: file.name,
-                error: 'Failed to process HEIC image. Please convert to JPEG/PNG and try again.',
-                code: ErrorCodes.UPLOAD_FAILED,
-              },
-            }
-          }
-        }
 
         // Generate storage path: notebook-images/{user_id}/{course_id}/page-{index}.{ext}
         const storagePath = `${user.id}/${courseId}/page-${index}.${extension}`
@@ -425,7 +323,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Upload to Supabase Storage
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from(BUCKET_NAME)
-          .upload(storagePath, uploadContent, {
+          .upload(storagePath, file, {
             contentType,
             cacheControl: '3600',
             upsert: false,
