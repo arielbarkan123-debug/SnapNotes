@@ -1,6 +1,44 @@
 import { createBrowserClient } from '@supabase/ssr'
+import heic2any from 'heic2any'
 
 type ProgressCallback = (progress: number) => void
+
+/**
+ * Check if file is HEIC/HEIF format
+ */
+function isHeicFile(file: File): boolean {
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  return ext === 'heic' || ext === 'heif' ||
+         file.type === 'image/heic' || file.type === 'image/heif'
+}
+
+/**
+ * Convert HEIC/HEIF to JPEG on the client side
+ * This is needed because Claude Vision API doesn't support HEIC
+ */
+async function convertHeicToJpeg(file: File): Promise<File> {
+  console.log('[Direct Upload] Converting HEIC to JPEG:', file.name)
+  try {
+    const jpegBlob = await heic2any({
+      blob: file,
+      toType: 'image/jpeg',
+      quality: 0.9
+    })
+
+    // heic2any can return single blob or array
+    const resultBlob = Array.isArray(jpegBlob) ? jpegBlob[0] : jpegBlob
+
+    // Create new File with .jpg extension
+    const newFileName = file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg')
+    const convertedFile = new File([resultBlob], newFileName, { type: 'image/jpeg' })
+
+    console.log('[Direct Upload] HEIC conversion successful:', newFileName, 'size:', convertedFile.size)
+    return convertedFile
+  } catch (error) {
+    console.error('[Direct Upload] HEIC conversion failed:', error)
+    throw new Error('Failed to convert HEIC image. Please convert to JPEG before uploading.')
+  }
+}
 export type FileType = 'image' | 'pptx' | 'docx'
 
 const ALLOWED_TYPES: Record<string, FileType> = {
@@ -188,7 +226,18 @@ export async function uploadImagesToStorage(
 
   // Upload files sequentially to show accurate progress
   for (let i = 0; i < files.length; i++) {
-    const file = files[i]
+    let file = files[i]
+
+    // Convert HEIC to JPEG before uploading (Claude Vision doesn't support HEIC)
+    if (isHeicFile(file)) {
+      try {
+        file = await convertHeicToJpeg(file)
+      } catch {
+        errors.push(`${files[i].name}: Failed to convert HEIC image`)
+        continue
+      }
+    }
+
     const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
     const storagePath = `${userId}/${courseId}/page-${i}.${ext}`
 
