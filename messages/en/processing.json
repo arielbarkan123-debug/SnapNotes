@@ -107,7 +107,10 @@
     "flashcardsReadyPlural": "{count} flashcards ready for review",
     "redirecting": "Redirecting you to your new study course...",
     "partialReady": "{ready} of {total} lessons ready - more generating in background",
-    "redirectingPartial": "Start learning now - more lessons generating in background..."
+    "redirectingPartial": "Start learning now - more lessons generating in background...",
+    "tapToView": "Tap the button below to view your course",
+    "viewCourse": "View Your Course",
+    "tapIfStuck": "Tap here if not redirected"
   },
 
   "error": {

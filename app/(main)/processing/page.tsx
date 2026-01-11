@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, Suspense, useRef, useMemo } from 'react'
+import { flushSync } from 'react-dom'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import Image from 'next/image'
@@ -285,23 +286,37 @@ function ProcessingContent() {
 
   // API call with streaming support
   const generateCourse = useCallback(async () => {
-    if (!hasValidInput || !processingKey) return
+    console.log('[Processing] generateCourse called', { hasValidInput, processingKey })
+    if (!hasValidInput || !processingKey) {
+      console.log('[Processing] Early return - no valid input or key')
+      return
+    }
 
     // Check if we're already processing (prevents duplicates on remount)
     const isAlreadyProcessing = sessionStorage.getItem(processingKey)
     if (isAlreadyProcessing === 'started') {
+      console.log('[Processing] Already processing, skipping')
       return
     }
 
     // Mark as started in sessionStorage
     try {
       sessionStorage.setItem(processingKey, 'started')
-    } catch {
+      console.log('[Processing] Marked as started in sessionStorage')
+    } catch (e) {
+      console.warn('[Processing] sessionStorage.setItem failed:', e)
       // Ignore quota errors for processing flag - it's just a guard against double-submit
     }
 
     setState({ status: 'processing' })
     setCurrentStage(0)
+
+    // Create AbortController for timeout (3 minutes for mobile)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => {
+      console.log('[Processing] Request timed out after 3 minutes')
+      controller.abort()
+    }, 180000) // 3 minutes timeout
 
     try {
       // Build request body based on source type
@@ -329,28 +344,130 @@ function ProcessingContent() {
       // Pass intensity mode for lesson generation
       requestBody.intensityMode = intensityMode
 
+      console.log('[Processing] Sending fetch request to /api/generate-course')
       const response = await fetch('/api/generate-course', {
         method: 'POST',
+        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
       })
+      console.log('[Processing] Got response:', { status: response.status, ok: response.ok })
 
-      // Handle streaming response
-      if (!response.body) {
-        throw new Error('No response body')
+      // Check for HTTP errors first
+      if (!response.ok) {
+        console.error('[Processing] HTTP error:', response.status, response.statusText)
+        clearTimeout(timeoutId)
+        if (processingKey) {
+          sessionStorage.removeItem(processingKey)
+        }
+        setState({
+          status: 'error',
+          error: `Server error (${response.status}). Please try again.`,
+          retryable: true,
+        })
+        return
       }
 
+      // Handle streaming response - with fallback for older browsers
+      if (!response.body) {
+        console.error('[Processing] No response body - trying text() fallback')
+        // Fallback: read entire response as text (for older Safari)
+        const text = await response.text()
+        console.log('[Processing] Got text response:', text.slice(0, 200))
+        const lines = text.split('\n').filter(l => l.trim())
+        for (const line of lines) {
+          try {
+            const message = JSON.parse(line)
+            if (message.type === 'success') {
+              console.log('[Processing] SUCCESS from text fallback:', message.courseId)
+              clearTimeout(timeoutId)
+              if (processingKey) {
+                sessionStorage.removeItem(processingKey)
+              }
+              flushSync(() => {
+                setState({
+                  status: 'success',
+                  courseId: message.courseId,
+                  cardsGenerated: message.cardsGenerated || 0,
+                  generationStatus: message.generationStatus || 'complete',
+                  lessonsReady: message.lessonsReady,
+                  totalLessons: message.totalLessons,
+                })
+              })
+              return
+            } else if (message.type === 'error') {
+              console.error('[Processing] ERROR from text fallback:', message.error)
+              clearTimeout(timeoutId)
+              if (processingKey) {
+                sessionStorage.removeItem(processingKey)
+              }
+              setState({
+                status: 'error',
+                error: message.error || 'Failed to generate course',
+                retryable: message.retryable ?? true,
+              })
+              return
+            }
+          } catch {
+            // Skip non-JSON lines
+          }
+        }
+        // No success/error found in response
+        throw new Error('Invalid response format')
+      }
+
+      console.log('[Processing] Starting to read stream')
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
 
       // Read stream
       while (true) {
-        const { done, value } = await reader.read()
+        let readResult
+        try {
+          readResult = await reader.read()
+        } catch (readError) {
+          console.error('[Processing] Stream read error:', readError)
+          // On read error, check if we have any complete messages in buffer
+          if (buffer.trim()) {
+            const lines = buffer.split('\n').filter(l => l.trim())
+            for (const line of lines) {
+              try {
+                const message = JSON.parse(line)
+                if (message.type === 'success') {
+                  console.log('[Processing] Found success in buffer after read error')
+                  clearTimeout(timeoutId)
+                  if (processingKey) {
+                    sessionStorage.removeItem(processingKey)
+                  }
+                  flushSync(() => {
+                    setState({
+                      status: 'success',
+                      courseId: message.courseId,
+                      cardsGenerated: message.cardsGenerated || 0,
+                      generationStatus: message.generationStatus || 'complete',
+                      lessonsReady: message.lessonsReady,
+                      totalLessons: message.totalLessons,
+                    })
+                  })
+                  return
+                }
+              } catch {
+                // Skip non-JSON
+              }
+            }
+          }
+          throw readError
+        }
 
-        if (done) break
+        const { done, value } = readResult
+
+        if (done) {
+          console.log('[Processing] Stream done')
+          break
+        }
 
         // Decode chunk and add to buffer
         buffer += decoder.decode(value, { stream: true })
@@ -364,74 +481,92 @@ function ProcessingContent() {
 
           try {
             const message = JSON.parse(line)
+            console.log('[Processing] Received message:', message.type)
 
             switch (message.type) {
               case 'heartbeat':
                 // Connection is alive, no action needed
+                console.log('[Processing] Heartbeat received')
                 break
 
               case 'progress':
                 // Update UI progress (optional - we have our own progress animation)
                 // You could map server progress to local progress here
+                console.log('[Processing] Progress:', message.stage, message.percent)
                 break
 
-              case 'success':
-                // Clear the processing flag on success
+              case 'success': {
+                console.log('[Processing] SUCCESS! courseId:', message.courseId)
+                // Clear timeout and processing flag on success
+                clearTimeout(timeoutId)
                 if (processingKey) {
                   sessionStorage.removeItem(processingKey)
                 }
 
-                setState({
-                  status: 'success',
-                  courseId: message.courseId,
-                  cardsGenerated: message.cardsGenerated || 0,
-                  generationStatus: message.generationStatus || 'complete',
-                  lessonsReady: message.lessonsReady,
-                  totalLessons: message.totalLessons,
+                // CRITICAL: Use flushSync to force immediate DOM update on mobile
+                // React 18 batches updates by default which can cause issues on mobile
+                console.log('[Processing] Setting state to success with flushSync')
+                flushSync(() => {
+                  setState({
+                    status: 'success',
+                    courseId: message.courseId,
+                    cardsGenerated: message.cardsGenerated || 0,
+                    generationStatus: message.generationStatus || 'complete',
+                    lessonsReady: message.lessonsReady,
+                    totalLessons: message.totalLessons,
+                  })
                 })
+                console.log('[Processing] flushSync complete, state should be updated')
 
-                // Track course created (step 5 - final step of course creation funnel)
+                // Track course created (non-blocking)
                 trackFunnelStep('course_created', 5, {
                   courseId: message.courseId,
                   cardsGenerated: message.cardsGenerated || 0,
                   sourceType: sourceType,
                 })
 
-                // Award XP for course creation
-                try {
-                  const xpResponse = await fetch('/api/gamification/xp', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ event: 'course_created' }),
-                  })
+                // Fire-and-forget gamification calls - don't block the UI
+                // These run in background and won't prevent redirect
+                const doGamification = async () => {
+                  try {
+                    const xpResponse = await fetch('/api/gamification/xp', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ event: 'course_created' }),
+                    })
 
-                  if (xpResponse.ok) {
-                    const xpData = await xpResponse.json()
-                    setXpAwarded(xpData.xpAwarded)
-                    showXP(xpData.xpAwarded)
+                    if (xpResponse.ok) {
+                      const xpData = await xpResponse.json()
+                      setXpAwarded(xpData.xpAwarded)
+                      showXP(xpData.xpAwarded)
 
-                    if (xpData.levelUp && xpData.newLevel) {
-                      setTimeout(() => showLevelUp(xpData.newLevel, xpData.newTitle), 1500)
+                      if (xpData.levelUp && xpData.newLevel) {
+                        setTimeout(() => showLevelUp(xpData.newLevel, xpData.newTitle), 1500)
+                      }
                     }
+
+                    // Update streak
+                    fetch('/api/gamification/streak', { method: 'POST' }).catch(() => {})
+
+                    // Check for achievements
+                    fetch('/api/gamification/check', { method: 'POST' }).catch(() => {})
+                  } catch {
+                    // XP award failed - continue anyway
                   }
-
-                  // Update streak
-                  await fetch('/api/gamification/streak', { method: 'POST' })
-
-                  // Check for achievements (first_course, etc.)
-                  await fetch('/api/gamification/check', { method: 'POST' })
-                } catch {
-                  // XP award failed - continue anyway
                 }
 
-                // Redirect to the new course after a brief delay to show success
-                setTimeout(() => {
-                  router.push(`/course/${message.courseId}`)
-                }, 2500)
+                // Start gamification but don't await it
+                doGamification()
+
+                console.log('[Processing] State set and gamification started, returning')
+                // Note: Redirect is now handled in SuccessView component for better mobile compatibility
                 return
+              }
 
               case 'error':
-                // Clear the processing flag so retry can work
+                console.error('[Processing] ERROR from server:', message.error)
+                // Clear timeout and processing flag so retry can work
+                clearTimeout(timeoutId)
                 if (processingKey) {
                   sessionStorage.removeItem(processingKey)
                 }
@@ -448,7 +583,49 @@ function ProcessingContent() {
         }
       }
 
+      // Check remaining buffer after stream ends (message might not have trailing newline)
+      if (buffer.trim()) {
+        console.log('[Processing] Checking remaining buffer:', buffer.slice(0, 100))
+        try {
+          const message = JSON.parse(buffer)
+          if (message.type === 'success') {
+            console.log('[Processing] SUCCESS found in remaining buffer:', message.courseId)
+            clearTimeout(timeoutId)
+            if (processingKey) {
+              sessionStorage.removeItem(processingKey)
+            }
+            flushSync(() => {
+              setState({
+                status: 'success',
+                courseId: message.courseId,
+                cardsGenerated: message.cardsGenerated || 0,
+                generationStatus: message.generationStatus || 'complete',
+                lessonsReady: message.lessonsReady,
+                totalLessons: message.totalLessons,
+              })
+            })
+            return
+          } else if (message.type === 'error') {
+            console.error('[Processing] ERROR found in remaining buffer:', message.error)
+            clearTimeout(timeoutId)
+            if (processingKey) {
+              sessionStorage.removeItem(processingKey)
+            }
+            setState({
+              status: 'error',
+              error: message.error || 'Failed to generate course',
+              retryable: message.retryable ?? true,
+            })
+            return
+          }
+        } catch {
+          console.log('[Processing] Could not parse remaining buffer')
+        }
+      }
+
       // If we got here without success/error, something went wrong
+      console.error('[Processing] Stream ended without success/error message')
+      clearTimeout(timeoutId)
       if (processingKey) {
         sessionStorage.removeItem(processingKey)
       }
@@ -458,18 +635,29 @@ function ProcessingContent() {
         retryable: true,
       })
 
-    } catch {
+    } catch (error) {
+      clearTimeout(timeoutId)
       // Clear the processing flag so retry can work
       if (processingKey) {
         sessionStorage.removeItem(processingKey)
       }
-      setState({
-        status: 'error',
-        error: 'Connection error. Please check your internet and try again.',
-        retryable: true,
-      })
+
+      // Handle abort/timeout specifically
+      if (error instanceof Error && error.name === 'AbortError') {
+        setState({
+          status: 'error',
+          error: 'Generation is taking longer than expected. Please try again or use a smaller document.',
+          retryable: true,
+        })
+      } else {
+        setState({
+          status: 'error',
+          error: 'Connection error. Please check your internet and try again.',
+          retryable: true,
+        })
+      }
     }
-  }, [hasValidInput, textContent, documentContent, documentUrl, imageUrls, imageUrl, title, sourceType, router, processingKey, showXP, showLevelUp, trackFunnelStep])
+  }, [hasValidInput, textContent, documentContent, documentUrl, imageUrls, imageUrl, title, sourceType, processingKey, showXP, showLevelUp, trackFunnelStep, intensityMode])
 
   // Start generation on mount (ref prevents duplicate calls in StrictMode)
   // Wait for document content to load if we have a documentId
@@ -505,6 +693,9 @@ function ProcessingContent() {
 
   const stage = progressStages[currentStage]
 
+  // Log every render to help debug mobile issues
+  console.log('[ProcessingContent] Render:', { status: state.status, courseId: state.courseId })
+
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
       <div className="max-w-md w-full">
@@ -527,6 +718,7 @@ function ProcessingContent() {
             generationStatus={state.generationStatus}
             lessonsReady={state.lessonsReady}
             totalLessons={state.totalLessons}
+            courseId={state.courseId}
             t={t}
           />
         )}
@@ -698,11 +890,79 @@ interface SuccessViewProps {
   generationStatus?: 'complete' | 'partial'
   lessonsReady?: number
   totalLessons?: number
+  courseId?: string
   t: ReturnType<typeof useTranslations<'processing'>>
 }
 
-function SuccessView({ cardsGenerated, xpAwarded, generationStatus, lessonsReady, totalLessons, t }: SuccessViewProps) {
+function SuccessView({ cardsGenerated, xpAwarded, generationStatus, lessonsReady, totalLessons, courseId, t }: SuccessViewProps) {
   const isPartial = generationStatus === 'partial'
+  const router = useRouter()
+  // If no courseId, show manual button immediately
+  const [redirectFailed, setRedirectFailed] = useState(!courseId)
+  const [attemptedRedirect, setAttemptedRedirect] = useState(false)
+
+  console.log('[SuccessView] Rendered with courseId:', courseId, 'redirectFailed:', redirectFailed)
+
+  // Auto-redirect with fallback for mobile
+  useEffect(() => {
+    console.log('[SuccessView] useEffect triggered, courseId:', courseId)
+    if (!courseId) {
+      console.log('[SuccessView] No courseId, showing manual button')
+      setRedirectFailed(true)
+      return
+    }
+
+    console.log('[SuccessView] Setting up redirect timers')
+
+    // Shorter initial delay for faster UX
+    const redirectTimer = setTimeout(() => {
+      if (attemptedRedirect) return // Prevent double redirect
+      setAttemptedRedirect(true)
+
+      console.log('[SuccessView] Attempting redirect to /course/' + courseId)
+
+      // Use window.location directly on mobile - more reliable than router.push
+      // We check for touch capability as a mobile indicator
+      const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+
+      if (isMobile) {
+        console.log('[SuccessView] Mobile detected, using window.location directly')
+        window.location.href = `/course/${courseId}`
+      } else {
+        // Desktop: try router.push first
+        try {
+          router.push(`/course/${courseId}`)
+          console.log('[SuccessView] router.push called')
+        } catch (e) {
+          console.error('[SuccessView] router.push failed:', e)
+          window.location.href = `/course/${courseId}`
+        }
+      }
+    }, 1500) // Reduced from 2500ms to 1500ms
+
+    // Set a backup timer - if we're still on this page after 4 seconds, show manual button
+    const fallbackTimer = setTimeout(() => {
+      console.log('[SuccessView] Fallback timer triggered - showing manual button')
+      setRedirectFailed(true)
+    }, 4000) // Reduced from 5000ms to 4000ms
+
+    return () => {
+      console.log('[SuccessView] Cleanup - clearing timers')
+      clearTimeout(redirectTimer)
+      clearTimeout(fallbackTimer)
+    }
+  }, [courseId, router, attemptedRedirect])
+
+  // Manual navigation handler for mobile fallback
+  const handleManualNavigation = () => {
+    console.log('[SuccessView] Manual navigation clicked, courseId:', courseId)
+    if (courseId) {
+      // Use window.location for guaranteed navigation on mobile
+      console.log('[SuccessView] Navigating via window.location to /course/' + courseId)
+      window.location.href = `/course/${courseId}`
+    }
+  }
+
   return (
     <div className="text-center">
       {/* Success Icon */}
@@ -760,16 +1020,44 @@ function SuccessView({ cardsGenerated, xpAwarded, generationStatus, lessonsReady
         </div>
       )}
 
-      <p className="text-gray-500 dark:text-gray-400 mb-4">
-        {isPartial ? t('success.redirectingPartial') : t('success.redirecting')}
-      </p>
+      {redirectFailed ? (
+        /* Show manual button if auto-redirect failed (common on mobile) */
+        <>
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
+            {t('success.tapToView') || 'Tap the button below to view your course'}
+          </p>
+          <button
+            onClick={handleManualNavigation}
+            className="w-full px-6 py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors flex items-center justify-center gap-2 text-lg"
+          >
+            <span>📖</span>
+            {t('success.viewCourse') || 'View Your Course'}
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
+            {isPartial ? t('success.redirectingPartial') : t('success.redirecting')}
+          </p>
 
-      {/* Loading dots */}
-      <div className="flex justify-center gap-1">
-        <span className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-        <span className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-        <span className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-      </div>
+          {/* Loading dots */}
+          <div className="flex justify-center gap-1 mb-4">
+            <span className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+            <span className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+            <span className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+
+          {/* Always show a manual link as backup */}
+          {courseId && (
+            <button
+              onClick={handleManualNavigation}
+              className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+            >
+              {t('success.tapIfStuck') || 'Tap here if not redirected'}
+            </button>
+          )}
+        </>
+      )}
     </div>
   )
 }
