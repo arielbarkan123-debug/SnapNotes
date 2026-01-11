@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Component, ReactNode, ErrorInfo } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
@@ -8,6 +8,66 @@ import Button from '@/components/ui/Button'
 import CourseCard from '@/components/course/CourseCard'
 import { DashboardWidget } from '@/components/srs'
 import { LazySection, SRSWidgetSkeleton } from '@/components/ui/LazySection'
+
+// ============================================================================
+// Component-Level Error Boundary (silently catches errors, shows nothing)
+// ============================================================================
+
+interface SilentErrorBoundaryProps {
+  children: ReactNode
+  componentName?: string
+}
+
+interface SilentErrorBoundaryState {
+  hasError: boolean
+}
+
+class SilentErrorBoundary extends Component<SilentErrorBoundaryProps, SilentErrorBoundaryState> {
+  constructor(props: SilentErrorBoundaryProps) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError(): SilentErrorBoundaryState {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error(`[Dashboard] Error in ${this.props.componentName || 'unknown component'}:`, error.message)
+    console.error('Component stack:', errorInfo.componentStack)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Render nothing when error occurs - don't crash the whole dashboard
+      return null
+    }
+    return this.props.children
+  }
+}
+
+// Safe wrapper for CourseCard that handles any errors in individual cards
+function SafeCourseCard({ course }: { course: import('@/types').Course }) {
+  try {
+    // Validate course data before rendering
+    if (!course || typeof course !== 'object') {
+      console.warn('[Dashboard] Invalid course data:', course)
+      return null
+    }
+    if (!course.id || !course.title) {
+      console.warn('[Dashboard] Course missing required fields:', course)
+      return null
+    }
+    return (
+      <SilentErrorBoundary componentName={`CourseCard-${course.id}`}>
+        <CourseCard course={course} />
+      </SilentErrorBoundary>
+    )
+  } catch (error) {
+    console.error('[Dashboard] Error rendering CourseCard:', error)
+    return null
+  }
+}
 
 // Lazy load UploadModal - only loaded when user opens it
 const UploadModal = dynamic(
@@ -267,26 +327,34 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
           </div>
         )}
 
-        {/* SRS Review Widget - Lazy loaded */}
-        <LazySection
-          skeleton={<SRSWidgetSkeleton />}
-          minHeight={150}
-          rootMargin="150px"
-        >
-          <DashboardWidget />
-        </LazySection>
+        {/* SRS Review Widget - Lazy loaded with error boundary */}
+        <SilentErrorBoundary componentName="DashboardWidget">
+          <LazySection
+            skeleton={<SRSWidgetSkeleton />}
+            minHeight={150}
+            rootMargin="150px"
+          >
+            <DashboardWidget />
+          </LazySection>
+        </SilentErrorBoundary>
 
         {/* Knowledge Gaps Alert - shows identified knowledge gaps */}
-        <GapAlert className="mb-6" />
+        <SilentErrorBoundary componentName="GapAlert">
+          <GapAlert className="mb-6" />
+        </SilentErrorBoundary>
 
         {/* Practice Widget - quick practice actions */}
-        <PracticeWidget />
+        <SilentErrorBoundary componentName="PracticeWidget">
+          <PracticeWidget />
+        </SilentErrorBoundary>
 
         {/* Weak Areas Widget - shows lessons needing review */}
         {totalCount > 0 && (
-          <div className="mb-6">
-            <WeakAreas />
-          </div>
+          <SilentErrorBoundary componentName="WeakAreas">
+            <div className="mb-6">
+              <WeakAreas />
+            </div>
+          </SilentErrorBoundary>
         )}
 
         {/* Search and Sort Bar - only show if there are courses */}
@@ -427,7 +495,7 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredCourses.map((course) => (
-              <CourseCard key={course.id} course={course} />
+              <SafeCourseCard key={course.id} course={course} />
             ))}
           </div>
         )}

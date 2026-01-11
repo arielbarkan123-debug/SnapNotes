@@ -96,59 +96,109 @@ export function useCourses(options: UseCoursesOptions = {}): UseCoursesReturn {
     }
   )
 
-  // Extract courses from response
+  // Extract courses from response with defensive coding
   const courses = useMemo(() => {
-    return data?.courses || initialCourses
+    try {
+      const rawCourses = data?.courses || initialCourses
+      // Ensure it's an array
+      if (!Array.isArray(rawCourses)) {
+        console.warn('[useCourses] courses is not an array:', rawCourses)
+        return []
+      }
+      // Filter out any invalid course objects
+      return rawCourses.filter(course => {
+        if (!course || typeof course !== 'object') {
+          console.warn('[useCourses] Invalid course object:', course)
+          return false
+        }
+        if (!course.id) {
+          console.warn('[useCourses] Course missing id:', course)
+          return false
+        }
+        return true
+      })
+    } catch (error) {
+      console.error('[useCourses] Error extracting courses:', error)
+      return []
+    }
   }, [data?.courses, initialCourses])
 
-  // Sort courses
+  // Sort courses with error handling
   const sortedCourses = useMemo(() => {
-    return [...courses].sort((a, b) => {
-      const dateA = new Date(a.created_at).getTime()
-      const dateB = new Date(b.created_at).getTime()
+    try {
+      return [...courses].sort((a, b) => {
+        // Safely parse dates
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0
 
-      if (sortOrder === 'newest') {
-        return dateB - dateA
-      } else {
-        return dateA - dateB
-      }
-    })
+        // Handle invalid dates
+        const validDateA = isNaN(dateA) ? 0 : dateA
+        const validDateB = isNaN(dateB) ? 0 : dateB
+
+        if (sortOrder === 'newest') {
+          return validDateB - validDateA
+        } else {
+          return validDateA - validDateB
+        }
+      })
+    } catch (error) {
+      console.error('[useCourses] Error sorting courses:', error)
+      return courses // Return unsorted if error
+    }
   }, [courses, sortOrder])
 
-  // Filter courses by search query
+  // Filter courses by search query with defensive coding
   const filteredCourses = useMemo(() => {
-    if (!debouncedSearchQuery.trim()) {
-      return sortedCourses
+    try {
+      if (!debouncedSearchQuery.trim()) {
+        return sortedCourses
+      }
+
+      const query = debouncedSearchQuery.toLowerCase().trim()
+
+      return sortedCourses.filter((course) => {
+        try {
+          // Search in title (with null check)
+          const title = course.title || ''
+          if (typeof title === 'string' && title.toLowerCase().includes(query)) {
+            return true
+          }
+
+          // Optionally search in generated course content
+          const generatedCourse = course.generated_course
+          if (generatedCourse && typeof generatedCourse === 'object') {
+            // Search in overview
+            const overview = generatedCourse.overview
+            if (typeof overview === 'string' && overview.toLowerCase().includes(query)) {
+              return true
+            }
+            // Search in lessons and steps
+            const lessons = Array.isArray(generatedCourse.lessons) ? generatedCourse.lessons : []
+            if (lessons.some(lesson => {
+              if (!lesson || typeof lesson !== 'object') return false
+              const lessonTitle = lesson.title || ''
+              if (typeof lessonTitle === 'string' && lessonTitle.toLowerCase().includes(query)) return true
+              const steps = Array.isArray(lesson.steps) ? lesson.steps : []
+              return steps.some(step => {
+                if (!step || typeof step !== 'object') return false
+                const content = step.content
+                return typeof content === 'string' && content.toLowerCase().includes(query)
+              })
+            })) {
+              return true
+            }
+          }
+
+          return false
+        } catch (filterError) {
+          console.error('[useCourses] Error filtering course:', course?.id, filterError)
+          return false // Skip this course on error
+        }
+      })
+    } catch (error) {
+      console.error('[useCourses] Error in filteredCourses:', error)
+      return sortedCourses // Return unfiltered if error
     }
-
-    const query = debouncedSearchQuery.toLowerCase().trim()
-
-    return sortedCourses.filter((course) => {
-      // Search in title
-      if (course.title.toLowerCase().includes(query)) {
-        return true
-      }
-
-      // Optionally search in generated course content
-      const generatedCourse = course.generated_course
-      if (generatedCourse) {
-        // Search in overview
-        if (generatedCourse.overview?.toLowerCase().includes(query)) {
-          return true
-        }
-        // Search in lessons and steps
-        if (generatedCourse.lessons?.some(lesson =>
-          lesson.title?.toLowerCase().includes(query) ||
-          lesson.steps?.some(step =>
-            step.content?.toLowerCase().includes(query)
-          )
-        )) {
-          return true
-        }
-      }
-
-      return false
-    })
   }, [sortedCourses, debouncedSearchQuery])
 
   // Clear search

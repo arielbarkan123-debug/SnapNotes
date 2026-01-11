@@ -34,22 +34,34 @@ const SUBJECT_PATTERNS: { pattern: RegExp; gradient: string }[] = [
   { pattern: /sociology|social|society|culture|community/i, gradient: 'from-orange-500 to-amber-600' },
 ]
 
-function detectSubject(title: string): { gradient: string } {
-  for (const subject of SUBJECT_PATTERNS) {
-    if (subject.pattern.test(title)) {
-      return { gradient: subject.gradient }
+const DEFAULT_GRADIENT = 'from-indigo-500 to-purple-600'
+
+function detectSubject(title: string | null | undefined): { gradient: string } {
+  try {
+    // Handle null/undefined/non-string title
+    if (!title || typeof title !== 'string') {
+      return { gradient: DEFAULT_GRADIENT }
     }
+
+    for (const subject of SUBJECT_PATTERNS) {
+      if (subject.pattern.test(title)) {
+        return { gradient: subject.gradient }
+      }
+    }
+    // Default gradient based on title hash for variety
+    const hash = title.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    const defaultGradients = [
+      'from-indigo-500 to-purple-600',
+      'from-blue-500 to-cyan-600',
+      'from-amber-500 to-yellow-600',
+      'from-red-500 to-orange-600',
+      'from-yellow-500 to-amber-600',
+    ]
+    return { gradient: defaultGradients[hash % defaultGradients.length] }
+  } catch (error) {
+    console.error('[CourseCard] Error in detectSubject:', error)
+    return { gradient: DEFAULT_GRADIENT }
   }
-  // Default gradient based on title hash for variety
-  const hash = title.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  const defaultGradients = [
-    'from-indigo-500 to-purple-600',
-    'from-blue-500 to-cyan-600',
-    'from-amber-500 to-yellow-600',
-    'from-red-500 to-orange-600',
-    'from-yellow-500 to-amber-600',
-  ]
-  return { gradient: defaultGradients[hash % defaultGradients.length] }
 }
 
 // Difficulty levels with styling
@@ -63,88 +75,123 @@ interface DifficultyInfo {
   icon: string
 }
 
+// Default difficulty info for fallback
+const DEFAULT_DIFFICULTY: DifficultyInfo = {
+  level: 'beginner',
+  labelKey: 'beginner',
+  color: 'text-green-600 dark:text-green-400',
+  bgColor: 'bg-green-100 dark:bg-green-900/30',
+  icon: '🌱',
+}
+
 // Estimate course difficulty based on content analysis
-function estimateDifficulty(generatedCourse: GeneratedCourse | null): DifficultyInfo {
-  if (!generatedCourse || !generatedCourse.lessons) {
-    return {
-      level: 'beginner',
-      labelKey: 'beginner',
-      color: 'text-green-600 dark:text-green-400',
-      bgColor: 'bg-green-100 dark:bg-green-900/30',
-      icon: '🌱',
+function estimateDifficulty(generatedCourse: GeneratedCourse | null | undefined): DifficultyInfo {
+  // Wrap entire function in try-catch to prevent any crashes
+  try {
+    // Return default for null/undefined or non-object
+    if (!generatedCourse || typeof generatedCourse !== 'object') {
+      return DEFAULT_DIFFICULTY
     }
-  }
 
-  // Safely handle null/undefined lessons array
-  const lessons = generatedCourse.lessons || []
-  let score = 0
+    // Safely handle null/undefined lessons array
+    const lessons = Array.isArray(generatedCourse.lessons) ? generatedCourse.lessons : []
 
-  // Factor 1: Number of lessons (more lessons = more complex)
-  if (lessons.length >= 6) score += 2
-  else if (lessons.length >= 4) score += 1
-
-  // Factor 2: Average steps per lesson
-  const totalSteps = lessons.reduce((sum, l) => sum + (l.steps?.length || 0), 0)
-  const avgSteps = totalSteps / Math.max(lessons.length, 1)
-  if (avgSteps >= 8) score += 2
-  else if (avgSteps >= 5) score += 1
-
-  // Factor 3: Question complexity (matching, sequence are harder)
-  const allSteps = lessons.flatMap(l => l.steps || [])
-  const complexQuestionTypes = ['matching', 'sequence', 'short_answer']
-  const complexQuestions = allSteps.filter(s =>
-    complexQuestionTypes.includes(s.type)
-  ).length
-  if (complexQuestions >= 5) score += 2
-  else if (complexQuestions >= 2) score += 1
-
-  // Factor 4: Content length (longer explanations = more depth)
-  const totalContentLength = allSteps.reduce(
-    (sum, s) => sum + (s.content?.length || 0),
-    0
-  )
-  if (totalContentLength >= 5000) score += 1
-
-  // Determine difficulty level
-  if (score >= 5) {
-    return {
-      level: 'advanced',
-      labelKey: 'advanced',
-      color: 'text-red-600 dark:text-red-400',
-      bgColor: 'bg-red-100 dark:bg-red-900/30',
-      icon: '🔥',
+    // Return default if no lessons
+    if (lessons.length === 0) {
+      return DEFAULT_DIFFICULTY
     }
-  } else if (score >= 2) {
-    return {
-      level: 'intermediate',
-      labelKey: 'intermediate',
-      color: 'text-amber-600 dark:text-amber-400',
-      bgColor: 'bg-amber-100 dark:bg-amber-900/30',
-      icon: '⚡',
+
+    let score = 0
+
+    // Factor 1: Number of lessons (more lessons = more complex)
+    if (lessons.length >= 6) score += 2
+    else if (lessons.length >= 4) score += 1
+
+    // Factor 2: Average steps per lesson (with defensive checks)
+    const totalSteps = lessons.reduce((sum, l) => {
+      if (!l || typeof l !== 'object') return sum
+      const steps = Array.isArray(l.steps) ? l.steps : []
+      return sum + steps.length
+    }, 0)
+    const avgSteps = totalSteps / Math.max(lessons.length, 1)
+    if (avgSteps >= 8) score += 2
+    else if (avgSteps >= 5) score += 1
+
+    // Factor 3: Question complexity (matching, sequence are harder)
+    const allSteps = lessons.flatMap(l => {
+      if (!l || typeof l !== 'object') return []
+      return Array.isArray(l.steps) ? l.steps : []
+    })
+    const complexQuestionTypes = ['matching', 'sequence', 'short_answer']
+    const complexQuestions = allSteps.filter(s => {
+      if (!s || typeof s !== 'object') return false
+      return complexQuestionTypes.includes(s.type)
+    }).length
+    if (complexQuestions >= 5) score += 2
+    else if (complexQuestions >= 2) score += 1
+
+    // Factor 4: Content length (longer explanations = more depth)
+    const totalContentLength = allSteps.reduce((sum, s) => {
+      if (!s || typeof s !== 'object') return sum
+      const content = s.content
+      if (typeof content !== 'string') return sum
+      return sum + content.length
+    }, 0)
+    if (totalContentLength >= 5000) score += 1
+
+    // Determine difficulty level
+    if (score >= 5) {
+      return {
+        level: 'advanced',
+        labelKey: 'advanced',
+        color: 'text-red-600 dark:text-red-400',
+        bgColor: 'bg-red-100 dark:bg-red-900/30',
+        icon: '🔥',
+      }
+    } else if (score >= 2) {
+      return {
+        level: 'intermediate',
+        labelKey: 'intermediate',
+        color: 'text-amber-600 dark:text-amber-400',
+        bgColor: 'bg-amber-100 dark:bg-amber-900/30',
+        icon: '⚡',
+      }
+    } else {
+      return DEFAULT_DIFFICULTY
     }
-  } else {
-    return {
-      level: 'beginner',
-      labelKey: 'beginner',
-      color: 'text-green-600 dark:text-green-400',
-      bgColor: 'bg-green-100 dark:bg-green-900/30',
-      icon: '🌱',
-    }
+  } catch (error) {
+    // Log error but don't crash - return default
+    console.error('[CourseCard] Error in estimateDifficulty:', error)
+    return DEFAULT_DIFFICULTY
   }
 }
 
-function formatDate(dateString: string, locale: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleDateString(locale === 'he' ? 'he-IL' : 'en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+function formatDate(dateString: string | null | undefined, locale: string): string {
+  try {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    // Check for invalid date
+    if (isNaN(date.getTime())) return ''
+    return date.toLocaleDateString(locale === 'he' ? 'he-IL' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+  } catch (error) {
+    console.error('[CourseCard] Error in formatDate:', error)
+    return ''
+  }
 }
 
-function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text
-  return text.slice(0, maxLength).trim() + '...'
+function truncateText(text: string | null | undefined, maxLength: number): string {
+  try {
+    if (!text || typeof text !== 'string') return ''
+    if (text.length <= maxLength) return text
+    return text.slice(0, maxLength).trim() + '...'
+  } catch (error) {
+    console.error('[CourseCard] Error in truncateText:', error)
+    return ''
+  }
 }
 
 export default function CourseCard({ course, onDelete }: CourseCardProps) {
