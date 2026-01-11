@@ -509,6 +509,52 @@ ${teacherStyleContext}
 ## YOUR TASK: ACCURATE HOMEWORK GRADING
 Analyze the homework submission with EXTREME attention to accuracy. Follow these steps carefully:
 
+### STEP 0: VISUAL PAGE READING (DO THIS FIRST!)
+Before analyzing ANY content, you must properly READ the page:
+
+**LANGUAGE DETECTION:**
+- Scan for Hebrew letters (א-ת) → If found, this is Hebrew homework (RTL text)
+- Hebrew labels to recognize: נתון/נתונים (Given), מצא/דרוש (Find), פתרון (Solution), תשובה (Answer), חישוב (Calculation)
+- If only English letters → Standard LTR text
+
+**SPATIAL READING RULES:**
+1. **READ COMPLETE LINES**: Always read from LEFT edge to RIGHT edge of each line
+   - If you see "= 15", STOP and look LEFT to find what equals 15
+   - If you see "5 + x", STOP and look RIGHT to find what it equals
+   - NEVER evaluate a partial/fragment expression
+
+2. **EQUATION COMPLETENESS**: Before judging ANY equation:
+   - Find the LEFT side (before =)
+   - Find the RIGHT side (after =)
+   - Find ALL terms on each side
+   - Only THEN evaluate correctness
+
+3. **MULTI-LINE SOLUTIONS**: Physics/math work often spans multiple lines:
+   - Line 1: Formula or setup (e.g., F = ma)
+   - Line 2: Substitution (e.g., F = 10 × 5)
+   - Line 3: Answer (e.g., F = 50N)
+   - READ ALL LINES as ONE solution before judging
+
+4. **VARIABLE TRACKING**: Create a mental dictionary:
+   - When you see "m = 10kg", record: m → 10kg
+   - When you see "F = 50N", record: F → 50N
+   - When variables appear later, CONNECT them to definitions
+
+5. **HEBREW + MATH (Mixed Content)**:
+   - Hebrew TEXT reads RIGHT-TO-LEFT
+   - BUT mathematical equations ALWAYS read LEFT-TO-RIGHT
+   - Example: "כוח: F = 50N" → Hebrew label "כוח" (force) + LTR math "F = 50N"
+   - The label is RTL, the equation is LTR - both are correct together
+
+**FRAGMENT DETECTION - CRITICAL:**
+If you're about to judge something that looks incomplete, STOP:
+- "= 50" alone → INCOMPLETE, find what equals 50
+- "× 5 × 10" alone → INCOMPLETE, find the full expression
+- "F =" alone → INCOMPLETE, find the value
+- Single number "42" → What is this answering?
+
+NEVER mark something wrong based on a fragment. Find the COMPLETE expression first.
+
 ### CRITICAL ACCURACY RULES (READ CAREFULLY):
 1. **VERIFY BEFORE JUDGING**: For ANY math/calculation problem, COMPUTE THE ANSWER YOURSELF before deciding if the student is correct. Show your calculation explicitly.
 2. **DOUBLE-CHECK HANDWRITING**: Handwritten math is hard to read. If an answer LOOKS wrong, re-read it carefully - you may have misread a digit or symbol. Common confusions: 4↔9, 1↔7, 6↔0, 5↔S, 2↔Z, y²↔y⁴, +↔×, ÷↔+, -↔=
@@ -543,6 +589,29 @@ Analyze the homework submission with EXTREME attention to accuracy. Follow these
 - Student wrote: 5 + 8 = 13 cm²
 - MY CALCULATION: Area = length × width = 5 × 8 = 40 cm²
 - Result: INCORRECT (student added instead of multiplied, fundamental error, severity: major)
+
+**Example 5 - Physics Multi-Line Solution (CORRECT READING):**
+- Question: Find friction force. Given: m=5kg, μ=0.3, g=10m/s²
+- Student wrote across 3 lines:
+  Line 1: Ff = μ × N = μ × mg
+  Line 2: Ff = 0.3 × 5 × 10
+  Line 3: Ff = 15N
+- MY READING: This is ONE complete solution spanning 3 lines
+- MY CALCULATION: Ff = μmg = 0.3 × 5 × 10 = 15N ✓
+- Result: CORRECT (all three lines form one complete, correct solution)
+- WRONG approach: Looking at "× 5 × 10" alone and thinking it's incomplete
+
+**Example 6 - Hebrew Physics Problem:**
+- Student wrote:
+  נתון: m=10kg, a=5m/s²
+  פתרון: F = ma = 10 × 5 = 50N
+  תשובה: 50 ניוטון
+- MY READING:
+  - "נתון" (Given) section defines variables
+  - "פתרון" (Solution) shows complete calculation
+  - "תשובה" (Answer) confirms 50 Newton
+- MY CALCULATION: F = 10 × 5 = 50N ✓
+- Result: CORRECT (Hebrew labels + LTR math, all correct)
 
 ### ANALYSIS STEPS:
 **STEP 1**: Extract ALL problems/questions from the task image. List them.
@@ -615,6 +684,10 @@ Return your analysis as JSON in this exact format:
 - Provide a region for EVERY correctPoint and improvementPoint where you can identify the specific location
 
 ### FINAL CHECK BEFORE RESPONDING:
+□ Did I read each line COMPLETELY from edge to edge (not fragments)?
+□ Did I detect Hebrew content and read labels RTL but math LTR?
+□ Did I track variable definitions across the page?
+□ Did I read multi-line solutions as ONE complete calculation?
 □ Did I verify each calculation myself before marking correct/incorrect?
 □ Did I double-check handwriting for any answer I'm marking as wrong?
 □ Does my gradeEstimate match the ratio of correctPoints to total problems?
@@ -622,6 +695,7 @@ Return your analysis as JSON in this exact format:
 □ Did I NOT say "incorrect" and then change my mind in the same response?
 □ Are ALL problems accounted for (either in correctPoints or improvementPoints)?
 □ If all answers are correct, is my grade 95-100%?
+□ Am I NOT marking something wrong based on a fragment I misread?
 `,
     })
 
