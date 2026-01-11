@@ -10,6 +10,20 @@ interface ServiceWorkerState {
   registration: ServiceWorkerRegistration | null
 }
 
+// Check if we're in a secure context where service workers can operate
+function canUseServiceWorker(): boolean {
+  if (typeof window === 'undefined') return false
+  if (!('serviceWorker' in navigator)) return false
+
+  // Must be in a secure context (HTTPS or localhost)
+  // Some browsers have 'serviceWorker' in navigator but throw SecurityError when used
+  if (typeof window.isSecureContext !== 'undefined' && !window.isSecureContext) {
+    return false
+  }
+
+  return true
+}
+
 export function useServiceWorker() {
   const [state, setState] = useState<ServiceWorkerState>({
     isSupported: false,
@@ -23,8 +37,8 @@ export function useServiceWorker() {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    // Check support
-    const isSupported = 'serviceWorker' in navigator
+    // Check support including secure context requirement
+    const isSupported = canUseServiceWorker()
     setState(prev => ({ ...prev, isSupported, isOnline: navigator.onLine }))
 
     if (!isSupported) return
@@ -71,11 +85,24 @@ export function useServiceWorker() {
 
     registerSW()
 
-    // Periodic update check - with proper cleanup
+    // Periodic update check - with proper cleanup and error handling
     const intervalId = setInterval(() => {
-      navigator.serviceWorker.ready.then(registration => {
-        registration.update()
-      })
+      try {
+        // Double-check we can still use service worker (context may have changed)
+        if (!canUseServiceWorker()) return
+
+        navigator.serviceWorker.ready
+          .then(registration => {
+            registration.update().catch(() => {
+              // Update failed silently - not critical
+            })
+          })
+          .catch(() => {
+            // Service worker not ready - silently continue
+          })
+      } catch {
+        // SecurityError or other error - silently continue
+      }
     }, 60 * 60 * 1000) // Check every hour
 
     return () => {
@@ -113,20 +140,30 @@ export function useServiceWorker() {
 
   // Skip waiting and reload
   const applyUpdate = useCallback(() => {
-    if (state.registration?.waiting) {
-      state.registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+    try {
+      if (state.registration?.waiting) {
+        state.registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+        window.location.reload()
+      }
+    } catch {
+      // SecurityError or other error - try simple reload
       window.location.reload()
     }
   }, [state.registration])
 
   // Cache course for offline access
   const cacheForOffline = useCallback((courseId: string, courseData: unknown) => {
-    if (state.registration?.active) {
-      state.registration.active.postMessage({
-        type: 'CACHE_COURSE',
-        courseId,
-        courseData,
-      })
+    try {
+      if (state.registration?.active) {
+        state.registration.active.postMessage({
+          type: 'CACHE_COURSE',
+          courseId,
+          courseData,
+        })
+      }
+    } catch {
+      // SecurityError or other error - silently continue
+      // Offline caching is a nice-to-have, not critical
     }
   }, [state.registration])
 
