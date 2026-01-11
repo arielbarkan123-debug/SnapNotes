@@ -1,0 +1,11 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://notesnap.app/sitemap.xml
+
+# Disallow sensitive paths
+Disallow: /api/
+Disallow: /dashboard/
+Disallow: /auth/
