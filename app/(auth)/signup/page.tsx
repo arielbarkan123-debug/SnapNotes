@@ -164,13 +164,19 @@ export default function SignupPage() {
   }
 
   const handleResendVerification = useCallback(async () => {
+    console.log('[Signup] ========== RESEND START ==========')
+    console.log('[Signup] Registered email:', registeredEmail)
+    console.log('[Signup] Cooldown remaining:', resendCooldown)
+
     if (!registeredEmail) {
+      console.error('[Signup] No email to resend to')
       setServerError(t('signup.noEmailToResend'))
       return
     }
 
     // Don't allow resend if cooldown is active
     if (resendCooldown > 0) {
+      console.log('[Signup] Cooldown active, skipping resend')
       return
     }
 
@@ -181,9 +187,12 @@ export default function SignupPage() {
       const supabase = createClient()
       const redirectUrl = `${window.location.origin}/auth/callback`
 
-      console.log('[Signup] Resending verification to:', registeredEmail)
+      console.log('[Signup] Resending verification email...')
+      console.log('[Signup] Target email:', registeredEmail)
+      console.log('[Signup] Redirect URL:', redirectUrl)
+      console.log('[Signup] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
 
-      const { error } = await supabase.auth.resend({
+      const { data, error } = await supabase.auth.resend({
         type: 'signup',
         email: registeredEmail,
         options: {
@@ -191,31 +200,46 @@ export default function SignupPage() {
         },
       })
 
+      console.log('[Signup] Resend response data:', data)
+
       if (error) {
-        console.error('[Signup] Resend error:', error.message, error.code)
+        console.error('[Signup] Resend error:', error.message)
+        console.error('[Signup] Resend error code:', error.code)
+        console.error('[Signup] Resend error status:', error.status)
+        console.error('[Signup] Full error object:', JSON.stringify(error, null, 2))
 
         // Handle rate limiting gracefully
         if (error.message.toLowerCase().includes('rate limit') ||
             error.message.toLowerCase().includes('too many') ||
-            error.message.toLowerCase().includes('email rate limit')) {
+            error.message.toLowerCase().includes('email rate limit') ||
+            error.code === 'over_email_send_rate_limit') {
+          console.log('[Signup] Rate limit detected')
           setServerError(t('signup.resendRateLimited'))
           // Set a longer cooldown on rate limit
           setResendCooldown(300) // 5 minutes
+        } else if (error.message.toLowerCase().includes('user not found') ||
+                   error.code === 'user_not_found') {
+          console.log('[Signup] User not found - may need to sign up again')
+          setServerError('No account found with this email. Please sign up again.')
         } else {
           const { message } = mapSupabaseAuthError(error.message)
           setServerError(message)
         }
       } else {
-        console.log('[Signup] Verification email resent successfully')
+        console.log('[Signup] Verification email resent successfully!')
+        console.log('[Signup] ========== RESEND SUCCESS ==========')
         setSuccessMessage(t('signup.verificationResent'))
         // Reset cooldown after successful resend
         setResendCooldown(RESEND_COOLDOWN_SECONDS)
       }
     } catch (err) {
       console.error('[Signup] Resend unexpected error:', err)
+      console.error('[Signup] Error type:', typeof err)
+      console.error('[Signup] Error details:', err instanceof Error ? err.message : String(err))
       setServerError(t('signup.unexpectedError'))
     } finally {
       setIsResending(false)
+      console.log('[Signup] ========== RESEND END ==========')
     }
   }, [registeredEmail, resendCooldown, t])
 

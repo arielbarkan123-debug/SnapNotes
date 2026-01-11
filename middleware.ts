@@ -11,8 +11,20 @@ const authRoutes = ['/login', '/signup', '/forgot-password', '/reset-password']
 const publicRoutes = ['/auth/callback']
 
 export async function middleware(request: NextRequest) {
-  const { user, supabaseResponse } = await updateSession(request)
   const { pathname } = request.nextUrl
+
+  // Log auth callback requests for debugging
+  if (pathname.startsWith('/auth/callback')) {
+    console.log('[Middleware] Auth callback detected')
+    console.log('[Middleware] Full URL:', request.url)
+    console.log('[Middleware] Pathname:', pathname)
+    console.log('[Middleware] Search params:', request.nextUrl.searchParams.toString())
+    // IMPORTANT: Let auth callback pass through WITHOUT session update
+    // The callback route will handle the code exchange itself
+    return NextResponse.next()
+  }
+
+  const { user, supabaseResponse } = await updateSession(request)
 
   // Check if this is a public route that needs no special handling
   const isPublicRoute = publicRoutes.some(route =>
