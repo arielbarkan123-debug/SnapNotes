@@ -7,9 +7,22 @@ const protectedRoutes = ['/dashboard', '/course']
 // Auth routes (redirect to dashboard if already authenticated)
 const authRoutes = ['/login', '/signup', '/forgot-password', '/reset-password']
 
+// Public routes that don't require any special handling
+const publicRoutes = ['/auth/callback']
+
 export async function middleware(request: NextRequest) {
   const { user, supabaseResponse } = await updateSession(request)
   const { pathname } = request.nextUrl
+
+  // Check if this is a public route that needs no special handling
+  const isPublicRoute = publicRoutes.some(route =>
+    pathname.startsWith(route)
+  )
+
+  // Let public routes through without modification
+  if (isPublicRoute) {
+    return supabaseResponse
+  }
 
   // Check if the current path is a protected route
   const isProtectedRoute = protectedRoutes.some(route =>

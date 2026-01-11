@@ -32,10 +32,16 @@ function LoginForm() {
   const [successMessage, setSuccessMessage] = useState('')
 
   useEffect(() => {
-    // Check for success message in URL params (from password reset)
+    // Check for success message in URL params (from password reset or email verification)
     const message = searchParams.get('message')
     if (message) {
-      setSuccessMessage(message)
+      setSuccessMessage(decodeURIComponent(message))
+    }
+
+    // Check for error message in URL params (from failed email verification)
+    const error = searchParams.get('error')
+    if (error) {
+      setServerError(decodeURIComponent(error))
     }
   }, [searchParams])
 

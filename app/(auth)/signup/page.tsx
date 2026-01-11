@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
@@ -21,6 +21,9 @@ interface FormErrors {
   confirmPassword?: string
 }
 
+// Cooldown time in seconds between resend attempts
+const RESEND_COOLDOWN_SECONDS = 60
+
 export default function SignupPage() {
   const t = useTranslations('auth')
   const [formData, setFormData] = useState<FormData>({
@@ -31,8 +34,23 @@ export default function SignupPage() {
   })
   const [errors, setErrors] = useState<FormErrors>({})
   const [isLoading, setIsLoading] = useState(false)
+  const [isResending, setIsResending] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [serverError, setServerError] = useState('')
+  const [registeredEmail, setRegisteredEmail] = useState('')
+  const [showResendOption, setShowResendOption] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
+
+  // Countdown timer for resend cooldown
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+
+    const timer = setInterval(() => {
+      setResendCooldown(prev => Math.max(0, prev - 1))
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [resendCooldown])
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
@@ -85,6 +103,7 @@ export default function SignupPage() {
     e.preventDefault()
     setSuccessMessage('')
     setServerError('')
+    setShowResendOption(false)
 
     if (!validateForm()) {
       return
@@ -95,22 +114,39 @@ export default function SignupPage() {
     try {
       const supabase = createClient()
 
-      const { error } = await supabase.auth.signUp({
+      // Get the current origin for the redirect URL
+      const redirectUrl = `${window.location.origin}/auth/callback`
+
+      console.log('[Signup] Attempting signup for:', formData.email)
+      console.log('[Signup] Redirect URL:', redirectUrl)
+
+      const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
           data: {
             name: formData.name,
           },
+          emailRedirectTo: redirectUrl,
         },
       })
 
       if (error) {
+        console.error('[Signup] Error:', error.message, error.code)
         // Map Supabase auth errors to user-friendly messages
         const { message } = mapSupabaseAuthError(error.message)
         setServerError(message)
       } else {
+        console.log('[Signup] Success, user data:', data?.user?.id ? 'User created' : 'No user')
+        console.log('[Signup] Confirmation sent to:', data?.user?.email)
+        console.log('[Signup] Email confirmation status:', data?.user?.identities?.length === 0 ? 'User already exists' : 'New user')
+
+        // Store the email for resend functionality
+        setRegisteredEmail(formData.email)
+        setShowResendOption(true)
         setSuccessMessage(t('signup.checkEmailVerify'))
+        // Start cooldown timer for resend button
+        setResendCooldown(RESEND_COOLDOWN_SECONDS)
         // Clear form
         setFormData({
           name: '',
@@ -119,12 +155,69 @@ export default function SignupPage() {
           confirmPassword: '',
         })
       }
-    } catch {
+    } catch (err) {
+      console.error('[Signup] Unexpected error:', err)
       setServerError(t('signup.unexpectedError'))
     } finally {
       setIsLoading(false)
     }
   }
+
+  const handleResendVerification = useCallback(async () => {
+    if (!registeredEmail) {
+      setServerError(t('signup.noEmailToResend'))
+      return
+    }
+
+    // Don't allow resend if cooldown is active
+    if (resendCooldown > 0) {
+      return
+    }
+
+    setIsResending(true)
+    setServerError('')
+
+    try {
+      const supabase = createClient()
+      const redirectUrl = `${window.location.origin}/auth/callback`
+
+      console.log('[Signup] Resending verification to:', registeredEmail)
+
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: registeredEmail,
+        options: {
+          emailRedirectTo: redirectUrl,
+        },
+      })
+
+      if (error) {
+        console.error('[Signup] Resend error:', error.message, error.code)
+
+        // Handle rate limiting gracefully
+        if (error.message.toLowerCase().includes('rate limit') ||
+            error.message.toLowerCase().includes('too many') ||
+            error.message.toLowerCase().includes('email rate limit')) {
+          setServerError(t('signup.resendRateLimited'))
+          // Set a longer cooldown on rate limit
+          setResendCooldown(300) // 5 minutes
+        } else {
+          const { message } = mapSupabaseAuthError(error.message)
+          setServerError(message)
+        }
+      } else {
+        console.log('[Signup] Verification email resent successfully')
+        setSuccessMessage(t('signup.verificationResent'))
+        // Reset cooldown after successful resend
+        setResendCooldown(RESEND_COOLDOWN_SECONDS)
+      }
+    } catch (err) {
+      console.error('[Signup] Resend unexpected error:', err)
+      setServerError(t('signup.unexpectedError'))
+    } finally {
+      setIsResending(false)
+    }
+  }, [registeredEmail, resendCooldown, t])
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-6 sm:py-8">
@@ -149,9 +242,56 @@ export default function SignupPage() {
           {/* Success Message */}
           {successMessage && (
             <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg">
-              <p className="text-green-700 dark:text-green-400 text-sm text-center">
-                {successMessage}
+              {/* Main success message */}
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <p className="text-green-700 dark:text-green-400 font-medium">
+                  {successMessage}
+                </p>
+              </div>
+
+              {/* Email instructions */}
+              <p className="text-gray-600 dark:text-gray-400 text-sm text-center mb-2">
+                {t('signup.emailInstructions')}
               </p>
+
+              {/* Check spam folder hint */}
+              <p className="text-amber-600 dark:text-amber-400 text-xs text-center mb-2">
+                ⚠️ {t('signup.checkSpamFolder')}
+              </p>
+
+              {/* Gmail tip */}
+              <p className="text-gray-500 dark:text-gray-500 text-xs text-center mb-3">
+                💡 {t('signup.gmailTip')}
+              </p>
+
+              {/* Delivery note */}
+              <p className="text-gray-500 dark:text-gray-500 text-xs text-center italic mb-3">
+                {t('signup.emailDeliveryNote')}
+              </p>
+
+              {showResendOption && registeredEmail && (
+                <div className="pt-3 border-t border-green-200 dark:border-green-800 text-center">
+                  <p className="text-gray-600 dark:text-gray-400 text-xs mb-2">
+                    {t('signup.didntReceiveEmail')}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={isResending || resendCooldown > 0}
+                    className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isResending
+                      ? t('signup.resending')
+                      : resendCooldown > 0
+                        ? t('signup.resendIn', { seconds: resendCooldown })
+                        : t('signup.resendVerification')
+                    }
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
