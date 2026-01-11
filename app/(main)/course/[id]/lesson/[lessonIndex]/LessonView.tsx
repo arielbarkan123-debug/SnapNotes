@@ -197,12 +197,19 @@ export default function LessonView({
     return () => {
       if (sessionIdRef.current) {
         // Use sendBeacon for reliable cleanup on page unload
-        const payload = JSON.stringify({
-          sessionId: sessionIdRef.current,
-          questionsAnswered: 0, // Will be updated in handleAdvance for completion
-          questionsCorrect: 0,
-        })
-        navigator.sendBeacon('/api/study-sessions', payload)
+        // Guard against navigator not being available (SSR or restricted context)
+        if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+          try {
+            const payload = JSON.stringify({
+              sessionId: sessionIdRef.current,
+              questionsAnswered: 0, // Will be updated in handleAdvance for completion
+              questionsCorrect: 0,
+            })
+            navigator.sendBeacon('/api/study-sessions', payload)
+          } catch {
+            // sendBeacon failed - not critical, silently continue
+          }
+        }
       }
     }
   }, [course.id, lessonIndex])

@@ -125,6 +125,24 @@ export function getDeviceInfo(): DeviceInfo {
   const browser = detectBrowser()
   const os = detectOS()
 
+  // Safely get timezone with fallback
+  let timezone = 'UTC'
+  try {
+    timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  } catch {
+    // Intl.DateTimeFormat might throw in some restricted environments
+    timezone = 'UTC'
+  }
+
+  // Safely get locale with fallback
+  let locale = 'en-US'
+  try {
+    locale = navigator.language || 'en-US'
+  } catch {
+    // navigator.language might throw in some restricted contexts
+    locale = 'en-US'
+  }
+
   return {
     deviceType: detectDeviceType(),
     browser: browser.name,
@@ -133,8 +151,8 @@ export function getDeviceInfo(): DeviceInfo {
     osVersion: os.version,
     screenWidth: window.screen.width,
     screenHeight: window.screen.height,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    locale: navigator.language || 'en-US',
+    timezone,
+    locale,
   }
 }
 

@@ -179,11 +179,20 @@ export default function SettingsPage() {
 
   // Apply theme
   useEffect(() => {
+    // Guard against SSR
+    if (typeof window === 'undefined') return
+
     const applyTheme = (t: Theme) => {
       const root = document.documentElement
       if (t === 'system') {
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-        root.classList.toggle('dark', prefersDark)
+        // Safe matchMedia access with fallback
+        try {
+          const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ?? false
+          root.classList.toggle('dark', prefersDark)
+        } catch {
+          // matchMedia not available - default to light theme
+          root.classList.remove('dark')
+        }
       } else {
         root.classList.toggle('dark', t === 'dark')
       }
@@ -196,15 +205,28 @@ export default function SettingsPage() {
       // localStorage not available
     }
 
-    // Listen for system theme changes
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    // Listen for system theme changes (with safe access)
+    let mediaQuery: MediaQueryList | null = null
     const handleChange = () => {
       if (theme === 'system') {
         applyTheme('system')
       }
     }
-    mediaQuery.addEventListener('change', handleChange)
-    return () => mediaQuery.removeEventListener('change', handleChange)
+
+    try {
+      mediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)') ?? null
+      mediaQuery?.addEventListener?.('change', handleChange)
+    } catch {
+      // matchMedia not available - skip listener
+    }
+
+    return () => {
+      try {
+        mediaQuery?.removeEventListener?.('change', handleChange)
+      } catch {
+        // Cleanup failed - not critical
+      }
+    }
   }, [theme])
 
   // Update setting helper

@@ -35,11 +35,18 @@ Time: ${new Date().toISOString()}
 Stack: ${error.stack || 'N/A'}
     `.trim()
 
-    navigator.clipboard?.writeText(details).then(() => {
-      alert('Error details copied to clipboard')
-    }).catch(() => {
-      console.log('Failed to copy, details:', details)
-    })
+    // Safe clipboard access - may not be available in all contexts
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(details).then(() => {
+        alert('Error details copied to clipboard')
+      }).catch(() => {
+        console.log('Failed to copy, details:', details)
+      })
+    } else {
+      // Fallback - just log to console
+      console.log('Clipboard not available. Error details:', details)
+      alert('Could not copy to clipboard. Check console for error details.')
+    }
   }
 
   return (

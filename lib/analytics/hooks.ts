@@ -36,7 +36,9 @@ export function useAnalytics(userId?: string | null): void {
   // Track page views on route change
   useEffect(() => {
     if (pathname && pathname !== prevPathRef.current) {
-      analytics.trackPageView(pathname, document.title)
+      // Safe document.title access
+      const title = typeof document !== 'undefined' ? document.title : ''
+      analytics.trackPageView(pathname, title)
       prevPathRef.current = pathname
     }
   }, [pathname])
@@ -51,7 +53,9 @@ export function usePageTracking(): void {
 
   useEffect(() => {
     if (pathname && pathname !== prevPathRef.current) {
-      analytics.trackPageView(pathname, document.title)
+      // Safe document.title access
+      const title = typeof document !== 'undefined' ? document.title : ''
+      analytics.trackPageView(pathname, title)
       prevPathRef.current = pathname
     }
   }, [pathname])
@@ -124,12 +128,23 @@ export function useEventTracking() {
 export function useErrorTracking() {
   // Set up global error handlers on mount
   useEffect(() => {
+    // Guard against SSR
+    if (typeof window === 'undefined') return
+
+    const getPagePath = () => {
+      try {
+        return window.location?.pathname || ''
+      } catch {
+        return ''
+      }
+    }
+
     const handleError = (event: ErrorEvent) => {
       analytics.trackError({
         type: 'javascript',
         message: event.message,
         stackTrace: event.error?.stack,
-        pagePath: window.location.pathname,
+        pagePath: getPagePath(),
       })
     }
 
@@ -138,7 +153,7 @@ export function useErrorTracking() {
         type: 'unhandled',
         message: String(event.reason),
         stackTrace: event.reason?.stack,
-        pagePath: window.location.pathname,
+        pagePath: getPagePath(),
       })
     }
 
@@ -152,54 +167,66 @@ export function useErrorTracking() {
   }, [])
 
   return useMemo(
-    () => ({
-      /**
-       * Track a caught error
-       */
-      trackError: (error: Error, componentName?: string, context?: Record<string, unknown>) => {
-        analytics.trackError({
-          type: 'javascript',
-          message: error.message,
-          stackTrace: error.stack,
-          pagePath: window.location.pathname,
-          componentName,
-          context,
-        })
-      },
+    () => {
+      // Helper for safe page path access
+      const getPagePath = () => {
+        if (typeof window === 'undefined') return ''
+        try {
+          return window.location?.pathname || ''
+        } catch {
+          return ''
+        }
+      }
 
-      /**
-       * Track an API error
-       */
-      trackApiError: (
-        endpoint: string,
-        status: number,
-        message: string,
-        method?: string,
-        context?: Record<string, unknown>
-      ) => {
-        analytics.trackError({
-          type: 'api',
-          message,
-          apiEndpoint: endpoint,
-          httpStatus: status,
-          httpMethod: method,
-          pagePath: window.location.pathname,
-          context,
-        })
-      },
+      return {
+        /**
+         * Track a caught error
+         */
+        trackError: (error: Error, componentName?: string, context?: Record<string, unknown>) => {
+          analytics.trackError({
+            type: 'javascript',
+            message: error.message,
+            stackTrace: error.stack,
+            pagePath: getPagePath(),
+            componentName,
+            context,
+          })
+        },
 
-      /**
-       * Track a network error
-       */
-      trackNetworkError: (message: string, context?: Record<string, unknown>) => {
-        analytics.trackError({
-          type: 'network',
-          message,
-          pagePath: window.location.pathname,
-          context,
-        })
-      },
-    }),
+        /**
+         * Track an API error
+         */
+        trackApiError: (
+          endpoint: string,
+          status: number,
+          message: string,
+          method?: string,
+          context?: Record<string, unknown>
+        ) => {
+          analytics.trackError({
+            type: 'api',
+            message,
+            apiEndpoint: endpoint,
+            httpStatus: status,
+            httpMethod: method,
+            pagePath: getPagePath(),
+            context,
+          })
+        },
+
+        /**
+         * Track a network error
+         */
+        trackNetworkError: (message: string, context?: Record<string, unknown>) => {
+          analytics.trackError({
+            type: 'network',
+            message,
+            pagePath: getPagePath(),
+            context,
+          })
+        },
+      }
+    },
     []
   )
 }

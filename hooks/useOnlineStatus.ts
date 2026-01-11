@@ -44,11 +44,19 @@ export function useOnlineStatus() {
   }, [])
 
   useEffect(() => {
-    // Set initial state
-    setStatus(prev => ({
-      ...prev,
-      isOnline: navigator.onLine,
-    }))
+    // Guard against SSR and restricted contexts
+    if (typeof window === 'undefined') return
+
+    // Set initial state with safe navigator access
+    try {
+      setStatus(prev => ({
+        ...prev,
+        isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
+      }))
+    } catch {
+      // navigator.onLine might throw in some restricted contexts
+      setStatus(prev => ({ ...prev, isOnline: true }))
+    }
 
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
