@@ -161,7 +161,7 @@ export default function SettingsPage() {
     }
 
     loadUser()
-  }, [router, supabase, toast])
+  }, [router, supabase, toast, t])
 
   // Track page view when settings load
   useEffect(() => {

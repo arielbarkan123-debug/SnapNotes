@@ -43,32 +43,44 @@ HOMEWORK QUESTION:
 TOPIC: {topic}
 REQUIRED CONCEPTS: {concepts}
 
-Your task:
-1. Extract all text content from the reference images
+## ACCURACY REQUIREMENTS:
+1. **EXACT FORMULA EXTRACTION**: Copy formulas EXACTLY as written - every symbol, subscript, superscript matters
+2. **NO GUESSING**: If text is unclear, mark it as [unclear] rather than guessing
+3. **VERIFY RELEVANCE**: Only mark content as highly relevant (>0.8) if it DIRECTLY applies to solving the question
+4. **COMPLETE DEFINITIONS**: Include the FULL definition, not abbreviated versions
+5. **PRESERVE CONTEXT**: Note any conditions or limitations mentioned with formulas
+
+## Your task:
+1. Extract all text content from the reference images ACCURATELY
 2. Identify which sections are most relevant to solving the homework question
-3. Extract key formulas, definitions, and examples that will help
-4. Note any worked examples that demonstrate similar problem-solving
+3. Extract key formulas EXACTLY as written (symbols, subscripts, everything)
+4. Extract key definitions COMPLETELY (don't abbreviate)
+5. Note any worked examples that demonstrate similar problem-solving
 
 Return your analysis as JSON:
 {
-  "extractedContent": "Full text content extracted from all images",
+  "extractedContent": "Full text content extracted from all images - be thorough and accurate",
   "relevantSections": [
     {
       "imageIndex": 0,
       "description": "Description of the relevant section",
-      "relevanceScore": 0.9
+      "relevanceScore": 0.9,
+      "whyRelevant": "Explains why this section helps solve the homework question"
     }
   ],
-  "keyFormulas": ["formula1", "formula2"],
-  "keyDefinitions": ["term: definition", ...],
-  "helpfulExamples": ["description of example 1", ...]
+  "keyFormulas": ["formula1 (copied EXACTLY)", "formula2"],
+  "keyDefinitions": ["term: COMPLETE definition", ...],
+  "helpfulExamples": ["description of example 1 and how it relates to the problem", ...],
+  "warnings": ["Any unclear text or potential transcription issues"]
 }
 
-Important:
+## Important:
 - Focus on content directly relevant to the homework question
-- Score relevance from 0 to 1 (1 = highly relevant)
-- Extract formulas exactly as written
-- Keep definitions concise but accurate`
+- Score relevance from 0 to 1 (1 = highly relevant, ONLY for content that directly helps solve the question)
+- Extract formulas EXACTLY as written - accuracy is critical
+- Keep definitions COMPLETE - don't abbreviate
+- If there are multiple similar formulas, include ALL of them
+- Note any conditions or constraints mentioned with formulas (e.g., "valid for x > 0")`
 
 // ============================================================================
 // Main Functions

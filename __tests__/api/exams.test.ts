@@ -90,7 +90,7 @@ describe('Exams API - POST (Generate Exam)', () => {
           })
         } else if (table === 'exams') {
           builder.single.mockResolvedValue({
-            data: { id: 'exam-123', ...mockCourseFromDB },
+            data: { id: 'exam-123', title: mockCourseFromDB.title, status: 'completed' },
             error: null,
           })
         } else if (table === 'exam_questions') {

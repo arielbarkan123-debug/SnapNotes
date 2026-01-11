@@ -55,7 +55,7 @@ export async function GET(
       success: true,
       exam: {
         ...exam,
-        course_title: (exam.courses as any)?.title,
+        course_title: (exam.courses as { title?: string } | null)?.title,
         questions: safeQuestions,
       },
     })

@@ -319,7 +319,7 @@ When showing mistakes or corrections, use these patterns:
    }
 `
 
-export default {
+const visualGuidance = {
   VISUAL_SUGGESTIONS,
   getSuggestedVisuals,
   getPrimarySuggestedVisual,
@@ -328,3 +328,5 @@ export default {
   getFullVisualGuidance,
   ERROR_VISUAL_GUIDANCE,
 }
+
+export default visualGuidance

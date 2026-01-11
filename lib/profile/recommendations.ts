@@ -410,12 +410,16 @@ async function getUserStudyStats(userId: string): Promise<UserStudyStats> {
     .order('mastery_level', { ascending: true })
     .limit(5)
 
-  const lowMasteryLessons = (lessonProgress || []).map((lp: any) => ({
-    id: lp.lessons.id,
-    title: lp.lessons.title,
-    mastery: lp.mastery_level,
-    courseId: lp.lessons.course_id,
-  }))
+  const lowMasteryLessons = (lessonProgress || []).map((lp: { mastery_level?: number; lessons?: { id?: string; title?: string; course_id?: string } | { id?: string; title?: string; course_id?: string }[] }) => {
+    // Handle both single object and array from Supabase join
+    const lesson = Array.isArray(lp.lessons) ? lp.lessons[0] : lp.lessons
+    return {
+      id: lesson?.id || '',
+      title: lesson?.title || '',
+      mastery: lp.mastery_level || 0,
+      courseId: lesson?.course_id || '',
+    }
+  })
 
   // Check for incomplete lessons (new content)
   const { count: incompleteLessons } = await supabase
@@ -547,7 +551,7 @@ export function getClientSessionSuggestion(
   const mockProfile = {
     optimal_session_length: optimalLength,
     avg_session_length: optimalLength,
-    preferred_study_time: preferredTime as any,
+    preferred_study_time: (preferredTime || 'varies') as 'morning' | 'afternoon' | 'evening' | 'varies',
     peak_performance_hour: null,
   } as UserLearningProfile
 

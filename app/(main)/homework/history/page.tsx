@@ -18,6 +18,17 @@ interface HomeworkItem {
   grade?: string
 }
 
+interface HomeworkCheckResponse {
+  id: string
+  topic?: string
+  subject?: string
+  created_at: string
+  status: string
+  feedback?: {
+    gradeEstimate?: string
+  }
+}
+
 // ============================================================================
 // Page Component
 // ============================================================================
@@ -34,7 +45,7 @@ export default function HomeworkHistoryPage() {
         const checksRes = await fetch('/api/homework/check?limit=50')
         if (checksRes.ok) {
           const { checks } = await checksRes.json()
-          const formattedChecks: HomeworkItem[] = (checks || []).map((check: any) => ({
+          const formattedChecks: HomeworkItem[] = (checks || []).map((check: HomeworkCheckResponse) => ({
             id: check.id,
             type: 'check' as const,
             title: check.topic || 'Homework Check',

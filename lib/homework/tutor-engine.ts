@@ -80,11 +80,25 @@ const SOCRATIC_TUTOR_SYSTEM_BASE = `You are a warm, supportive Socratic tutor he
 - If there's a misconception, gently redirect without making them feel wrong
 - Use the student's own words when possible
 
+## ACCURACY REQUIREMENTS:
+When helping with MATH problems:
+- ALWAYS verify your mental calculations before giving hints
+- If the student has a correct answer, DO NOT suggest it's wrong
+- If pointing toward a concept, verify that concept applies to THIS problem
+- NEVER accidentally give hints that lead to wrong answers
+- If unsure about the correct approach, ask the student to explain their thinking first
+
+When helping with SCIENCE/OTHER subjects:
+- Only reference information from the provided reference materials or well-established facts
+- If the topic isn't covered in the references, acknowledge that honestly
+- Don't make up facts or explanations - accuracy matters more than helpfulness
+
 ## CRITICAL RULES:
 - NEVER give the final answer directly
 - NEVER solve the problem for them
 - NEVER make the student feel judged or stupid
 - If they ask "just tell me the answer", gently explain why discovering it themselves is more valuable
+- NEVER give hints that could lead them to a WRONG answer - verify your guidance first
 
 Return your response as JSON:
 {
@@ -293,32 +307,49 @@ function buildContextPrompt(context: TutorContext): string {
 
   let prompt = `TUTORING SESSION CONTEXT
 
-HOMEWORK QUESTION:
+## HOMEWORK QUESTION (READ CAREFULLY):
 ${questionAnalysis.questionText}
 
-SUBJECT: ${questionAnalysis.subject}
-TOPIC: ${questionAnalysis.topic}
-DIFFICULTY: ${questionAnalysis.difficultyEstimate}/5
-REQUIRED CONCEPTS: ${questionAnalysis.requiredConcepts.join(', ')}
-COMMON MISTAKES TO WATCH FOR: ${questionAnalysis.commonMistakes.join(', ')}
-APPROACH: ${questionAnalysis.solutionApproach}
+## PROBLEM DETAILS:
+- SUBJECT: ${questionAnalysis.subject}
+- TOPIC: ${questionAnalysis.topic}
+- DIFFICULTY: ${questionAnalysis.difficultyEstimate}/5
+- QUESTION TYPE: ${questionAnalysis.questionType || 'unknown'}
+- ESTIMATED STEPS: ${questionAnalysis.estimatedSteps || 'unknown'}
 
-STUDENT INFO:
+## KEY CONCEPTS NEEDED:
+${(questionAnalysis.requiredConcepts || []).map((c, i) => `${i + 1}. ${c}`).join('\n') || 'Not specified'}
+
+## COMMON MISTAKES (watch for these):
+${(questionAnalysis.commonMistakes || []).map((m) => `- ${m}`).join('\n') || 'None identified'}
+
+## APPROACH GUIDANCE (do NOT share directly with student):
+${questionAnalysis.solutionApproach}
+
+## STUDENT INFO:
 - Comfort level: ${session.comfort_level || 'not specified'}
 - Initial attempt: ${session.initial_attempt || 'none provided'}
 - Hints used: ${context.hintsUsed}/4
 - Current progress: ${context.currentProgress}%
 
-${getComfortLevelGuidance(session.comfort_level || 'some_idea')}`
+${getComfortLevelGuidance(session.comfort_level || 'some_idea')}
+
+## ACCURACY REMINDER:
+- Before giving any hint, mentally verify it leads to the CORRECT approach
+- If student's work looks correct, DO NOT imply it's wrong
+- Double-check any numbers or calculations before mentioning them`
 
   if (referenceAnalysis && referenceAnalysis.extractedContent) {
     prompt += `
 
-REFERENCE MATERIALS PROVIDED:
-${referenceAnalysis.extractedContent.slice(0, 2000)}
+## REFERENCE MATERIALS (from student's notes/textbook):
+${referenceAnalysis.extractedContent.slice(0, 2500)}
 
-KEY FORMULAS: ${referenceAnalysis.keyFormulas.join(', ')}
-KEY DEFINITIONS: ${referenceAnalysis.keyDefinitions.slice(0, 5).join('; ')}`
+## KEY FORMULAS (use these when helping):
+${(referenceAnalysis.keyFormulas || []).map((f, i) => `${i + 1}. ${f}`).join('\n') || 'None extracted'}
+
+## KEY DEFINITIONS:
+${(referenceAnalysis.keyDefinitions || []).slice(0, 5).map((d, i) => `${i + 1}. ${d}`).join('\n') || 'None extracted'}`
   }
 
   return prompt

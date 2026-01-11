@@ -20,6 +20,17 @@ interface RecentItem {
   grade?: string
 }
 
+interface HomeworkCheckResponse {
+  id: string
+  topic?: string
+  subject?: string
+  created_at: string
+  status: string
+  feedback?: {
+    gradeEstimate?: string
+  }
+}
+
 // ============================================================================
 // Feature Card Component
 // ============================================================================
@@ -164,7 +175,7 @@ export default function HomeworkHubPage() {
         const checksRes = await fetch('/api/homework/check?limit=3')
         if (checksRes.ok) {
           const { checks } = await checksRes.json()
-          const recentChecks: RecentItem[] = (checks || []).map((check: any) => ({
+          const recentChecks: RecentItem[] = (checks || []).map((check: HomeworkCheckResponse) => ({
             id: check.id,
             type: 'check' as const,
             title: check.topic || t('homeworkCheck'),
@@ -184,7 +195,7 @@ export default function HomeworkHubPage() {
     }
 
     fetchRecent()
-  }, [])
+  }, [t])
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">

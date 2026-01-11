@@ -326,7 +326,7 @@ export function calculateAlignmentScore(
 // Export
 // =============================================================================
 
-export default {
+const learningObjectives = {
   validateLearningObjective,
   validateLearningObjectives,
   suggestActionVerbs,
@@ -335,3 +335,5 @@ export default {
   mapLOsToStandards,
   calculateAlignmentScore,
 }
+
+export default learningObjectives

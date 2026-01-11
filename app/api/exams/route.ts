@@ -9,6 +9,26 @@ import { shouldIncludeImages, detectVisualContentMentions } from '@/lib/images/s
 import type { PastExamTemplate, ImageAnalysis } from '@/types/past-exam'
 import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 
+// Type for AI-generated exam questions
+interface GeneratedQuestion {
+  question_type?: string
+  question_text?: string
+  correct_answer?: string
+  lesson_title?: string | null
+  lesson_index?: number | null
+  options?: string[]
+  explanation?: string | null
+  passage?: string | null
+  matching_pairs?: Array<{ left: string; right: string }> | null
+  ordering_items?: string[] | null
+  sub_questions?: Array<{ id: string; question: string; correct_answer?: string; points?: number }> | null
+  acceptable_answers?: string[] | null
+  image_label_data?: {
+    image_url?: string
+    labels?: Array<{ id: string; x: number; y: number; correct_answer: string }>
+  } | null
+}
+
 // Allow 3 minutes for exam generation (Claude API call for complex exams)
 export const maxDuration = 180
 
@@ -102,7 +122,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Not authorized' }, { status: 403 })
     }
 
-    const generatedCourse = course.generated_course as any
+    const generatedCourse = course.generated_course as {
+      lessons?: Array<{ title?: string; steps?: Array<{ content?: string; question?: string; explanation?: string }> }>;
+      sections?: Array<{ title?: string; steps?: Array<{ content?: string; question?: string; explanation?: string }> }>;
+    } | null
     const lessons = generatedCourse?.lessons || generatedCourse?.sections || []
 
     if (!lessons.length) {
@@ -119,7 +142,7 @@ export async function POST(request: NextRequest) {
     const studySystem = (userProfile?.study_system || 'general') as StudySystem
     const subjects = (userProfile?.subjects || []) as string[]
     const subjectLevels = (userProfile?.subject_levels || {}) as Record<string, string>
-    const examFormat = ((body as any).examFormat || userProfile?.exam_format || 'match_real') as ExamFormat
+    const examFormat = (body.examFormat || userProfile?.exam_format || 'match_real') as ExamFormat
 
     // Fetch user's past exam templates for style guide
     const { data: pastExamTemplates } = await supabase
@@ -497,35 +520,36 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
       return false
     }
 
-    const isQuestionAutoGradable = (q: any): boolean => {
+    const isQuestionAutoGradable = (q: GeneratedQuestion): boolean => {
+      const qType = q.question_type || ''
       // Multiple choice, true/false, matching, ordering are auto-gradable by design
-      if (['multiple_choice', 'true_false', 'matching', 'ordering'].includes(q.question_type)) {
+      if (['multiple_choice', 'true_false', 'matching', 'ordering'].includes(qType)) {
         return true
       }
 
       // Fill blank and short answer need a correct answer
-      if (['fill_blank', 'short_answer'].includes(q.question_type)) {
-        return q.correct_answer && q.correct_answer.trim().length > 0
+      if (['fill_blank', 'short_answer'].includes(qType)) {
+        return Boolean(q.correct_answer && q.correct_answer.trim().length > 0)
       }
 
       // Passage-based needs sub_questions
-      if (q.question_type === 'passage_based') {
-        return q.sub_questions && Array.isArray(q.sub_questions) && q.sub_questions.length > 0
+      if (qType === 'passage_based') {
+        return Boolean(q.sub_questions && Array.isArray(q.sub_questions) && q.sub_questions.length > 0)
       }
 
       // Image label needs image_label_data with labels
-      if (q.question_type === 'image_label') {
-        return q.image_label_data &&
+      if (qType === 'image_label') {
+        return Boolean(q.image_label_data &&
           q.image_label_data.labels &&
           Array.isArray(q.image_label_data.labels) &&
-          q.image_label_data.labels.length > 0
+          q.image_label_data.labels.length > 0)
       }
 
       return true
     }
 
     // Validate and filter questions
-    const validatedQuestions = questionsData.questions.filter((q: any) => {
+    const validatedQuestions = questionsData.questions.filter((q: GeneratedQuestion) => {
       const questionText = q.question_text || ''
       const lessonTitle = q.lesson_title || null
 
@@ -607,7 +631,7 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
     }
 
     // Filter out image_label questions with no valid image
-    questionsData.questions = validatedQuestions.filter((q: any) => {
+    questionsData.questions = validatedQuestions.filter((q: GeneratedQuestion) => {
       if (q.question_type === 'image_label') {
         return q.image_label_data?.image_url && !q.image_label_data.image_url.startsWith('SEARCH_IMAGE:')
       }
@@ -615,7 +639,7 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
     })
 
     // Calculate points based on question type
-    const calculatePoints = (q: any): number => {
+    const calculatePoints = (q: GeneratedQuestion): number => {
       switch (q.question_type) {
         case 'matching':
         case 'ordering':
@@ -623,7 +647,7 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
         case 'passage_based':
           // Sum of sub-question points
           if (q.sub_questions && Array.isArray(q.sub_questions)) {
-            return q.sub_questions.reduce((sum: number, sq: any) => sum + (sq.points || 1), 0)
+            return q.sub_questions.reduce((sum: number, sq: { points?: number }) => sum + (sq.points || 1), 0)
           }
           return 2
         case 'image_label':
@@ -637,7 +661,7 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
 
     // Calculate total points from all questions
     const totalPoints = questionsData.questions.reduce(
-      (sum: number, q: any) => sum + calculatePoints(q),
+      (sum: number, q: GeneratedQuestion) => sum + calculatePoints(q),
       0
     )
 
@@ -660,7 +684,7 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
       return NextResponse.json({ success: false, error: 'Failed to create exam' }, { status: 500 })
     }
 
-    const questionsToInsert = questionsData.questions.map((q: any, index: number) => ({
+    const questionsToInsert = questionsData.questions.map((q: GeneratedQuestion, index: number) => ({
       exam_id: exam.id,
       question_index: index,
       lesson_index: q.lesson_index ?? null,

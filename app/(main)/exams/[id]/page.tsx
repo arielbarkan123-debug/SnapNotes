@@ -249,7 +249,6 @@ export default function TakeExamPage() {
   submitRef.current = handleSubmit
 
   // Timer effect - only re-run when relevant exam properties change
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!exam || exam.status !== 'in_progress' || !exam.started_at) return
 
@@ -269,7 +268,7 @@ export default function TakeExamPage() {
     updateTimer()
     const interval = setInterval(updateTimer, 1000)
     return () => clearInterval(interval)
-  }, [exam?.started_at, exam?.status, exam?.time_limit_minutes])
+  }, [exam])
 
   const handleStart = async () => {
     try {

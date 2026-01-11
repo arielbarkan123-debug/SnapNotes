@@ -95,7 +95,33 @@ export function createMockSupabaseClient(config: MockSupabaseConfig = {}) {
         response = { data: null, error: null }
     }
 
-    const builder = {
+    interface QueryBuilder {
+      select: jest.Mock
+      insert: jest.Mock
+      update: jest.Mock
+      upsert: jest.Mock
+      delete: jest.Mock
+      eq: jest.Mock
+      neq: jest.Mock
+      gt: jest.Mock
+      gte: jest.Mock
+      lt: jest.Mock
+      lte: jest.Mock
+      like: jest.Mock
+      ilike: jest.Mock
+      is: jest.Mock
+      in: jest.Mock
+      contains: jest.Mock
+      containedBy: jest.Mock
+      order: jest.Mock
+      limit: jest.Mock
+      range: jest.Mock
+      single: jest.Mock
+      maybeSingle: jest.Mock
+      then: (resolve: (value: typeof response) => void) => Promise<typeof response>
+    }
+
+    const builder: QueryBuilder = {
       select: jest.fn((columns?: string) => {
         calls.select.push(columns || '*')
         return builder

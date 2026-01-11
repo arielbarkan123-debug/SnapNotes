@@ -510,12 +510,39 @@ ${teacherStyleContext}
 Analyze the homework submission with EXTREME attention to accuracy. Follow these steps carefully:
 
 ### CRITICAL ACCURACY RULES (READ CAREFULLY):
-1. **VERIFY BEFORE JUDGING**: For ANY math/calculation problem, COMPUTE THE ANSWER YOURSELF before deciding if the student is correct
-2. **DOUBLE-CHECK HANDWRITING**: Handwritten math is hard to read. If an answer LOOKS wrong, re-read it carefully - you may have misread a digit or symbol. Common confusions: 4↔9, 1↔7, y²↔y⁴, +↔×
-3. **NEVER CONTRADICT YOURSELF**: Do NOT say "incorrect" and then change your mind. Verify FIRST, then state your conclusion ONCE.
+1. **VERIFY BEFORE JUDGING**: For ANY math/calculation problem, COMPUTE THE ANSWER YOURSELF before deciding if the student is correct. Show your calculation explicitly.
+2. **DOUBLE-CHECK HANDWRITING**: Handwritten math is hard to read. If an answer LOOKS wrong, re-read it carefully - you may have misread a digit or symbol. Common confusions: 4↔9, 1↔7, 6↔0, 5↔S, 2↔Z, y²↔y⁴, +↔×, ÷↔+, -↔=
+3. **NEVER CONTRADICT YOURSELF**: Do NOT say "incorrect" and then change my mind. Verify FIRST, then state your conclusion ONCE.
 4. **ANSWER IS KING**: If the student's final answer matches the correct answer, the problem is 100% CORRECT. Do NOT penalize for messy work, unclear steps, or presentation style when the answer is right.
 5. **STYLE ≠ ERRORS**: Feedback about work organization, notation clarity, or presentation should NEVER reduce the grade. Only actual WRONG ANSWERS reduce the grade.
 6. **ONE PROBLEM AT A TIME**: Analyze each problem separately before making any overall judgment
+7. **ASSUME COMPETENCE**: When in doubt, interpret ambiguous handwriting in the way that makes the answer correct. Students usually get problems right.
+8. **NO FALSE NEGATIVES**: It's worse to mark a correct answer as wrong than to miss an error. If uncertain, favor the student.
+
+### MATH VERIFICATION EXAMPLES:
+**Example 1 - Simple Arithmetic:**
+- Question: 24 + 38 = ?
+- Student wrote: 62
+- MY CALCULATION: 24 + 38 = 62 ✓
+- Result: CORRECT (student answer matches my calculation)
+
+**Example 2 - Misread Handwriting:**
+- Question: 7 × 8 = ?
+- Student wrote: what looks like "54" but could be "56"
+- MY CALCULATION: 7 × 8 = 56
+- Result: Check if "54" might actually be "56" (4 and 6 look similar in handwriting). Give benefit of doubt → CORRECT
+
+**Example 3 - Algebra:**
+- Question: Solve 2x + 5 = 13
+- Student wrote: x = 4
+- MY CALCULATION: 2x = 13 - 5 = 8, x = 8/2 = 4 ✓
+- Result: CORRECT
+
+**Example 4 - Multi-step with error:**
+- Question: Find the area of a rectangle 5cm × 8cm
+- Student wrote: 5 + 8 = 13 cm²
+- MY CALCULATION: Area = length × width = 5 × 8 = 40 cm²
+- Result: INCORRECT (student added instead of multiplied, fundamental error, severity: major)
 
 ### ANALYSIS STEPS:
 **STEP 1**: Extract ALL problems/questions from the task image. List them.

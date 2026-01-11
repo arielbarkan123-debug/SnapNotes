@@ -290,9 +290,11 @@ export function filterForbiddenContent(course: GeneratedCourse): GeneratedCourse
 // Exports
 // =============================================================================
 
-export default {
+const courseValidator = {
   filterForbiddenContent,
   isLessonForbidden,
   isStepForbidden,
   isQuestionForbidden,
 }
+
+export default courseValidator

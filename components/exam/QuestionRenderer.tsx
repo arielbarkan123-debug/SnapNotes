@@ -530,7 +530,6 @@ function MatchingRenderer({
   const [matches, setMatches] = useState<Map<number, number>>(new Map())
 
   // Initialize matches from answer if available (only on mount)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (answer?.matchingAnswers && answer.matchingAnswers.length > 0) {
       const newMatches = new Map<number, number>()
@@ -551,6 +550,7 @@ function MatchingRenderer({
       })
       setMatches(newMatches)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleTermClick = (termIndex: number) => {
@@ -795,7 +795,6 @@ function OrderingRenderer({
   const correctOrder = useMemo(() => question.ordering_items || [], [question.ordering_items])
 
   // Shuffle items on mount (intentionally only on mount)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const initialOrder = useMemo(() => {
     const items = [...correctOrder]
     for (let i = items.length - 1; i > 0; i--) {
@@ -803,6 +802,7 @@ function OrderingRenderer({
       ;[items[i], items[j]] = [items[j], items[i]]
     }
     return items
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const [currentOrder, setCurrentOrder] = useState<string[]>(
@@ -810,11 +810,11 @@ function OrderingRenderer({
   )
 
   // Initialize from answer (only on mount)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (answer?.orderingAnswer) {
       setCurrentOrder(answer.orderingAnswer)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const moveItem = (fromIndex: number, toIndex: number) => {
@@ -974,7 +974,6 @@ function PassageBasedRenderer({
   const [subAnswers, setSubAnswers] = useState<Map<string, string>>(new Map())
 
   // Initialize from answer (only on mount)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (answer?.subAnswers) {
       const map = new Map<string, string>()
@@ -983,6 +982,7 @@ function PassageBasedRenderer({
       })
       setSubAnswers(map)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleSubAnswer = (subQuestionId: string, answerValue: string) => {

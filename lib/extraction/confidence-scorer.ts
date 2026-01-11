@@ -554,10 +554,12 @@ export async function generateQualityReport(
 // Export
 // =============================================================================
 
-export default {
+const confidenceScorer = {
   scoreExtraction,
   recordExtractionFeedback,
   getExtractionFeedback,
   updateFeedbackStatus,
   generateQualityReport,
 }
+
+export default confidenceScorer

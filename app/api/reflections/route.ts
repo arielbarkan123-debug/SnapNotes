@@ -175,9 +175,7 @@ export async function GET(request: Request) {
 // Helper Functions
 // =============================================================================
 
-interface SupabaseClient {
-  from: (table: string) => any
-}
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
 async function checkWeeklyReflectionStatus(supabase: SupabaseClient, userId: string) {
   const now = new Date()

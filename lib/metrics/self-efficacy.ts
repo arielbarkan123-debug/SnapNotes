@@ -426,7 +426,7 @@ export function shouldTriggerSurvey(
 // Export
 // =============================================================================
 
-export default {
+const selfEfficacy = {
   SELF_EFFICACY_ITEMS,
   LIKERT_OPTIONS,
   calculateSelfEfficacyScore,
@@ -437,3 +437,5 @@ export default {
   analyzeSelfEfficacy,
   shouldTriggerSurvey,
 }
+
+export default selfEfficacy

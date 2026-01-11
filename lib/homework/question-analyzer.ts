@@ -33,8 +33,15 @@ function getAnthropicClient(): Anthropic {
 
 const QUESTION_ANALYSIS_PROMPT = `You are an expert educational analyst. Analyze this homework question image and extract detailed information.
 
-Your task:
-1. Read and transcribe the question exactly as written
+## ACCURACY REQUIREMENTS - READ CAREFULLY:
+1. **EXACT TRANSCRIPTION**: Copy the question EXACTLY as written. Do not paraphrase or simplify.
+2. **HANDWRITING CARE**: For handwritten questions, if a character is ambiguous (e.g., 4 vs 9, 1 vs 7, + vs ×), transcribe BOTH interpretations in parentheses: "24 + 38 (or 24 × 38)"
+3. **INCLUDE ALL NUMBERS**: Ensure ALL numbers, variables, and symbols are captured exactly
+4. **DIAGRAMS**: Describe diagrams in detail - dimensions, labels, angles, any given values
+5. **DON'T GUESS**: If something is illegible, mark it as [illegible] rather than guessing
+
+## Your task:
+1. Read and transcribe the question EXACTLY as written (including any unclear parts)
 2. Identify the academic subject and specific topic
 3. Determine the type of question (word problem, calculation, proof, etc.)
 4. Estimate difficulty level (1-5, where 1=elementary, 5=advanced college)
@@ -45,22 +52,25 @@ Your task:
 
 Return your analysis as JSON in this exact format:
 {
-  "questionText": "The exact text of the question",
+  "questionText": "The exact text of the question (mark [illegible] for unclear parts, show alternatives for ambiguous characters)",
   "subject": "math" | "science" | "history" | "language" | "other",
   "topic": "Specific topic (e.g., 'Quadratic Equations', 'Photosynthesis')",
   "questionType": "word_problem" | "multiple_choice" | "proof" | "calculation" | "essay" | "fill_blank" | "short_answer",
   "difficultyEstimate": 1-5,
   "requiredConcepts": ["concept1", "concept2", ...],
   "commonMistakes": ["mistake1", "mistake2", ...],
-  "solutionApproach": "High-level description of how to approach this problem",
-  "estimatedSteps": 5
+  "solutionApproach": "High-level description of how to approach this problem - DO NOT include the answer",
+  "estimatedSteps": 5,
+  "hasAmbiguity": true/false,
+  "ambiguityNotes": "Notes about any unclear parts if hasAmbiguity is true"
 }
 
-Important:
-- Be accurate in transcribing the question
-- If there are diagrams, describe what they show
+## Important:
+- Be EXTREMELY accurate in transcribing the question - errors here cascade to wrong tutoring
+- If there are diagrams, describe EXACTLY what they show with all given values
 - The solutionApproach should guide thinking, NOT give the answer
-- List at least 2-3 required concepts and common mistakes`
+- List at least 2-3 required concepts and common mistakes
+- If anything is unclear or could be read multiple ways, flag it in ambiguityNotes`
 
 // ============================================================================
 // Main Functions
@@ -174,26 +184,48 @@ function parseAnalysisResponse(responseText: string): QuestionAnalysis {
     jsonStr = jsonMatch[1]
   }
 
+  // Also try to find JSON object directly
+  if (!jsonMatch) {
+    const directJsonMatch = responseText.match(/\{[\s\S]*\}/)
+    if (directJsonMatch) {
+      jsonStr = directJsonMatch[0]
+    }
+  }
+
   try {
     const parsed = JSON.parse(jsonStr.trim())
 
+    // Validate question text - ensure we got something meaningful
+    const questionText = String(parsed.questionText || '')
+    if (!questionText || questionText.length < 5) {
+      console.warn('[Question Analyzer] Short or missing question text:', questionText)
+    }
+
+    // Log if there are ambiguity issues
+    if (parsed.hasAmbiguity) {
+      console.log('[Question Analyzer] Ambiguity detected:', parsed.ambiguityNotes)
+    }
+
     // Validate and normalize the response
     return {
-      questionText: String(parsed.questionText || ''),
+      questionText: questionText,
       subject: normalizeSubject(parsed.subject),
       topic: String(parsed.topic || 'General'),
-      questionType: String(parsed.questionType || 'unknown'),
+      questionType: normalizeQuestionType(parsed.questionType),
       difficultyEstimate: Math.min(5, Math.max(1, Number(parsed.difficultyEstimate) || 3)),
       requiredConcepts: Array.isArray(parsed.requiredConcepts)
-        ? parsed.requiredConcepts.map(String)
+        ? parsed.requiredConcepts.map(String).filter((c: string) => c.length > 0)
         : [],
       commonMistakes: Array.isArray(parsed.commonMistakes)
-        ? parsed.commonMistakes.map(String)
+        ? parsed.commonMistakes.map(String).filter((m: string) => m.length > 0)
         : [],
       solutionApproach: String(parsed.solutionApproach || ''),
       estimatedSteps: Math.max(1, Number(parsed.estimatedSteps) || 5),
+      hasAmbiguity: Boolean(parsed.hasAmbiguity),
+      ambiguityNotes: parsed.ambiguityNotes ? String(parsed.ambiguityNotes) : undefined,
     }
-  } catch {
+  } catch (error) {
+    console.error('[Question Analyzer] JSON parse error:', error)
     // If JSON parsing fails, try to extract information from plain text
     return {
       questionText: extractQuestionFromText(responseText),
@@ -207,6 +239,26 @@ function parseAnalysisResponse(responseText: string): QuestionAnalysis {
       estimatedSteps: 5,
     }
   }
+}
+
+/**
+ * Normalize question type to valid values
+ */
+function normalizeQuestionType(type: string): string {
+  const normalized = String(type || '').toLowerCase().replace(/[^a-z_]/g, '')
+  const validTypes = ['word_problem', 'multiple_choice', 'proof', 'calculation', 'essay', 'fill_blank', 'short_answer']
+  if (validTypes.includes(normalized)) {
+    return normalized
+  }
+  // Try to match partial
+  if (normalized.includes('word')) return 'word_problem'
+  if (normalized.includes('choice') || normalized.includes('multi')) return 'multiple_choice'
+  if (normalized.includes('calc')) return 'calculation'
+  if (normalized.includes('essay')) return 'essay'
+  if (normalized.includes('fill')) return 'fill_blank'
+  if (normalized.includes('short')) return 'short_answer'
+  if (normalized.includes('proof')) return 'proof'
+  return 'unknown'
 }
 
 function normalizeSubject(subject: string): QuestionSubject {

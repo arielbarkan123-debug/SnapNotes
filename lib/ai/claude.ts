@@ -26,7 +26,7 @@ import {
   UserLearningContext,
 } from './prompts'
 import type { ExtractedDocument } from '@/lib/documents'
-import { GeneratedCourse, Lesson, LessonOutline, LessonIntensityMode } from '@/types'
+import { GeneratedCourse, Lesson, LessonOutline, LessonIntensityMode, StepType, LearningObjective } from '@/types'
 import { filterForbiddenContent } from './course-validator'
 
 // ============================================================================
@@ -713,7 +713,7 @@ export async function generateStudyCourse(
     }
 
     // Validate required fields (AI may return "sections" or "lessons")
-    const hasLessons = course.lessons || (course as any).sections
+    const hasLessons = course.lessons || (course as { sections?: unknown }).sections
     if (!course.title || !course.overview || !hasLessons) {
       throw new ClaudeAPIError(
         'Generated course is missing required fields',
@@ -852,7 +852,7 @@ export async function generateCourseFromImageSingleCall(
     }
 
     // Validate and apply user title (AI may return "sections" or "lessons")
-    const hasLessons = course.lessons || (course as any).sections
+    const hasLessons = course.lessons || (course as { sections?: unknown }).sections
     if (!course.title || !course.overview || !hasLessons) {
       throw new ClaudeAPIError(
         'Generated course is missing required fields',
@@ -1555,8 +1555,11 @@ export async function generateCourseFromText(
  * @param imageUrls - Optional array of image URLs to map from imageIndex
  * @returns Normalized course and any web image queries that need to be fetched
  */
+type RawLesson = { title?: string; steps?: RawStep[] }
+type RawStep = { type?: string; title?: string; question?: string; content?: string; imageIndex?: number; imageUrl?: string; imageAlt?: string; webImageQuery?: string; options?: string[]; correctIndex?: number; correct_answer?: number | string; isTrue?: boolean; explanation?: string }
+
 function normalizeGeneratedCourse(
-  course: GeneratedCourse & { sections?: any[] },
+  course: GeneratedCourse & { sections?: RawLesson[] },
   imageUrls?: string[]
 ): { normalizedCourse: GeneratedCourse; webImageQueries: { lessonIndex: number; stepIndex: number; query: string; alt: string }[] } {
   // Handle AI response that uses "sections" instead of "lessons"
@@ -1566,9 +1569,9 @@ function normalizeGeneratedCourse(
   const normalizedCourse: GeneratedCourse = {
     title: course.title,
     overview: course.overview,
-    lessons: lessonsData.map((lesson: any, lessonIndex: number) => ({
+    lessons: lessonsData.map((lesson: RawLesson, lessonIndex: number) => ({
       title: lesson.title || 'Untitled Lesson',
-      steps: (lesson.steps || []).map((step: any, stepIndex: number) => {
+      steps: (lesson.steps || []).map((step: RawStep, stepIndex: number) => {
         // For question steps, put the question text in content
         // AI generates: { type: "question", question: "What is...?", options: [...] }
         // We need: { type: "question", content: "What is...?", options: [...] }
@@ -1600,12 +1603,16 @@ function normalizeGeneratedCourse(
           })
         }
 
+        // Convert correct_answer to number if it's a string
+        const rawAnswer = step.correctIndex ?? step.correct_answer
+        const correctAnswer = typeof rawAnswer === 'string' ? parseInt(rawAnswer, 10) : rawAnswer
+
         return {
-          type: step.type || 'explanation',
+          type: (step.type || 'explanation') as StepType,
           content,
           title: step.title,
           options: step.options,
-          correct_answer: step.correctIndex ?? step.correct_answer,
+          correct_answer: correctAnswer,
           explanation: step.explanation,
           imageUrl,
           imageAlt,
@@ -1758,10 +1765,10 @@ export async function generateInitialCourse(
     let parsed: {
       title: string
       overview: string
-      learningObjectives?: any[]
+      learningObjectives?: string[]
       documentSummary: string
       lessonOutline: LessonOutline[]
-      lessons: any[]
+      lessons: RawLesson[]
     }
 
     try {
@@ -1786,18 +1793,21 @@ export async function generateInitialCourse(
     const partialCourse: GeneratedCourse = {
       title: safeTitle || parsed.title,
       overview: parsed.overview,
-      lessons: parsed.lessons.map((lesson: any) => ({
+      lessons: parsed.lessons.map((lesson: RawLesson) => ({
         title: lesson.title || 'Untitled Lesson',
-        steps: (lesson.steps || []).map((step: any) => ({
-          type: step.type || 'explanation',
-          content: step.type === 'question' ? (step.question || step.content || '') : (step.content || ''),
-          title: step.title,
-          options: step.options,
-          correct_answer: step.correctIndex ?? step.correct_answer,
-          explanation: step.explanation,
-        })),
+        steps: (lesson.steps || []).map((step: RawStep) => {
+          const rawAnswer = step.correctIndex ?? step.correct_answer
+          return {
+            type: (step.type || 'explanation') as StepType,
+            content: step.type === 'question' ? (step.question || step.content || '') : (step.content || ''),
+            title: step.title,
+            options: step.options,
+            correct_answer: typeof rawAnswer === 'string' ? parseInt(rawAnswer, 10) : rawAnswer,
+            explanation: step.explanation,
+          }
+        }),
       })),
-      learningObjectives: parsed.learningObjectives,
+      learningObjectives: parsed.learningObjectives as LearningObjective[] | undefined,
     }
 
     // Apply content filter
@@ -1870,7 +1880,7 @@ export async function generateContinuationLessons(
     console.log(`[generateContinuationLessons] Response length: ${rawText.length} chars`)
 
     const jsonText = extractJsonFromResponse(rawText)
-    let parsed: { lessons: any[] }
+    let parsed: { lessons: RawLesson[] }
 
     try {
       parsed = JSON.parse(jsonText)
@@ -1890,16 +1900,19 @@ export async function generateContinuationLessons(
     }
 
     // Normalize the lessons
-    const newLessons: Lesson[] = parsed.lessons.map((lesson: any) => ({
+    const newLessons: Lesson[] = parsed.lessons.map((lesson: RawLesson) => ({
       title: lesson.title || 'Untitled Lesson',
-      steps: (lesson.steps || []).map((step: any) => ({
-        type: step.type || 'explanation',
-        content: step.type === 'question' ? (step.question || step.content || '') : (step.content || ''),
-        title: step.title,
-        options: step.options,
-        correct_answer: step.correctIndex ?? step.correct_answer,
-        explanation: step.explanation,
-      })),
+      steps: (lesson.steps || []).map((step: RawStep) => {
+        const rawAnswer = step.correctIndex ?? step.correct_answer
+        return {
+          type: (step.type || 'explanation') as StepType,
+          content: step.type === 'question' ? (step.question || step.content || '') : (step.content || ''),
+          title: step.title,
+          options: step.options,
+          correct_answer: typeof rawAnswer === 'string' ? parseInt(rawAnswer, 10) : rawAnswer,
+          explanation: step.explanation,
+        }
+      }),
     }))
 
     console.log(`[generateContinuationLessons] Generated ${newLessons.length} new lessons`)

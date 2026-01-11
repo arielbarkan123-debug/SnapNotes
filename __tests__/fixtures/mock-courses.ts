@@ -2,7 +2,7 @@
  * Mock Course Data for Testing
  */
 
-import type { Course, GeneratedCourse, Lesson, Step } from '@/types'
+import type { Course, GeneratedCourse } from '@/types'
 
 /**
  * Mock generated course content
@@ -24,9 +24,9 @@ export const mockGeneratedCourse: GeneratedCourse = {
         },
         {
           type: 'question',
-          question: 'What is the basic unit of life?',
+          content: 'What is the basic unit of life?',
           options: ['Cell', 'Atom', 'Molecule', 'Tissue'],
-          correctIndex: 0,
+          correct_answer: 0,
           explanation: 'The cell is considered the basic unit of life because it is the smallest unit that can carry out all life processes.',
         },
         {
@@ -35,9 +35,9 @@ export const mockGeneratedCourse: GeneratedCourse = {
         },
         {
           type: 'question',
-          question: 'Which type of cell has a nucleus?',
+          content: 'Which type of cell has a nucleus?',
           options: ['Prokaryotic', 'Eukaryotic', 'Both', 'Neither'],
-          correctIndex: 1,
+          correct_answer: 1,
           explanation: 'Eukaryotic cells have a true nucleus enclosed by a nuclear membrane.',
         },
       ],
@@ -55,9 +55,9 @@ export const mockGeneratedCourse: GeneratedCourse = {
         },
         {
           type: 'question',
-          question: 'Which organelle is responsible for protein synthesis?',
+          content: 'Which organelle is responsible for protein synthesis?',
           options: ['Mitochondria', 'Ribosome', 'Golgi apparatus', 'Lysosome'],
-          correctIndex: 1,
+          correct_answer: 1,
           explanation: 'Ribosomes are the sites of protein synthesis in all cells.',
         },
         {
@@ -80,18 +80,14 @@ export const mockGeneratedCourse: GeneratedCourse = {
         },
         {
           type: 'question',
-          question: 'What is the main component of the cell membrane?',
+          content: 'What is the main component of the cell membrane?',
           options: ['Proteins', 'Carbohydrates', 'Phospholipids', 'Nucleic acids'],
-          correctIndex: 2,
+          correct_answer: 2,
           explanation: 'Phospholipids form the basic structure of the cell membrane bilayer.',
         },
       ],
     },
   ],
-  keyConcepts: ['cell', 'organelle', 'membrane', 'nucleus', 'mitochondria'],
-  connections: 'All concepts relate to the fundamental understanding of cellular biology.',
-  summary: 'This course covered the basic concepts of cell biology including cell types, organelles, and membrane structure.',
-  furtherStudy: ['Cell division', 'Cellular respiration', 'Photosynthesis'],
 }
 
 /**
@@ -102,6 +98,8 @@ export const mockCourseFromDB: Course = {
   user_id: 'user-123',
   title: 'Cell Biology Fundamentals',
   source_type: 'image',
+  original_image_url: 'https://example.com/image.jpg',
+  extracted_content: 'Sample extracted content from the notes.',
   generated_course: mockGeneratedCourse,
   created_at: '2024-01-15T10:00:00Z',
   updated_at: '2024-01-15T10:00:00Z',
@@ -115,6 +113,8 @@ export const mockVisualCourse: Course = {
   user_id: 'user-123',
   title: 'Human Anatomy: Heart Diagrams and Structure',
   source_type: 'image',
+  original_image_url: 'https://example.com/heart-diagram.jpg',
+  extracted_content: 'Extracted content about heart anatomy.',
   generated_course: {
     ...mockGeneratedCourse,
     title: 'Human Anatomy: Heart Diagrams and Structure',
@@ -129,9 +129,9 @@ export const mockVisualCourse: Course = {
           },
           {
             type: 'question',
-            question: 'How many chambers does the human heart have?',
+            content: 'How many chambers does the human heart have?',
             options: ['Two', 'Three', 'Four', 'Five'],
-            correctIndex: 2,
+            correct_answer: 2,
             explanation: 'The heart has four chambers: left and right atria, and left and right ventricles.',
           },
         ],
@@ -150,6 +150,8 @@ export const mockHebrewCourse: Course = {
   user_id: 'user-456',
   title: 'ביולוגיה של התא',
   source_type: 'text',
+  original_image_url: null,
+  extracted_content: 'תאים הם יחידות המבנה והתפקוד הבסיסיות של כל היצורים החיים.',
   generated_course: {
     title: 'ביולוגיה של התא',
     overview: 'קורס זה מכסה את מבנה התא ותפקודיו.',
@@ -164,7 +166,6 @@ export const mockHebrewCourse: Course = {
         ],
       },
     ],
-    keyConcepts: ['תא', 'אברון', 'קרום'],
   },
   created_at: '2024-01-15T10:00:00Z',
   updated_at: '2024-01-15T10:00:00Z',

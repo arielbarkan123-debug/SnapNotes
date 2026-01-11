@@ -202,7 +202,7 @@ export default function DeepPracticeLessonView({
         wrongAttemptsOnCurrent: 0,
       }))
     }
-  }, [isCorrect, isMastered, state.correctCount, state.totalAttempts, state.correctStreak, lessonData.practiceProblems.length, goToPhase])
+  }, [isCorrect, isMastered, state.correctCount, state.totalAttempts, lessonData.practiceProblems.length, goToPhase])
 
   // Handle hint request
   const handleShowHint = useCallback(() => {

@@ -58,7 +58,10 @@ export async function POST(request: Request): Promise<NextResponse<HelpAPIRespon
       return NextResponse.json({ success: false, error: 'Not authorized' }, { status: 403 })
     }
 
-    const generatedCourse = course.generated_course as any
+    const generatedCourse = course.generated_course as {
+      lessons?: Array<{ title?: string; steps?: Array<{ type?: string; content?: string; question?: string; explanation?: string }> }>;
+      sections?: Array<{ title?: string; steps?: Array<{ type?: string; content?: string; question?: string; explanation?: string }> }>;
+    } | null
     let relevantContent = ''
 
     if (generatedCourse) {
@@ -94,20 +97,47 @@ export async function POST(request: Request): Promise<NextResponse<HelpAPIRespon
 
     switch (questionType) {
       case 'explain':
-        systemPrompt = 'You are a helpful tutor. ONLY use information from the COURSE CONTENT provided. If not there, say "This isn\'t covered in your notes." Keep under 100 words. Use simple language.'
-        userPrompt = `The student doesn't understand:\n"${stepContent}"\n\nExplain simpler.\n\nCOURSE CONTENT:\n${relevantContent}\n\nEnd with:\n📍 From: [Lesson title]`
+        systemPrompt = `You are a helpful, accurate tutor.
+RULES:
+- ONLY use information from the COURSE CONTENT provided below
+- If the topic isn't in the course content, say "This isn't covered in your notes."
+- Keep explanations under 100 words
+- Use simple, clear language appropriate for a student
+- Be accurate - don't make up information
+- If explaining math, double-check any calculations you show`
+        userPrompt = `The student doesn't understand this concept:\n"${stepContent}"\n\nExplain it in simpler terms they can understand.\n\nCOURSE CONTENT:\n${relevantContent}\n\nEnd with:\n📍 From: [Lesson title where this is covered]`
         break
       case 'example':
-        systemPrompt = 'You are a helpful tutor. Provide real-world examples. ONLY use COURSE CONTENT. Keep under 80 words.'
-        userPrompt = `Give example for:\n"${stepContent}"\n\nCOURSE CONTENT:\n${relevantContent}\n\nEnd with:\n📍 From: [Lesson title]`
+        systemPrompt = `You are a helpful tutor providing real-world examples.
+RULES:
+- ONLY use examples that relate to the COURSE CONTENT provided
+- Examples must be accurate and age-appropriate
+- Keep under 80 words
+- Make examples concrete and relatable
+- Don't use examples that could confuse the student`
+        userPrompt = `Give a real-world example that illustrates:\n"${stepContent}"\n\nThe example should help the student understand and remember this concept.\n\nCOURSE CONTENT:\n${relevantContent}\n\nEnd with:\n📍 From: [Lesson title]`
         break
       case 'hint':
-        systemPrompt = 'You are a helpful tutor. Give hints WITHOUT revealing the answer. Keep under 50 words.'
-        userPrompt = `Student stuck on:\n"${stepContent}"\n\nTheir answer: "${context.userAnswer || 'none'}"\nCorrect: "${context.correctAnswer || 'unknown'}"\n\nGive hint without answer.\n\nCOURSE CONTENT:\n${relevantContent}`
+        systemPrompt = `You are a Socratic tutor giving hints WITHOUT revealing answers.
+RULES:
+- NEVER give the answer directly
+- Give a hint that guides thinking in the RIGHT direction
+- VERIFY your hint is accurate - don't accidentally mislead
+- If the student's answer is actually correct, tell them!
+- Keep under 50 words
+- Be encouraging, not condescending`
+        userPrompt = `Student is stuck on:\n"${stepContent}"\n\nTheir current answer: "${context.userAnswer || 'none provided'}"\nThe correct answer is: "${context.correctAnswer || 'not specified'}"\n\nIF their answer is correct (or very close), tell them they're right!\nIF wrong, give a hint to guide them (WITHOUT revealing the answer).\n\nCOURSE CONTENT:\n${relevantContent}`
         break
       case 'custom':
-        systemPrompt = 'You are a helpful tutor. Answer ONLY using COURSE CONTENT. If not covered, say so. Keep under 120 words.'
-        userPrompt = `Student asks: "${customQuestion!.slice(0, 300)}"\n\nStudying: "${context.lessonTitle}"\nTopic: "${stepContent}"\n\nCOURSE CONTENT:\n${relevantContent}\n\nEnd with source:\n📍 From: [Lesson title]`
+        systemPrompt = `You are a helpful, accurate tutor answering student questions.
+RULES:
+- ONLY use information from the COURSE CONTENT provided
+- If the question isn't covered in the content, honestly say so
+- Be accurate - it's better to say "I don't have that information" than to guess
+- Keep under 120 words
+- If the question involves math, verify your calculations
+- Cite which lesson the information comes from`
+        userPrompt = `The student asks: "${customQuestion!.slice(0, 300)}"\n\nThey're studying: "${context.lessonTitle}"\nCurrent topic: "${stepContent}"\n\nAnswer their question accurately using ONLY the course content below.\n\nCOURSE CONTENT:\n${relevantContent}\n\nEnd with source:\n📍 From: [Lesson title where this is covered]`
         break
     }
 

@@ -275,6 +275,10 @@ export interface QuestionAnalysis {
   commonMistakes: string[]
   solutionApproach: string
   estimatedSteps: number
+  /** Indicates if there was ambiguity in reading the question (e.g., unclear handwriting) */
+  hasAmbiguity?: boolean
+  /** Notes about ambiguous parts if hasAmbiguity is true */
+  ambiguityNotes?: string
 }
 
 export interface ReferenceAnalysis {

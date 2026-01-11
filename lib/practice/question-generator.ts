@@ -281,8 +281,11 @@ async function fetchCourseContent(courseId: string): Promise<{
   }
 
   // Add section/lesson content
-  const sections = course.sections as any[] | null
-  const lessons = course.lessons as any[] | null
+  type LessonStep = { type?: string; content?: string }
+  type Lesson = { title?: string; steps?: LessonStep[] }
+  type Section = { title?: string; lessons?: Lesson[] }
+  const sections = course.sections as Section[] | null
+  const lessons = course.lessons as Lesson[] | null
 
   if (sections) {
     for (const section of sections) {

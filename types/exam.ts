@@ -121,6 +121,7 @@ export interface CreateExamRequest {
   courseId: string
   questionCount: number
   timeLimitMinutes: number
+  examFormat?: 'match_real' | 'adaptive' | 'standard'
 }
 
 export interface ExamAnswer {

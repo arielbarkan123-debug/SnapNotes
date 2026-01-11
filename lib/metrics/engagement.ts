@@ -504,7 +504,7 @@ export function generateSessionId(): string {
 // Export
 // =============================================================================
 
-export default {
+const engagementMetrics = {
   recordEngagementEvent,
   recordEngagementEventsBatch,
   calculateEngagementMetrics,
@@ -512,3 +512,5 @@ export default {
   aggregateLearningEffectiveness,
   generateSessionId,
 }
+
+export default engagementMetrics

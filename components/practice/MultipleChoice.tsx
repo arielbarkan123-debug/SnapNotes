@@ -59,7 +59,6 @@ export default function MultipleChoice({
   )
 
   // Shuffle options once per question - intentionally only depends on question
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const shuffledOptions = useMemo<ShuffledOption[]>(() => {
     const indexed = options.map((text, originalIndex) => ({ text, originalIndex }))
     // Fisher-Yates shuffle
@@ -68,6 +67,7 @@ export default function MultipleChoice({
       ;[indexed[i], indexed[j]] = [indexed[j], indexed[i]]
     }
     return indexed
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question]) // Use question as key - options should stay fixed for same question
 
   // Find the shuffled index of the correct answer

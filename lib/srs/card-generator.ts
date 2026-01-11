@@ -19,6 +19,18 @@ import type {
   TrueFalseData,
 } from '@/types'
 
+// Type for course sections/lessons with flexible step format
+type CourseSection = {
+  title?: string
+  steps?: LessonStep[]
+  // Legacy formats
+  content?: string
+  keyPoints?: string[]
+  formulas?: Formula[]
+  explanation?: string
+  questions?: Array<{ question?: string; options?: string[]; correct?: number; correctIndex?: number }>
+}
+
 import {
   createMultipleChoiceBack,
   createTrueFalseBack,
@@ -77,7 +89,7 @@ const MAX_BACK_WORDS = 200
  * @returns Array of ReviewCardInsert objects ready for database insertion
  */
 export function generateCardsFromCourse(
-  course: GeneratedCourse & { sections?: any[]; lessons?: any[]; keyConcepts?: string[] },
+  course: GeneratedCourse & { sections?: CourseSection[]; lessons?: CourseSection[]; keyConcepts?: string[] },
   courseId: string,
   conceptMappings?: ConceptMapping
 ): ReviewCardInsert[] {
@@ -92,7 +104,7 @@ export function generateCardsFromCourse(
   }
 
   // Process each section (lesson)
-  lessonsData.forEach((section: any, lessonIndex: number) => {
+  lessonsData.forEach((section: CourseSection, lessonIndex: number) => {
     if (!section) return
 
     let stepIndex = 0
@@ -159,7 +171,7 @@ export function generateCardsFromCourse(
   })
 
   // Generate cards from key concepts (course-level)
-  const keyConcepts = course.keyConcepts || (course as any).keyConcepts || []
+  const keyConcepts = course.keyConcepts || []
   if (keyConcepts.length > 0) {
     const conceptCards = generateConceptCards(
       keyConcepts,
@@ -234,6 +246,9 @@ function getConceptIds(
  * Directly uses embedded questions and extracts key points
  * Creates interactive card types (multiple_choice, true_false, fill_blank) when applicable
  */
+// Extended step type to handle legacy AI formats that may have 'question' and 'correctIndex' fields
+type ExtendedStep = LessonStep & { question?: string; correctIndex?: number }
+
 function generateCardsFromSteps(
   steps: LessonStep[],
   sectionTitle: string,
@@ -243,7 +258,8 @@ function generateCardsFromSteps(
 ): ReviewCardInsert[] {
   const cards: ReviewCardInsert[] = []
 
-  steps.forEach((step: any, index: number) => {
+  steps.forEach((rawStep: LessonStep, index: number) => {
+    const step = rawStep as ExtendedStep
     const stepType = step.type || 'explanation'
     const conceptIds = getConceptIds(lessonIndex, index, conceptMappings)
 
@@ -617,14 +633,13 @@ function truncateText(text: string, maxWords: number): string {
  * Useful for showing user how many cards they'll get
  * Supports both new steps format and legacy format
  */
-export function estimateCardCount(course: GeneratedCourse & { sections?: any[]; lessons?: any[] }): number {
+export function estimateCardCount(course: GeneratedCourse & { sections?: CourseSection[]; lessons?: CourseSection[] }): number {
   let count = 0
 
   // Handle both "sections" and "lessons"
   const lessonsData = course.lessons || course.sections || []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  lessonsData.forEach((section: any) => {
+  lessonsData.forEach((section: CourseSection) => {
     // Check for new steps format
     if (section.steps && Array.isArray(section.steps) && section.steps.length > 0) {
       // Count questions and key_points from steps
@@ -668,7 +683,7 @@ export function estimateCardCount(course: GeneratedCourse & { sections?: any[]; 
  * Uses new card types: flashcard, multiple_choice, true_false, short_answer, formula
  */
 export function getCardTypeSummary(
-  course: GeneratedCourse & { sections?: any[]; lessons?: any[] }
+  course: GeneratedCourse & { sections?: CourseSection[]; lessons?: CourseSection[] }
 ): Partial<Record<CardType, number>> {
   const summary: Partial<Record<CardType, number>> = {
     flashcard: 0,
@@ -681,8 +696,7 @@ export function getCardTypeSummary(
   // Handle both "sections" and "lessons"
   const lessonsData = course.lessons || course.sections || []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  lessonsData.forEach((section: any) => {
+  lessonsData.forEach((section: CourseSection) => {
     // Check for new steps format
     if (section.steps && Array.isArray(section.steps) && section.steps.length > 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
