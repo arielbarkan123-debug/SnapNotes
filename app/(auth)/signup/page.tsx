@@ -286,9 +286,24 @@ export default function SignupPage() {
                 ⚠️ {t('signup.checkSpamFolder')}
               </p>
 
+              {/* Check all folders */}
+              <p className="text-gray-500 dark:text-gray-500 text-xs text-center mb-2">
+                📁 {t('signup.checkAllFolders')}
+              </p>
+
               {/* Gmail tip */}
-              <p className="text-gray-500 dark:text-gray-500 text-xs text-center mb-3">
+              <p className="text-gray-500 dark:text-gray-500 text-xs text-center mb-2">
                 💡 {t('signup.gmailTip')}
+              </p>
+
+              {/* iCloud/Apple Mail tip */}
+              <p className="text-gray-500 dark:text-gray-500 text-xs text-center mb-2">
+                🍎 {t('signup.iCloudTip')}
+              </p>
+
+              {/* Email not arriving note */}
+              <p className="text-amber-600 dark:text-amber-500 text-xs text-center mb-2">
+                ℹ️ {t('signup.emailNotArriving')}
               </p>
 
               {/* Delivery note */}
