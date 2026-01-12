@@ -28,7 +28,31 @@ import type {
 const AI_MODEL = 'claude-sonnet-4-5-20250929'
 const MAX_TOKENS = 4096
 const IMAGE_FETCH_TIMEOUT_MS = 30000 // 30 second timeout for fetching images
-const API_TIMEOUT_MS = 150000 // 2.5 minutes - allows for complex vision tasks but fails before mobile timeouts
+const API_TIMEOUT_MS = 180000 // 3 minutes - increased for Safari compatibility
+
+// Retry configuration
+const MAX_RETRIES = 3
+const INITIAL_RETRY_DELAY_MS = 1000
+
+/**
+ * Check if an error is retryable (transient server issues)
+ */
+function isRetryableError(error: unknown): boolean {
+  if (error instanceof Anthropic.APIError) {
+    // Retry on server errors, overload, rate limits
+    const retryableStatuses = [429, 500, 502, 503, 504, 529]
+    return retryableStatuses.includes(error.status)
+  }
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase()
+    return message.includes('overloaded') ||
+           message.includes('529') ||
+           message.includes('rate') ||
+           message.includes('timeout') ||
+           error.name === 'AbortError'
+  }
+  return false
+}
 
 // ============================================================================
 // Image Fetching
@@ -703,26 +727,52 @@ Return your analysis as JSON in this exact format:
 `,
     })
 
-    console.log('[Checker] Sending request to Claude (streaming)...')
+    console.log('[Checker] Sending request to Claude (streaming with retry)...')
 
-    // Use streaming to prevent connection timeouts on mobile
-    // The stream keeps data flowing, preventing TCP/browser timeouts
-    const stream = client.messages.stream({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS,
-      messages: [{ role: 'user', content }],
-    })
+    // Use streaming with retry to handle transient Safari/network issues
+    let response: Anthropic.Message | null = null
+    let lastError: Error | null = null
 
-    // Consume the stream to keep data flowing (prevents connection timeouts)
-    // We don't need to collect the text since finalMessage() gives us everything
-    for await (const event of stream) {
-      // Just iterate to consume the stream - this keeps the connection alive
-      void event
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        // Use streaming to prevent connection timeouts on mobile
+        // The stream keeps data flowing, preventing TCP/browser timeouts
+        const stream = client.messages.stream({
+          model: AI_MODEL,
+          max_tokens: MAX_TOKENS,
+          messages: [{ role: 'user', content }],
+        })
+
+        // Consume the stream to keep data flowing (prevents connection timeouts)
+        // We don't need to collect the text since finalMessage() gives us everything
+        for await (const event of stream) {
+          // Just iterate to consume the stream - this keeps the connection alive
+          void event
+        }
+
+        // Get the final message for metadata
+        response = await stream.finalMessage()
+        console.log('[Checker] Response received, tokens used:', response.usage?.output_tokens)
+        break // Success - exit retry loop
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error))
+
+        // Check if we should retry
+        if (!isRetryableError(error) || attempt === MAX_RETRIES) {
+          console.error(`[Checker] Attempt ${attempt}/${MAX_RETRIES} failed (not retrying):`, lastError.message)
+          throw error
+        }
+
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1)
+        console.warn(`[Checker] Attempt ${attempt}/${MAX_RETRIES} failed: ${lastError.message}. Retrying in ${delay}ms...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
     }
 
-    // Get the final message for metadata
-    const response = await stream.finalMessage()
-    console.log('[Checker] Response received, tokens used:', response.usage?.output_tokens)
+    if (!response) {
+      throw lastError || new Error('Failed to get response from AI')
+    }
 
     // Parse response and apply consistency validation
     const result = parseCheckerResponse(response)

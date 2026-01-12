@@ -24,10 +24,17 @@ const HEARTBEAT_INTERVAL = 5000
 // ============================================================================
 
 export async function POST(request: NextRequest) {
+  // Detect Safari for more aggressive heartbeat interval
+  const userAgent = request.headers.get('user-agent') || ''
+  const isSafari = userAgent.includes('Safari') && !userAgent.includes('Chrome') && !userAgent.includes('Chromium')
+
   // Create a streaming response to keep mobile connections alive
   const encoder = new TextEncoder()
   let heartbeatInterval: NodeJS.Timeout | null = null
   const startTime = Date.now()
+
+  // Safari needs more frequent heartbeats to prevent connection drops
+  const heartbeatFrequency = isSafari ? 3000 : HEARTBEAT_INTERVAL // 3s for Safari, 5s for others
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -37,10 +44,11 @@ export async function POST(request: NextRequest) {
       }
 
       // Start heartbeat to keep connection alive
+      // Safari gets more frequent heartbeats (3s vs 5s)
       heartbeatInterval = setInterval(() => {
         const elapsed = Math.round((Date.now() - startTime) / 1000)
         send({ type: 'heartbeat', status: 'analyzing', elapsed })
-      }, HEARTBEAT_INTERVAL)
+      }, heartbeatFrequency)
 
       try {
         const supabase = await createClient()
@@ -88,8 +96,18 @@ export async function POST(request: NextRequest) {
           .single()
 
         if (insertError) {
-          console.error('Insert error:', insertError)
-          send({ type: 'error', error: 'Failed to create homework check' })
+          console.error('[Homework Check] Insert error:', insertError)
+          console.error('[Homework Check] Insert data was:', {
+            task_image_url: body.taskImageUrl,
+            answer_image_url: body.answerImageUrl || null,
+            reference_image_urls: body.referenceImageUrls || [],
+            teacher_review_urls: body.teacherReviewUrls || [],
+          })
+          // Provide more specific error message
+          const errorMsg = insertError.code === '23502' // NOT NULL violation
+            ? 'Database schema error. Please contact support.'
+            : 'Failed to create homework check. Please try again.'
+          send({ type: 'error', error: errorMsg })
           controller.close()
           return
         }
@@ -205,13 +223,15 @@ export async function POST(request: NextRequest) {
     }
   })
 
+  // Return stream with Safari-optimized headers
   return new Response(stream, {
     headers: {
       'Content-Type': 'application/x-ndjson',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Connection': 'keep-alive',
-      // Prevent buffering by proxies/CDNs
+      // Prevent buffering by proxies/CDNs for faster streaming
       'X-Accel-Buffering': 'no',
+      'X-Content-Type-Options': 'nosniff',
     },
   })
 }

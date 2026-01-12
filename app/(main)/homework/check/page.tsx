@@ -15,6 +15,27 @@ import { sanitizeError } from '@/lib/utils/error-sanitizer'
 // HEIC conversion module is dynamically imported to avoid bundling heic2any
 // into the main bundle (which causes SecurityError on some mobile browsers)
 
+// Auto-retry configuration for transient errors (Safari fix)
+const MAX_AUTO_RETRIES = 2
+const AUTO_RETRY_DELAY_MS = 2000
+
+const TRANSIENT_ERROR_PATTERNS = [
+  'AI service is temporarily busy',
+  'AI is busy',
+  'temporarily busy',
+  'temporary issue',
+  'try again',
+  'Database schema error',
+  'Failed to create homework check',
+]
+
+function isTransientError(errorMessage: string): boolean {
+  const lowerMessage = errorMessage.toLowerCase()
+  return TRANSIENT_ERROR_PATTERNS.some(pattern =>
+    lowerMessage.includes(pattern.toLowerCase())
+  )
+}
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -395,6 +416,7 @@ export default function HomeworkCheckPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const autoRetryCountRef = useRef(0)
 
   // Analytics
   const { trackFeature } = useEventTracking()
@@ -714,13 +736,17 @@ export default function HomeworkCheckPage() {
       // If only one image provided, use it as taskImageUrl (the main image for analysis)
       setSubmissionStatus('Analyzing homework...')
 
-      // Create AbortController with 3-minute timeout to match server maxDuration
-      // This prevents indefinite waiting if the connection is silently dropped
+      // Create AbortController with timeout
+      // Safari/iOS needs more time due to aggressive connection management
+      const isSafari = typeof navigator !== 'undefined' &&
+        /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+      const timeoutMs = isSafari ? 240000 : 210000 // 4 min for Safari, 3.5 min for others
+
       const controller = new AbortController()
       let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
-        console.log('[HomeworkCheck] Client-side timeout after 3 minutes')
+        console.log(`[HomeworkCheck] Client-side timeout after ${timeoutMs / 1000}s`)
         controller.abort()
-      }, 180000) // 3 minutes
+      }, timeoutMs)
 
       // Helper to clear timeout when we're done
       const clearTimeoutSafely = () => {
@@ -839,11 +865,27 @@ export default function HomeworkCheckPage() {
         }
       }
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+
       // Track raw error for debugging
       trackFeature('homework_check_error', {
-        error: err instanceof Error ? err.message : 'Unknown error',
+        error: errorMessage,
         name: err instanceof Error ? err.name : 'Unknown',
+        autoRetryAttempt: autoRetryCountRef.current,
       })
+
+      // Check if we should auto-retry transient errors (Safari fix)
+      if (isTransientError(errorMessage) && autoRetryCountRef.current < MAX_AUTO_RETRIES) {
+        autoRetryCountRef.current += 1
+        console.log(`[HomeworkCheck] Auto-retrying (${autoRetryCountRef.current}/${MAX_AUTO_RETRIES}) after error: ${errorMessage}`)
+
+        // Brief delay before retry
+        setSubmissionStatus('Retrying...')
+        setTimeout(() => {
+          handleSubmit()
+        }, AUTO_RETRY_DELAY_MS)
+        return
+      }
 
       // Handle timeout/abort specifically with a clearer message
       if (err instanceof Error && err.name === 'AbortError') {
@@ -852,6 +894,9 @@ export default function HomeworkCheckPage() {
         // Show sanitized user-friendly error message
         setError(sanitizeError(err))
       }
+
+      // Reset auto-retry counter on final error
+      autoRetryCountRef.current = 0
     } finally {
       setIsSubmitting(false)
     }
