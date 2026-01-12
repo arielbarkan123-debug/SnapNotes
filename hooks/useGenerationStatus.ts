@@ -130,40 +130,100 @@ export function useGenerationStatus(
 
     fetchStatus()
 
-    // Subscribe to realtime updates
-    const channel = supabase
-      .channel(`course-${courseId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'courses',
-          filter: `id=eq.${courseId}`,
-        },
-        (payload) => {
-          const newData = payload.new as Partial<Course>
+    // Subscribe to realtime updates (with fallback for browsers that block WebSocket)
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    let pollingInterval: ReturnType<typeof setInterval> | null = null
 
-          if (newData.generation_status) {
-            setStatus(newData.generation_status)
+    try {
+      channel = supabase
+        .channel(`course-${courseId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'courses',
+            filter: `id=eq.${courseId}`,
+          },
+          (payload) => {
+            const newData = payload.new as Partial<Course>
+
+            if (newData.generation_status) {
+              setStatus(newData.generation_status)
+            }
+            if (typeof newData.lessons_ready === 'number') {
+              setLessonsReady(newData.lessons_ready)
+            }
+            if (typeof newData.total_lessons === 'number') {
+              setTotalLessons(newData.total_lessons)
+            }
+
+            // Check for completion
+            if (newData.generation_status === 'complete') {
+              onComplete?.()
+            }
           }
-          if (typeof newData.lessons_ready === 'number') {
-            setLessonsReady(newData.lessons_ready)
+        )
+        .subscribe((status) => {
+          // If subscription fails, fall back to polling
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('[useGenerationStatus] Realtime subscription failed, falling back to polling')
+            startPolling()
           }
-          if (typeof newData.total_lessons === 'number') {
-            setTotalLessons(newData.total_lessons)
+        })
+    } catch (err) {
+      // WebSocket not available (e.g., Safari private mode, some mobile browsers)
+      console.warn('[useGenerationStatus] WebSocket not available, falling back to polling:', err)
+      startPolling()
+    }
+
+    // Polling fallback for browsers that don't support WebSocket
+    function startPolling() {
+      if (pollingInterval) return // Already polling
+
+      pollingInterval = setInterval(async () => {
+        const { data } = await supabase
+          .from('courses')
+          .select('generation_status, lessons_ready, total_lessons')
+          .eq('id', courseId)
+          .single()
+
+        if (data) {
+          if (data.generation_status) {
+            setStatus(data.generation_status as GenerationStatus)
+          }
+          if (typeof data.lessons_ready === 'number') {
+            setLessonsReady(data.lessons_ready)
+          }
+          if (typeof data.total_lessons === 'number') {
+            setTotalLessons(data.total_lessons)
           }
 
-          // Check for completion
-          if (newData.generation_status === 'complete') {
-            onComplete?.()
+          // Stop polling when complete
+          if (data.generation_status === 'complete' || data.generation_status === 'failed') {
+            if (pollingInterval) {
+              clearInterval(pollingInterval)
+              pollingInterval = null
+            }
+            if (data.generation_status === 'complete') {
+              onComplete?.()
+            }
           }
         }
-      )
-      .subscribe()
+      }, 3000) // Poll every 3 seconds
+    }
 
     return () => {
-      supabase.removeChannel(channel)
+      if (channel) {
+        try {
+          supabase.removeChannel(channel)
+        } catch {
+          // Ignore errors when removing channel
+        }
+      }
+      if (pollingInterval) {
+        clearInterval(pollingInterval)
+      }
     }
   }, [courseId, autoTriggerContinuation, triggerContinuation, onComplete])
 
