@@ -12,7 +12,8 @@ import { sanitizeError } from '@/lib/utils/error-sanitizer'
 // - Vercel's sharp doesn't have HEIC codec support
 // - Server-side heic-convert also fails on Vercel
 // - heic2any works in browser via WASM
-// Note: heic2any is dynamically imported to avoid SSR issues (window not defined)
+// HEIC conversion module is dynamically imported to avoid bundling heic2any
+// into the main bundle (which causes SecurityError on some mobile browsers)
 
 // ============================================================================
 // Types
@@ -59,7 +60,7 @@ function isHeicFile(file: File): boolean {
 /**
  * Convert HEIC file to JPEG
  * Returns result with converted file, success status, and any error message
- * Uses dynamic import to avoid SSR issues with heic2any
+ * Uses dynamic import to load heic-converter module only when needed
  */
 async function convertHeicToJpeg(file: File): Promise<HeicConversionResult> {
   if (!isHeicFile(file)) {
@@ -69,23 +70,11 @@ async function convertHeicToJpeg(file: File): Promise<HeicConversionResult> {
   console.log('[HEIC] Converting HEIC to JPEG:', file.name)
 
   try {
-    // Dynamic import to avoid window not defined errors during SSR
-    const heic2any = (await import('heic2any')).default
+    // Dynamically import the converter module - keeps heic2any out of main bundle
+    const { convertHeicToJpeg: convert } = await import('@/lib/upload/heic-converter')
+    const convertedFile = await convert(file)
 
-    const blob = await heic2any({
-      blob: file,
-      toType: 'image/jpeg',
-      quality: 0.9,
-    })
-
-    // heic2any can return a single blob or array of blobs
-    const resultBlob = Array.isArray(blob) ? blob[0] : blob
-
-    // Create a new File with .jpg extension
-    const newFileName = file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg')
-    const convertedFile = new File([resultBlob], newFileName, { type: 'image/jpeg' })
-
-    console.log('[HEIC] Conversion successful:', newFileName)
+    console.log('[HEIC] Conversion successful:', convertedFile.name)
     return { file: convertedFile, converted: true }
   } catch (error) {
     console.error('[HEIC] Conversion failed:', error)
@@ -93,7 +82,7 @@ async function convertHeicToJpeg(file: File): Promise<HeicConversionResult> {
     return {
       file,
       converted: false,
-      error: 'Could not convert this image. Please open the photo in your Gallery app, tap Share or Export, and save as JPEG.'
+      error: error instanceof Error ? error.message : 'Could not convert this image. Please open the photo in your Gallery app, tap Share or Export, and save as JPEG.'
     }
   }
 }

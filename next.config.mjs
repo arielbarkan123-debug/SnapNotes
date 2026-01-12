@@ -51,6 +51,8 @@ const nextConfig = {
               "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://images.unsplash.com https://*.unsplash.com https://picsum.photos https://*.picsum.photos",
               "font-src 'self' data:",
               "connect-src 'self' https://*.supabase.co https://*.supabase.in https://api.anthropic.com https://generativelanguage.googleapis.com",
+              // Allow Web Workers from same origin and blob URLs (needed for heic2any, PDF.js, etc.)
+              "worker-src 'self' blob:",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

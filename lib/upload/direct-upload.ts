@@ -1,7 +1,8 @@
 import { createBrowserClient } from '@supabase/ssr'
 
-// NOTE: heic2any uses Web Workers internally which can cause SecurityError
-// on some mobile browsers. We use dynamic import to only load it when needed.
+// HEIC conversion is loaded dynamically from a separate module to avoid
+// bundling heic2any (which uses Web Workers) into the main bundle.
+// See lib/upload/heic-converter.ts
 
 type ProgressCallback = (progress: number) => void
 
@@ -17,38 +18,12 @@ function isHeicFile(file: File): boolean {
 /**
  * Convert HEIC/HEIF to JPEG on the client side
  * This is needed because Claude Vision API doesn't support HEIC
- * Uses dynamic import to avoid loading heic2any (which uses Web Workers) until needed
+ * Uses dynamic import to load converter only when needed (avoids SecurityError)
  */
 async function convertHeicToJpeg(file: File): Promise<File> {
-  console.log('[Direct Upload] Converting HEIC to JPEG:', file.name)
-  try {
-    // Dynamic import to avoid Web Worker initialization until actually needed
-    // This prevents SecurityError on mobile browsers that restrict Worker creation
-    const heic2any = (await import('heic2any')).default
-
-    const jpegBlob = await heic2any({
-      blob: file,
-      toType: 'image/jpeg',
-      quality: 0.9
-    })
-
-    // heic2any can return single blob or array
-    const resultBlob = Array.isArray(jpegBlob) ? jpegBlob[0] : jpegBlob
-
-    // Create new File with .jpg extension
-    const newFileName = file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg')
-    const convertedFile = new File([resultBlob], newFileName, { type: 'image/jpeg' })
-
-    console.log('[Direct Upload] HEIC conversion successful:', newFileName, 'size:', convertedFile.size)
-    return convertedFile
-  } catch (error) {
-    console.error('[Direct Upload] HEIC conversion failed:', error)
-    // Check if it's a SecurityError from Web Worker
-    if (error instanceof Error && error.name === 'SecurityError') {
-      throw new Error('HEIC conversion not supported in this browser. Please convert to JPEG before uploading.')
-    }
-    throw new Error('Failed to convert HEIC image. Please convert to JPEG before uploading.')
-  }
+  // Dynamically import the converter module - this keeps heic2any out of the main bundle
+  const { convertHeicToJpeg: convert } = await import('./heic-converter')
+  return convert(file)
 }
 export type FileType = 'image' | 'pptx' | 'docx'
 
