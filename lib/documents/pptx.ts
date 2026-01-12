@@ -9,9 +9,16 @@
  * - ppt/slideMasters/ - Master slide templates
  * - docProps/core.xml - Document metadata (title, author, etc.)
  * - [Content_Types].xml - Content type definitions
+ *
+ * NOTE: This file should only be imported in server-side code (API routes).
+ * For client-side code, import types from './types' instead.
  */
 
 import JSZip from 'jszip'
+import type { ExtractedDocument, ExtractedImage } from './types'
+
+// Re-export types for backward compatibility
+export type { ExtractedDocument, ExtractedImage } from './types'
 
 // =============================================================================
 // Configuration
@@ -49,41 +56,6 @@ async function withTimeout<T>(
 // =============================================================================
 // Types
 // =============================================================================
-
-/**
- * ExtractedImage - An image extracted from a document
- */
-export interface ExtractedImage {
-  /** Base64 encoded image data */
-  data: string
-  /** MIME type of the image */
-  mimeType: string
-  /** Original filename in the document */
-  filename?: string
-  /** Page/slide number where the image was found */
-  pageNumber?: number
-  /** Alt text or description if available */
-  alt?: string
-}
-
-export interface ExtractedDocument {
-  type: 'pptx' | 'pdf' | 'docx'
-  title: string
-  content: string
-  sections: {
-    title: string
-    content: string
-    pageNumber: number
-  }[]
-  metadata: {
-    pageCount: number
-    author?: string
-    createdDate?: string
-    modifiedDate?: string
-  }
-  /** Images extracted from the document */
-  images?: ExtractedImage[]
-}
 
 interface SlideContent {
   slideNumber: number

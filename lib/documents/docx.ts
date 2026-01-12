@@ -4,11 +4,14 @@
  * Extracts text content from Word documents using mammoth library.
  * Parses document structure to identify headings and sections.
  * Also extracts embedded images from the word/media folder.
+ *
+ * NOTE: This file should only be imported in server-side code (API routes).
+ * For client-side code, import types from './types' instead.
  */
 
 import mammoth from 'mammoth'
 import JSZip from 'jszip'
-import { ExtractedDocument, ExtractedImage } from './pptx'
+import type { ExtractedDocument, ExtractedImage } from './types'
 
 // =============================================================================
 // Configuration

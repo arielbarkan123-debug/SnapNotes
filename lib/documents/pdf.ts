@@ -4,9 +4,12 @@
  * NOTE: PDF text extraction is temporarily disabled due to pdf-parse
  * incompatibility with Next.js App Router. Users should upload images
  * or screenshots of their PDF pages instead.
+ *
+ * NOTE: This file should only be imported in server-side code (API routes).
+ * For client-side code, import types from './types' instead.
  */
 
-import { ExtractedDocument } from './pptx'
+import type { ExtractedDocument } from './types'
 
 // =============================================================================
 // Main Processor

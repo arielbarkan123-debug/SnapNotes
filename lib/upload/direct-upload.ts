@@ -1,5 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr'
-import heic2any from 'heic2any'
+
+// NOTE: heic2any uses Web Workers internally which can cause SecurityError
+// on some mobile browsers. We use dynamic import to only load it when needed.
 
 type ProgressCallback = (progress: number) => void
 
@@ -15,10 +17,15 @@ function isHeicFile(file: File): boolean {
 /**
  * Convert HEIC/HEIF to JPEG on the client side
  * This is needed because Claude Vision API doesn't support HEIC
+ * Uses dynamic import to avoid loading heic2any (which uses Web Workers) until needed
  */
 async function convertHeicToJpeg(file: File): Promise<File> {
   console.log('[Direct Upload] Converting HEIC to JPEG:', file.name)
   try {
+    // Dynamic import to avoid Web Worker initialization until actually needed
+    // This prevents SecurityError on mobile browsers that restrict Worker creation
+    const heic2any = (await import('heic2any')).default
+
     const jpegBlob = await heic2any({
       blob: file,
       toType: 'image/jpeg',
@@ -36,6 +43,10 @@ async function convertHeicToJpeg(file: File): Promise<File> {
     return convertedFile
   } catch (error) {
     console.error('[Direct Upload] HEIC conversion failed:', error)
+    // Check if it's a SecurityError from Web Worker
+    if (error instanceof Error && error.name === 'SecurityError') {
+      throw new Error('HEIC conversion not supported in this browser. Please convert to JPEG before uploading.')
+    }
     throw new Error('Failed to convert HEIC image. Please convert to JPEG before uploading.')
   }
 }

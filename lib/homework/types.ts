@@ -253,6 +253,8 @@ export interface ConversationMessage {
   referencedConcept?: string
   showsUnderstanding?: boolean
   misconceptionDetected?: string
+  /** Physics diagram state for this message (tutor messages only) */
+  diagram?: TutorDiagramState
 }
 
 export interface SessionSummary {
@@ -298,6 +300,53 @@ export interface TutorResponse {
   estimatedProgress: number
   shouldEndSession: boolean
   celebrationMessage?: string
+  /** Physics diagram state for visual explanations */
+  diagram?: TutorDiagramState
+}
+
+/**
+ * Diagram state returned by tutor for physics and math visualizations
+ * Syncs with the step-by-step explanation
+ */
+export interface TutorDiagramState {
+  /** Type of diagram to render - includes both physics and math diagram types */
+  type:
+    // Physics diagram types
+    | 'fbd'
+    | 'inclined_plane'
+    | 'projectile'
+    | 'pulley'
+    | 'circuit'
+    | 'wave'
+    | 'optics'
+    | 'motion'
+    // Math diagram types
+    | 'long_division'
+    | 'equation'
+    | 'fraction'
+    | 'number_line'
+    | 'coordinate_plane'
+    | 'triangle'
+    | 'circle'
+    | 'bar_model'
+    | 'area_model'
+  /** Diagram-specific data */
+  data: Record<string, unknown>
+  /** Current step to display */
+  visibleStep: number
+  /** Total number of steps */
+  totalSteps?: number
+  /** Step configuration for progressive reveal */
+  stepConfig?: Array<{
+    step: number
+    visibleForces?: string[]
+    highlightForces?: string[]
+    showComponents?: boolean
+    showNetForce?: boolean
+    showCalculation?: string
+    stepLabel?: string
+    stepLabelHe?: string
+  }>
 }
 
 export interface HintResponse {

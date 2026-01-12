@@ -138,6 +138,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         : tutorResponse.message,
       timestamp: new Date().toISOString(),
       pedagogicalIntent: tutorResponse.pedagogicalIntent,
+      diagram: tutorResponse.diagram,
     }
 
     updatedSession = await addMessage(sessionId, user.id, tutorMessage)

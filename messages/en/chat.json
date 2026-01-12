@@ -25,5 +25,8 @@
   "progress": "Progress",
   "stepOf": "Step {current} of ~{total}",
   "typeAnswer": "Type your answer or question...",
-  "markComplete": "Mark as Complete"
+  "markComplete": "Mark as Complete",
+
+  "diagramTitle": "Physics Diagram",
+  "diagramInstructions": "Use the controls to step through the diagram as you follow along with the explanation."
 }

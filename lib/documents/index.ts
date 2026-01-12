@@ -7,6 +7,12 @@
  * - Word documents (DOCX/DOC)
  *
  * Used for processing uploaded documents before sending to AI for course generation.
+ *
+ * WARNING: This module imports libraries (mammoth, jszip) that use Web Workers.
+ * Only import this module in SERVER-SIDE code (API routes).
+ *
+ * For CLIENT-SIDE code that only needs types, import from '@/lib/documents/types' instead:
+ *   import type { ExtractedDocument } from '@/lib/documents/types'
  */
 
 // Import from specific processors
@@ -14,23 +20,14 @@ import { processPPTX, getPPTXPreview, isValidPPTX } from './pptx'
 import { processPDF, getPDFPreview, isValidPDF } from './pdf'
 import { processDOCX, getDOCXPreview, isValidDOCX } from './docx'
 
-// Re-export types and functions from specific processors
-export { type ExtractedDocument, type ExtractedImage } from './pptx'
+// Import types for use in this file
+import type { DocumentType, ProcessedDocument } from './types'
+
+// Re-export types from the dedicated types file (safe for client-side)
+export type { ExtractedDocument, ExtractedImage, DocumentType, ProcessedDocument } from './types'
 export { processPPTX, getPPTXPreview, isValidPPTX }
 export { processPDF, getPDFPreview, isValidPDF }
 export { processDOCX, getDOCXPreview, isValidDOCX }
-
-// =============================================================================
-// Types
-// =============================================================================
-
-export type DocumentType = 'image' | 'pdf' | 'pptx' | 'docx' | 'unknown'
-
-export interface ProcessedDocument {
-  text: string
-  pageCount?: number
-  metadata?: Record<string, string>
-}
 
 // =============================================================================
 // MIME Type Detection

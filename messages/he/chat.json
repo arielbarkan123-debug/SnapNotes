@@ -25,5 +25,8 @@
   "progress": "התקדמות",
   "stepOf": "שלב {current} מתוך ~{total}",
   "typeAnswer": "הקלד את התשובה או השאלה שלך...",
-  "markComplete": "סמן כהושלם"
+  "markComplete": "סמן כהושלם",
+
+  "diagramTitle": "תרשים פיזיקה",
+  "diagramInstructions": "השתמש בכפתורים כדי לעבור בין שלבי התרשים תוך כדי מעקב אחר ההסבר."
 }

@@ -8,7 +8,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useXP } from '@/contexts/XPContext'
 import { useFunnelTracking } from '@/lib/analytics'
-import type { ExtractedDocument } from '@/lib/documents'
+// Import types from the dedicated types file to avoid bundling mammoth/jszip
+import type { ExtractedDocument } from '@/lib/documents/types'
 
 // ============================================================================
 // Types

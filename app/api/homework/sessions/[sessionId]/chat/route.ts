@@ -126,6 +126,7 @@ export async function POST(
       pedagogicalIntent: tutorResponse.pedagogicalIntent,
       showsUnderstanding: tutorResponse.detectedUnderstanding,
       misconceptionDetected: tutorResponse.detectedMisconception || undefined,
+      diagram: tutorResponse.diagram,
     }
 
     let finalSession: HomeworkSession
