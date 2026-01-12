@@ -417,6 +417,31 @@ export class ClaudeAPIError extends Error {
           error.status
         )
       }
+      // Handle transient server errors with specific messages
+      if (error.status === 529 || error.status === 503) {
+        // API overloaded or service unavailable - these are retryable
+        return new ClaudeAPIError(
+          'AI service is temporarily busy. Please wait a moment and try again.',
+          'RATE_LIMIT', // Use RATE_LIMIT code to make it retryable
+          error.status
+        )
+      }
+      if (error.status === 500 || error.status === 502) {
+        // Internal server error or bad gateway - temporary issue
+        return new ClaudeAPIError(
+          'AI service encountered a temporary issue. Please try again.',
+          'RATE_LIMIT', // Use RATE_LIMIT code to make it retryable
+          error.status
+        )
+      }
+      if (error.status === 408 || error.status === 504) {
+        // Request timeout or gateway timeout
+        return new ClaudeAPIError(
+          'Request timed out. Please try again with a smaller file.',
+          'TIMEOUT',
+          error.status
+        )
+      }
       // Don't expose raw error messages to users - they may contain JSON/technical details
       return new ClaudeAPIError(
         'Something went wrong. Please try again.',
