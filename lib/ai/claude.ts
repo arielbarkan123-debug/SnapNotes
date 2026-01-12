@@ -124,7 +124,8 @@ const INITIAL_RETRY_DELAY_MS = 1000
  * Executes an async operation with exponential backoff retry logic
  * Only retries on transient errors (network, rate limit, timeout)
  */
-async function withRetry<T>(
+// Kept for potential future use - streaming is now preferred for mobile reliability
+async function _withRetry<T>(
   operation: () => Promise<T>,
   operationName: string
 ): Promise<T> {
@@ -537,44 +538,64 @@ export async function analyzeNotebookImage(imageUrl: string): Promise<AnalysisRe
   const { systemPrompt, userPrompt } = getImageAnalysisPrompt()
 
   try {
-    const response = await withRetry(
-      () => client.messages.create({
-        model: AI_MODEL,
-        max_tokens: MAX_TOKENS_EXTRACTION,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: {
-                  type: 'base64',
-                  media_type: mediaType,
-                  data: base64,
-                },
-              },
-              {
-                type: 'text',
-                text: userPrompt,
-              },
-            ],
-          },
-        ],
-      }),
-      'analyzeNotebookImage'
-    )
+    // Use streaming to prevent mobile connection timeouts
+    console.log('[analyzeNotebookImage] Starting streaming request')
 
-    // Extract text from response
-    const textContent = response.content.find(block => block.type === 'text')
-    if (!textContent || textContent.type !== 'text') {
+    const stream = client.messages.stream({
+      model: AI_MODEL,
+      max_tokens: MAX_TOKENS_EXTRACTION,
+      system: systemPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: mediaType,
+                data: base64,
+              },
+            },
+            {
+              type: 'text',
+              text: userPrompt,
+            },
+          ],
+        },
+      ],
+    })
+
+    // Collect response text from stream
+    let rawText = ''
+    let lastLogTime = Date.now()
+    const LOG_INTERVAL_MS = 10000
+
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        rawText += event.delta.text
+      }
+
+      const now = Date.now()
+      if (now - lastLogTime > LOG_INTERVAL_MS) {
+        console.log(`[analyzeNotebookImage] Streaming: ${rawText.length} chars`)
+        lastLogTime = now
+      }
+    }
+
+    const finalMessage = await stream.finalMessage()
+    if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
+      console.warn(`[analyzeNotebookImage] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
+    }
+
+    console.log(`[analyzeNotebookImage] Complete: ${rawText.length} chars`)
+
+    if (!rawText || rawText.trim().length === 0) {
       throw new ClaudeAPIError(
         'No text content in AI response',
         'PARSE_ERROR'
       )
     }
-
-    const rawText = textContent.text
 
     // Parse JSON response
     const jsonText = cleanJsonResponse(rawText)
@@ -799,44 +820,64 @@ export async function generateCourseFromImageSingleCall(
   const { systemPrompt, userPrompt } = getCombinedAnalysisPrompt(safeTitle)
 
   try {
-    const response = await withRetry(
-      () => client.messages.create({
-        model: AI_MODEL,
-        max_tokens: MAX_TOKENS_GENERATION,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: {
-                  type: 'base64',
-                  media_type: mediaType,
-                  data: base64,
-                },
-              },
-              {
-                type: 'text',
-                text: userPrompt,
-              },
-            ],
-          },
-        ],
-      }),
-      'generateCourseFromImageSingleCall'
-    )
+    // Use streaming to prevent mobile connection timeouts
+    console.log('[generateCourseFromImageSingleCall] Starting streaming request')
 
-    // Extract text from response
-    const textContent = response.content.find(block => block.type === 'text')
-    if (!textContent || textContent.type !== 'text') {
+    const stream = client.messages.stream({
+      model: AI_MODEL,
+      max_tokens: MAX_TOKENS_GENERATION,
+      system: systemPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: mediaType,
+                data: base64,
+              },
+            },
+            {
+              type: 'text',
+              text: userPrompt,
+            },
+          ],
+        },
+      ],
+    })
+
+    // Collect response text from stream
+    let rawText = ''
+    let lastLogTime = Date.now()
+    const LOG_INTERVAL_MS = 15000
+
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        rawText += event.delta.text
+      }
+
+      const now = Date.now()
+      if (now - lastLogTime > LOG_INTERVAL_MS) {
+        console.log(`[generateCourseFromImageSingleCall] Streaming: ${rawText.length} chars`)
+        lastLogTime = now
+      }
+    }
+
+    const finalMessage = await stream.finalMessage()
+    if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
+      console.warn(`[generateCourseFromImageSingleCall] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
+    }
+
+    console.log(`[generateCourseFromImageSingleCall] Complete: ${rawText.length} chars`)
+
+    if (!rawText || rawText.trim().length === 0) {
       throw new ClaudeAPIError(
         'No text content in AI response',
         'PARSE_ERROR'
       )
     }
-
-    const rawText = textContent.text
 
     // Parse JSON response
     const jsonText = cleanJsonResponse(rawText)
@@ -980,28 +1021,48 @@ async function analyzeImageBatch(imageUrls: string[]): Promise<AnalysisResult> {
   })
 
   try {
-    const response = await withRetry(
-      () => client.messages.create({
-        model: AI_MODEL,
-        max_tokens: MAX_TOKENS_EXTRACTION * 2, // More tokens for multiple images
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: messageContent,
-          },
-        ],
-      }),
-      'analyzeImageBatch'
-    )
+    // Use streaming to prevent mobile connection timeouts
+    console.log(`[analyzeImageBatch] Starting streaming request for ${imageUrls.length} images`)
 
-    // Extract text from response
-    const textContent = response.content.find((block) => block.type === 'text')
-    if (!textContent || textContent.type !== 'text') {
-      throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
+    const stream = client.messages.stream({
+      model: AI_MODEL,
+      max_tokens: MAX_TOKENS_EXTRACTION * 2, // More tokens for multiple images
+      system: systemPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: messageContent,
+        },
+      ],
+    })
+
+    // Collect response text from stream
+    let rawText = ''
+    let lastLogTime = Date.now()
+    const LOG_INTERVAL_MS = 10000
+
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        rawText += event.delta.text
+      }
+
+      const now = Date.now()
+      if (now - lastLogTime > LOG_INTERVAL_MS) {
+        console.log(`[analyzeImageBatch] Streaming: ${rawText.length} chars`)
+        lastLogTime = now
+      }
     }
 
-    const rawText = textContent.text
+    const finalMessage = await stream.finalMessage()
+    if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
+      console.warn(`[analyzeImageBatch] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
+    }
+
+    console.log(`[analyzeImageBatch] Complete: ${rawText.length} chars`)
+
+    if (!rawText || rawText.trim().length === 0) {
+      throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
+    }
 
     // Parse JSON response
     const jsonText = cleanJsonResponse(rawText)
