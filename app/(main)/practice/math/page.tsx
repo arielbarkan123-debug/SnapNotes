@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useTranslations, useLocale } from 'next-intl'
+import { useLocale } from 'next-intl'
 import Link from 'next/link'
 import { MathProblemType, MathDifficulty, MATH_PROBLEM_CONFIG } from '@/lib/practice/types'
 import {
@@ -25,7 +25,6 @@ interface SessionStats {
 }
 
 export default function MathPracticePage() {
-  const t = useTranslations('practice')
   const locale = useLocale()
   const language = locale === 'he' ? 'he' : 'en'
   const isRTL = language === 'he'

@@ -35,7 +35,7 @@ interface EquationWorkspaceProps {
 }
 
 export default function EquationWorkspace({
-  type,
+  type: _type,
   equation,
   onStepComplete,
   onProblemComplete,

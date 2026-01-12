@@ -1,13 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { useTranslations } from 'next-intl'
-import {
-  StepByStepProblem,
-  ProblemStep,
-  StepAttempt,
-  StepStatus,
-} from '@/lib/practice/types'
+import { StepStatus } from '@/lib/practice/types'
 
 interface DivisionStep {
   type: 'quotient_digit' | 'multiply' | 'subtract' | 'bring_down'
@@ -36,14 +30,13 @@ export default function LongDivisionWorkspace({
   showHints = true,
   maxAttempts = 3,
 }: LongDivisionWorkspaceProps) {
-  const t = useTranslations('practice')
   const isRTL = language === 'he'
 
   // Calculate the solution
   const quotient = Math.floor(dividend / divisor)
   const remainder = dividend % divisor
   const dividendDigits = dividend.toString().split('').map(Number)
-  const quotientDigits = quotient.toString().split('').map(Number)
+  const _quotientDigits = quotient.toString().split('').map(Number)
 
   // Generate all steps for this division problem
   const generateSteps = useCallback(() => {
@@ -146,14 +139,14 @@ export default function LongDivisionWorkspace({
   const getHint = (step: DivisionStep): string => {
     // Calculate context for hint
     let workingNumber = 0
-    let quotientSoFar = ''
+    let _quotientSoFar = ''
 
     for (let i = 0; i <= step.position; i++) {
       if (i < dividendDigits.length) {
         workingNumber = workingNumber * 10 + dividendDigits[i]
         if (workingNumber >= divisor) {
           const q = Math.floor(workingNumber / divisor)
-          quotientSoFar += q
+          _quotientSoFar += q
           workingNumber = workingNumber - q * divisor
         }
       }
