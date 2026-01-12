@@ -28,6 +28,7 @@ import type {
 const AI_MODEL = 'claude-sonnet-4-5-20250929'
 const MAX_TOKENS = 4096
 const IMAGE_FETCH_TIMEOUT_MS = 30000 // 30 second timeout for fetching images
+const API_TIMEOUT_MS = 150000 // 2.5 minutes - allows for complex vision tasks but fails before mobile timeouts
 
 // ============================================================================
 // Image Fetching
@@ -295,7 +296,10 @@ function getAnthropicClient(): Anthropic {
     if (!apiKey) {
       throw new Error('ANTHROPIC_API_KEY environment variable is not set')
     }
-    anthropicClient = new Anthropic({ apiKey })
+    anthropicClient = new Anthropic({
+      apiKey,
+      timeout: API_TIMEOUT_MS, // Prevent indefinite blocking on mobile
+    })
   }
   return anthropicClient
 }
@@ -699,15 +703,26 @@ Return your analysis as JSON in this exact format:
 `,
     })
 
-    console.log('[Checker] Sending request to Claude...')
+    console.log('[Checker] Sending request to Claude (streaming)...')
 
-    const response = await client.messages.create({
+    // Use streaming to prevent connection timeouts on mobile
+    // The stream keeps data flowing, preventing TCP/browser timeouts
+    const stream = client.messages.stream({
       model: AI_MODEL,
       max_tokens: MAX_TOKENS,
       messages: [{ role: 'user', content }],
     })
 
-    console.log('[Checker] Response received, parsing...')
+    // Consume the stream to keep data flowing (prevents connection timeouts)
+    // We don't need to collect the text since finalMessage() gives us everything
+    for await (const event of stream) {
+      // Just iterate to consume the stream - this keeps the connection alive
+      void event
+    }
+
+    // Get the final message for metadata
+    const response = await stream.finalMessage()
+    console.log('[Checker] Response received, tokens used:', response.usage?.output_tokens)
 
     // Parse response and apply consistency validation
     const result = parseCheckerResponse(response)
@@ -723,11 +738,20 @@ Return your analysis as JSON in this exact format:
       cause: error instanceof Error ? (error as Error & { cause?: unknown }).cause : undefined,
     })
 
-    // Include error details in the response for debugging
-    const defaultOutput = getDefaultOutput()
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error'
-    defaultOutput.feedback.summary = `Analysis failed: ${errorMsg}. This may be due to image quality or a temporary service issue. Please try again.`
-    return defaultOutput
+    // Check for timeout errors and provide specific messages
+    const errorMessage = error instanceof Error ? error.message.toLowerCase() : ''
+    const errorName = error instanceof Error ? error.name : ''
+
+    if (errorMessage.includes('timeout') || errorName === 'AbortError' || errorMessage.includes('timed out')) {
+      throw new Error('Analysis took too long. Please try again with clearer images.')
+    }
+
+    if (errorMessage.includes('overloaded') || errorMessage.includes('529')) {
+      throw new Error('Our AI is busy right now. Please try again in a moment.')
+    }
+
+    // Re-throw the original error for the route to handle
+    throw error
   }
 }
 

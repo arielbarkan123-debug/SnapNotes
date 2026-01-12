@@ -713,19 +713,34 @@ export default function HomeworkCheckPage() {
       // The API sends heartbeats every 5 seconds to keep mobile connections alive
       // If only one image provided, use it as taskImageUrl (the main image for analysis)
       setSubmissionStatus('Analyzing homework...')
-      const response = await fetch('/api/homework/check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          taskImageUrl: taskImageUrl || answerImageUrl,  // Use answer as task if no task provided
-          answerImageUrl: taskImageUrl ? answerImageUrl : undefined,  // Only include if we have both
-          referenceImageUrls,
-          teacherReviewUrls,
-          // Include extracted DOCX text if available
-          taskDocumentText,
-          answerDocumentText,
-        }),
-      })
+
+      // Create AbortController with 3-minute timeout to match server maxDuration
+      // This prevents indefinite waiting if the connection is silently dropped
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => {
+        console.log('[HomeworkCheck] Client-side timeout after 3 minutes')
+        controller.abort()
+      }, 180000) // 3 minutes
+
+      let response: Response
+      try {
+        response = await fetch('/api/homework/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            taskImageUrl: taskImageUrl || answerImageUrl,  // Use answer as task if no task provided
+            answerImageUrl: taskImageUrl ? answerImageUrl : undefined,  // Only include if we have both
+            referenceImageUrls,
+            teacherReviewUrls,
+            // Include extracted DOCX text if available
+            taskDocumentText,
+            answerDocumentText,
+          }),
+        })
+      } finally {
+        clearTimeout(timeoutId)
+      }
 
       if (!response.ok && !response.body) {
         throw new Error('Failed to connect to analysis service. Please try again.')
@@ -802,10 +817,16 @@ export default function HomeworkCheckPage() {
       // Track raw error for debugging
       trackFeature('homework_check_error', {
         error: err instanceof Error ? err.message : 'Unknown error',
+        name: err instanceof Error ? err.name : 'Unknown',
       })
 
-      // Show sanitized user-friendly error message
-      setError(sanitizeError(err))
+      // Handle timeout/abort specifically with a clearer message
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError('Analysis is taking longer than expected. Please try again with clearer images or fewer files.')
+      } else {
+        // Show sanitized user-friendly error message
+        setError(sanitizeError(err))
+      }
     } finally {
       setIsSubmitting(false)
     }
