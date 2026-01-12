@@ -717,12 +717,22 @@ export default function HomeworkCheckPage() {
       // Create AbortController with 3-minute timeout to match server maxDuration
       // This prevents indefinite waiting if the connection is silently dropped
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => {
+      let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
         console.log('[HomeworkCheck] Client-side timeout after 3 minutes')
         controller.abort()
       }, 180000) // 3 minutes
 
+      // Helper to clear timeout when we're done
+      const clearTimeoutSafely = () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+          timeoutId = null
+        }
+      }
+
       let response: Response
+      let reader: ReadableStreamDefaultReader<Uint8Array> | null = null
+
       try {
         response = await fetch('/api/homework/check', {
           method: 'POST',
@@ -738,26 +748,23 @@ export default function HomeworkCheckPage() {
             answerDocumentText,
           }),
         })
-      } finally {
-        clearTimeout(timeoutId)
-      }
 
-      if (!response.ok && !response.body) {
-        throw new Error('Failed to connect to analysis service. Please try again.')
-      }
+        if (!response.ok && !response.body) {
+          throw new Error('Failed to connect to analysis service. Please try again.')
+        }
 
-      // Read streaming NDJSON response
-      const reader = response.body?.getReader()
-      if (!reader) {
-        throw new Error('Failed to start analysis stream. Please try again.')
-      }
+        // Read streaming NDJSON response
+        reader = response.body?.getReader() || null
+        if (!reader) {
+          throw new Error('Failed to start analysis stream. Please try again.')
+        }
 
-      const decoder = new TextDecoder()
-      let buffer = ''
-      let check = null
-      let streamError: string | null = null
+        const decoder = new TextDecoder()
+        let buffer = ''
+        let check = null
+        let streamError: string | null = null
+        let lastHeartbeat = Date.now()
 
-      try {
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
@@ -776,7 +783,7 @@ export default function HomeworkCheckPage() {
 
               if (message.type === 'heartbeat') {
                 // Heartbeat received - connection is alive
-                // Could update UI with elapsed time: message.elapsed
+                lastHeartbeat = Date.now()
                 console.log('[HomeworkCheck] Heartbeat:', message.elapsed, 'seconds')
               } else if (message.type === 'status') {
                 console.log('[HomeworkCheck] Status:', message.status, message.checkId)
@@ -789,30 +796,48 @@ export default function HomeworkCheckPage() {
               console.error('[HomeworkCheck] Failed to parse stream message:', line, parseErr)
             }
           }
+
+          // Safety check: if no heartbeat for 30 seconds during stream, something's wrong
+          if (Date.now() - lastHeartbeat > 30000) {
+            console.warn('[HomeworkCheck] No heartbeat for 30 seconds, connection may be stale')
+          }
         }
+
+        // Clear timeout only after stream is fully read
+        clearTimeoutSafely()
+
+        // Handle any error from the stream
+        if (streamError) {
+          throw new Error(streamError)
+        }
+
+        // Ensure we got a result
+        if (!check) {
+          throw new Error('Analysis did not return a result. Please try again.')
+        }
+
+        // Track successful feedback
+        trackStep('feedback_received', 5)
+        trackFeature('homework_check_success', {
+          checkId: check.id,
+          subject: check.subject,
+          gradeLevel: check.feedback?.gradeLevel,
+        })
+
+        router.push(`/homework/${check.id}`)
+        return  // Exit early on success
+
       } finally {
-        reader.releaseLock()
+        // Always clean up
+        clearTimeoutSafely()
+        if (reader) {
+          try {
+            reader.releaseLock()
+          } catch {
+            // Ignore if already released
+          }
+        }
       }
-
-      // Handle any error from the stream
-      if (streamError) {
-        throw new Error(streamError)
-      }
-
-      // Ensure we got a result
-      if (!check) {
-        throw new Error('Analysis did not return a result. Please try again.')
-      }
-
-      // Track successful feedback
-      trackStep('feedback_received', 5)
-      trackFeature('homework_check_success', {
-        checkId: check.id,
-        subject: check.subject,
-        gradeLevel: check.feedback?.gradeLevel,
-      })
-
-      router.push(`/homework/${check.id}`)
     } catch (err) {
       // Track raw error for debugging
       trackFeature('homework_check_error', {
