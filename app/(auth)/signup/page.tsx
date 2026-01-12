@@ -114,11 +114,14 @@ export default function SignupPage() {
     try {
       const supabase = createClient()
 
-      // Get the current origin for the redirect URL
-      const redirectUrl = `${window.location.origin}/auth/callback`
+      // Use production URL for email redirect to ensure cross-device compatibility
+      // This fixes the "invalid or expired" error on iPhone when clicking email links
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+      const redirectUrl = `${appUrl}/auth/callback`
 
       console.log('[Signup] Attempting signup for:', formData.email)
       console.log('[Signup] Redirect URL:', redirectUrl)
+      console.log('[Signup] App URL source:', process.env.NEXT_PUBLIC_APP_URL ? 'env' : 'origin')
 
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
@@ -185,11 +188,14 @@ export default function SignupPage() {
 
     try {
       const supabase = createClient()
-      const redirectUrl = `${window.location.origin}/auth/callback`
+      // Use production URL for email redirect to ensure cross-device compatibility
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+      const redirectUrl = `${appUrl}/auth/callback`
 
       console.log('[Signup] Resending verification email...')
       console.log('[Signup] Target email:', registeredEmail)
       console.log('[Signup] Redirect URL:', redirectUrl)
+      console.log('[Signup] App URL source:', process.env.NEXT_PUBLIC_APP_URL ? 'env' : 'origin')
       console.log('[Signup] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
 
       const { data, error } = await supabase.auth.resend({

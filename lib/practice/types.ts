@@ -281,6 +281,167 @@ export interface QuickPracticeOption {
 }
 
 // -----------------------------------------------------------------------------
+// Step-by-Step Math Practice Types
+// -----------------------------------------------------------------------------
+
+export type MathProblemType =
+  | 'long_division'
+  | 'fraction_simplify'
+  | 'fraction_add'
+  | 'fraction_multiply'
+  | 'equation_linear'
+  | 'equation_quadratic'
+  | 'multiplication'
+  | 'decimal_operation'
+
+export type StepStatus = 'pending' | 'active' | 'correct' | 'incorrect' | 'skipped'
+
+export interface ProblemStep {
+  id: string
+  stepNumber: number
+  instruction: string           // "מה התוצאה של 7 × 2?" / "What is 7 × 2?"
+  instructionHe?: string        // Hebrew instruction
+  expectedAnswer: string        // "14"
+  acceptableAnswers?: string[]  // Alternative correct answers
+  hint?: string                 // "כמה פעמים 7 נכנס ב-15?"
+  hintHe?: string              // Hebrew hint
+  inputType: 'number' | 'fraction' | 'expression' | 'text'
+  inputPlaceholder?: string
+  visualUpdate?: {              // How to update visualization after step
+    type: string
+    config: Record<string, unknown>
+  }
+}
+
+export interface StepByStepProblem {
+  id: string
+  type: MathProblemType
+  difficulty: DifficultyLevel
+  question: string              // "חשב: 156 ÷ 7" / "Calculate: 156 ÷ 7"
+  questionHe?: string           // Hebrew question
+  steps: ProblemStep[]
+  finalAnswer: string           // "22 remainder 2"
+  visualization?: {
+    type: 'long_division' | 'fraction' | 'equation' | 'number_line' | 'coordinate_plane'
+    initialConfig: Record<string, unknown>
+  }
+  explanation?: string          // Full solution explanation
+  explanationHe?: string        // Hebrew explanation
+}
+
+export interface StepAttempt {
+  stepId: string
+  userAnswer: string
+  correct: boolean
+  attempts: number
+  hintUsed: boolean
+  timeSpentMs: number
+}
+
+export interface MathPracticeSession {
+  id: string
+  userId: string
+  problemType: MathProblemType
+  difficulty: DifficultyLevel
+  currentProblem: StepByStepProblem | null
+  currentStepIndex: number
+  stepAttempts: StepAttempt[]
+  problemsCompleted: number
+  problemsCorrect: number
+  totalStepsCompleted: number
+  totalStepsCorrect: number
+  startedAt: string
+  completedAt: string | null
+}
+
+export interface ValidateStepRequest {
+  problemId: string
+  stepId: string
+  userAnswer: string
+}
+
+export interface ValidateStepResponse {
+  correct: boolean
+  feedback: string
+  feedbackHe?: string
+  correctAnswer?: string        // Only revealed after max attempts
+  hint?: string                 // Next hint if incorrect
+  hintHe?: string
+  attemptsRemaining: number
+  stepComplete: boolean
+  problemComplete: boolean
+}
+
+export interface GenerateMathProblemRequest {
+  type: MathProblemType
+  difficulty: DifficultyLevel
+  language?: 'en' | 'he'
+}
+
+// Math difficulty levels (1=easy, 2=medium, 3=hard)
+export type MathDifficulty = 'easy' | 'medium' | 'hard'
+
+// Problem type configurations
+export const MATH_PROBLEM_CONFIG = {
+  long_division: {
+    name: 'Long Division',
+    nameHe: 'חילוק ארוך',
+    icon: '➗',
+    difficulties: ['easy', 'medium', 'hard'] as MathDifficulty[],
+    estimatedMinutes: 3,
+  },
+  fraction_simplify: {
+    name: 'Simplify Fractions',
+    nameHe: 'צמצום שברים',
+    icon: '½',
+    difficulties: ['easy', 'medium', 'hard'] as MathDifficulty[],
+    estimatedMinutes: 2,
+  },
+  fraction_add: {
+    name: 'Add Fractions',
+    nameHe: 'חיבור שברים',
+    icon: '⅓+⅔',
+    difficulties: ['easy', 'medium', 'hard'] as MathDifficulty[],
+    estimatedMinutes: 3,
+  },
+  fraction_multiply: {
+    name: 'Multiply Fractions',
+    nameHe: 'כפל שברים',
+    icon: '×',
+    difficulties: ['easy', 'medium', 'hard'] as MathDifficulty[],
+    estimatedMinutes: 2,
+  },
+  equation_linear: {
+    name: 'Linear Equations',
+    nameHe: 'משוואות ליניאריות',
+    icon: 'x=?',
+    difficulties: ['easy', 'medium', 'hard'] as MathDifficulty[],
+    estimatedMinutes: 3,
+  },
+  equation_quadratic: {
+    name: 'Quadratic Equations',
+    nameHe: 'משוואות ריבועיות',
+    icon: 'x²',
+    difficulties: ['medium', 'hard'] as MathDifficulty[],
+    estimatedMinutes: 5,
+  },
+  multiplication: {
+    name: 'Long Multiplication',
+    nameHe: 'כפל ארוך',
+    icon: '×',
+    difficulties: ['easy', 'medium'] as MathDifficulty[],
+    estimatedMinutes: 2,
+  },
+  decimal_operation: {
+    name: 'Decimal Operations',
+    nameHe: 'פעולות עם עשרוניים',
+    icon: '0.5',
+    difficulties: ['easy', 'medium', 'hard'] as MathDifficulty[],
+    estimatedMinutes: 2,
+  },
+} as const
+
+// -----------------------------------------------------------------------------
 // Configuration
 // -----------------------------------------------------------------------------
 

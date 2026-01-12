@@ -5,6 +5,8 @@ import { cookies } from 'next/headers'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const tokenHash = searchParams.get('token_hash')
+  const type = searchParams.get('type') as 'signup' | 'email' | 'recovery' | 'invite' | null
   const next = searchParams.get('next') ?? '/dashboard'
   const error = searchParams.get('error')
   const errorDescription = searchParams.get('error_description')
@@ -14,6 +16,8 @@ export async function GET(request: Request) {
   console.log('[Auth Callback] Full URL:', request.url)
   console.log('[Auth Callback] Code present:', !!code)
   console.log('[Auth Callback] Code length:', code?.length || 0)
+  console.log('[Auth Callback] Token hash present:', !!tokenHash)
+  console.log('[Auth Callback] Type:', type)
   console.log('[Auth Callback] Error param:', error)
   console.log('[Auth Callback] Error description:', errorDescription)
   console.log('[Auth Callback] Next redirect:', next)
@@ -23,6 +27,70 @@ export async function GET(request: Request) {
     console.error('[Auth Callback] Error from Supabase:', error, errorDescription)
     const errorMessage = encodeURIComponent(errorDescription || 'Email verification failed')
     return NextResponse.redirect(`${origin}/login?error=${errorMessage}`)
+  }
+
+  // Handle token_hash flow (works cross-device, no PKCE required)
+  // This is the fallback when users click email links on a different device (e.g., iPhone)
+  if (tokenHash && type) {
+    try {
+      const cookieStore = await cookies()
+      const cookiesToSet: { name: string; value: string; options: Record<string, unknown> }[] = []
+
+      console.log('[Auth Callback] Using token_hash flow for cross-device verification')
+
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll() {
+              return cookieStore.getAll()
+            },
+            setAll(newCookies) {
+              newCookies.forEach(({ name, value, options }) => {
+                cookiesToSet.push({ name, value, options: options as Record<string, unknown> })
+                try {
+                  cookieStore.set(name, value, options)
+                } catch {
+                  // Expected in route handlers
+                }
+              })
+            },
+          },
+        }
+      )
+
+      console.log('[Auth Callback] Verifying token_hash with type:', type)
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: type,
+      })
+
+      if (verifyError) {
+        console.error('[Auth Callback] Token verification error:', verifyError.message)
+        const errorMessage = encodeURIComponent('Email verification failed. The link may have expired. Please try signing up again.')
+        return NextResponse.redirect(`${origin}/login?error=${errorMessage}`)
+      }
+
+      console.log('[Auth Callback] Token verified successfully!')
+      console.log('[Auth Callback] User ID:', data?.user?.id)
+      console.log('[Auth Callback] User email:', data?.user?.email)
+
+      const successMessage = encodeURIComponent('Email verified successfully! Welcome to NoteSnap.')
+      const redirectUrl = `${origin}${next}?message=${successMessage}`
+      const response = NextResponse.redirect(redirectUrl)
+
+      cookiesToSet.forEach(({ name, value, options }) => {
+        response.cookies.set(name, value, options)
+      })
+
+      console.log('[Auth Callback] ========== TOKEN HASH SUCCESS ==========')
+      return response
+    } catch (err) {
+      console.error('[Auth Callback] Token hash error:', err)
+      const errorMessage = encodeURIComponent('An unexpected error occurred. Please try again.')
+      return NextResponse.redirect(`${origin}/login?error=${errorMessage}`)
+    }
   }
 
   if (code) {
