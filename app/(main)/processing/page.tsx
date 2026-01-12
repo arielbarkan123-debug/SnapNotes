@@ -39,8 +39,12 @@ type SourceType = 'image' | 'pdf' | 'pptx' | 'docx' | 'text'
 // ============================================================================
 
 // Maximum automatic retries for transient errors (Safari fix)
-const MAX_AUTO_RETRIES = 2
-const AUTO_RETRY_DELAY_MS = 2000
+const MAX_AUTO_RETRIES = 3  // Increased from 2 to 3 for Safari reliability
+const AUTO_RETRY_DELAY_MS = 2500  // Slightly longer delay for Safari stability
+
+// Poll interval for fallback course lookup
+const POLL_INTERVAL_MS = 3000
+const MAX_POLL_ATTEMPTS = 5
 
 // Error messages that indicate transient issues and should auto-retry
 const TRANSIENT_ERROR_PATTERNS = [
@@ -51,6 +55,10 @@ const TRANSIENT_ERROR_PATTERNS = [
   'try again',
   'Connection closed unexpectedly',
   'Connection error',
+  'network',
+  'timeout',
+  'Something went wrong',
+  'Server error',
 ]
 
 /**
@@ -310,6 +318,46 @@ function ProcessingContent() {
 
     return () => clearTimeout(timeout)
   }, [state.status, currentStage, progressStages.length])
+
+  // Fallback: Poll for recently created course when stream fails without clear result
+  // This handles Safari edge cases where connection drops but server completed
+  const pollForRecentCourse = useCallback(async (): Promise<{ courseId: string; cardsGenerated: number } | null> => {
+    console.log('[Processing] Polling for recently created course...')
+
+    for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+      try {
+        const response = await fetch('/api/courses/recent', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.course && data.course.id) {
+            // Check if course was created within the last 5 minutes
+            const createdAt = new Date(data.course.created_at).getTime()
+            const now = Date.now()
+            const fiveMinutes = 5 * 60 * 1000
+
+            if (now - createdAt < fiveMinutes) {
+              console.log('[Processing] Found recently created course:', data.course.id)
+              return { courseId: data.course.id, cardsGenerated: data.cardsGenerated || 0 }
+            }
+          }
+        }
+      } catch (e) {
+        console.log('[Processing] Poll attempt failed:', e)
+      }
+
+      // Wait before next poll
+      if (attempt < MAX_POLL_ATTEMPTS - 1) {
+        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS))
+      }
+    }
+
+    console.log('[Processing] No recent course found after polling')
+    return null
+  }, [])
 
   // Helper to handle errors with auto-retry for transient issues (Safari fix)
   const handleError = useCallback((
@@ -705,8 +753,29 @@ function ProcessingContent() {
       }
 
       // If we got here without success/error, something went wrong
-      console.error('[Processing] Stream ended without success/error message')
+      // But on Safari, the server might have succeeded - poll to check
+      console.error('[Processing] Stream ended without success/error message - trying fallback poll')
       clearTimeout(timeoutId)
+
+      // Try to find a recently created course (Safari fallback)
+      const recentCourse = await pollForRecentCourse()
+      if (recentCourse) {
+        console.log('[Processing] Found course via polling fallback:', recentCourse.courseId)
+        if (processingKey) {
+          sessionStorage.removeItem(processingKey)
+        }
+        flushSync(() => {
+          setState({
+            status: 'success',
+            courseId: recentCourse.courseId,
+            cardsGenerated: recentCourse.cardsGenerated,
+            generationStatus: 'complete',
+          })
+        })
+        return
+      }
+
+      // No course found, treat as error
       if (processingKey) {
         sessionStorage.removeItem(processingKey)
       }
@@ -723,6 +792,23 @@ function ProcessingContent() {
       // Clear the processing flag so retry can work
       if (processingKey) {
         sessionStorage.removeItem(processingKey)
+      }
+
+      // On any error, first try polling to see if server actually succeeded
+      // (Safari may drop connection after server completes)
+      console.log('[Processing] Caught error, checking for completed course via poll...')
+      const recentCourse = await pollForRecentCourse()
+      if (recentCourse) {
+        console.log('[Processing] Found course via error-recovery poll:', recentCourse.courseId)
+        flushSync(() => {
+          setState({
+            status: 'success',
+            courseId: recentCourse.courseId,
+            cardsGenerated: recentCourse.cardsGenerated,
+            generationStatus: 'complete',
+          })
+        })
+        return
       }
 
       // Handle abort/timeout specifically
@@ -744,7 +830,7 @@ function ProcessingContent() {
         if (wasRetried) return
       }
     }
-  }, [hasValidInput, textContent, documentContent, documentUrl, imageUrls, imageUrl, title, sourceType, processingKey, showXP, showLevelUp, trackFunnelStep, intensityMode, handleError])
+  }, [hasValidInput, textContent, documentContent, documentUrl, imageUrls, imageUrl, title, sourceType, processingKey, showXP, showLevelUp, trackFunnelStep, intensityMode, handleError, pollForRecentCourse])
 
   // Start generation on mount (ref prevents duplicate calls in StrictMode)
   // Wait for document content to load if we have a documentId

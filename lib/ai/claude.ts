@@ -591,57 +591,62 @@ export async function analyzeNotebookImage(imageUrl: string): Promise<AnalysisRe
   const { systemPrompt, userPrompt } = getImageAnalysisPrompt()
 
   try {
-    // Use streaming to prevent mobile connection timeouts
-    console.log('[analyzeNotebookImage] Starting streaming request')
+    // Use streaming WITH RETRY to prevent mobile connection timeouts
+    console.log('[analyzeNotebookImage] Starting streaming request with retry')
 
-    const stream = client.messages.stream({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS_EXTRACTION,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: mediaType,
-                data: base64,
+    const rawText = await withStreamRetry(
+      () => client.messages.stream({
+        model: AI_MODEL,
+        max_tokens: MAX_TOKENS_EXTRACTION,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: mediaType,
+                  data: base64,
+                },
               },
-            },
-            {
-              type: 'text',
-              text: userPrompt,
-            },
-          ],
-        },
-      ],
-    })
+              {
+                type: 'text',
+                text: userPrompt,
+              },
+            ],
+          },
+        ],
+      }),
+      async (stream) => {
+        // Collect response text from stream
+        let rawText = ''
+        let lastLogTime = Date.now()
+        const LOG_INTERVAL_MS = 10000
 
-    // Collect response text from stream
-    let rawText = ''
-    let lastLogTime = Date.now()
-    const LOG_INTERVAL_MS = 10000
+        for await (const event of stream) {
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            rawText += event.delta.text
+          }
 
-    for await (const event of stream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        rawText += event.delta.text
-      }
+          const now = Date.now()
+          if (now - lastLogTime > LOG_INTERVAL_MS) {
+            console.log(`[analyzeNotebookImage] Streaming: ${rawText.length} chars`)
+            lastLogTime = now
+          }
+        }
 
-      const now = Date.now()
-      if (now - lastLogTime > LOG_INTERVAL_MS) {
-        console.log(`[analyzeNotebookImage] Streaming: ${rawText.length} chars`)
-        lastLogTime = now
-      }
-    }
+        const finalMessage = await stream.finalMessage()
+        if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
+          console.warn(`[analyzeNotebookImage] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
+        }
 
-    const finalMessage = await stream.finalMessage()
-    if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
-      console.warn(`[analyzeNotebookImage] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
-    }
-
-    console.log(`[analyzeNotebookImage] Complete: ${rawText.length} chars`)
+        console.log(`[analyzeNotebookImage] Complete: ${rawText.length} chars`)
+        return rawText
+      },
+      'analyzeNotebookImage'
+    )
 
     if (!rawText || rawText.trim().length === 0) {
       throw new ClaudeAPIError(
@@ -716,55 +721,62 @@ export async function generateStudyCourse(
   const { systemPrompt, userPrompt } = getCourseGenerationPrompt(formattedContent, safeTitle, imageCount, userContext, undefined, intensityMode)
 
   try {
-    // Use streaming to avoid timeout for large content
+    // Use streaming WITH RETRY to avoid timeout for large content
     // Streaming keeps the connection alive and collects response incrementally
-    console.log('[generateStudyCourse] Starting streaming request for course generation')
+    console.log('[generateStudyCourse] Starting streaming request with retry for course generation')
 
-    const stream = client.messages.stream({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS_GENERATION,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: userPrompt,
-        },
-      ],
-    })
+    const { rawText, stopReason } = await withStreamRetry(
+      () => client.messages.stream({
+        model: AI_MODEL,
+        max_tokens: MAX_TOKENS_GENERATION,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: userPrompt,
+          },
+        ],
+      }),
+      async (stream) => {
+        // Collect the full response text from the stream with activity logging
+        let rawText = ''
+        let lastActivity = Date.now()
+        let lastLogTime = Date.now()
+        const LOG_INTERVAL_MS = 15000 // Log every 15 seconds of activity
 
-    // Collect the full response text from the stream with activity logging
-    let rawText = ''
-    let lastActivity = Date.now()
-    let lastLogTime = Date.now()
-    const LOG_INTERVAL_MS = 15000 // Log every 15 seconds of activity
+        for await (const event of stream) {
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            rawText += event.delta.text
+            lastActivity = Date.now()
+          }
 
-    for await (const event of stream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        rawText += event.delta.text
-        lastActivity = Date.now()
-      }
+          // Log progress periodically during generation
+          const now = Date.now()
+          if (now - lastLogTime > LOG_INTERVAL_MS) {
+            console.log(`[generateStudyCourse] Streaming in progress: ${rawText.length} chars received`)
+            lastLogTime = now
+          }
 
-      // Log progress periodically during generation
-      const now = Date.now()
-      if (now - lastLogTime > LOG_INTERVAL_MS) {
-        console.log(`[generateStudyCourse] Streaming in progress: ${rawText.length} chars received`)
-        lastLogTime = now
-      }
+          // Warn if no activity for 30 seconds
+          if (now - lastActivity > 30000) {
+            console.warn(`[generateStudyCourse] No activity for 30s at ${rawText.length} chars, still waiting...`)
+            lastActivity = now // Reset to avoid spamming logs
+          }
+        }
 
-      // Warn if no activity for 30 seconds
-      if (now - lastActivity > 30000) {
-        console.warn(`[generateStudyCourse] No activity for 30s at ${rawText.length} chars, still waiting...`)
-        lastActivity = now // Reset to avoid spamming logs
-      }
+        // Ensure the stream completed successfully
+        const finalMessage = await stream.finalMessage()
+        const stopReason = finalMessage.stop_reason
+
+        console.log(`[generateStudyCourse] Streaming complete, received ${rawText.length} characters`)
+        return { rawText, stopReason }
+      },
+      'generateStudyCourse'
+    )
+
+    if (stopReason !== 'end_turn' && stopReason !== 'stop_sequence') {
+      console.warn(`[generateStudyCourse] Stream ended with stop_reason: ${stopReason}`)
     }
-
-    // Ensure the stream completed successfully
-    const finalMessage = await stream.finalMessage()
-    if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
-      console.warn(`[generateStudyCourse] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
-    }
-
-    console.log(`[generateStudyCourse] Streaming complete, received ${rawText.length} characters in ${Date.now() - lastLogTime}ms`)
 
     if (!rawText || rawText.trim().length === 0) {
       throw new ClaudeAPIError(
@@ -873,57 +885,62 @@ export async function generateCourseFromImageSingleCall(
   const { systemPrompt, userPrompt } = getCombinedAnalysisPrompt(safeTitle)
 
   try {
-    // Use streaming to prevent mobile connection timeouts
-    console.log('[generateCourseFromImageSingleCall] Starting streaming request')
+    // Use streaming WITH RETRY to prevent mobile connection timeouts
+    console.log('[generateCourseFromImageSingleCall] Starting streaming request with retry')
 
-    const stream = client.messages.stream({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS_GENERATION,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: mediaType,
-                data: base64,
+    const rawText = await withStreamRetry(
+      () => client.messages.stream({
+        model: AI_MODEL,
+        max_tokens: MAX_TOKENS_GENERATION,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: mediaType,
+                  data: base64,
+                },
               },
-            },
-            {
-              type: 'text',
-              text: userPrompt,
-            },
-          ],
-        },
-      ],
-    })
+              {
+                type: 'text',
+                text: userPrompt,
+              },
+            ],
+          },
+        ],
+      }),
+      async (stream) => {
+        // Collect response text from stream
+        let rawText = ''
+        let lastLogTime = Date.now()
+        const LOG_INTERVAL_MS = 15000
 
-    // Collect response text from stream
-    let rawText = ''
-    let lastLogTime = Date.now()
-    const LOG_INTERVAL_MS = 15000
+        for await (const event of stream) {
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            rawText += event.delta.text
+          }
 
-    for await (const event of stream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        rawText += event.delta.text
-      }
+          const now = Date.now()
+          if (now - lastLogTime > LOG_INTERVAL_MS) {
+            console.log(`[generateCourseFromImageSingleCall] Streaming: ${rawText.length} chars`)
+            lastLogTime = now
+          }
+        }
 
-      const now = Date.now()
-      if (now - lastLogTime > LOG_INTERVAL_MS) {
-        console.log(`[generateCourseFromImageSingleCall] Streaming: ${rawText.length} chars`)
-        lastLogTime = now
-      }
-    }
+        const finalMessage = await stream.finalMessage()
+        if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
+          console.warn(`[generateCourseFromImageSingleCall] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
+        }
 
-    const finalMessage = await stream.finalMessage()
-    if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
-      console.warn(`[generateCourseFromImageSingleCall] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
-    }
-
-    console.log(`[generateCourseFromImageSingleCall] Complete: ${rawText.length} chars`)
+        console.log(`[generateCourseFromImageSingleCall] Complete: ${rawText.length} chars`)
+        return rawText
+      },
+      'generateCourseFromImageSingleCall'
+    )
 
     if (!rawText || rawText.trim().length === 0) {
       throw new ClaudeAPIError(
@@ -1074,44 +1091,49 @@ async function analyzeImageBatch(imageUrls: string[]): Promise<AnalysisResult> {
   })
 
   try {
-    // Use streaming to prevent mobile connection timeouts
-    console.log(`[analyzeImageBatch] Starting streaming request for ${imageUrls.length} images`)
+    // Use streaming WITH RETRY to prevent mobile connection timeouts
+    console.log(`[analyzeImageBatch] Starting streaming request with retry for ${imageUrls.length} images`)
 
-    const stream = client.messages.stream({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS_EXTRACTION * 2, // More tokens for multiple images
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: messageContent,
-        },
-      ],
-    })
+    const rawText = await withStreamRetry(
+      () => client.messages.stream({
+        model: AI_MODEL,
+        max_tokens: MAX_TOKENS_EXTRACTION * 2, // More tokens for multiple images
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: messageContent,
+          },
+        ],
+      }),
+      async (stream) => {
+        // Collect response text from stream
+        let rawText = ''
+        let lastLogTime = Date.now()
+        const LOG_INTERVAL_MS = 10000
 
-    // Collect response text from stream
-    let rawText = ''
-    let lastLogTime = Date.now()
-    const LOG_INTERVAL_MS = 10000
+        for await (const event of stream) {
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            rawText += event.delta.text
+          }
 
-    for await (const event of stream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        rawText += event.delta.text
-      }
+          const now = Date.now()
+          if (now - lastLogTime > LOG_INTERVAL_MS) {
+            console.log(`[analyzeImageBatch] Streaming: ${rawText.length} chars`)
+            lastLogTime = now
+          }
+        }
 
-      const now = Date.now()
-      if (now - lastLogTime > LOG_INTERVAL_MS) {
-        console.log(`[analyzeImageBatch] Streaming: ${rawText.length} chars`)
-        lastLogTime = now
-      }
-    }
+        const finalMessage = await stream.finalMessage()
+        if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
+          console.warn(`[analyzeImageBatch] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
+        }
 
-    const finalMessage = await stream.finalMessage()
-    if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
-      console.warn(`[analyzeImageBatch] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
-    }
-
-    console.log(`[analyzeImageBatch] Complete: ${rawText.length} chars`)
+        console.log(`[analyzeImageBatch] Complete: ${rawText.length} chars`)
+        return rawText
+      },
+      'analyzeImageBatch'
+    )
 
     if (!rawText || rawText.trim().length === 0) {
       throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
@@ -1446,46 +1468,53 @@ export async function generateCourseFromDocument(
   console.log(`[generateCourseFromDocument] Using ${isExam ? 'EXAM' : 'DOCUMENT'} prompt for content`)
 
   try {
-    // Use streaming to prevent mobile connection timeouts
-    console.log('[generateCourseFromDocument] Starting streaming request')
+    // Use streaming WITH RETRY to prevent mobile connection timeouts
+    console.log('[generateCourseFromDocument] Starting streaming request with retry')
 
-    const stream = client.messages.stream({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS_GENERATION,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: userPrompt,
-        },
-      ],
-    })
+    const { rawText, stopReason } = await withStreamRetry(
+      () => client.messages.stream({
+        model: AI_MODEL,
+        max_tokens: MAX_TOKENS_GENERATION,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: userPrompt,
+          },
+        ],
+      }),
+      async (stream) => {
+        // Collect the full response text from the stream with activity logging
+        let rawText = ''
+        let lastLogTime = Date.now()
+        const LOG_INTERVAL_MS = 15000 // Log every 15 seconds
 
-    // Collect the full response text from the stream with activity logging
-    let rawText = ''
-    let lastLogTime = Date.now()
-    const LOG_INTERVAL_MS = 15000 // Log every 15 seconds
+        for await (const event of stream) {
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            rawText += event.delta.text
+          }
 
-    for await (const event of stream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        rawText += event.delta.text
-      }
+          // Log progress periodically
+          const now = Date.now()
+          if (now - lastLogTime > LOG_INTERVAL_MS) {
+            console.log(`[generateCourseFromDocument] Streaming in progress: ${rawText.length} chars received`)
+            lastLogTime = now
+          }
+        }
 
-      // Log progress periodically
-      const now = Date.now()
-      if (now - lastLogTime > LOG_INTERVAL_MS) {
-        console.log(`[generateCourseFromDocument] Streaming in progress: ${rawText.length} chars received`)
-        lastLogTime = now
-      }
+        // Verify stream completed successfully
+        const finalMessage = await stream.finalMessage()
+        const stopReason = finalMessage.stop_reason
+
+        console.log(`[generateCourseFromDocument] Streaming complete, received ${rawText.length} characters`)
+        return { rawText, stopReason }
+      },
+      'generateCourseFromDocument'
+    )
+
+    if (stopReason !== 'end_turn' && stopReason !== 'stop_sequence') {
+      console.warn(`[generateCourseFromDocument] Stream ended with stop_reason: ${stopReason}`)
     }
-
-    // Verify stream completed successfully
-    const finalMessage = await stream.finalMessage()
-    if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
-      console.warn(`[generateCourseFromDocument] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
-    }
-
-    console.log(`[generateCourseFromDocument] Streaming complete, received ${rawText.length} characters`)
 
     if (!rawText || rawText.trim().length === 0) {
       throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
@@ -1606,45 +1635,52 @@ export async function generateCourseFromText(
   console.log(`[generateCourseFromText] Using ${isExam ? 'EXAM' : 'TEXT'} prompt for content (intensity: ${intensityMode || 'standard'})`)
 
   try {
-    // Use streaming to prevent mobile connection timeouts
-    console.log('[generateCourseFromText] Starting streaming request')
+    // Use streaming WITH RETRY to prevent mobile connection timeouts
+    console.log('[generateCourseFromText] Starting streaming request with retry')
 
-    const stream = client.messages.stream({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS_GENERATION,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: userPrompt,
-        },
-      ],
-    })
+    const { rawText, stopReason } = await withStreamRetry(
+      () => client.messages.stream({
+        model: AI_MODEL,
+        max_tokens: MAX_TOKENS_GENERATION,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: userPrompt,
+          },
+        ],
+      }),
+      async (stream) => {
+        // Collect the full response text from the stream
+        let rawText = ''
+        let lastLogTime = Date.now()
+        const LOG_INTERVAL_MS = 15000
 
-    // Collect the full response text from the stream
-    let rawText = ''
-    let lastLogTime = Date.now()
-    const LOG_INTERVAL_MS = 15000
+        for await (const event of stream) {
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            rawText += event.delta.text
+          }
 
-    for await (const event of stream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        rawText += event.delta.text
-      }
+          const now = Date.now()
+          if (now - lastLogTime > LOG_INTERVAL_MS) {
+            console.log(`[generateCourseFromText] Streaming in progress: ${rawText.length} chars received`)
+            lastLogTime = now
+          }
+        }
 
-      const now = Date.now()
-      if (now - lastLogTime > LOG_INTERVAL_MS) {
-        console.log(`[generateCourseFromText] Streaming in progress: ${rawText.length} chars received`)
-        lastLogTime = now
-      }
+        // Verify stream completed successfully
+        const finalMessage = await stream.finalMessage()
+        const stopReason = finalMessage.stop_reason
+
+        console.log(`[generateCourseFromText] Streaming complete, received ${rawText.length} characters`)
+        return { rawText, stopReason }
+      },
+      'generateCourseFromText'
+    )
+
+    if (stopReason !== 'end_turn' && stopReason !== 'stop_sequence') {
+      console.warn(`[generateCourseFromText] Stream ended with stop_reason: ${stopReason}`)
     }
-
-    // Verify stream completed successfully
-    const finalMessage = await stream.finalMessage()
-    if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
-      console.warn(`[generateCourseFromText] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
-    }
-
-    console.log(`[generateCourseFromText] Streaming complete, received ${rawText.length} characters`)
 
     if (!rawText || rawText.trim().length === 0) {
       throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
@@ -2037,40 +2073,45 @@ export async function generateContinuationLessons(
     userContext
   )
 
-  console.log(`[generateContinuationLessons] Generating lessons ${targetLessonIndices.map(i => i + 1).join(', ')} (streaming)`)
+  console.log(`[generateContinuationLessons] Generating lessons ${targetLessonIndices.map(i => i + 1).join(', ')} (streaming with retry)`)
 
   try {
-    // Use streaming to prevent mobile connection timeouts
-    const stream = client.messages.stream({
-      model: AI_MODEL,
-      max_tokens: 8192, // 2 lessons at a time
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    })
+    // Use streaming WITH RETRY to prevent mobile connection timeouts
+    const rawText = await withStreamRetry(
+      () => client.messages.stream({
+        model: AI_MODEL,
+        max_tokens: 8192, // 2 lessons at a time
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+      async (stream) => {
+        // Collect the full response text from the stream
+        let rawText = ''
+        let lastLogTime = Date.now()
+        const LOG_INTERVAL_MS = 15000
 
-    // Collect the full response text from the stream
-    let rawText = ''
-    let lastLogTime = Date.now()
-    const LOG_INTERVAL_MS = 15000
+        for await (const event of stream) {
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            rawText += event.delta.text
+          }
 
-    for await (const event of stream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        rawText += event.delta.text
-      }
+          const now = Date.now()
+          if (now - lastLogTime > LOG_INTERVAL_MS) {
+            console.log(`[generateContinuationLessons] Streaming in progress: ${rawText.length} chars received`)
+            lastLogTime = now
+          }
+        }
 
-      const now = Date.now()
-      if (now - lastLogTime > LOG_INTERVAL_MS) {
-        console.log(`[generateContinuationLessons] Streaming in progress: ${rawText.length} chars received`)
-        lastLogTime = now
-      }
-    }
+        const finalMessage = await stream.finalMessage()
+        if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
+          console.warn(`[generateContinuationLessons] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
+        }
 
-    const finalMessage = await stream.finalMessage()
-    if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
-      console.warn(`[generateContinuationLessons] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
-    }
-
-    console.log(`[generateContinuationLessons] Streaming complete: ${rawText.length} chars`)
+        console.log(`[generateContinuationLessons] Streaming complete: ${rawText.length} chars`)
+        return rawText
+      },
+      'generateContinuationLessons'
+    )
 
     if (!rawText || rawText.trim().length === 0) {
       throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')

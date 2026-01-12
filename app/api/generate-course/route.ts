@@ -69,43 +69,56 @@ type StreamMessage =
 // ============================================================================
 
 export async function POST(request: NextRequest): Promise<Response> {
-  // Detect Safari for more aggressive heartbeat interval
+  // Detect Safari and iOS for more aggressive heartbeat interval
   const userAgent = request.headers.get('user-agent') || ''
   const isSafari = userAgent.includes('Safari') && !userAgent.includes('Chrome') && !userAgent.includes('Chromium')
+  const isIOS = /iPhone|iPad|iPod/i.test(userAgent)
+  const needsAggressiveHeartbeat = isSafari || isIOS
+
+  if (needsAggressiveHeartbeat) {
+    console.log('[GenerateCourse] Detected Safari/iOS - using aggressive heartbeat')
+  }
 
   // Create a TransformStream to send data to client
   const encoder = new TextEncoder()
   let streamController: ReadableStreamDefaultController<Uint8Array> | null = null
+  let streamClosed = false
 
   // Helper to send a message to the stream
   const sendMessage = (msg: StreamMessage) => {
-    if (streamController) {
+    if (streamController && !streamClosed) {
       try {
         streamController.enqueue(encoder.encode(JSON.stringify(msg) + '\n'))
-      } catch {
-        // Stream might be closed
+      } catch (e) {
+        // Stream might be closed - mark it
+        streamClosed = true
+        console.warn('[GenerateCourse] Stream write failed:', e)
       }
     }
   }
 
   // Helper to close the stream
   const closeStream = () => {
-    if (streamController) {
+    if (streamController && !streamClosed) {
       try {
         streamController.close()
+        streamClosed = true
       } catch {
         // Stream might already be closed
+        streamClosed = true
       }
     }
   }
 
   // Start heartbeat interval to keep connection alive
-  // Safari needs more frequent heartbeats to prevent connection drops
+  // Safari/iOS needs VERY frequent heartbeats (3s) to prevent connection drops
   let heartbeatInterval: ReturnType<typeof setInterval> | null = null
-  const heartbeatFrequency = isSafari ? 5000 : 10000 // 5s for Safari, 10s for others
+  const heartbeatFrequency = needsAggressiveHeartbeat ? 3000 : 10000 // 3s for Safari/iOS, 10s for others
   const startHeartbeat = () => {
     heartbeatInterval = setInterval(() => {
-      sendMessage({ type: 'heartbeat', timestamp: Date.now() })
+      if (!streamClosed) {
+        sendMessage({ type: 'heartbeat', timestamp: Date.now() })
+      }
     }, heartbeatFrequency)
   }
 
