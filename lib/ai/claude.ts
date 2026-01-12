@@ -39,7 +39,7 @@ const AI_MODEL_FAST = process.env.ANTHROPIC_MODEL_FAST || 'claude-3-5-haiku-2024
 const MAX_TOKENS_EXTRACTION = 4096
 const MAX_TOKENS_GENERATION = 16384  // Increased for large documents (31 slides needs more tokens)
 const MAX_IMAGES_PER_REQUEST = 5 // Claude's recommended limit for optimal performance
-const API_TIMEOUT_MS = 150000 // 2.5 minute timeout - must be less than client timeout (3 min) to fail gracefully
+const API_TIMEOUT_MS = 180000 // 3 minute timeout - matches client timeout for Safari compatibility
 
 /**
  * Get the default AI model for standard operations
@@ -121,30 +121,58 @@ const MAX_RETRIES = 3
 const INITIAL_RETRY_DELAY_MS = 1000
 
 /**
- * Executes an async operation with exponential backoff retry logic
- * Only retries on transient errors (network, rate limit, timeout)
+ * Checks if an Anthropic error is retryable (transient server issues)
  */
-// Kept for potential future use - streaming is now preferred for mobile reliability
-async function _withRetry<T>(
-  operation: () => Promise<T>,
+function isAnthropicErrorRetryable(error: unknown): boolean {
+  if (error instanceof Anthropic.APIError) {
+    // Retry on server errors, overload, rate limits, timeouts
+    const retryableStatuses = [429, 500, 502, 503, 504, 529]
+    return retryableStatuses.includes(error.status)
+  }
+  if (error instanceof Error) {
+    // Retry on network/timeout errors
+    const message = error.message.toLowerCase()
+    return message.includes('network') ||
+           message.includes('timeout') ||
+           message.includes('fetch') ||
+           error.name === 'AbortError'
+  }
+  return false
+}
+
+/**
+ * Executes a streaming operation with retry logic for Safari reliability.
+ * Wraps the stream creation and consumption with automatic retry on transient errors.
+ *
+ * @param createStream - Function that creates the message stream
+ * @param processStream - Function that processes the stream and extracts result
+ * @param operationName - Name for logging
+ * @returns The processed result
+ */
+async function withStreamRetry<T>(
+  createStream: () => ReturnType<Anthropic['messages']['stream']>,
+  processStream: (stream: ReturnType<Anthropic['messages']['stream']>) => Promise<T>,
   operationName: string
 ): Promise<T> {
   let lastError: Error | undefined
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      return await operation()
+      const stream = createStream()
+      return await processStream(stream)
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
 
-      // Convert to ClaudeAPIError to check if retryable
-      const claudeError = error instanceof ClaudeAPIError
-        ? error
-        : ClaudeAPIError.fromAnthropicError(error)
+      // Check if this error is retryable
+      const shouldRetry = isAnthropicErrorRetryable(error) ||
+        (error instanceof ClaudeAPIError && error.retryable)
 
-      // Only retry on transient errors
-      if (!claudeError.retryable || attempt === MAX_RETRIES) {
-        throw claudeError
+      if (!shouldRetry || attempt === MAX_RETRIES) {
+        // Convert to ClaudeAPIError if needed
+        if (error instanceof ClaudeAPIError) {
+          throw error
+        }
+        throw ClaudeAPIError.fromAnthropicError(error)
       }
 
       // Exponential backoff: 1s, 2s, 4s
@@ -1774,7 +1802,8 @@ export function getUserFriendlyError(error: unknown): string {
   if (error instanceof ClaudeAPIError) {
     switch (error.code) {
       case 'RATE_LIMIT':
-        return 'Service is busy. Please try again in a moment.'
+        // Be specific about retry for Safari users who may see this more often
+        return 'AI service is temporarily busy. Please wait a moment and try again.'
       case 'INVALID_IMAGE':
         return 'Could not read the image. Please upload a clearer photo.'
       case 'PARSE_ERROR':
@@ -1786,10 +1815,11 @@ export function getUserFriendlyError(error: unknown): string {
       case 'CONFIG_ERROR':
         return 'Service configuration error. Please contact support.'
       case 'TIMEOUT':
-        return 'The request took too long. Please try again with a smaller file.'
+        return 'The request took too long. Please try again with a smaller file or fewer images.'
+      case 'API_ERROR':
       default:
-        // Never expose raw error messages - they may contain JSON/technical details
-        return 'Something went wrong. Please try again.'
+        // Provide actionable message instead of generic error
+        return 'The AI service encountered an issue. Please try again. If the problem persists, try with a smaller image or fewer pages.'
     }
   }
   return 'An unexpected error occurred. Please try again.'
@@ -1857,38 +1887,43 @@ export async function generateInitialCourse(
     intensityMode
   )
 
-  console.log(`[generateInitialCourse] Starting fast initial generation (streaming)`)
+  console.log(`[generateInitialCourse] Starting fast initial generation (streaming with retry)`)
 
   try {
-    // Use streaming to prevent mobile connection timeouts
-    const stream = client.messages.stream({
-      model: AI_MODEL,
-      max_tokens: 16384, // Enough for 2 lessons + full outline + summary
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    })
+    // Use streaming with retry to handle transient Safari/network issues
+    const { rawText, stopReason } = await withStreamRetry(
+      () => client.messages.stream({
+        model: AI_MODEL,
+        max_tokens: 16384, // Enough for 2 lessons + full outline + summary
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+      async (stream) => {
+        // Collect the full response text from the stream
+        let rawText = ''
+        let lastLogTime = Date.now()
+        const LOG_INTERVAL_MS = 15000
 
-    // Collect the full response text from the stream
-    let rawText = ''
-    let lastLogTime = Date.now()
-    const LOG_INTERVAL_MS = 15000
+        for await (const event of stream) {
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            rawText += event.delta.text
+          }
 
-    for await (const event of stream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        rawText += event.delta.text
-      }
+          const now = Date.now()
+          if (now - lastLogTime > LOG_INTERVAL_MS) {
+            console.log(`[generateInitialCourse] Streaming in progress: ${rawText.length} chars received`)
+            lastLogTime = now
+          }
+        }
 
-      const now = Date.now()
-      if (now - lastLogTime > LOG_INTERVAL_MS) {
-        console.log(`[generateInitialCourse] Streaming in progress: ${rawText.length} chars received`)
-        lastLogTime = now
-      }
-    }
+        const finalMessage = await stream.finalMessage()
+        const stopReason = finalMessage.stop_reason
 
-    const finalMessage = await stream.finalMessage()
-    const stopReason = finalMessage.stop_reason
-
-    console.log(`[generateInitialCourse] Streaming complete: ${rawText.length} chars, stop_reason: ${stopReason}`)
+        console.log(`[generateInitialCourse] Streaming complete: ${rawText.length} chars, stop_reason: ${stopReason}`)
+        return { rawText, stopReason }
+      },
+      'generateInitialCourse'
+    )
 
     if (!rawText || rawText.trim().length === 0) {
       throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')

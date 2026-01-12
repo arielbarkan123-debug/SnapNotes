@@ -38,6 +38,31 @@ type SourceType = 'image' | 'pdf' | 'pptx' | 'docx' | 'text'
 // Constants
 // ============================================================================
 
+// Maximum automatic retries for transient errors (Safari fix)
+const MAX_AUTO_RETRIES = 2
+const AUTO_RETRY_DELAY_MS = 2000
+
+// Error messages that indicate transient issues and should auto-retry
+const TRANSIENT_ERROR_PATTERNS = [
+  'AI service is temporarily busy',
+  'AI service encountered',
+  'temporarily busy',
+  'temporary issue',
+  'try again',
+  'Connection closed unexpectedly',
+  'Connection error',
+]
+
+/**
+ * Check if an error message indicates a transient issue that should auto-retry
+ */
+function isTransientError(errorMessage: string): boolean {
+  const lowerMessage = errorMessage.toLowerCase()
+  return TRANSIENT_ERROR_PATTERNS.some(pattern =>
+    lowerMessage.includes(pattern.toLowerCase())
+  )
+}
+
 const IMAGE_PROGRESS_STAGES: ProgressStage[] = [
   {
     message: 'Analyzing your notebook page...',
@@ -235,6 +260,7 @@ function ProcessingContent() {
   const [currentStage, setCurrentStage] = useState(0)
   const [xpAwarded, setXpAwarded] = useState(0)
   const hasStartedRef = useRef(false)
+  const autoRetryCountRef = useRef(0)
 
   // Generate a unique key for this processing session
   const processingKey = useMemo(() => {
@@ -285,17 +311,57 @@ function ProcessingContent() {
     return () => clearTimeout(timeout)
   }, [state.status, currentStage, progressStages.length])
 
+  // Helper to handle errors with auto-retry for transient issues (Safari fix)
+  const handleError = useCallback((
+    errorMessage: string,
+    retryable: boolean,
+    processingKey: string | null,
+    retryFn: () => void
+  ) => {
+    // Check if we should auto-retry transient errors
+    if (retryable && isTransientError(errorMessage) && autoRetryCountRef.current < MAX_AUTO_RETRIES) {
+      autoRetryCountRef.current += 1
+      console.log(`[Processing] Auto-retrying (${autoRetryCountRef.current}/${MAX_AUTO_RETRIES}) after transient error: ${errorMessage}`)
+
+      // Clear processing key so retry can proceed
+      if (processingKey) {
+        sessionStorage.removeItem(processingKey)
+      }
+
+      // Show brief "retrying" state then retry
+      setState({
+        status: 'processing',
+      })
+      setCurrentStage(0)
+
+      // Delay then retry
+      setTimeout(() => {
+        retryFn()
+      }, AUTO_RETRY_DELAY_MS)
+      return true // Indicates retry was triggered
+    }
+
+    // No auto-retry - show error to user
+    setState({
+      status: 'error',
+      error: errorMessage,
+      retryable,
+    })
+    return false
+  }, [])
+
   // API call with streaming support
   const generateCourse = useCallback(async () => {
-    console.log('[Processing] generateCourse called', { hasValidInput, processingKey })
+    console.log('[Processing] generateCourse called', { hasValidInput, processingKey, autoRetry: autoRetryCountRef.current })
     if (!hasValidInput || !processingKey) {
       console.log('[Processing] Early return - no valid input or key')
       return
     }
 
     // Check if we're already processing (prevents duplicates on remount)
+    // Skip this check during auto-retry
     const isAlreadyProcessing = sessionStorage.getItem(processingKey)
-    if (isAlreadyProcessing === 'started') {
+    if (isAlreadyProcessing === 'started' && autoRetryCountRef.current === 0) {
       console.log('[Processing] Already processing, skipping')
       return
     }
@@ -312,12 +378,17 @@ function ProcessingContent() {
     setState({ status: 'processing' })
     setCurrentStage(0)
 
-    // Create AbortController for timeout (3 minutes for mobile)
+    // Create AbortController for timeout
+    // Safari/iOS needs more time due to aggressive connection management
+    const isSafari = typeof navigator !== 'undefined' &&
+      /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+    const timeoutMs = isSafari ? 240000 : 210000 // 4 min for Safari, 3.5 min for others
+
     const controller = new AbortController()
     const timeoutId = setTimeout(() => {
-      console.log('[Processing] Request timed out after 3 minutes')
+      console.log(`[Processing] Request timed out after ${timeoutMs / 1000}s`)
       controller.abort()
-    }, 180000) // 3 minutes timeout
+    }, timeoutMs)
 
     try {
       // Build request body based on source type
@@ -363,11 +434,13 @@ function ProcessingContent() {
         if (processingKey) {
           sessionStorage.removeItem(processingKey)
         }
-        setState({
-          status: 'error',
-          error: `Server error (${response.status}). Please try again.`,
-          retryable: true,
-        })
+        const wasRetried = handleError(
+          `Server error (${response.status}). Please try again.`,
+          true,
+          processingKey,
+          generateCourse
+        )
+        if (wasRetried) return
         return
       }
 
@@ -404,11 +477,13 @@ function ProcessingContent() {
               if (processingKey) {
                 sessionStorage.removeItem(processingKey)
               }
-              setState({
-                status: 'error',
-                error: message.error || 'Failed to generate course',
-                retryable: message.retryable ?? true,
-              })
+              const wasRetried = handleError(
+                message.error || 'Failed to generate course',
+                message.retryable ?? true,
+                processingKey,
+                generateCourse
+              )
+              if (wasRetried) return
               return
             }
           } catch {
@@ -564,19 +639,22 @@ function ProcessingContent() {
                 return
               }
 
-              case 'error':
+              case 'error': {
                 console.error('[Processing] ERROR from server:', message.error)
                 // Clear timeout and processing flag so retry can work
                 clearTimeout(timeoutId)
                 if (processingKey) {
                   sessionStorage.removeItem(processingKey)
                 }
-                setState({
-                  status: 'error',
-                  error: message.error || 'Failed to generate course',
-                  retryable: message.retryable ?? true,
-                })
+                const wasRetried = handleError(
+                  message.error || 'Failed to generate course',
+                  message.retryable ?? true,
+                  processingKey,
+                  generateCourse
+                )
+                if (wasRetried) return
                 return
+              }
             }
           } catch {
             // Ignore parse errors for incomplete/malformed messages
@@ -612,11 +690,13 @@ function ProcessingContent() {
             if (processingKey) {
               sessionStorage.removeItem(processingKey)
             }
-            setState({
-              status: 'error',
-              error: message.error || 'Failed to generate course',
-              retryable: message.retryable ?? true,
-            })
+            const wasRetried = handleError(
+              message.error || 'Failed to generate course',
+              message.retryable ?? true,
+              processingKey,
+              generateCourse
+            )
+            if (wasRetried) return
             return
           }
         } catch {
@@ -630,11 +710,13 @@ function ProcessingContent() {
       if (processingKey) {
         sessionStorage.removeItem(processingKey)
       }
-      setState({
-        status: 'error',
-        error: 'Connection closed unexpectedly. Please try again.',
-        retryable: true,
-      })
+      const wasRetried = handleError(
+        'Connection closed unexpectedly. Please try again.',
+        true,
+        processingKey,
+        generateCourse
+      )
+      if (wasRetried) return
 
     } catch (error) {
       clearTimeout(timeoutId)
@@ -645,20 +727,24 @@ function ProcessingContent() {
 
       // Handle abort/timeout specifically
       if (error instanceof Error && error.name === 'AbortError') {
+        // Don't auto-retry timeouts - they indicate the request is too large
         setState({
           status: 'error',
           error: 'Generation is taking longer than expected. Please try again or use a smaller document.',
           retryable: true,
         })
       } else {
-        setState({
-          status: 'error',
-          error: 'Connection error. Please check your internet and try again.',
-          retryable: true,
-        })
+        // Auto-retry connection errors
+        const wasRetried = handleError(
+          'Connection error. Please check your internet and try again.',
+          true,
+          processingKey,
+          generateCourse
+        )
+        if (wasRetried) return
       }
     }
-  }, [hasValidInput, textContent, documentContent, documentUrl, imageUrls, imageUrl, title, sourceType, processingKey, showXP, showLevelUp, trackFunnelStep, intensityMode])
+  }, [hasValidInput, textContent, documentContent, documentUrl, imageUrls, imageUrl, title, sourceType, processingKey, showXP, showLevelUp, trackFunnelStep, intensityMode, handleError])
 
   // Start generation on mount (ref prevents duplicate calls in StrictMode)
   // Wait for document content to load if we have a documentId
@@ -669,8 +755,9 @@ function ProcessingContent() {
     }
   }, [hasValidInput, isWaitingForDocumentContent, generateCourse])
 
-  // Handle retry
+  // Handle manual retry - reset auto-retry counter
   const handleRetry = () => {
+    autoRetryCountRef.current = 0 // Reset counter for fresh manual retry
     generateCourse()
   }
 

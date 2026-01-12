@@ -69,6 +69,10 @@ type StreamMessage =
 // ============================================================================
 
 export async function POST(request: NextRequest): Promise<Response> {
+  // Detect Safari for more aggressive heartbeat interval
+  const userAgent = request.headers.get('user-agent') || ''
+  const isSafari = userAgent.includes('Safari') && !userAgent.includes('Chrome') && !userAgent.includes('Chromium')
+
   // Create a TransformStream to send data to client
   const encoder = new TextEncoder()
   let streamController: ReadableStreamDefaultController<Uint8Array> | null = null
@@ -96,11 +100,13 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   // Start heartbeat interval to keep connection alive
+  // Safari needs more frequent heartbeats to prevent connection drops
   let heartbeatInterval: ReturnType<typeof setInterval> | null = null
+  const heartbeatFrequency = isSafari ? 5000 : 10000 // 5s for Safari, 10s for others
   const startHeartbeat = () => {
     heartbeatInterval = setInterval(() => {
       sendMessage({ type: 'heartbeat', timestamp: Date.now() })
-    }, 10000) // Send heartbeat every 10 seconds
+    }, heartbeatFrequency)
   }
 
   const stopHeartbeat = () => {
@@ -519,12 +525,14 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
   })()
 
-  // Return the stream immediately
+  // Return the stream immediately with Safari-optimized headers
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no', // Disable proxy buffering for faster streaming
+      'X-Content-Type-Options': 'nosniff',
     },
   })
 }
