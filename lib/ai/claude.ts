@@ -39,7 +39,7 @@ const AI_MODEL_FAST = process.env.ANTHROPIC_MODEL_FAST || 'claude-3-5-haiku-2024
 const MAX_TOKENS_EXTRACTION = 4096
 const MAX_TOKENS_GENERATION = 16384  // Increased for large documents (31 slides needs more tokens)
 const MAX_IMAGES_PER_REQUEST = 5 // Claude's recommended limit for optimal performance
-const API_TIMEOUT_MS = 210000 // 3.5 minute timeout for AI operations (documents need more time)
+const API_TIMEOUT_MS = 150000 // 2.5 minute timeout - must be less than client timeout (3 min) to fail gracefully
 
 /**
  * Get the default AI model for standard operations
@@ -1332,28 +1332,50 @@ export async function generateCourseFromDocument(
   console.log(`[generateCourseFromDocument] Using ${isExam ? 'EXAM' : 'DOCUMENT'} prompt for content`)
 
   try {
-    const response = await withRetry(
-      () => client.messages.create({
-        model: AI_MODEL,
-        max_tokens: MAX_TOKENS_GENERATION,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt,
-          },
-        ],
-      }),
-      'generateCourseFromDocument'
-    )
+    // Use streaming to prevent mobile connection timeouts
+    console.log('[generateCourseFromDocument] Starting streaming request')
 
-    // Extract text from response
-    const textContent = response.content.find((block) => block.type === 'text')
-    if (!textContent || textContent.type !== 'text') {
-      throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
+    const stream = client.messages.stream({
+      model: AI_MODEL,
+      max_tokens: MAX_TOKENS_GENERATION,
+      system: systemPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: userPrompt,
+        },
+      ],
+    })
+
+    // Collect the full response text from the stream with activity logging
+    let rawText = ''
+    let lastLogTime = Date.now()
+    const LOG_INTERVAL_MS = 15000 // Log every 15 seconds
+
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        rawText += event.delta.text
+      }
+
+      // Log progress periodically
+      const now = Date.now()
+      if (now - lastLogTime > LOG_INTERVAL_MS) {
+        console.log(`[generateCourseFromDocument] Streaming in progress: ${rawText.length} chars received`)
+        lastLogTime = now
+      }
     }
 
-    const rawText = textContent.text
+    // Verify stream completed successfully
+    const finalMessage = await stream.finalMessage()
+    if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
+      console.warn(`[generateCourseFromDocument] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
+    }
+
+    console.log(`[generateCourseFromDocument] Streaming complete, received ${rawText.length} characters`)
+
+    if (!rawText || rawText.trim().length === 0) {
+      throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
+    }
 
     // Log raw response length for debugging
     console.log(`[generateCourseFromDocument] Raw response length: ${rawText.length} characters`)
@@ -1470,28 +1492,49 @@ export async function generateCourseFromText(
   console.log(`[generateCourseFromText] Using ${isExam ? 'EXAM' : 'TEXT'} prompt for content (intensity: ${intensityMode || 'standard'})`)
 
   try {
-    const response = await withRetry(
-      () => client.messages.create({
-        model: AI_MODEL,
-        max_tokens: MAX_TOKENS_GENERATION,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt,
-          },
-        ],
-      }),
-      'generateCourseFromText'
-    )
+    // Use streaming to prevent mobile connection timeouts
+    console.log('[generateCourseFromText] Starting streaming request')
 
-    // Extract text from response
-    const textResponseContent = response.content.find((block) => block.type === 'text')
-    if (!textResponseContent || textResponseContent.type !== 'text') {
-      throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
+    const stream = client.messages.stream({
+      model: AI_MODEL,
+      max_tokens: MAX_TOKENS_GENERATION,
+      system: systemPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: userPrompt,
+        },
+      ],
+    })
+
+    // Collect the full response text from the stream
+    let rawText = ''
+    let lastLogTime = Date.now()
+    const LOG_INTERVAL_MS = 15000
+
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        rawText += event.delta.text
+      }
+
+      const now = Date.now()
+      if (now - lastLogTime > LOG_INTERVAL_MS) {
+        console.log(`[generateCourseFromText] Streaming in progress: ${rawText.length} chars received`)
+        lastLogTime = now
+      }
     }
 
-    const rawText = textResponseContent.text
+    // Verify stream completed successfully
+    const finalMessage = await stream.finalMessage()
+    if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
+      console.warn(`[generateCourseFromText] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
+    }
+
+    console.log(`[generateCourseFromText] Streaming complete, received ${rawText.length} characters`)
+
+    if (!rawText || rawText.trim().length === 0) {
+      throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
+    }
 
     // Parse JSON response
     const jsonText = cleanJsonResponse(rawText)
@@ -1728,27 +1771,42 @@ export async function generateInitialCourse(
     intensityMode
   )
 
-  console.log(`[generateInitialCourse] Starting fast initial generation`)
+  console.log(`[generateInitialCourse] Starting fast initial generation (streaming)`)
 
   try {
-    const response = await withRetry(
-      () => client.messages.create({
-        model: AI_MODEL,
-        max_tokens: 16384, // Enough for 2 lessons + full outline + summary
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }],
-      }),
-      'generateInitialCourse'
-    )
+    // Use streaming to prevent mobile connection timeouts
+    const stream = client.messages.stream({
+      model: AI_MODEL,
+      max_tokens: 16384, // Enough for 2 lessons + full outline + summary
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    })
 
-    const textContent = response.content.find((block) => block.type === 'text')
-    if (!textContent || textContent.type !== 'text') {
-      throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
+    // Collect the full response text from the stream
+    let rawText = ''
+    let lastLogTime = Date.now()
+    const LOG_INTERVAL_MS = 15000
+
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        rawText += event.delta.text
+      }
+
+      const now = Date.now()
+      if (now - lastLogTime > LOG_INTERVAL_MS) {
+        console.log(`[generateInitialCourse] Streaming in progress: ${rawText.length} chars received`)
+        lastLogTime = now
+      }
     }
 
-    const rawText = textContent.text
-    const stopReason = response.stop_reason
-    console.log(`[generateInitialCourse] Response length: ${rawText.length} chars, stop_reason: ${stopReason}`)
+    const finalMessage = await stream.finalMessage()
+    const stopReason = finalMessage.stop_reason
+
+    console.log(`[generateInitialCourse] Streaming complete: ${rawText.length} chars, stop_reason: ${stopReason}`)
+
+    if (!rawText || rawText.trim().length === 0) {
+      throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
+    }
 
     // Check if response was truncated
     if (stopReason === 'max_tokens') {
@@ -1858,26 +1916,44 @@ export async function generateContinuationLessons(
     userContext
   )
 
-  console.log(`[generateContinuationLessons] Generating lessons ${targetLessonIndices.map(i => i + 1).join(', ')}`)
+  console.log(`[generateContinuationLessons] Generating lessons ${targetLessonIndices.map(i => i + 1).join(', ')} (streaming)`)
 
   try {
-    const response = await withRetry(
-      () => client.messages.create({
-        model: AI_MODEL,
-        max_tokens: 8192, // 2 lessons at a time
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }],
-      }),
-      'generateContinuationLessons'
-    )
+    // Use streaming to prevent mobile connection timeouts
+    const stream = client.messages.stream({
+      model: AI_MODEL,
+      max_tokens: 8192, // 2 lessons at a time
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    })
 
-    const textContent = response.content.find((block) => block.type === 'text')
-    if (!textContent || textContent.type !== 'text') {
-      throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
+    // Collect the full response text from the stream
+    let rawText = ''
+    let lastLogTime = Date.now()
+    const LOG_INTERVAL_MS = 15000
+
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        rawText += event.delta.text
+      }
+
+      const now = Date.now()
+      if (now - lastLogTime > LOG_INTERVAL_MS) {
+        console.log(`[generateContinuationLessons] Streaming in progress: ${rawText.length} chars received`)
+        lastLogTime = now
+      }
     }
 
-    const rawText = textContent.text
-    console.log(`[generateContinuationLessons] Response length: ${rawText.length} chars`)
+    const finalMessage = await stream.finalMessage()
+    if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
+      console.warn(`[generateContinuationLessons] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
+    }
+
+    console.log(`[generateContinuationLessons] Streaming complete: ${rawText.length} chars`)
+
+    if (!rawText || rawText.trim().length === 0) {
+      throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
+    }
 
     const jsonText = extractJsonFromResponse(rawText)
     let parsed: { lessons: RawLesson[] }
