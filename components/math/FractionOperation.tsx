@@ -14,6 +14,8 @@ interface FractionOperationProps {
   data: FractionOperationData
   /** Current step to display */
   currentStep?: number
+  /** Total number of steps (for step counter display) */
+  totalSteps?: number
   /** Step configuration */
   stepConfig?: MathDiagramStepConfig[]
   /** Animation duration in ms */
@@ -28,6 +30,8 @@ interface FractionOperationProps {
   className?: string
   /** Language for labels */
   language?: 'en' | 'he'
+  /** Whether to show the step counter (default: true) */
+  showStepCounter?: boolean
 }
 
 /**
@@ -43,6 +47,7 @@ interface FractionOperationProps {
 export function FractionOperation({
   data,
   currentStep = 0,
+  totalSteps: totalStepsProp,
   stepConfig: _stepConfig,
   animationDuration = 400,
   onStepComplete: _onStepComplete,
@@ -50,6 +55,7 @@ export function FractionOperation({
   height: _height,
   className = '',
   language = 'en',
+  showStepCounter = true,
 }: FractionOperationProps) {
   const {
     operationType,
@@ -294,14 +300,16 @@ export function FractionOperation({
         </div>
       )}
 
-      {/* Step counter */}
-      <div className="mt-3 text-center">
-        <span className="text-xs text-gray-400">
-          {language === 'he'
-            ? `שלב ${currentStep + 1} מתוך ${steps.length}`
-            : `Step ${currentStep + 1} of ${steps.length}`}
-        </span>
-      </div>
+      {/* Step counter - only show if not rendered by parent */}
+      {showStepCounter && (
+        <div className="mt-3 text-center">
+          <span className="text-xs text-gray-400">
+            {language === 'he'
+              ? `שלב ${currentStep + 1} מתוך ${totalStepsProp ?? steps.length}`
+              : `Step ${currentStep + 1} of ${totalStepsProp ?? steps.length}`}
+          </span>
+        </div>
+      )}
 
       {/* Animation keyframes */}
       <style jsx>{`

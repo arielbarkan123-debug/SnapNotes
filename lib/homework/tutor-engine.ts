@@ -10,6 +10,8 @@ import type {
   TutorContext,
   ComfortLevel,
   PedagogicalIntent,
+  ConversationMessage,
+  TutorDiagramState,
 } from './types'
 import { ensureDiagramInResponse } from './diagram-generator'
 
@@ -31,6 +33,48 @@ function getAnthropicClient(): Anthropic {
     anthropicClient = new Anthropic({ apiKey })
   }
   return anthropicClient
+}
+
+// ============================================================================
+// ASCII Diagram Detection & Cleanup
+// ============================================================================
+
+/**
+ * Detect if response contains ASCII art diagrams that should be replaced with visual diagrams
+ */
+function containsAsciiDiagram(text: string): boolean {
+  // Patterns that indicate ASCII division diagrams
+  const asciiPatterns = [
+    /\d+\s*\|\s*[\d,]+/,           // "8 | 7,248" or similar division notation
+    /\)\s*[\d,]+\s*\n/,            // ") 7248\n" bracket notation
+    /_{4,}/,                        // "______" underline (4+ chars)
+    /─{4,}/,                        // "───" line (4+ chars)
+    /```[\s\S]*?\d+[\s\S]*?```/,   // Code blocks with numbers
+  ]
+  return asciiPatterns.some(pattern => pattern.test(text))
+}
+
+/**
+ * Strip ASCII diagrams from message text when a visual diagram is available
+ */
+function stripAsciiDiagrams(text: string): string {
+  // Remove code blocks that contain division-like patterns
+  let cleaned = text.replace(/```[\s\S]*?```/g, '')
+
+  // Remove ASCII division layouts (multi-line patterns)
+  // Pattern: lines with numbers, underscores, pipes that form a division layout
+  cleaned = cleaned.replace(
+    /\n\s*\d+\s*\n\s*[_─]+\s*\n[\s\S]*?(?=\n\n|\n\*\*|$)/g,
+    ''
+  )
+
+  // Remove inline division notation like "8 | 7,248"
+  cleaned = cleaned.replace(/\d+\s*\|\s*[\d,]+/g, '')
+
+  // Clean up multiple newlines that may have resulted
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim()
+
+  return cleaned
 }
 
 // ============================================================================
@@ -101,23 +145,46 @@ When helping with SCIENCE/OTHER subjects:
 - If they ask "just tell me the answer", gently explain why discovering it themselves is more valuable
 - NEVER give hints that could lead them to a WRONG answer - verify your guidance first
 
-## PHYSICS DIAGRAM GENERATION:
-When helping with PHYSICS problems that involve forces, motion, inclined planes, projectiles, circuits, or any visual concept:
+## INTELLIGENT VISUAL DIAGRAM GENERATION:
 
-Include a "diagram" field in your response with step-synced visualization data. The diagram should EVOLVE with your explanation - each step reveals more elements.
+### When to Generate Diagrams
+Only include a "diagram" field when visual representation would SIGNIFICANTLY help student understanding beyond text alone. Consider diagrams for:
 
-For INCLINED PLANE / FREE BODY DIAGRAM problems:
-- Start showing the object with no forces (step 0)
-- Add weight force pointing down (step 1)
-- Add normal force perpendicular to surface (step 2)
-- Add friction force parallel to surface (step 3)
-- Show force decomposition if needed (step 4+)
+**Spatial Concepts:**
+- Physics: Forces, motion, inclines, projectiles, circuits, waves
+- Geometry: Triangles, circles, coordinate planes, transformations
 
-Force angles:
-- Weight: -90 (pointing down)
-- Normal on inclined plane: 90 - planeAngle (perpendicular to surface pointing away)
-- Friction: If object moves down slope: 180 - planeAngle (up the slope)
-- Tension: Depends on rope direction
+**Multi-Step Processes:**
+- Math: Long division, equation solving, fraction operations
+- Chemistry: Chemical reactions (reactants → products)
+- Biology: Process flows (cell division, photosynthesis cycles)
+
+**Abstract Relationships:**
+- Math word problems: Proportions, ratios, comparisons (bar models)
+- Function graphs: Input-output relationships on coordinate planes
+
+**Complex Structures:**
+- Chemistry: Molecule structures (atoms, bonds, electron shells)
+- Biology: Cell structures (organelles), system diagrams (digestive system)
+
+**IMPORTANT:** Only generate diagrams when they ADD VALUE beyond your text explanation. Simple concepts don't need diagrams.
+
+### Diagram Evolution - CRITICAL
+Diagrams should EVOLVE step-by-step as the conversation progresses:
+- Start with basic setup (step 0)
+- Each tutor message advances visibleStep to reveal the next layer
+- Align diagram steps with your explanation - reveal elements as you discuss them
+- If introducing a new concept, add it to the diagram in your next message
+- Progressive reveal maintains student engagement and prevents cognitive overload
+
+### Available Diagram Types
+
+**Physics:** fbd (free body diagram), inclined_plane, projectile, circuit, wave
+**Math:** long_division, equation, fraction, number_line, coordinate_plane, triangle, circle, bar_model, area_model
+**Chemistry:** molecule, reaction, energy_diagram
+**Biology:** cell, system, process_flow
+
+### Diagram Response Structure
 
 Return your response as JSON:
 {
@@ -130,105 +197,153 @@ Return your response as JSON:
   "shouldEndSession": false,
   "celebrationMessage": null | "message if they solved it",
   "diagram": null | {
-    "type": "fbd" | "inclined_plane" | "projectile" | "circuit" | "wave",
-    "visibleStep": 0-N,
+    "type": "fbd" | "inclined_plane" | "equation" | "bar_model" | "molecule" | "cell" | etc,
+    "visibleStep": 0-N,  // IMPORTANT: Increment this each message to progressively reveal
     "totalSteps": N,
-    "data": {
-      "angle": 30,
-      "object": { "type": "block", "label": "m", "mass": 10, "color": "#e0e7ff" },
-      "forces": [
-        { "name": "weight", "type": "weight", "magnitude": 98, "angle": -90, "symbol": "W", "subscript": "" },
-        { "name": "normal", "type": "normal", "magnitude": 85, "angle": 60, "symbol": "N", "subscript": "" },
-        { "name": "friction", "type": "friction", "magnitude": 42, "angle": 150, "symbol": "f", "subscript": "k" }
-      ],
-      "showDecomposition": false,
-      "frictionCoefficient": 0.5
-    },
+    "evolutionMode": "auto-advance",  // Always use auto-advance for conversation-synced diagrams
+    "updatedElements": ["element1", "element2"],  // What's new in this step
+    "data": { /* Diagram-specific data structure */ },
     "stepConfig": [
-      { "step": 0, "visibleForces": [], "stepLabel": "First, let's visualize the setup" },
-      { "step": 1, "visibleForces": ["weight"], "highlightForces": ["weight"], "stepLabel": "Weight acts straight down", "showCalculation": "W = mg = 98N" },
-      { "step": 2, "visibleForces": ["weight", "normal"], "highlightForces": ["normal"], "stepLabel": "Normal force perpendicular to surface" },
-      { "step": 3, "visibleForces": ["weight", "normal", "friction"], "highlightForces": ["friction"], "stepLabel": "Friction opposes motion" }
+      { "step": 0, "stepLabel": "First step explanation" },
+      { "step": 1, "stepLabel": "Second step explanation" },
+      // Define all steps upfront for progressive reveal
     ]
   }
 }
 
-## MATH DIAGRAM GENERATION:
-When helping with MATH problems that involve long division, algebraic equations, fractions, or other procedural math:
+### Example: Physics Forces Problem
 
-Include a "diagram" field with step-synced visualization data. The diagram should EVOLVE with your explanation - each step reveals more of the process.
+For "5 kg block on horizontal surface, 20 N tension to right, friction present":
 
-For LONG DIVISION problems:
-- Step 0: Show dividend and divisor setup
-- Step 1: First divide operation (find quotient digit)
-- Step 2: Show multiply step
-- Step 3: Show subtract step
-- Step 4: Bring down next digit
-- Continue pattern until complete
-
-Example for 156 ÷ 12:
+**First tutor message (visibleStep: 0):**
 {
-  "message": "Let's work through this division step by step!",
+  "message": "Great physics problem! Before we check your work together, can you walk me through your reasoning for how you got that friction force of 5N?",
+  "diagram": {
+    "type": "fbd",
+    "visibleStep": 0,
+    "totalSteps": 5,
+    "evolutionMode": "auto-advance",
+    "data": {
+      "object": { "type": "block", "label": "5 kg", "mass": 5, "color": "#e0e7ff" },
+      "forces": [
+        { "name": "weight", "type": "weight", "magnitude": 50, "angle": -90, "symbol": "W" },
+        { "name": "normal", "type": "normal", "magnitude": 50, "angle": 90, "symbol": "N" },
+        { "name": "tension", "type": "tension", "magnitude": 20, "angle": 0, "symbol": "T" },
+        { "name": "friction", "type": "friction", "magnitude": 5, "angle": 180, "symbol": "f" }
+      ]
+    },
+    "stepConfig": [
+      { "step": 0, "visibleForces": [], "stepLabel": "Let's visualize this problem" },
+      { "step": 1, "visibleForces": ["weight"], "highlightForces": ["weight"], "stepLabel": "Weight acts downward", "showCalculation": "W = mg = 5 × 10 = 50N" },
+      { "step": 2, "visibleForces": ["weight", "normal"], "highlightForces": ["normal"], "stepLabel": "Normal force balances weight" },
+      { "step": 3, "visibleForces": ["weight", "normal", "tension"], "highlightForces": ["tension"], "stepLabel": "Tension pulls to the right: 20N" },
+      { "step": 4, "visibleForces": ["weight", "normal", "tension", "friction"], "highlightForces": ["friction"], "stepLabel": "Friction opposes motion" }
+    ]
+  }
+}
+
+**Second tutor message (visibleStep: 1):** - Now shows weight force
+**Third tutor message (visibleStep: 2):** - Now shows weight + normal
+**Fourth tutor message (visibleStep: 3):** - Now shows weight + normal + tension
+**Fifth tutor message (visibleStep: 4):** - Now shows all forces
+
+### Example: Math Bar Model Problem
+
+For "John has 3 times as many apples as Mary. Together 24 apples. How many each?":
+
+{
+  "diagram": {
+    "type": "bar_model",
+    "visibleStep": 0,
+    "totalSteps": 4,
+    "evolutionMode": "auto-advance",
+    "data": {
+      "title": "Apple Problem",
+      "bars": [
+        { "name": "Mary", "value": 6, "color": "#fbbf24" },
+        { "name": "John", "value": 18, "color": "#3b82f6" }
+      ],
+      "total": 24,
+      "showLabels": true,
+      "showCalculations": false
+    },
+    "stepConfig": [
+      { "step": 0, "stepLabel": "Let's draw this out" },
+      { "step": 1, "stepLabel": "Mary's apples (1 unit)" },
+      { "step": 2, "stepLabel": "John has 3 times as many (3 units)" },
+      { "step": 3, "stepLabel": "Total is 4 units = 24, so 1 unit = 6" }
+    ]
+  }
+}
+
+### Example: Chemistry Molecule
+
+For "Draw Lewis structure for water H₂O":
+
+{
+  "diagram": {
+    "type": "molecule",
+    "visibleStep": 0,
+    "totalSteps": 4,
+    "evolutionMode": "auto-advance",
+    "data": {
+      "molecule": "H2O",
+      "atoms": [
+        { "element": "O", "x": 200, "y": 200, "color": "#ef4444" },
+        { "element": "H", "x": 150, "y": 250, "color": "#94a3b8" },
+        { "element": "H", "x": 250, "y": 250, "color": "#94a3b8" }
+      ],
+      "bonds": [
+        { "from": 0, "to": 1, "type": "single" },
+        { "from": 0, "to": 2, "type": "single" }
+      ],
+      "lonePairs": [
+        { "atom": 0, "count": 2, "positions": ["top", "bottom"] }
+      ]
+    },
+    "stepConfig": [
+      { "step": 0, "stepLabel": "Let's build the Lewis structure" },
+      { "step": 1, "stepLabel": "Start with oxygen atom (central)" },
+      { "step": 2, "stepLabel": "Add hydrogen atoms" },
+      { "step": 3, "stepLabel": "Add bonds (single bonds)" },
+      { "step": 4, "stepLabel": "Show lone pairs on oxygen" }
+    ]
+  }
+}
+
+### Example: Math Long Division
+
+For "Divide 7,248 by 8" or "7,248 crayons into 8 boxes":
+
+{
+  "message": "Let's work through this division step by step! First, can you tell me - how many times does 8 go into 7?",
   "diagram": {
     "type": "long_division",
     "visibleStep": 0,
-    "totalSteps": 8,
+    "totalSteps": 4,
+    "evolutionMode": "auto-advance",
     "data": {
-      "dividend": 156,
-      "divisor": 12,
-      "quotient": 13,
+      "dividend": 7248,
+      "divisor": 8,
+      "quotient": 906,
       "remainder": 0,
-      "title": "Long Division: 156 ÷ 12",
       "steps": [
-        { "step": 0, "type": "setup", "position": 0, "explanation": "Set up the division problem" },
-        { "step": 1, "type": "divide", "position": 0, "quotientDigit": 1, "explanation": "How many times does 12 go into 15?", "calculation": "12 × 1 = 12" },
-        { "step": 2, "type": "multiply", "position": 0, "product": 12, "explanation": "Write 12 below 15" },
-        { "step": 3, "type": "subtract", "position": 0, "difference": 3, "explanation": "15 - 12 = 3", "calculation": "15 - 12 = 3" },
-        { "step": 4, "type": "bring_down", "position": 1, "workingNumber": 36, "explanation": "Bring down the 6" },
-        { "step": 5, "type": "divide", "position": 1, "quotientDigit": 3, "explanation": "How many times does 12 go into 36?", "calculation": "12 × 3 = 36" },
-        { "step": 6, "type": "multiply", "position": 1, "product": 36, "explanation": "Write 36 below 36" },
-        { "step": 7, "type": "subtract", "position": 1, "difference": 0, "explanation": "36 - 36 = 0" }
+        { "type": "setup", "bringDown": "72", "currentDividend": 72 },
+        { "type": "divide", "quotientDigit": "9", "currentDividend": 72, "product": 72, "difference": 0, "bringDown": "4" },
+        { "type": "divide", "quotientDigit": "0", "currentDividend": 4, "product": 0, "difference": 4, "bringDown": "8" },
+        { "type": "divide", "quotientDigit": "6", "currentDividend": 48, "product": 48, "difference": 0 }
       ]
-    }
-  }
-}
-
-For EQUATION solving:
-{
-  "type": "equation",
-  "data": {
-    "originalEquation": "2x + 5 = 15",
-    "variable": "x",
-    "solution": "5",
-    "showBalanceScale": true,
-    "steps": [
-      { "step": 0, "leftSide": "2x + 5", "rightSide": "15", "operation": "initial", "description": "Start with the equation" },
-      { "step": 1, "leftSide": "2x + 5 - 5", "rightSide": "15 - 5", "operation": "subtract", "description": "Subtract 5 from both sides", "calculation": "-5" },
-      { "step": 2, "leftSide": "2x", "rightSide": "10", "operation": "simplify", "description": "Simplify both sides" },
-      { "step": 3, "leftSide": "2x ÷ 2", "rightSide": "10 ÷ 2", "operation": "divide", "description": "Divide both sides by 2", "calculation": "÷2" },
-      { "step": 4, "leftSide": "x", "rightSide": "5", "operation": "simplify", "description": "Solution: x = 5" }
+    },
+    "stepConfig": [
+      { "step": 0, "stepLabel": "Setup: 8 ) 72" },
+      { "step": 1, "stepLabel": "9 × 8 = 72, bring down 4" },
+      { "step": 2, "stepLabel": "0 × 8 = 0, bring down 8" },
+      { "step": 3, "stepLabel": "6 × 8 = 48, remainder 0" }
     ]
   }
 }
 
-For FRACTION operations:
-{
-  "type": "fraction",
-  "data": {
-    "operationType": "add",
-    "fraction1": { "numerator": 1, "denominator": 4 },
-    "fraction2": { "numerator": 2, "denominator": 3 },
-    "result": { "numerator": 11, "denominator": 12 },
-    "showPieChart": true,
-    "showBarModel": false,
-    "steps": [
-      { "step": 0, "type": "initial", "fractions": [{ "numerator": 1, "denominator": 4 }, { "numerator": 2, "denominator": 3 }] },
-      { "step": 1, "type": "find_lcd", "fractions": [{ "numerator": 1, "denominator": 4 }, { "numerator": 2, "denominator": 3 }], "lcd": 12, "description": "Find the LCD of 4 and 3" },
-      { "step": 2, "type": "convert", "fractions": [{ "numerator": 3, "denominator": 12 }, { "numerator": 8, "denominator": 12 }], "description": "Convert fractions to LCD" },
-      { "step": 3, "type": "operate", "fractions": [{ "numerator": 3, "denominator": 12 }, { "numerator": 8, "denominator": 12 }], "result": { "numerator": 11, "denominator": 12 }, "description": "Add numerators" }
-    ]
-  }
-}`
+⚠️ CRITICAL: NEVER use ASCII art (like "8 | 7,248" or text-based division layouts) for division problems. ALWAYS use the JSON diagram structure above.`
 
 /**
  * Build the complete system prompt with optional language instruction
@@ -282,10 +397,16 @@ export async function generateInitialGreeting(context: TutorContext): Promise<Tu
   const tutorResponse = parseTutorResponse(response)
 
   // Ensure diagram is present for physics/math problems
+  const originalDiagram = tutorResponse.diagram
   tutorResponse.diagram = ensureDiagramInResponse(
     context.questionAnalysis,
     tutorResponse.diagram
   )
+
+  // If we generated a fallback diagram and message has ASCII diagrams, clean them up
+  if (!originalDiagram && tutorResponse.diagram && containsAsciiDiagram(tutorResponse.message)) {
+    tutorResponse.message = stripAsciiDiagrams(tutorResponse.message)
+  }
 
   return tutorResponse
 }
@@ -299,16 +420,23 @@ export async function generateTutorResponse(
 ): Promise<TutorResponse> {
   const client = getAnthropicClient()
 
+  // Extract previous diagram from conversation history
+  const previousDiagram = getPreviousDiagram(context.recentMessages)
+  const conversationTurn = context.recentMessages.length + 1
+
   // Build conversation context
   const contextPrompt = buildContextPrompt(context)
+
+  // Add diagram continuation instructions if a diagram exists
+  const diagramContinuationPrompt = buildDiagramContinuationPrompt(previousDiagram, conversationTurn)
 
   // Build messages array from conversation history
   const messages: Anthropic.MessageParam[] = []
 
-  // Add context as first user message
+  // Add context as first user message (including diagram continuation)
   messages.push({
     role: 'user',
-    content: contextPrompt,
+    content: contextPrompt + diagramContinuationPrompt,
   })
 
   // Add a brief assistant acknowledgment
@@ -342,11 +470,23 @@ export async function generateTutorResponse(
 
   const tutorResponse = parseTutorResponse(response)
 
-  // Ensure diagram is present for physics/math problems
+  // Set diagram metadata if diagram was returned
+  if (tutorResponse.diagram) {
+    tutorResponse.diagram.evolutionMode = 'auto-advance'
+    tutorResponse.diagram.conversationTurn = conversationTurn
+  }
+
+  // Ensure diagram is present for physics/math problems (fallback generation)
+  const originalDiagram = tutorResponse.diagram
   tutorResponse.diagram = ensureDiagramInResponse(
     context.questionAnalysis,
     tutorResponse.diagram
   )
+
+  // If we generated a fallback diagram and message has ASCII diagrams, clean them up
+  if (!originalDiagram && tutorResponse.diagram && containsAsciiDiagram(tutorResponse.message)) {
+    tutorResponse.message = stripAsciiDiagrams(tutorResponse.message)
+  }
 
   return tutorResponse
 }
@@ -435,6 +575,59 @@ export function getComfortLevelGuidance(comfortLevel: ComfortLevel): string {
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+/**
+ * Extract the most recent diagram from conversation history
+ * Returns null if no diagram found
+ */
+function getPreviousDiagram(recentMessages: ConversationMessage[]): TutorDiagramState | null {
+  // Search backwards through messages to find most recent diagram
+  for (let i = recentMessages.length - 1; i >= 0; i--) {
+    const msg = recentMessages[i]
+    if (msg.role === 'tutor' && msg.diagram) {
+      return msg.diagram
+    }
+  }
+  return null
+}
+
+/**
+ * Build diagram continuation instructions for Claude
+ * Tells Claude to continue evolving an existing diagram
+ */
+function buildDiagramContinuationPrompt(previousDiagram: TutorDiagramState | null, conversationTurn: number): string {
+  if (!previousDiagram) {
+    return '' // No previous diagram, Claude will decide if one is needed
+  }
+
+  const nextStep = (previousDiagram.visibleStep ?? 0) + 1
+  // Calculate total steps from multiple sources - prefer explicit totalSteps, then stepConfig, then data.steps
+  const dataSteps = (previousDiagram.data as { steps?: unknown[] })?.steps
+  const totalSteps = previousDiagram.totalSteps ?? previousDiagram.stepConfig?.length ?? dataSteps?.length ?? 5
+
+  // Don't advance if we're already at the last step
+  if (nextStep >= totalSteps) {
+    return `
+## EXISTING DIAGRAM:
+You previously created a ${previousDiagram.type} diagram (currently showing step ${previousDiagram.visibleStep}/${totalSteps}).
+The diagram is complete. Only include it again if you need to reference it in your explanation.`
+  }
+
+  return `
+## DIAGRAM EVOLUTION - IMPORTANT:
+You previously created a ${previousDiagram.type} diagram for this problem.
+Current state: Step ${previousDiagram.visibleStep}/${totalSteps}
+
+CONTINUE EVOLVING THIS DIAGRAM with your next response:
+- Increment visibleStep to ${nextStep} to reveal the next layer
+- Keep the same diagram type and data structure
+- Add new elements that align with what you're explaining in this message
+- Update the "updatedElements" field with what's new in step ${nextStep}
+- Set "evolutionMode": "auto-advance"
+- Set "conversationTurn": ${conversationTurn}
+
+The diagram should progressively reveal concepts as you guide the student through the problem.`
+}
 
 function buildContextPrompt(context: TutorContext): string {
   const { questionAnalysis, referenceAnalysis, session } = context

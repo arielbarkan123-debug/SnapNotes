@@ -330,12 +330,26 @@ export interface TutorDiagramState {
     | 'circle'
     | 'bar_model'
     | 'area_model'
+    // Chemistry diagram types
+    | 'molecule'
+    | 'reaction'
+    | 'energy_diagram'
+    // Biology diagram types
+    | 'cell'
+    | 'system'
+    | 'process_flow'
   /** Diagram-specific data */
   data: Record<string, unknown>
   /** Current step to display */
   visibleStep: number
   /** Total number of steps */
   totalSteps?: number
+  /** Evolution mode: manual = user controls, auto-advance = progresses with conversation */
+  evolutionMode?: 'manual' | 'auto-advance'
+  /** Conversation turn when this diagram was introduced/updated */
+  conversationTurn?: number
+  /** Elements that were added/updated in this step (for highlighting new additions) */
+  updatedElements?: string[]
   /** Step configuration for progressive reveal */
   stepConfig?: Array<{
     step: number

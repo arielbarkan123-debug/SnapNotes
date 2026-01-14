@@ -17,12 +17,27 @@ const PHYSICS_DIAGRAM_TYPES = ['fbd', 'inclined_plane', 'projectile', 'pulley', 
 // Math diagram types
 const MATH_DIAGRAM_TYPES = ['long_division', 'equation', 'fraction', 'number_line', 'coordinate_plane', 'triangle', 'circle', 'bar_model', 'area_model']
 
+// Chemistry diagram types
+const CHEMISTRY_DIAGRAM_TYPES = ['molecule', 'reaction', 'energy_diagram']
+
+// Biology diagram types
+const BIOLOGY_DIAGRAM_TYPES = ['cell', 'system', 'process_flow']
+
 function isPhysicsDiagram(diagram: DiagramState): diagram is PhysicsDiagramState {
   return PHYSICS_DIAGRAM_TYPES.includes(diagram.type as string)
 }
 
 function isMathDiagram(diagram: DiagramState): diagram is MathDiagramState {
   return MATH_DIAGRAM_TYPES.includes(diagram.type as string)
+}
+
+// Placeholder functions for future chemistry/biology diagram renderers
+function _isChemistryDiagram(diagram: DiagramState): boolean {
+  return CHEMISTRY_DIAGRAM_TYPES.includes(diagram.type as string)
+}
+
+function _isBiologyDiagram(diagram: DiagramState): boolean {
+  return BIOLOGY_DIAGRAM_TYPES.includes(diagram.type as string)
 }
 
 /**
@@ -49,6 +64,14 @@ function getDiagramTypeName(type: string): string {
     circle: 'Circle',
     bar_model: 'Bar Model',
     area_model: 'Area Model',
+    // Chemistry diagrams
+    molecule: 'Molecule Structure',
+    reaction: 'Chemical Reaction',
+    energy_diagram: 'Energy Diagram',
+    // Biology diagrams
+    cell: 'Cell Structure',
+    system: 'System Diagram',
+    process_flow: 'Process Flow',
   }
   return names[type] || type.replace(/_/g, ' ')
 }
@@ -170,8 +193,17 @@ function getLatestDiagram(messages: ConversationMessage[]): DiagramState | null 
 // Sub-components
 // ============================================================================
 
-function MessageBubble({ message, t }: { message: ConversationMessage; t: ReturnType<typeof useTranslations<'chat'>> }) {
+function MessageBubble({ message, t, diagramStep, onStepAdvance }: {
+  message: ConversationMessage
+  t: ReturnType<typeof useTranslations<'chat'>>
+  diagramStep?: number
+  onStepAdvance?: () => void
+}) {
   const isTutor = message.role === 'tutor'
+  const hasDiagram = isTutor && message.diagram
+
+  // Convert diagram to correct type if present
+  const diagramState = hasDiagram ? convertToDiagramState(message.diagram!) : null
 
   return (
     <div className={`flex ${isTutor ? 'justify-start' : 'justify-end'}`}>
@@ -199,6 +231,46 @@ function MessageBubble({ message, t }: { message: ConversationMessage; t: Return
           `}
         >
           <p className="whitespace-pre-wrap">{message.content}</p>
+
+          {/* Inline Diagram - shows directly in message when diagram is present */}
+          {diagramState && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                  📊 {getDiagramTypeName(diagramState.type)}
+                </span>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 overflow-x-auto">
+                {isPhysicsDiagram(diagramState) ? (
+                  <PhysicsDiagramRenderer
+                    diagram={diagramState}
+                    currentStep={diagramStep ?? 0}
+                    animate={true}
+                    showControls={true}
+                    onStepAdvance={onStepAdvance}
+                    language="en"
+                    width={350}
+                    height={280}
+                  />
+                ) : isMathDiagram(diagramState) ? (
+                  <MathDiagramRenderer
+                    diagram={diagramState}
+                    currentStep={diagramStep ?? 0}
+                    animate={true}
+                    showControls={true}
+                    onStepAdvance={onStepAdvance}
+                    language="en"
+                    width={350}
+                    height={280}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-32 text-gray-500 dark:text-gray-400 text-xs">
+                    Diagram visualization coming soon
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -304,12 +376,20 @@ export default function TutoringChat({
     return getLatestDiagram(session.conversation)
   }, [session.conversation])
 
-  // Reset diagram step when a new diagram arrives
+  // Determine if diagram uses auto-advance mode
+  const isAutoAdvance = currentDiagram?.evolutionMode === 'auto-advance'
+
+  // Track previous diagram step for animation detection
+  const prevDiagramStepRef = useRef<number>(0)
+
+  // Reset diagram step when a new diagram arrives (auto-advance)
   useEffect(() => {
     if (currentDiagram) {
-      setDiagramStep(currentDiagram.visibleStep)
+      const newStep = currentDiagram.visibleStep
+      prevDiagramStepRef.current = diagramStep
+      setDiagramStep(newStep)
     }
-  }, [currentDiagram])
+  }, [currentDiagram, diagramStep])
 
   // Restore draft from localStorage on mount
   useEffect(() => {
@@ -395,7 +475,13 @@ export default function TutoringChat({
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           {session.conversation.map((msg, idx) => (
-            <MessageBubble key={idx} message={msg} t={t} />
+            <MessageBubble
+              key={idx}
+              message={msg}
+              t={t}
+              diagramStep={diagramStep}
+              onStepAdvance={() => setDiagramStep(prev => Math.min(prev + 1, (currentDiagram?.totalSteps || 10) - 1))}
+            />
           ))}
 
           {isLoading && (
@@ -504,7 +590,7 @@ export default function TutoringChat({
                   diagram={currentDiagram}
                   currentStep={diagramStep}
                   animate={true}
-                  showControls={true}
+                  showControls={!isAutoAdvance}
                   onStepAdvance={() => setDiagramStep(prev => Math.min(prev + 1, (currentDiagram.totalSteps || 10) - 1))}
                   language="en"
                 />
@@ -513,18 +599,32 @@ export default function TutoringChat({
                   diagram={currentDiagram}
                   currentStep={diagramStep}
                   animate={true}
-                  showControls={true}
+                  showControls={!isAutoAdvance}
                   onStepAdvance={() => setDiagramStep(prev => Math.min(prev + 1, (currentDiagram.totalSteps || 10) - 1))}
                   language="en"
                 />
-              ) : null}
+              ) : (
+                // Placeholder for chemistry/biology diagrams (coming soon)
+                <div className="flex items-center justify-center h-64 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+                  <div className="text-center px-4">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {getDiagramTypeName((currentDiagram as { type: string }).type)}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Diagram visualization coming soon
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Diagram Instructions */}
           <div className="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border-t border-gray-200 dark:border-gray-700">
             <p className="text-xs text-indigo-700 dark:text-indigo-300">
-              {t('diagramInstructions') || 'Use the controls above to step through the diagram as you follow along with the explanation.'}
+              {isAutoAdvance
+                ? (t('diagramAutoAdvance') || 'The diagram reveals more as the tutor explains each concept.')
+                : (t('diagramInstructions') || 'Use the controls above to step through the diagram as you follow along with the explanation.')}
             </p>
           </div>
         </div>
@@ -598,7 +698,7 @@ function MobileDiagramPanel({
                 diagram={diagram}
                 currentStep={diagramStep}
                 animate={true}
-                showControls={true}
+                showControls={diagram.evolutionMode !== 'auto-advance'}
                 onStepAdvance={onStepAdvance}
                 width={350}
                 height={280}
@@ -609,13 +709,25 @@ function MobileDiagramPanel({
                 diagram={diagram}
                 currentStep={diagramStep}
                 animate={true}
-                showControls={true}
+                showControls={diagram.evolutionMode !== 'auto-advance'}
                 onStepAdvance={onStepAdvance}
                 width={350}
                 height={280}
                 language="en"
               />
-            ) : null}
+            ) : (
+              // Placeholder for chemistry/biology diagrams (coming soon)
+              <div className="flex items-center justify-center h-48 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+                <div className="text-center px-4">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {getDiagramTypeName((diagram as { type: string }).type)}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Coming soon
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

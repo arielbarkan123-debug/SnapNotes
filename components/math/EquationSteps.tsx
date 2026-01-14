@@ -1,17 +1,21 @@
 'use client'
 
 import { useMemo } from 'react'
+import { motion, AnimatePresence, Variants } from 'framer-motion'
 import {
   EquationData,
   EquationStep,
   MathDiagramStepConfig,
-  MATH_COLORS,
 } from '@/types/math'
+import { COLORS, MATH_OPERATION_COLORS } from '@/lib/diagram-theme'
+import { prefersReducedMotion } from '@/lib/diagram-animations'
 
 interface EquationStepsProps {
   data: EquationData
   /** Current step to display */
   currentStep?: number
+  /** Total number of steps (for step counter display) */
+  totalSteps?: number
   /** Step configuration */
   stepConfig?: MathDiagramStepConfig[]
   /** Animation duration in ms */
@@ -26,28 +30,38 @@ interface EquationStepsProps {
   className?: string
   /** Language for labels */
   language?: 'en' | 'he'
+  /** Whether to show the step counter (default: true) */
+  showStepCounter?: boolean
 }
 
 /**
- * EquationSteps - Step-synced visualization of algebraic equation solving
+ * EquationSteps - Enhanced step-synced visualization with Framer Motion
  *
- * Shows the equation transformation progressively:
- * 1. Original equation
- * 2. Each algebraic step with operation explanation
- * 3. Final solution
+ * Features:
+ * - Smooth step reveal animations
+ * - Animated balance scale
+ * - Morph transitions between equation states
+ * - Professional visual design
+ * - Celebration effect on completion
  */
 export function EquationSteps({
   data,
   currentStep = 0,
+  totalSteps: totalStepsProp,
   stepConfig,
-  animationDuration = 400,
+  animationDuration: _animationDuration = 400,
   onStepComplete: _onStepComplete,
   width = 400,
   height: _height,
   className = '',
   language = 'en',
+  showStepCounter = true,
 }: EquationStepsProps) {
   const { originalEquation: _originalEquation, variable, solution, steps, title, showBalanceScale } = data
+  const reducedMotion = prefersReducedMotion()
+
+  // Calculate total steps for progress
+  const actualTotalSteps = totalStepsProp ?? steps.length
 
   // Get visible steps up to current step
   const visibleSteps = useMemo(() => {
@@ -62,263 +76,619 @@ export function EquationSteps({
     return steps[currentStep] || null
   }, [stepConfig, steps, currentStep])
 
-  // Animation style
-  const fadeInStyle = {
-    animation: `fadeIn ${animationDuration}ms ease-out`,
+  // Progress percentage
+  const progressPercent = ((currentStep + 1) / actualTotalSteps) * 100
+
+  // Is complete?
+  const isComplete = currentStep >= steps.length - 1
+
+  // Animation variants
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: reducedMotion ? 0 : 0.1,
+        delayChildren: 0.1,
+      },
+    },
   }
 
-  // Get operation symbol
-  const getOperationSymbol = (operation: EquationStep['operation']): string => {
+  const stepCardVariants: Variants = {
+    hidden: {
+      opacity: 0,
+      y: reducedMotion ? 0 : -10,
+      scale: 0.98,
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: 'spring',
+        stiffness: 300,
+        damping: 25,
+      },
+    },
+    exit: {
+      opacity: 0,
+      y: 10,
+      scale: 0.98,
+    },
+  }
+
+  const celebrationVariants: Variants = {
+    hidden: { opacity: 0, scale: 0.8, y: 20 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: {
+        type: 'spring',
+        stiffness: 200,
+        damping: 20,
+        delay: reducedMotion ? 0 : 0.2,
+      },
+    },
+  }
+
+  // Get operation info with colors from theme
+  const getOperationInfo = (operation: EquationStep['operation']): {
+    symbol: string
+    color: string
+    bgColor: string
+    icon: string
+    label: string
+    labelHe: string
+  } => {
     switch (operation) {
       case 'add':
-        return '+'
+        return {
+          symbol: '+',
+          color: MATH_OPERATION_COLORS.add.primary,
+          bgColor: MATH_OPERATION_COLORS.add.bg,
+          icon: '➕',
+          label: 'Add',
+          labelHe: 'חיבור',
+        }
       case 'subtract':
-        return '−'
+        return {
+          symbol: '−',
+          color: MATH_OPERATION_COLORS.subtract.primary,
+          bgColor: MATH_OPERATION_COLORS.subtract.bg,
+          icon: '➖',
+          label: 'Subtract',
+          labelHe: 'חיסור',
+        }
       case 'multiply':
-        return '×'
+        return {
+          symbol: '×',
+          color: MATH_OPERATION_COLORS.multiply.primary,
+          bgColor: MATH_OPERATION_COLORS.multiply.bg,
+          icon: '✖️',
+          label: 'Multiply',
+          labelHe: 'כפל',
+        }
       case 'divide':
-        return '÷'
+        return {
+          symbol: '÷',
+          color: MATH_OPERATION_COLORS.divide.primary,
+          bgColor: MATH_OPERATION_COLORS.divide.bg,
+          icon: '➗',
+          label: 'Divide',
+          labelHe: 'חילוק',
+        }
       case 'simplify':
-        return '='
+        return {
+          symbol: '=',
+          color: MATH_OPERATION_COLORS.equals.primary,
+          bgColor: MATH_OPERATION_COLORS.equals.bg,
+          icon: '🔄',
+          label: 'Simplify',
+          labelHe: 'פישוט',
+        }
       case 'combine':
-        return '⟹'
+        return {
+          symbol: '⟹',
+          color: COLORS.primary[500],
+          bgColor: COLORS.primary[50],
+          icon: '🔗',
+          label: 'Combine',
+          labelHe: 'איחוד',
+        }
       case 'distribute':
-        return '⟹'
+        return {
+          symbol: '⟹',
+          color: COLORS.primary[500],
+          bgColor: COLORS.primary[50],
+          icon: '📤',
+          label: 'Distribute',
+          labelHe: 'פיזור',
+        }
       case 'factor':
-        return '⟹'
+        return {
+          symbol: '⟹',
+          color: COLORS.primary[500],
+          bgColor: COLORS.primary[50],
+          icon: '📦',
+          label: 'Factor',
+          labelHe: 'פירוק',
+        }
+      case 'initial':
+        return {
+          symbol: '',
+          color: COLORS.gray[500],
+          bgColor: COLORS.gray[100],
+          icon: '📝',
+          label: 'Start',
+          labelHe: 'התחלה',
+        }
       default:
-        return ''
-    }
-  }
-
-  // Get operation color
-  const getOperationColor = (operation: EquationStep['operation']): string => {
-    switch (operation) {
-      case 'add':
-        return MATH_COLORS.success
-      case 'subtract':
-        return MATH_COLORS.error
-      case 'multiply':
-        return MATH_COLORS.primary
-      case 'divide':
-        return MATH_COLORS.warning
-      default:
-        return MATH_COLORS.secondary
+        return {
+          symbol: '',
+          color: COLORS.primary[500],
+          bgColor: COLORS.primary[50],
+          icon: '📐',
+          label: 'Step',
+          labelHe: 'שלב',
+        }
     }
   }
 
   return (
     <div className={`equation-steps ${className}`} style={{ width }}>
-      {/* Title */}
-      {title && (
-        <div className="text-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+      {/* Header with title and progress */}
+      <motion.div
+        className="mb-4"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: reducedMotion ? 0 : 0.3 }}
+      >
+        {title && (
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 text-center mb-3">
             {title}
           </h3>
+        )}
+
+        {/* Animated progress bar */}
+        <div className="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <motion.div
+            className="absolute inset-y-0 left-0 rounded-full"
+            initial={{ width: 0 }}
+            animate={{ width: `${progressPercent}%` }}
+            transition={{ duration: reducedMotion ? 0 : 0.5, ease: 'easeOut' }}
+            style={{
+              background: isComplete
+                ? 'linear-gradient(90deg, #22c55e, #16a34a)'
+                : 'linear-gradient(90deg, #4f46e5, #6366f1)',
+            }}
+          />
         </div>
-      )}
+      </motion.div>
 
       {/* Balance Scale Visualization (optional) */}
       {showBalanceScale && currentStepInfo && (
-        <div className="mb-4 flex justify-center">
+        <motion.div
+          className="mb-6"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: reducedMotion ? 0 : 0.4 }}
+        >
           <BalanceScale
             leftSide={(steps[currentStep] as EquationStep)?.leftSide || ''}
             rightSide={(steps[currentStep] as EquationStep)?.rightSide || ''}
-            isBalanced={currentStep === steps.length - 1}
+            isBalanced={isComplete}
+            operation={steps[currentStep]?.operation}
+            reducedMotion={reducedMotion}
           />
-        </div>
+        </motion.div>
       )}
 
-      {/* Equation steps */}
-      <div className="space-y-3">
-        {visibleSteps.map((step, index) => {
-          const isCurrentStep = step.step === currentStep
-          const stepInfo = step as EquationStep
-
-          return (
-            <div
-              key={index}
-              className={`
-                p-3 rounded-lg transition-all duration-300
-                ${isCurrentStep
-                  ? 'bg-indigo-50 dark:bg-indigo-900/30 border-2 border-indigo-300 dark:border-indigo-700'
-                  : 'bg-gray-50 dark:bg-gray-800/50'
-                }
-              `}
-              style={isCurrentStep ? fadeInStyle : undefined}
-            >
-              {/* Equation */}
-              <div className="flex items-center justify-center gap-2 font-mono text-lg">
-                <span
-                  className={`
-                    ${isCurrentStep ? 'text-indigo-700 dark:text-indigo-300 font-bold' : 'text-gray-700 dark:text-gray-300'}
-                  `}
-                >
-                  {stepInfo.leftSide}
-                </span>
-                <span className="text-gray-500">=</span>
-                <span
-                  className={`
-                    ${isCurrentStep ? 'text-indigo-700 dark:text-indigo-300 font-bold' : 'text-gray-700 dark:text-gray-300'}
-                  `}
-                >
-                  {stepInfo.rightSide}
-                </span>
-              </div>
-
-              {/* Operation explanation */}
-              {stepInfo.operation && stepInfo.operation !== 'initial' && (
-                <div className="flex items-center justify-center gap-2 mt-2 text-sm">
-                  <span
-                    className="px-2 py-0.5 rounded-full text-white font-medium"
-                    style={{ backgroundColor: getOperationColor(stepInfo.operation) }}
-                  >
-                    {getOperationSymbol(stepInfo.operation)} {stepInfo.calculation}
-                  </span>
-                </div>
-              )}
-
-              {/* Description */}
-              {(stepInfo.description || stepInfo.descriptionHe) && isCurrentStep && (
-                <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-2 italic">
-                  {language === 'he'
-                    ? stepInfo.descriptionHe || stepInfo.description
-                    : stepInfo.description}
-                </p>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Arrows between steps */}
-      <div className="flex flex-col items-center my-2">
-        {visibleSteps.slice(0, -1).map((_, index) => (
-          <div
-            key={`arrow-${index}`}
-            className="text-gray-400 dark:text-gray-600 text-lg"
-          >
-            ↓
-          </div>
-        ))}
-      </div>
-
-      {/* Final solution highlight */}
-      {currentStep >= steps.length - 1 && (
-        <div
-          className="mt-4 p-4 bg-green-50 dark:bg-green-900/30 rounded-lg text-center border-2 border-green-300 dark:border-green-700"
-          style={fadeInStyle}
+      {/* Equation steps in card */}
+      <motion.div
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 p-4"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: reducedMotion ? 0 : 0.3, delay: 0.1 }}
+      >
+        <motion.div
+          className="space-y-3"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
         >
-          <p className="text-sm text-green-600 dark:text-green-400 mb-1">
-            {language === 'he' ? 'פתרון:' : 'Solution:'}
-          </p>
-          <p
-            className="text-2xl font-bold font-mono"
-            style={{ color: MATH_COLORS.success }}
+          <AnimatePresence mode="sync">
+            {visibleSteps.map((step, index) => {
+              const isCurrentStep = step.step === currentStep
+              const stepInfo = step as EquationStep
+              const opInfo = getOperationInfo(stepInfo.operation)
+
+              return (
+                <motion.div
+                  key={`step-${index}`}
+                  variants={stepCardVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  layout
+                  className={`
+                    relative p-4 rounded-xl transition-colors duration-300
+                    ${isCurrentStep
+                      ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 border-2 border-indigo-300 dark:border-indigo-700 shadow-md'
+                      : 'bg-gray-50 dark:bg-gray-800/50'
+                    }
+                  `}
+                >
+                  {/* Step indicator badge with animation */}
+                  <motion.div
+                    className="absolute -left-2 -top-2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-md"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 400,
+                      damping: 15,
+                      delay: reducedMotion ? 0 : index * 0.05,
+                    }}
+                    style={{
+                      backgroundColor: isCurrentStep ? COLORS.primary[500] : COLORS.gray[200],
+                      color: isCurrentStep ? 'white' : COLORS.gray[500],
+                    }}
+                  >
+                    {index + 1}
+                  </motion.div>
+
+                  {/* Equation display with morph effect */}
+                  <motion.div
+                    className="flex items-center justify-center gap-3 font-mono text-xl mt-2"
+                    layout
+                  >
+                    <motion.span
+                      className={`
+                        px-3 py-1 rounded-lg
+                        ${isCurrentStep ? 'font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-800/50' : 'text-gray-700 dark:text-gray-300'}
+                      `}
+                      layout
+                      key={`left-${stepInfo.leftSide}`}
+                    >
+                      {stepInfo.leftSide}
+                    </motion.span>
+                    <span className="text-gray-500 text-2xl">=</span>
+                    <motion.span
+                      className={`
+                        px-3 py-1 rounded-lg
+                        ${isCurrentStep ? 'font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-800/50' : 'text-gray-700 dark:text-gray-300'}
+                      `}
+                      layout
+                      key={`right-${stepInfo.rightSide}`}
+                    >
+                      {stepInfo.rightSide}
+                    </motion.span>
+                  </motion.div>
+
+                  {/* Operation explanation with slide-in animation */}
+                  {stepInfo.operation && stepInfo.operation !== 'initial' && isCurrentStep && (
+                    <motion.div
+                      className="flex items-center justify-center gap-2 mt-3"
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: reducedMotion ? 0 : 0.2 }}
+                    >
+                      <div
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium text-white shadow-sm"
+                        style={{ backgroundColor: opInfo.color }}
+                      >
+                        <span>{opInfo.icon}</span>
+                        <span>{language === 'he' ? opInfo.labelHe : opInfo.label}</span>
+                        {stepInfo.calculation && (
+                          <span className="ml-1 font-mono bg-white/20 px-2 py-0.5 rounded">
+                            {stepInfo.calculation}
+                          </span>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Description */}
+                  {(stepInfo.description || stepInfo.descriptionHe) && isCurrentStep && (
+                    <motion.p
+                      className="text-center text-sm text-gray-600 dark:text-gray-400 mt-3 italic"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: reducedMotion ? 0 : 0.3 }}
+                    >
+                      {language === 'he'
+                        ? stepInfo.descriptionHe || stepInfo.description
+                        : stepInfo.description}
+                    </motion.p>
+                  )}
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* Arrow indicators between visible steps */}
+        {visibleSteps.length > 1 && !isComplete && (
+          <motion.div
+            className="flex justify-center mt-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
           >
-            {variable} = {solution}
-          </p>
-        </div>
-      )}
+            <motion.span
+              className="text-gray-400 text-xl"
+              animate={{ y: [0, 5, 0] }}
+              transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+            >
+              ↓
+            </motion.span>
+          </motion.div>
+        )}
+      </motion.div>
+
+      {/* Final solution highlight with celebration animation */}
+      <AnimatePresence>
+        {isComplete && (
+          <motion.div
+            variants={celebrationVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            className="mt-4 p-5 rounded-xl text-center"
+            style={{
+              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.1))',
+              border: '2px solid rgba(34, 197, 94, 0.3)',
+            }}
+          >
+            <motion.div
+              className="text-2xl mb-2"
+              animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
+              transition={{ duration: 0.5, delay: reducedMotion ? 0 : 0.3 }}
+            >
+              🎉
+            </motion.div>
+            <p className="text-sm text-green-600 dark:text-green-400 mb-2 font-medium">
+              {language === 'he' ? 'פתרון:' : 'Solution:'}
+            </p>
+            <motion.p
+              className="text-3xl font-bold font-mono"
+              style={{ color: COLORS.success[500] }}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 200, delay: reducedMotion ? 0 : 0.4 }}
+            >
+              {variable} = {solution}
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Step description from config */}
       {stepConfig?.[currentStep]?.stepLabel && (
-        <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/30 rounded text-center">
+        <motion.div
+          className="mt-4 p-3 rounded-xl border-l-4"
+          style={{
+            backgroundColor: 'rgba(59, 130, 246, 0.08)',
+            borderLeftColor: COLORS.primary[500],
+          }}
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: reducedMotion ? 0 : 0.3 }}
+        >
           <p className="text-sm text-blue-700 dark:text-blue-300">
             {language === 'he'
               ? stepConfig[currentStep].stepLabelHe || stepConfig[currentStep].stepLabel
               : stepConfig[currentStep].stepLabel}
           </p>
-        </div>
+        </motion.div>
       )}
 
       {/* Step counter */}
-      <div className="mt-3 text-center">
-        <span className="text-xs text-gray-400">
-          {language === 'he'
-            ? `שלב ${currentStep + 1} מתוך ${steps.length}`
-            : `Step ${currentStep + 1} of ${steps.length}`}
-        </span>
-      </div>
-
-      {/* Animation keyframes */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(-5px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
+      {showStepCounter && (
+        <div className="mt-4 text-center">
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            {language === 'he'
+              ? `שלב ${currentStep + 1} מתוך ${actualTotalSteps}`
+              : `Step ${currentStep + 1} of ${actualTotalSteps}`}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
 
 /**
- * Balance Scale - Visual representation of equation balance
+ * Balance Scale - Enhanced animated visual representation
  */
 function BalanceScale({
   leftSide,
   rightSide,
   isBalanced,
+  operation,
+  reducedMotion = false,
 }: {
   leftSide: string
   rightSide: string
   isBalanced: boolean
+  operation?: EquationStep['operation']
+  reducedMotion?: boolean
 }) {
+  // Calculate tilt based on whether balanced
+  const tiltAngle = isBalanced ? 0 : -3
+
+  // Get glow color based on operation
+  const glowColor = isBalanced ? 'rgba(34, 197, 94, 0.3)' : 'rgba(79, 70, 229, 0.2)'
+
   return (
-    <div className="relative w-64 h-32">
-      {/* Fulcrum (triangle base) */}
-      <div
-        className="absolute bottom-0 left-1/2 transform -translate-x-1/2"
-        style={{
-          width: 0,
-          height: 0,
-          borderLeft: '20px solid transparent',
-          borderRight: '20px solid transparent',
-          borderBottom: `30px solid ${MATH_COLORS.muted}`,
+    <div className="relative w-full max-w-sm mx-auto h-40">
+      {/* Balance indicator at top */}
+      <motion.div
+        className="absolute top-0 left-1/2 transform -translate-x-1/2 z-10"
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+      >
+        <motion.div
+          className="w-8 h-8 rounded-full flex items-center justify-center text-lg shadow-lg"
+          animate={{
+            backgroundColor: isBalanced ? COLORS.success[500] : COLORS.primary[500],
+            boxShadow: `0 0 15px ${glowColor}`,
+          }}
+          transition={{ duration: reducedMotion ? 0 : 0.5 }}
+        >
+          <motion.span
+            key={isBalanced ? 'check' : 'scale'}
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+          >
+            {isBalanced ? '✓' : '⚖️'}
+          </motion.span>
+        </motion.div>
+      </motion.div>
+
+      {/* Fulcrum (triangle base) - more stylish */}
+      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2">
+        <svg width="50" height="40" viewBox="0 0 50 40">
+          <defs>
+            <linearGradient id="fulcrumGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#6b7280" />
+              <stop offset="100%" stopColor="#374151" />
+            </linearGradient>
+          </defs>
+          <polygon points="25,0 50,40 0,40" fill="url(#fulcrumGradient)" />
+        </svg>
+      </div>
+
+      {/* Beam with smooth rotation */}
+      <motion.div
+        className="absolute top-12 left-1/2 origin-center"
+        style={{ width: '280px' }}
+        initial={{ rotate: 0 }}
+        animate={{
+          rotate: tiltAngle,
+          x: '-50%',
         }}
-      />
+        transition={{
+          type: 'spring',
+          stiffness: 100,
+          damping: 15,
+          duration: reducedMotion ? 0 : 0.7,
+        }}
+      >
+        {/* Main beam */}
+        <div
+          className="h-3 rounded-full shadow-md"
+          style={{ background: 'linear-gradient(180deg, #4b5563, #374151)' }}
+        />
 
-      {/* Beam */}
-      <div
-        className={`
-          absolute top-10 left-0 right-0 h-2 bg-gray-600 dark:bg-gray-400 rounded
-          transform transition-transform duration-500 origin-center
-          ${isBalanced ? 'rotate-0' : '-rotate-2'}
-        `}
-      />
+        {/* Left string */}
+        <div className="absolute -left-2 top-3 w-0.5 h-8 bg-gray-500" />
 
-      {/* Left pan */}
-      <div className="absolute top-12 left-4 w-20 text-center">
-        <div className="w-full h-8 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg border-2 border-indigo-300 dark:border-indigo-700 flex items-center justify-center">
-          <span className="text-xs font-mono font-medium text-indigo-700 dark:text-indigo-300 truncate px-1">
-            {leftSide}
-          </span>
-        </div>
-        <div className="w-px h-4 bg-gray-400 mx-auto" />
-      </div>
+        {/* Right string */}
+        <div className="absolute -right-2 top-3 w-0.5 h-8 bg-gray-500" />
 
-      {/* Right pan */}
-      <div className="absolute top-12 right-4 w-20 text-center">
-        <div className="w-full h-8 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg border-2 border-indigo-300 dark:border-indigo-700 flex items-center justify-center">
-          <span className="text-xs font-mono font-medium text-indigo-700 dark:text-indigo-300 truncate px-1">
-            {rightSide}
-          </span>
-        </div>
-        <div className="w-px h-4 bg-gray-400 mx-auto" />
-      </div>
+        {/* Left pan */}
+        <motion.div
+          className="absolute top-11 transform -translate-x-1/2"
+          style={{ left: '0%' }}
+          animate={{
+            rotate: -tiltAngle, // Counter-rotate to stay level
+          }}
+          transition={{ type: 'spring', stiffness: 100, damping: 15 }}
+        >
+          <motion.div
+            className="w-24 min-h-12 px-2 py-2 rounded-xl shadow-lg flex items-center justify-center"
+            animate={{
+              background: isBalanced
+                ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.15))'
+                : 'linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(99, 102, 241, 0.15))',
+              borderColor: isBalanced ? 'rgba(34, 197, 94, 0.4)' : 'rgba(79, 70, 229, 0.4)',
+            }}
+            transition={{ duration: reducedMotion ? 0 : 0.3 }}
+            style={{ border: '2px solid' }}
+          >
+            <motion.span
+              className="text-sm font-mono font-bold text-center break-all"
+              key={leftSide}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+                color: isBalanced ? COLORS.success[500] : COLORS.primary[500]
+              }}
+              transition={{ duration: reducedMotion ? 0 : 0.2 }}
+            >
+              {leftSide}
+            </motion.span>
+          </motion.div>
+        </motion.div>
 
-      {/* Balance indicator */}
-      {isBalanced && (
-        <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
-          <span className="text-green-500 text-xl">✓</span>
-        </div>
-      )}
+        {/* Right pan */}
+        <motion.div
+          className="absolute top-11 transform -translate-x-1/2"
+          style={{ left: '100%' }}
+          animate={{
+            rotate: -tiltAngle, // Counter-rotate to stay level
+          }}
+          transition={{ type: 'spring', stiffness: 100, damping: 15 }}
+        >
+          <motion.div
+            className="w-24 min-h-12 px-2 py-2 rounded-xl shadow-lg flex items-center justify-center"
+            animate={{
+              background: isBalanced
+                ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.15))'
+                : 'linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(99, 102, 241, 0.15))',
+              borderColor: isBalanced ? 'rgba(34, 197, 94, 0.4)' : 'rgba(79, 70, 229, 0.4)',
+            }}
+            transition={{ duration: reducedMotion ? 0 : 0.3 }}
+            style={{ border: '2px solid' }}
+          >
+            <motion.span
+              className="text-sm font-mono font-bold text-center break-all"
+              key={rightSide}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+                color: isBalanced ? COLORS.success[500] : COLORS.primary[500]
+              }}
+              transition={{ duration: reducedMotion ? 0 : 0.2 }}
+            >
+              {rightSide}
+            </motion.span>
+          </motion.div>
+        </motion.div>
+      </motion.div>
+
+      {/* Operation indicator */}
+      <AnimatePresence>
+        {operation && operation !== 'initial' && !isBalanced && (
+          <motion.div
+            className="absolute bottom-12 left-1/2 transform -translate-x-1/2"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: reducedMotion ? 0 : 0.3 }}
+          >
+            <motion.div
+              className="px-2 py-1 rounded-lg text-xs font-medium"
+              style={{
+                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                color: COLORS.primary[500],
+              }}
+              animate={{ opacity: [0.7, 1, 0.7] }}
+              transition={{ repeat: Infinity, duration: 2 }}
+            >
+              {operation === 'add' && '+ both sides'}
+              {operation === 'subtract' && '− both sides'}
+              {operation === 'multiply' && '× both sides'}
+              {operation === 'divide' && '÷ both sides'}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

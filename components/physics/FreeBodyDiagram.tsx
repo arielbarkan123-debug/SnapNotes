@@ -1,12 +1,22 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { motion, AnimatePresence, useAnimation, Variants } from 'framer-motion'
 import {
   FreeBodyDiagramData,
   DiagramStepConfig,
   Force,
 } from '@/types/physics'
 import { ForceVector } from './ForceVector'
+import {
+  COLORS,
+  SHADOWS,
+  hexToRgba,
+} from '@/lib/diagram-theme'
+import {
+  createForceAnimationSequence,
+  prefersReducedMotion,
+} from '@/lib/diagram-animations'
 
 interface FreeBodyDiagramProps {
   data: FreeBodyDiagramData
@@ -29,22 +39,23 @@ interface FreeBodyDiagramProps {
 }
 
 /**
- * FreeBodyDiagram - SVG component for rendering free body diagrams
+ * FreeBodyDiagram - Enhanced SVG component with choreographed animations
  *
  * Features:
- * - Renders object at center
- * - Progressive force reveal based on currentStep
- * - Smooth transitions between steps
- * - Optional force component decomposition
- * - Coordinate axes display
+ * - Framer Motion for smooth, choreographed animations
+ * - Progressive force reveal with educational sequencing
+ * - Object fade-in before forces appear
+ * - Forces animate in order: weight → normal → friction → tension → net
+ * - Professional visual design with gradients and shadows
  * - Step-synced with tutor explanations
+ * - Accessibility: respects prefers-reduced-motion
  */
 export function FreeBodyDiagram({
   data,
   currentStep = 0,
   stepConfig,
   onStepComplete,
-  animationDuration = 400,
+  animationDuration = 500,
   width = 400,
   height = 350,
   className = '',
@@ -62,7 +73,10 @@ export function FreeBodyDiagram({
     forceScale = 1,
   } = data
 
-  const [animatingForces, setAnimatingForces] = useState<Set<string>>(new Set())
+  const _controls = useAnimation()
+  const reducedMotion = prefersReducedMotion()
+  const [completedAnimations, setCompletedAnimations] = useState<Set<string>>(new Set())
+  const [isObjectVisible, setIsObjectVisible] = useState(currentStep > 0)
 
   // Calculate center of diagram
   const centerX = width / 2
@@ -80,7 +94,7 @@ export function FreeBodyDiagram({
     }
   }, [currentStep, stepConfig, forces])
 
-  // Calculate which forces should be visible
+  // Calculate which forces should be visible based on step
   const visibleForces = useMemo(() => {
     if (currentStepConfig.visibleForces) {
       return forces.filter((f) => currentStepConfig.visibleForces?.includes(f.name))
@@ -94,141 +108,223 @@ export function FreeBodyDiagram({
     return new Set(currentStepConfig.highlightForces || [])
   }, [currentStepConfig])
 
-  // Handle animation completion
-  useEffect(() => {
-    if (animatingForces.size > 0) {
-      const timer = setTimeout(() => {
-        setAnimatingForces(new Set())
+  // Create choreographed animation sequence for forces
+  const forceAnimationSequence = useMemo(() => {
+    const forceNames = visibleForces.map((f) => f.type.toLowerCase())
+    return createForceAnimationSequence(forceNames, reducedMotion ? 0 : animationDuration / 1000)
+  }, [visibleForces, animationDuration, reducedMotion])
+
+  // Calculate animation delay for each force (choreographed)
+  const getForceDelay = useCallback(
+    (force: Force): number => {
+      const type = force.type.toLowerCase()
+      const sequence = forceAnimationSequence.get(type)
+      // Add base delay for object to appear first
+      const objectDelay = reducedMotion ? 0 : 200
+      return objectDelay + (sequence?.delay || 0) * 1000
+    },
+    [forceAnimationSequence, reducedMotion]
+  )
+
+  // Handle animation completion for choreography
+  const handleForceAnimationComplete = useCallback(
+    (forceName: string) => {
+      setCompletedAnimations((prev) => {
+        const next = new Set(prev)
+        next.add(forceName)
+        return next
+      })
+
+      // Check if all forces have completed
+      if (completedAnimations.size + 1 >= visibleForces.length) {
         onStepComplete?.()
-      }, animationDuration)
-      return () => clearTimeout(timer)
-    }
-  }, [animatingForces, animationDuration, onStepComplete])
+      }
+    },
+    [completedAnimations, visibleForces, onStepComplete]
+  )
 
-  // Track newly visible forces for animation
+  // Trigger object visibility when step changes
   useEffect(() => {
-    const newForces = visibleForces.filter((f) => !animatingForces.has(f.name))
-    if (newForces.length > 0) {
-      setAnimatingForces(new Set(newForces.map((f) => f.name)))
+    if (currentStep > 0 && !isObjectVisible) {
+      setIsObjectVisible(true)
     }
-  }, [visibleForces])
+  }, [currentStep, isObjectVisible])
 
-  // Render physics object
+  // Animation variants for the object
+  const objectVariants: Variants = {
+    hidden: {
+      opacity: 0,
+      scale: 0.8,
+    },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: {
+        type: 'spring',
+        stiffness: 300,
+        damping: 25,
+        duration: reducedMotion ? 0 : 0.4,
+      },
+    },
+  }
+
+  // Render physics object with animation
   const renderObject = () => {
     const objSize = 50
     const objX = centerX - objSize / 2
     const objY = centerY - objSize / 2
+    const gradientId = 'object-gradient'
 
-    switch (object.type) {
-      case 'block':
-        return (
-          <g className="physics-object block">
+    const objectContent = (() => {
+      switch (object.type) {
+        case 'block':
+          return (
+            <>
+              {/* Shadow */}
+              <rect
+                x={objX + 3}
+                y={objY + 3}
+                width={object.width || objSize}
+                height={object.height || objSize}
+                fill="rgba(0,0,0,0.1)"
+                rx={6}
+              />
+              {/* Main block with gradient */}
+              <rect
+                x={objX}
+                y={objY}
+                width={object.width || objSize}
+                height={object.height || objSize}
+                fill={`url(#${gradientId})`}
+                stroke={COLORS.gray[400]}
+                strokeWidth={2}
+                rx={6}
+              />
+              {object.label && (
+                <text
+                  x={centerX}
+                  y={centerY - (object.mass ? 5 : 0)}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize={16}
+                  fontWeight="600"
+                  fontFamily="'Inter', system-ui, sans-serif"
+                  fill={COLORS.gray[700]}
+                >
+                  {object.label}
+                </text>
+              )}
+              {object.mass && (
+                <text
+                  x={centerX}
+                  y={centerY + 15}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize={12}
+                  fontFamily="'JetBrains Mono', monospace"
+                  fill={COLORS.gray[500]}
+                >
+                  m = {object.mass} kg
+                </text>
+              )}
+            </>
+          )
+
+        case 'sphere':
+          return (
+            <>
+              {/* Shadow */}
+              <ellipse
+                cx={centerX + 3}
+                cy={centerY + 5}
+                rx={(object.radius || objSize / 2) * 0.9}
+                ry={(object.radius || objSize / 2) * 0.5}
+                fill="rgba(0,0,0,0.15)"
+              />
+              {/* Main sphere with gradient */}
+              <circle
+                cx={centerX}
+                cy={centerY}
+                r={object.radius || objSize / 2}
+                fill={`url(#${gradientId})`}
+                stroke={COLORS.gray[400]}
+                strokeWidth={2}
+              />
+              {/* Highlight for 3D effect */}
+              <ellipse
+                cx={centerX - 8}
+                cy={centerY - 8}
+                rx={8}
+                ry={6}
+                fill="rgba(255,255,255,0.5)"
+              />
+              {object.label && (
+                <text
+                  x={centerX}
+                  y={centerY}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize={16}
+                  fontWeight="600"
+                  fontFamily="'Inter', system-ui, sans-serif"
+                  fill={COLORS.gray[700]}
+                >
+                  {object.label}
+                </text>
+              )}
+            </>
+          )
+
+        case 'particle':
+          return (
+            <>
+              <circle cx={centerX} cy={centerY} r={10} fill={COLORS.gray[600]} />
+              <circle cx={centerX - 2} cy={centerY - 2} r={3} fill="rgba(255,255,255,0.4)" />
+              {object.label && (
+                <text
+                  x={centerX + 18}
+                  y={centerY - 12}
+                  textAnchor="start"
+                  fontSize={14}
+                  fontWeight="600"
+                  fontFamily="'Inter', system-ui, sans-serif"
+                  fill={COLORS.gray[700]}
+                >
+                  {object.label}
+                </text>
+              )}
+            </>
+          )
+
+        default:
+          return (
             <rect
               x={objX}
               y={objY}
-              width={object.width || objSize}
-              height={object.height || objSize}
-              fill={object.color || '#f3f4f6'}
-              stroke="#374151"
+              width={objSize}
+              height={objSize}
+              fill={`url(#${gradientId})`}
+              stroke={COLORS.gray[400]}
               strokeWidth={2}
               rx={4}
             />
-            {object.label && (
-              <text
-                x={centerX}
-                y={centerY}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize={16}
-                fontWeight="bold"
-                fill="#374151"
-              >
-                {object.label}
-              </text>
-            )}
-            {object.mass && (
-              <text
-                x={centerX}
-                y={centerY + 15}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize={12}
-                fill="#6b7280"
-              >
-                m = {object.mass} kg
-              </text>
-            )}
-          </g>
-        )
+          )
+      }
+    })()
 
-      case 'sphere':
-        return (
-          <g className="physics-object sphere">
-            <circle
-              cx={centerX}
-              cy={centerY}
-              r={object.radius || objSize / 2}
-              fill={object.color || '#f3f4f6'}
-              stroke="#374151"
-              strokeWidth={2}
-            />
-            {object.label && (
-              <text
-                x={centerX}
-                y={centerY}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize={16}
-                fontWeight="bold"
-                fill="#374151"
-              >
-                {object.label}
-              </text>
-            )}
-          </g>
-        )
-
-      case 'particle':
-        return (
-          <g className="physics-object particle">
-            <circle
-              cx={centerX}
-              cy={centerY}
-              r={8}
-              fill="#374151"
-            />
-            {object.label && (
-              <text
-                x={centerX + 15}
-                y={centerY - 10}
-                textAnchor="start"
-                dominantBaseline="middle"
-                fontSize={14}
-                fontWeight="bold"
-                fill="#374151"
-              >
-                {object.label}
-              </text>
-            )}
-          </g>
-        )
-
-      default:
-        return (
-          <rect
-            x={objX}
-            y={objY}
-            width={objSize}
-            height={objSize}
-            fill="#f3f4f6"
-            stroke="#374151"
-            strokeWidth={2}
-          />
-        )
-    }
+    return (
+      <motion.g
+        className="physics-object"
+        initial="hidden"
+        animate={isObjectVisible ? 'visible' : 'hidden'}
+        variants={objectVariants}
+      >
+        {objectContent}
+      </motion.g>
+    )
   }
 
-  // Render coordinate axes
+  // Render coordinate axes with subtle styling
   const renderAxes = () => {
     if (coordinateSystem === 'none') return null
 
@@ -236,9 +332,12 @@ export function FreeBodyDiagram({
     const rotation = coordinateSystem === 'inclined' ? -referenceAngle : 0
 
     return (
-      <g
+      <motion.g
         className="coordinate-axes"
         transform={`rotate(${rotation}, ${centerX}, ${centerY})`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.6 }}
+        transition={{ delay: reducedMotion ? 0 : 0.1, duration: 0.3 }}
       >
         {/* X-axis */}
         <line
@@ -246,21 +345,23 @@ export function FreeBodyDiagram({
           y1={centerY}
           x2={centerX + axisLength}
           y2={centerY}
-          stroke="#9ca3af"
+          stroke={COLORS.gray[400]}
           strokeWidth={1.5}
-          strokeDasharray="4 2"
+          strokeDasharray="5 3"
         />
         <polygon
-          points={`${centerX + axisLength},${centerY} ${centerX + axisLength - 6},${centerY - 4} ${centerX + axisLength - 6},${centerY + 4}`}
-          fill="#9ca3af"
+          points={`${centerX + axisLength},${centerY} ${centerX + axisLength - 7},${centerY - 4} ${centerX + axisLength - 7},${centerY + 4}`}
+          fill={COLORS.gray[400]}
         />
         <text
-          x={centerX + axisLength + 10}
+          x={centerX + axisLength + 12}
           y={centerY}
           textAnchor="start"
           dominantBaseline="middle"
           fontSize={12}
-          fill="#6b7280"
+          fontFamily="'Inter', system-ui, sans-serif"
+          fontWeight={500}
+          fill={COLORS.gray[500]}
         >
           {coordinateSystem === 'inclined' ? 'x∥' : 'x'}
         </text>
@@ -271,25 +372,27 @@ export function FreeBodyDiagram({
           y1={centerY}
           x2={centerX}
           y2={centerY - axisLength}
-          stroke="#9ca3af"
+          stroke={COLORS.gray[400]}
           strokeWidth={1.5}
-          strokeDasharray="4 2"
+          strokeDasharray="5 3"
         />
         <polygon
-          points={`${centerX},${centerY - axisLength} ${centerX - 4},${centerY - axisLength + 6} ${centerX + 4},${centerY - axisLength + 6}`}
-          fill="#9ca3af"
+          points={`${centerX},${centerY - axisLength} ${centerX - 4},${centerY - axisLength + 7} ${centerX + 4},${centerY - axisLength + 7}`}
+          fill={COLORS.gray[400]}
         />
         <text
           x={centerX}
-          y={centerY - axisLength - 10}
+          y={centerY - axisLength - 12}
           textAnchor="middle"
           dominantBaseline="middle"
           fontSize={12}
-          fill="#6b7280"
+          fontFamily="'Inter', system-ui, sans-serif"
+          fontWeight={500}
+          fill={COLORS.gray[500]}
         >
           {coordinateSystem === 'inclined' ? 'y⊥' : 'y'}
         </text>
-      </g>
+      </motion.g>
     )
   }
 
@@ -299,7 +402,6 @@ export function FreeBodyDiagram({
     const halfSize = objSize / 2
     const angleRad = (force.angle * Math.PI) / 180
 
-    // If force has custom origin, use it
     if (force.origin) {
       return {
         x: centerX + force.origin.x,
@@ -307,19 +409,15 @@ export function FreeBodyDiagram({
       }
     }
 
-    // Calculate origin based on force direction (arrow starts from object surface)
     const cos = Math.cos(angleRad)
     const sin = Math.sin(angleRad)
 
-    // Determine which surface the force originates from
     if (Math.abs(cos) > Math.abs(sin)) {
-      // Horizontal direction dominant
       return {
         x: centerX + (cos > 0 ? halfSize : -halfSize),
         y: centerY,
       }
     } else {
-      // Vertical direction dominant
       return {
         x: centerX,
         y: centerY + (sin > 0 ? -halfSize : halfSize),
@@ -327,39 +425,44 @@ export function FreeBodyDiagram({
     }
   }
 
-  // Render forces
+  // Render forces with choreographed draw animations
   const renderForces = () => {
-    const defaultScale = 2.5 // Pixels per Newton
+    const defaultScale = 2.5
 
-    return visibleForces.map((force) => {
-      const isAnimating = animatingForces.has(force.name)
-      const isHighlighted = highlightedForces.has(force.name)
-      const origin = getForceOrigin(force)
+    return (
+      <AnimatePresence>
+        {visibleForces.map((force) => {
+          const isHighlighted = highlightedForces.has(force.name)
+          const origin = getForceOrigin(force)
+          const animDelay = getForceDelay(force)
 
-      return (
-        <ForceVector
-          key={force.name}
-          force={force}
-          origin={origin}
-          scale={forceScale * defaultScale}
-          highlighted={isHighlighted}
-          showLabel={true}
-          showMagnitude={false}
-          showAngle={showAngles && isHighlighted}
-          referenceAngle={referenceAngle}
-          animation={isAnimating ? 'fade' : 'none'}
-          animationDuration={animationDuration}
-          opacity={isAnimating ? 1 : 1}
-        />
-      )
-    })
+          return (
+            <ForceVector
+              key={force.name}
+              force={force}
+              origin={origin}
+              scale={forceScale * defaultScale}
+              highlighted={isHighlighted}
+              showLabel={true}
+              showMagnitude={isHighlighted}
+              showAngle={showAngles && isHighlighted}
+              referenceAngle={referenceAngle}
+              animation="draw"
+              animationDuration={reducedMotion ? 0 : animationDuration}
+              animationDelay={animDelay}
+              useGradient={true}
+              onAnimationComplete={() => handleForceAnimationComplete(force.name)}
+            />
+          )
+        })}
+      </AnimatePresence>
+    )
   }
 
   // Render net force if enabled
   const renderNetForce = () => {
     if (!showNetForce || !currentStepConfig.showNetForce) return null
 
-    // Calculate net force
     let netX = 0
     let netY = 0
 
@@ -372,7 +475,7 @@ export function FreeBodyDiagram({
     const netMagnitude = Math.sqrt(netX * netX + netY * netY)
     const netAngle = (Math.atan2(netY, netX) * 180) / Math.PI
 
-    if (netMagnitude < 0.01) return null // Don't show if negligible
+    if (netMagnitude < 0.01) return null
 
     const netForce: Force = {
       name: 'net',
@@ -383,6 +486,9 @@ export function FreeBodyDiagram({
       subscript: 'net',
     }
 
+    // Net force appears after all other forces
+    const netDelay = reducedMotion ? 0 : 200 + visibleForces.length * 250
+
     return (
       <ForceVector
         force={netForce}
@@ -391,28 +497,50 @@ export function FreeBodyDiagram({
         highlighted={true}
         showLabel={true}
         showMagnitude={true}
-        animation="pulse"
+        animation="draw"
+        animationDuration={reducedMotion ? 0 : animationDuration}
+        animationDelay={netDelay}
+        useGradient={true}
       />
     )
   }
 
-  // Render step label if provided
+  // Render step label with animation
   const renderStepLabel = () => {
-    const label = language === 'he'
-      ? currentStepConfig.stepLabelHe
-      : currentStepConfig.stepLabel
+    const label =
+      language === 'he' ? currentStepConfig.stepLabelHe : currentStepConfig.stepLabel
 
     if (!label && !currentStepConfig.showCalculation) return null
 
     return (
-      <g className="step-info">
+      <motion.g
+        className="step-info"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: reducedMotion ? 0 : 0.3, duration: 0.3 }}
+      >
+        {/* Background card for step info */}
+        {(label || currentStepConfig.showCalculation) && (
+          <rect
+            x={width - 170}
+            y={height - 60}
+            width={160}
+            height={50}
+            fill="white"
+            stroke={COLORS.gray[200]}
+            strokeWidth={1}
+            rx={6}
+            style={{ filter: SHADOWS.soft }}
+          />
+        )}
         {label && (
           <text
-            x={width - 10}
-            y={height - 30}
-            textAnchor="end"
-            fontSize={13}
-            fill="#4b5563"
+            x={width - 90}
+            y={height - 40}
+            textAnchor="middle"
+            fontSize={12}
+            fill={COLORS.gray[600]}
+            fontFamily="'Inter', system-ui, sans-serif"
             fontStyle="italic"
           >
             {label}
@@ -420,17 +548,18 @@ export function FreeBodyDiagram({
         )}
         {currentStepConfig.showCalculation && (
           <text
-            x={width - 10}
-            y={height - 10}
-            textAnchor="end"
-            fontSize={14}
-            fill="#1f2937"
+            x={width - 90}
+            y={height - 22}
+            textAnchor="middle"
+            fontSize={13}
+            fill={COLORS.primary[600]}
+            fontFamily="'JetBrains Mono', monospace"
             fontWeight="500"
           >
             {currentStepConfig.showCalculation}
           </text>
         )}
-      </g>
+      </motion.g>
     )
   }
 
@@ -440,23 +569,55 @@ export function FreeBodyDiagram({
       height={height}
       viewBox={`0 0 ${width} ${height}`}
       className={`free-body-diagram ${className}`}
-      style={{ backgroundColor: '#ffffff', borderRadius: '8px' }}
+      style={{ borderRadius: '12px', overflow: 'hidden' }}
     >
-      {/* Background */}
-      <rect width={width} height={height} fill="#ffffff" rx={8} />
+      {/* Definitions */}
+      <defs>
+        {/* Object gradient */}
+        <linearGradient id="object-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={object.color || COLORS.gray[100]} />
+          <stop offset="100%" stopColor={object.color ? hexToRgba(object.color, 0.8) : COLORS.gray[200]} />
+        </linearGradient>
+
+        {/* Background gradient */}
+        <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor={COLORS.gray[50]} />
+        </linearGradient>
+
+        {/* Subtle grid pattern */}
+        <pattern id="grid-pattern" width="20" height="20" patternUnits="userSpaceOnUse">
+          <path
+            d="M 20 0 L 0 0 0 20"
+            fill="none"
+            stroke={COLORS.gray[100]}
+            strokeWidth="0.5"
+          />
+        </pattern>
+      </defs>
+
+      {/* Background with subtle gradient */}
+      <rect width={width} height={height} fill="url(#bg-gradient)" rx={12} />
+
+      {/* Subtle grid */}
+      <rect width={width} height={height} fill="url(#grid-pattern)" opacity={0.5} rx={12} />
 
       {/* Title */}
       {title && (
-        <text
+        <motion.text
           x={width / 2}
-          y={25}
+          y={28}
           textAnchor="middle"
           fontSize={16}
-          fontWeight="bold"
-          fill="#1f2937"
+          fontWeight="600"
+          fontFamily="'Inter', system-ui, sans-serif"
+          fill={COLORS.gray[800]}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
         >
           {title}
-        </text>
+        </motion.text>
       )}
 
       {/* Coordinate axes (behind object) */}
@@ -465,7 +626,7 @@ export function FreeBodyDiagram({
       {/* Physics object */}
       {renderObject()}
 
-      {/* Force vectors */}
+      {/* Force vectors with choreographed animations */}
       {renderForces()}
 
       {/* Net force (if enabled) */}
@@ -474,34 +635,34 @@ export function FreeBodyDiagram({
       {/* Step information */}
       {renderStepLabel()}
 
-      {/* Step indicator */}
-      <text
-        x={10}
-        y={height - 10}
-        fontSize={11}
-        fill="#9ca3af"
+      {/* Step indicator with progress */}
+      <motion.g
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
       >
-        {language === 'he' ? `שלב ${currentStep}` : `Step ${currentStep}`}
-      </text>
-
-      {/* Styles */}
-      <style>
-        {`
-          .free-body-diagram {
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          }
-
-          .physics-object rect,
-          .physics-object circle {
-            transition: all 0.2s ease-out;
-          }
-
-          .physics-object:hover rect,
-          .physics-object:hover circle {
-            fill: #e5e7eb;
-          }
-        `}
-      </style>
+        <rect
+          x={8}
+          y={height - 28}
+          width={80}
+          height={20}
+          fill="white"
+          stroke={COLORS.gray[200]}
+          strokeWidth={1}
+          rx={4}
+        />
+        <text
+          x={48}
+          y={height - 15}
+          textAnchor="middle"
+          fontSize={11}
+          fontFamily="'Inter', system-ui, sans-serif"
+          fontWeight={500}
+          fill={COLORS.gray[500]}
+        >
+          {language === 'he' ? `שלב ${currentStep}` : `Step ${currentStep}`}
+        </text>
+      </motion.g>
     </svg>
   )
 }

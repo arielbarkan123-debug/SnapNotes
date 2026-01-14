@@ -73,6 +73,10 @@ export function MathDiagramRenderer({
     }
   }, [diagram.visibleStep, stepOverride])
 
+  // Calculate total steps once for use in rendering and controls
+  const dataStepsArray = (diagram.data as { steps?: unknown[] })?.steps
+  const calculatedTotalSteps = diagram.totalSteps ?? diagram.stepConfig?.length ?? dataStepsArray?.length ?? 1
+
   // Handle step completion
   const handleStepComplete = useCallback(() => {
     onStepComplete?.()
@@ -80,15 +84,14 @@ export function MathDiagramRenderer({
 
   // Handle manual step advance
   const handleNextStep = useCallback(() => {
-    const totalSteps = diagram.totalSteps || diagram.stepConfig?.length || 10
-    if (currentStep < totalSteps - 1) {
+    if (currentStep < calculatedTotalSteps - 1) {
       const newStep = currentStep + 1
       if (stepOverride === undefined) {
         setInternalStep(newStep)
       }
       onStepAdvance?.()
     }
-  }, [currentStep, diagram.totalSteps, diagram.stepConfig, stepOverride, onStepAdvance])
+  }, [currentStep, calculatedTotalSteps, stepOverride, onStepAdvance])
 
   const handlePrevStep = useCallback(() => {
     if (currentStep > 0) {
@@ -117,6 +120,8 @@ export function MathDiagramRenderer({
             data={diagram.data as LongDivisionData}
             width={width || 400}
             height={height || 350}
+            totalSteps={calculatedTotalSteps}
+            showStepCounter={false}
             {...commonProps}
           />
         )
@@ -127,6 +132,8 @@ export function MathDiagramRenderer({
             data={diagram.data as EquationData}
             width={width || 400}
             height={height || 350}
+            totalSteps={calculatedTotalSteps}
+            showStepCounter={false}
             {...commonProps}
           />
         )
@@ -137,6 +144,8 @@ export function MathDiagramRenderer({
             data={diagram.data as FractionOperationData}
             width={width || 400}
             height={height || 350}
+            totalSteps={calculatedTotalSteps}
+            showStepCounter={false}
             {...commonProps}
           />
         )
@@ -191,9 +200,6 @@ export function MathDiagramRenderer({
     }
   }
 
-  // Calculate total steps for progress indicator
-  const totalSteps = diagram.totalSteps || diagram.stepConfig?.length || 1
-
   // Get diagram type display name
   const getDiagramTypeName = (): string => {
     const names = {
@@ -231,7 +237,7 @@ export function MathDiagramRenderer({
           {getDiagramTypeName()}
         </span>
         <span className="text-xs text-gray-400">
-          {language === 'he' ? 'צעד' : 'Step'} {currentStep + 1}/{totalSteps}
+          {language === 'he' ? 'צעד' : 'Step'} {currentStep + 1}/{calculatedTotalSteps}
         </span>
       </div>
 
@@ -241,14 +247,14 @@ export function MathDiagramRenderer({
       </div>
 
       {/* Step controls (optional) */}
-      {showControls && totalSteps > 1 && (
+      {showControls && calculatedTotalSteps > 1 && (
         <div className="step-controls mt-3 flex items-center justify-between px-2">
           {/* Progress indicator */}
           <div className="progress-indicator flex items-center gap-2">
             <div className="progress-bar h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full w-32">
               <div
                 className="progress-fill h-full bg-indigo-500 rounded-full transition-all duration-300"
-                style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
+                style={{ width: `${((currentStep + 1) / calculatedTotalSteps) * 100}%` }}
               />
             </div>
           </div>
@@ -264,7 +270,7 @@ export function MathDiagramRenderer({
             </button>
             <button
               onClick={handleNextStep}
-              disabled={currentStep >= totalSteps - 1}
+              disabled={currentStep >= calculatedTotalSteps - 1}
               className="px-3 py-1.5 text-sm bg-indigo-500 hover:bg-indigo-600 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
             >
               {language === 'he' ? 'הבא →' : 'Next →'}

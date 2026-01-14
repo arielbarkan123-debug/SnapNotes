@@ -310,6 +310,12 @@ export interface MathDiagramState {
   totalSteps?: number
   /** Step configuration for progressive reveal */
   stepConfig?: MathDiagramStepConfig[]
+  /** Evolution mode: manual = user controls, auto-advance = progresses with conversation */
+  evolutionMode?: 'manual' | 'auto-advance'
+  /** Conversation turn when this diagram was introduced/updated */
+  conversationTurn?: number
+  /** Elements that were added/updated in this step (for highlighting new additions) */
+  updatedElements?: string[]
 }
 
 export interface MathDiagramStepConfig {
