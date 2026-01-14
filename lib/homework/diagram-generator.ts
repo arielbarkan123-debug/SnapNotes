@@ -584,6 +584,26 @@ export function generateLongDivisionDiagram(
   }
 }
 
+/**
+ * Generate a diagram from tutor's response message text
+ * This is used as a fallback when the original question didn't trigger diagram generation
+ * but the tutor's message contains division-related content
+ */
+export function generateDiagramFromTutorMessage(
+  messageText: string
+): TutorDiagramState | undefined {
+  // Try to generate a long division diagram from the message
+  // This catches cases where tutor writes about dividing numbers
+  const divisionDiagram = generateLongDivisionDiagram(messageText)
+  if (divisionDiagram) {
+    return divisionDiagram
+  }
+
+  // Future: Could add other diagram types here (equations, fractions, etc.)
+
+  return undefined
+}
+
 // ============================================================================
 // Main Generator Function
 // ============================================================================

@@ -13,7 +13,7 @@ import type {
   ConversationMessage,
   TutorDiagramState,
 } from './types'
-import { ensureDiagramInResponse } from './diagram-generator'
+import { ensureDiagramInResponse, generateDiagramFromTutorMessage } from './diagram-generator'
 
 // ============================================================================
 // Configuration
@@ -402,6 +402,16 @@ export async function generateInitialGreeting(context: TutorContext): Promise<Tu
     context.questionAnalysis,
     tutorResponse.diagram
   )
+
+  // ENHANCED: If no diagram yet, also check the tutor's response message for division
+  // This catches cases where the original question didn't have "divide" keywords
+  // but the tutor's explanation does
+  if (!tutorResponse.diagram && containsAsciiDiagram(tutorResponse.message)) {
+    const diagramFromMessage = generateDiagramFromTutorMessage(tutorResponse.message)
+    if (diagramFromMessage) {
+      tutorResponse.diagram = diagramFromMessage
+    }
+  }
 
   // If we generated a fallback diagram and message has ASCII diagrams, clean them up
   if (!originalDiagram && tutorResponse.diagram && containsAsciiDiagram(tutorResponse.message)) {
