@@ -512,17 +512,32 @@ function calculateLongDivisionSteps(dividend: number, divisor: number): LongDivi
  * Extract division numbers from problem text
  */
 function extractDivisionNumbers(questionText: string): { dividend: number; divisor: number } | null {
-  // Match patterns like: "7,248 ÷ 8", "divide 456 by 12", "456/12", "456 divided by 12"
+  // Match patterns for division - ordered from most specific to most general
   const patterns = [
-    /(\d[\d,]*)\s*[÷/]\s*(\d+)/,                    // 7,248 ÷ 8 or 456/12
-    /divide\s+(\d[\d,]*)\s+by\s+(\d+)/i,           // divide 456 by 12
-    /(\d[\d,]*)\s+divided\s+by\s+(\d+)/i,          // 456 divided by 12
-    /(\d[\d,]*)\s+into\s+(\d+)\s+equal/i,          // 7248 into 8 equal groups
+    // Direct division notation
+    /(\d[\d,]*)\s*[÷]\s*(\d+)/,                           // 7,248 ÷ 8 (direct)
+    /(\d[\d,]*)\s*\/\s*(\d+)/,                            // 456/12 (fraction notation)
+
+    // ASCII long division notation: "8 | 7,248" - divisor | dividend
+    /(\d+)\s*\|\s*(\d[\d,]*)/,                            // 8 | 7,248 (reversed - divisor first)
+
+    // Division with words between number and symbol: "7,248 crayons ÷ 8 boxes"
+    /(\d[\d,]*)\s+\w+\s*[÷]\s*(\d+)/,                     // 7,248 crayons ÷ 8
+    /(\d[\d,]*)\s+(?:\w+\s+)+[÷]\s*(\d+)/,                // 7,248 red crayons ÷ 8
+
+    // Word-based division
+    /divide\s+(\d[\d,]*)\s+by\s+(\d+)/i,                  // divide 456 by 12
+    /(\d[\d,]*)\s+divided\s+by\s+(\d+)/i,                 // 456 divided by 12
+    /(\d[\d,]*)\s+into\s+(\d+)\s+equal/i,                 // 7248 into 8 equal groups
+
+    // Word problems with context
     /(\d+)\s+(?:boxes?|groups?|parts?|pieces?).*?(\d[\d,]*)/i, // 8 boxes...7248 (reversed)
-    // Word problem patterns - "X items...among/between Y groups"
     /(\d[\d,]*)\s+(?:\w+\s+)*(?:among|between|into)\s+(\d+)/i,  // 7,248 crayons among 8 boxes
     /(\d+)\s+equal\s+(?:groups?|parts?|pieces?|portions?).*?(\d[\d,]*)/i, // 8 equal groups...7248
     /share\s+(\d[\d,]*).*?(?:among|between|into)\s+(\d+)/i,  // share 7248 among 8
+
+    // Very general: just find two numbers where one is much larger (for long division context)
+    // Only use this if we're confident this is a division problem
   ]
 
   for (const pattern of patterns) {

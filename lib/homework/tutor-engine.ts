@@ -58,10 +58,20 @@ function containsAsciiDiagram(text: string): boolean {
  * Strip ASCII diagrams from message text when a visual diagram is available
  */
 function stripAsciiDiagrams(text: string): string {
-  // Remove code blocks that contain division-like patterns
-  let cleaned = text.replace(/```[\s\S]*?```/g, '')
+  let cleaned = text
 
-  // Remove ASCII division layouts (multi-line patterns)
+  // Remove entire "Long Division Steps" sections with their code blocks
+  // Pattern: **Long Division Steps:** followed by code block
+  cleaned = cleaned.replace(
+    /\*\*Long Division Steps?:?\*\*\s*\n```[\s\S]*?```/gi,
+    ''
+  )
+
+  // Remove any remaining code blocks that contain division-like patterns
+  // (numbers, pipes, underscores arranged as division)
+  cleaned = cleaned.replace(/```[\s\S]*?```/g, '')
+
+  // Remove ASCII division layouts (multi-line patterns outside code blocks)
   // Pattern: lines with numbers, underscores, pipes that form a division layout
   cleaned = cleaned.replace(
     /\n\s*\d+\s*\n\s*[_─]+\s*\n[\s\S]*?(?=\n\n|\n\*\*|$)/g,
@@ -70,6 +80,9 @@ function stripAsciiDiagrams(text: string): string {
 
   // Remove inline division notation like "8 | 7,248"
   cleaned = cleaned.replace(/\d+\s*\|\s*[\d,]+/g, '')
+
+  // Remove orphaned section headers that had content removed
+  cleaned = cleaned.replace(/\*\*Long Division Steps?:?\*\*\s*\n\n/gi, '')
 
   // Clean up multiple newlines that may have resulted
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim()
@@ -492,6 +505,16 @@ export async function generateTutorResponse(
     context.questionAnalysis,
     tutorResponse.diagram
   )
+
+  // ENHANCED: If no diagram yet, also check the tutor's response message for division
+  // This catches cases where the original question didn't have "divide" keywords
+  // but the tutor's explanation does (e.g., "7,248 crayons ÷ 8 boxes")
+  if (!tutorResponse.diagram && containsAsciiDiagram(tutorResponse.message)) {
+    const diagramFromMessage = generateDiagramFromTutorMessage(tutorResponse.message)
+    if (diagramFromMessage) {
+      tutorResponse.diagram = diagramFromMessage
+    }
+  }
 
   // If we generated a fallback diagram and message has ASCII diagrams, clean them up
   if (!originalDiagram && tutorResponse.diagram && containsAsciiDiagram(tutorResponse.message)) {
