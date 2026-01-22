@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { Hint } from '@/lib/adaptive/hints'
+import { type Hint } from '@/lib/adaptive/hints'
 
 interface HintBubbleProps {
   hint: Hint

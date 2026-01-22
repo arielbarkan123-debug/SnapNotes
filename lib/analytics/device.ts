@@ -2,7 +2,7 @@
 // Device Detection Utilities
 // ============================================================================
 
-import { DeviceInfo } from './types'
+import { type DeviceInfo } from './types'
 
 /**
  * Detect device type based on user agent and screen size

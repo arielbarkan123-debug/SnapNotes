@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { motion, AnimatePresence, useAnimation, Variants } from 'framer-motion'
+import { motion, AnimatePresence, useAnimation, type Variants } from 'framer-motion'
 import {
-  FreeBodyDiagramData,
-  DiagramStepConfig,
-  Force,
+  type FreeBodyDiagramData,
+  type DiagramStepConfig,
+  type Force,
 } from '@/types/physics'
 import { ForceVector } from './ForceVector'
 import {

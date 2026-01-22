@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Course, UserProgress } from '@/types'
+import { type Course, type UserProgress } from '@/types'
 import CourseView from './CourseView'
 
 interface CoursePageProps {

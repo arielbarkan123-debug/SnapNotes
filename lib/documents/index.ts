@@ -21,7 +21,7 @@ import { processPDF, getPDFPreview, isValidPDF } from './pdf'
 import { processDOCX, getDOCXPreview, isValidDOCX } from './docx'
 
 // Import types for use in this file
-import type { DocumentType, ProcessedDocument } from './types'
+import type { DocumentType, ProcessedDocument, ExtractedDocument } from './types'
 
 // Re-export types from the dedicated types file (safe for client-side)
 export type { ExtractedDocument, ExtractedImage, DocumentType, ProcessedDocument } from './types'
@@ -99,7 +99,7 @@ export async function processDocument(
   buffer: Buffer,
   mimeType: string,
   filename?: string
-): Promise<import('./pptx').ExtractedDocument> {
+): Promise<ExtractedDocument> {
   let fileType = getFileType(mimeType)
 
   // Fallback to extension if MIME type is unknown

@@ -1,6 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useRef, RefObject } from 'react'
+import {type RefObject} from 'react';
+import type React from 'react';
+import { useState, useEffect, useRef } from 'react'
 
 interface UseInViewOptions {
   // Margin around the viewport (e.g., '100px' to trigger 100px before element is visible)

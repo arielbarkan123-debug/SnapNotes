@@ -7,7 +7,7 @@
  * - Linear equations
  */
 
-import { MathProblemType, MathDifficulty } from './types'
+import { type MathProblemType, type MathDifficulty } from './types'
 
 // ============================================================================
 // Types

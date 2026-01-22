@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import {
-  MathDiagramState,
-  MathDiagramStepConfig,
-  LongDivisionData,
-  EquationData,
-  FractionOperationData,
+  type MathDiagramState,
+  type MathDiagramStepConfig,
+  type LongDivisionData,
+  type EquationData,
+  type FractionOperationData,
 } from '@/types/math'
 import { LongDivisionDiagram } from './LongDivisionDiagram'
 import { EquationSteps } from './EquationSteps'

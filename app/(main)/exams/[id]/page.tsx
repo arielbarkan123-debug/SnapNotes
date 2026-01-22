@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ExamWithQuestions, ExamQuestion, ExamAnswer } from '@/types'
+import { type ExamWithQuestions, type ExamQuestion, type ExamAnswer } from '@/types'
 import QuestionRenderer from '@/components/exam/QuestionRenderer'
 import { useEventTracking } from '@/lib/analytics'
 

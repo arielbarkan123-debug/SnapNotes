@@ -191,9 +191,14 @@ NoteSnap is a standard Next.js application and can be deployed to any platform t
 | `/api/upload` | POST | Upload a notebook image |
 | `/api/generate-course` | POST | Generate a course from an image |
 | `/api/courses` | GET | Get all courses for the user |
-| `/api/course/[id]` | GET | Get a specific course |
-| `/api/course/[id]` | PATCH | Update a course (title) |
-| `/api/course/[id]` | DELETE | Delete a course |
+| `/api/courses/[id]` | GET | Get a specific course |
+| `/api/courses/[id]` | DELETE | Delete a course |
+| `/api/courses/[id]/progress` | GET | Get course progress |
+| `/api/courses/[id]/mastery` | GET | Get course mastery data |
+| `/api/homework/sessions` | GET, POST | List/create homework sessions |
+| `/api/homework/sessions/[id]` | GET, PATCH | Get/update homework session |
+| `/api/homework/sessions/[id]/chat` | POST | Send chat message |
+| `/api/homework/sessions/[id]/hint` | POST | Request hint |
 
 ## Production Considerations
 

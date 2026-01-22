@@ -1,3 +1,8 @@
+/**
+ * Homework Components
+ * Components for homework checking, tutoring, and image annotation
+ */
+
 export { default as QuestionUploader } from './QuestionUploader'
 export { default as ReferenceUploader } from './ReferenceUploader'
 export type { ReferenceImage } from './ReferenceUploader'

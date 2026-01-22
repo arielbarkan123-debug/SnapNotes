@@ -1,3 +1,21 @@
+/**
+ * usePastExamTemplates Hook
+ *
+ * Fetches user's uploaded past exam templates with upload limit tracking.
+ * Templates are used to generate practice exams in a familiar format.
+ *
+ * @example
+ * ```tsx
+ * const { templates, canUpload, count, limit } = usePastExamTemplates()
+ *
+ * if (canUpload) {
+ *   // Show upload button
+ * } else {
+ *   console.log(`Upload limit reached (${count}/${limit})`)
+ * }
+ * ```
+ */
+
 'use client'
 
 import { useCallback } from 'react'
@@ -26,6 +44,11 @@ async function fetcher(url: string): Promise<PastExamTemplatesResponse> {
   return response.json()
 }
 
+/**
+ * Hook for fetching past exam templates
+ *
+ * @returns Object containing templates, upload status, and control functions
+ */
 export function usePastExamTemplates(): UsePastExamTemplatesReturn {
   const { data, error: swrError, isLoading, isValidating, mutate } = useSWR<PastExamTemplatesResponse>(
     PAST_EXAMS_CACHE_KEY,

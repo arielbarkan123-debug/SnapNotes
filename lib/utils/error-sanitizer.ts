@@ -1,80 +1,24 @@
 /**
+ * Error Sanitizer
+ *
  * Sanitizes error messages before showing them to users.
  * Maps cryptic browser/technical errors to user-friendly messages.
  *
- * This prevents raw error messages like:
- * - "SyntaxError: The string did not match the expected pattern" (Safari)
- * - "TypeError: Failed to fetch"
- * - "AbortError: The operation was aborted"
- * - JSON parse errors
- * - Network errors
+ * This module now uses the comprehensive error code system from @/lib/errors
+ * for consistent error handling across the application.
  */
 
-type ErrorMessageMap = {
-  patterns: string[]
-  message: string
-}
+import {
+  sanitizeError as newSanitizeError,
+  createErrorHandler as newCreateErrorHandler,
+  getDisplayError,
+  getDisplayErrorCode,
+  isUserFriendlyMessage,
+  type ErrorCode,
+} from '@/lib/errors'
 
-// Map of error patterns to user-friendly messages
-const ERROR_MAPPINGS: ErrorMessageMap[] = [
-  // Safari JSON parse error
-  {
-    patterns: ['did not match the expected pattern', 'syntaxerror: the string'],
-    message: 'Server error. Please try again.',
-  },
-  // Network/fetch errors
-  {
-    patterns: ['failed to fetch', 'network error', 'networkerror', 'load failed', 'fetch failed'],
-    message: 'Connection error. Please check your internet and try again.',
-  },
-  // Abort errors
-  {
-    patterns: ['aborted', 'abort'],
-    message: 'Request was cancelled. Please try again.',
-  },
-  // Timeout errors
-  {
-    patterns: ['timeout', 'timed out', 'time out'],
-    message: 'Server is taking too long. Please try again.',
-  },
-  // JSON parse errors
-  {
-    patterns: ['json', 'unexpected token', 'unexpected end'],
-    message: 'Server error. Please try again.',
-  },
-  // CORS errors
-  {
-    patterns: ['cors', 'cross-origin', 'blocked by cors'],
-    message: 'Connection blocked. Please try again.',
-  },
-  // SSL/certificate errors
-  {
-    patterns: ['certificate', 'ssl', 'secure connection'],
-    message: 'Secure connection error. Please try again.',
-  },
-]
-
-// Patterns that indicate the message is already user-friendly
-const USER_FRIENDLY_PATTERNS = [
-  'please',
-  'try again',
-  'failed to',
-  'could not',
-  'unable to',
-  'invalid',
-  'required',
-  'not found',
-  'unauthorized',
-  'forbidden',
-]
-
-/**
- * Checks if an error message appears to already be user-friendly
- */
-function isUserFriendlyMessage(message: string): boolean {
-  const lowerMessage = message.toLowerCase()
-  return USER_FRIENDLY_PATTERNS.some((pattern) => lowerMessage.includes(pattern))
-}
+// Re-export from the new error system for backward compatibility
+export { isUserFriendlyMessage }
 
 /**
  * Sanitizes an error to produce a user-friendly message
@@ -94,38 +38,7 @@ export function sanitizeError(
   error: unknown,
   fallback = 'Something went wrong. Please try again.'
 ): string {
-  // Extract message from various error types
-  let rawMessage: string
-
-  if (error instanceof Error) {
-    rawMessage = error.message
-  } else if (typeof error === 'string') {
-    rawMessage = error
-  } else if (error && typeof error === 'object' && 'message' in error) {
-    rawMessage = String((error as { message: unknown }).message)
-  } else {
-    return fallback
-  }
-
-  const lowerMessage = rawMessage.toLowerCase()
-
-  // Check if message is already user-friendly
-  if (isUserFriendlyMessage(rawMessage)) {
-    return rawMessage
-  }
-
-  // Try to map to a user-friendly message
-  for (const mapping of ERROR_MAPPINGS) {
-    for (const pattern of mapping.patterns) {
-      if (lowerMessage.includes(pattern)) {
-        return mapping.message
-      }
-    }
-  }
-
-  // Log unexpected errors for debugging but don't show to user
-  console.error('[ErrorSanitizer] Unmapped error:', rawMessage)
-  return fallback
+  return newSanitizeError(error, fallback)
 }
 
 /**
@@ -144,7 +57,25 @@ export function createErrorHandler(
   setError: (message: string) => void,
   fallback?: string
 ): (error: unknown) => void {
-  return (error: unknown) => {
-    setError(sanitizeError(error, fallback))
-  }
+  return newCreateErrorHandler(setError, { fallbackMessage: fallback })
+}
+
+/**
+ * Sanitizes an error and returns both the message and error code
+ *
+ * @example
+ * try {
+ *   await doSomething()
+ * } catch (err) {
+ *   const { message, code } = sanitizeErrorWithCode(err)
+ *   console.log(`[${code}] ${message}`)
+ * }
+ */
+export function sanitizeErrorWithCode(
+  error: unknown,
+  fallback = 'Something went wrong. Please try again.'
+): { message: string; code: ErrorCode } {
+  const code = getDisplayErrorCode(error)
+  const message = getDisplayError(error, { fallbackMessage: fallback })
+  return { message, code }
 }

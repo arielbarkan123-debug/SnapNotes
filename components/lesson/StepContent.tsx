@@ -1,6 +1,6 @@
 'use client'
 
-import { Step } from '@/types'
+import { type Step } from '@/types'
 import Image from 'next/image'
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'

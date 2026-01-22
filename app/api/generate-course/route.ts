@@ -1,6 +1,17 @@
-import { NextRequest } from 'next/server'
+import { type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { CourseInsert, LessonIntensityMode } from '@/types'
+import { type CourseInsert, type LessonIntensityMode, type GeneratedCourse, type LessonOutline } from '@/types'
+
+/** Metadata for progressive course generation (when courses are generated incrementally) */
+interface ProgressiveMetadata {
+  lessonOutline: LessonOutline[]
+  documentSummary: string
+  totalLessons: number
+  lessonsReady: number
+}
+
+/** Generated course with optional progressive metadata attached */
+type GeneratedCourseWithMetadata = GeneratedCourse & { _progressiveMetadata?: ProgressiveMetadata }
 import {
   generateCourseFromImage,
   generateCourseFromMultipleImagesProgressive,
@@ -253,13 +264,22 @@ export async function POST(request: NextRequest): Promise<Response> {
         const duplicateCheckField = documentContent ? documentUrl : urls[0]
 
         if (duplicateCheckField) {
-          // Use maybeSingle() instead of single() to handle 0 results gracefully
-          const { data: existingCourse } = await supabase
+          // Use separate queries to avoid SQL/PostgREST injection via string interpolation
+          // Check by image URL first
+          const { data: existingByImage } = await supabase
             .from('courses')
             .select('id')
             .eq('user_id', user.id)
-            .or(`original_image_url.eq.${duplicateCheckField},document_url.eq.${duplicateCheckField}`)
+            .eq('original_image_url', duplicateCheckField)
             .maybeSingle()
+
+          // Check by document URL if not found by image
+          const existingCourse = existingByImage || (await supabase
+            .from('courses')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('document_url', duplicateCheckField)
+            .maybeSingle()).data
 
           if (existingCourse) {
             sendMessage({
@@ -339,8 +359,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           extractedContent = documentContent.content
 
           // Store progressive generation metadata for continuation
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ;(generatedCourse as any)._progressiveMetadata = {
+          ;(generatedCourse as GeneratedCourseWithMetadata)._progressiveMetadata = {
             lessonOutline: result.lessonOutline,
             documentSummary: result.documentSummary,
             totalLessons: result.totalLessons,
@@ -363,8 +382,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           extractedContent = result.extractionRawText
 
           // Store progressive generation metadata for continuation
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ;(generatedCourse as any)._progressiveMetadata = {
+          ;(generatedCourse as GeneratedCourseWithMetadata)._progressiveMetadata = {
             lessonOutline: result.lessonOutline,
             documentSummary: result.documentSummary,
             totalLessons: result.totalLessons,
@@ -425,8 +443,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
       // 6c. Save to database
       // Check for progressive generation metadata
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const progressiveMetadata = (generatedCourse as any)._progressiveMetadata
+      const progressiveMetadata = (generatedCourse as GeneratedCourseWithMetadata)._progressiveMetadata
       const isProgressiveGeneration = !!progressiveMetadata
 
       const courseData: CourseInsert = {
@@ -579,8 +596,7 @@ function mapClaudeAPIErrorCode(errorCode: string): typeof ErrorCodes[keyof typeo
 // Cover Image Generation Helper
 // ============================================================================
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function generateCoverImage(supabase: any, userId: string, courseId: string, title: string) {
+async function generateCoverImage(supabase: Awaited<ReturnType<typeof createClient>>, userId: string, courseId: string, title: string) {
   try {
     // Generate the cover image using Gemini Nano Banana
     const result = await generateCourseImage(title)
@@ -654,8 +670,7 @@ async function extractConcepts(
   userId: string,
   courseId: string,
   courseTitle: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  generatedCourse: any,
+  generatedCourse: GeneratedCourse,
   userContext?: UserLearningContext
 ) {
   try {

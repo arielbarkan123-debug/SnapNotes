@@ -13,12 +13,14 @@ const publicRoutes = ['/auth/callback']
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Log auth callback requests for debugging
+  // Log auth callback requests for debugging (development only)
   if (pathname.startsWith('/auth/callback')) {
-    console.log('[Middleware] Auth callback detected')
-    console.log('[Middleware] Full URL:', request.url)
-    console.log('[Middleware] Pathname:', pathname)
-    console.log('[Middleware] Search params:', request.nextUrl.searchParams.toString())
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Middleware] Auth callback detected')
+      console.log('[Middleware] Full URL:', request.url)
+      console.log('[Middleware] Pathname:', pathname)
+      console.log('[Middleware] Search params:', request.nextUrl.searchParams.toString())
+    }
     // IMPORTANT: Let auth callback pass through WITHOUT session update
     // The callback route will handle the code exchange itself
     return NextResponse.next()

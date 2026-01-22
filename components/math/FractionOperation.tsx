@@ -2,10 +2,10 @@
 
 import { useMemo } from 'react'
 import {
-  FractionOperationData,
-  FractionStep,
-  Fraction,
-  MathDiagramStepConfig,
+  type FractionOperationData,
+  type FractionStep,
+  type Fraction,
+  type MathDiagramStepConfig,
   MATH_COLORS,
   FRACTION_COLORS,
 } from '@/types/math'

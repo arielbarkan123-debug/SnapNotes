@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { StepStatus } from '@/lib/practice/types'
+import { type StepStatus } from '@/lib/practice/types'
 
 type FractionOperation = 'simplify' | 'add' | 'multiply' | 'divide'
 

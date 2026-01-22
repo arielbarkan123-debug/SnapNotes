@@ -6,8 +6,7 @@
  * leads to better long-term retention than blocked practice.
  */
 
-import { Course as _Course, GeneratedCourse as _GeneratedCourse } from '@/types'
-import { ReviewCard } from '@/types/srs'
+import { type ReviewCard } from '@/types/srs'
 
 // ============================================
 // TYPES

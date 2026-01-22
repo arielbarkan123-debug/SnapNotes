@@ -4,16 +4,16 @@
 // ============================================================================
 
 import {
-  AnalyticsEvent,
-  AnalyticsError,
-  FunnelStep,
-  AnalyticsBatch,
-  BatchEvent,
-  BatchPageView,
-  BatchError,
-  BatchFunnelStep,
-  ClickPosition,
-  ElementInfo,
+  type AnalyticsEvent,
+  type AnalyticsError,
+  type FunnelStep,
+  type AnalyticsBatch,
+  type BatchEvent,
+  type BatchPageView,
+  type BatchError,
+  type BatchFunnelStep,
+  type ClickPosition,
+  type ElementInfo,
 } from './types'
 import { getDeviceInfo, getUTMParams, getReferrer } from './device'
 

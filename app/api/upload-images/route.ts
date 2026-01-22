@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
   ErrorCodes,
@@ -76,7 +76,9 @@ function generateCourseId(): string {
 
 function getFileExtension(filename: string): string {
   const parts = filename.split('.')
-  return parts.length > 1 ? parts.pop()!.toLowerCase() : 'jpg'
+  if (parts.length <= 1) return 'jpg'
+  const ext = parts.pop()
+  return ext && ext.length > 0 ? ext.toLowerCase() : 'jpg'
 }
 
 /**
@@ -235,7 +237,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const contentLength = request.headers.get('content-length')
     if (contentLength) {
       const size = parseInt(contentLength, 10)
-      if (size > MAX_TOTAL_SIZE) {
+      // Check for NaN (invalid content-length) or size exceeding limit
+      if (Number.isNaN(size) || size > MAX_TOTAL_SIZE) {
         return createErrorResponse(
           ErrorCodes.FILE_TOO_LARGE,
           `Total upload size exceeds ${MAX_TOTAL_SIZE / (1024 * 1024)}MB limit`

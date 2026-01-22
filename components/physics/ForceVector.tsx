@@ -1,8 +1,8 @@
 'use client'
 
 import { useRef, useState, useEffect, useMemo } from 'react'
-import { motion, useAnimation, Variants } from 'framer-motion'
-import { Force, FORCE_COLORS, FORCE_SYMBOLS } from '@/types/physics'
+import { motion, useAnimation, type Variants } from 'framer-motion'
+import { type Force, FORCE_COLORS, FORCE_SYMBOLS } from '@/types/physics'
 import { FORCE_COLORS as THEME_FORCE_COLORS, SHADOWS } from '@/lib/diagram-theme'
 import {
   createPathDrawVariants,

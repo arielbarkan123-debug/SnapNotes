@@ -1,10 +1,11 @@
 'use client'
 
-import { Component, ErrorInfo, ReactNode } from 'react'
+import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
 import Button from './ui/Button'
 import { analytics } from '@/lib/analytics'
 import { errorReporter } from '@/lib/monitoring'
+import { ErrorCodes, type ErrorCode, getDisplayErrorCode } from '@/lib/errors'
 
 // ============================================================================
 // Types
@@ -25,6 +26,7 @@ interface ErrorBoundaryState {
   hasError: boolean
   error: Error | null
   errorInfo: ErrorInfo | null
+  errorCode: ErrorCode
 }
 
 // ============================================================================
@@ -38,21 +40,25 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       hasError: false,
       error: null,
       errorInfo: null,
+      errorCode: ErrorCodes.CLIENT_UNKNOWN,
     }
   }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
-    return { hasError: true, error }
+    // Map the error to an error code
+    const errorCode = getDisplayErrorCode(error)
+    return { hasError: true, error, errorCode }
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log error to console
-    console.error('ErrorBoundary caught an error:', error)
+    // Log error to console with error code
+    const errorCode = this.state.errorCode || ErrorCodes.CLIENT_UNKNOWN
+    console.error(`[${errorCode}] ErrorBoundary caught an error:`, error)
     console.error('Component stack:', errorInfo.componentStack)
 
     this.setState({ errorInfo })
 
-    // Track error in analytics
+    // Track error in analytics with error code
     analytics.trackError({
       type: 'javascript',
       message: error.message,
@@ -61,12 +67,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       componentName: 'ErrorBoundary',
       context: {
         componentStack: errorInfo.componentStack,
+        errorCode,
       },
     })
 
-    // Report error to monitoring system
+    // Report error to monitoring system with error code
     errorReporter.reportError(error, 'ErrorBoundary', {
       componentStack: errorInfo.componentStack,
+      errorCode,
     })
   }
 
@@ -75,6 +83,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       hasError: false,
       error: null,
       errorInfo: null,
+      errorCode: ErrorCodes.CLIENT_UNKNOWN,
     })
   }
 
@@ -122,8 +131,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
               {t.title}
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
               {t.description}
+            </p>
+
+            {/* Error Code */}
+            <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
+              Error code: <code className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">{this.state.errorCode}</code>
             </p>
 
             {/* Error Details (Development Only) */}
@@ -167,6 +181,7 @@ interface ErrorFallbackProps {
   reset?: () => void
   title?: string
   message?: string
+  errorCode?: ErrorCode
 }
 
 export function ErrorFallback({
@@ -174,6 +189,7 @@ export function ErrorFallback({
   reset,
   title,
   message,
+  errorCode,
 }: ErrorFallbackProps) {
   const t = useTranslations('errors')
 
@@ -183,6 +199,7 @@ export function ErrorFallback({
 
   const displayTitle = title || t('generic')
   const displayMessage = message || t('genericDescription')
+  const displayCode = errorCode || (error ? getDisplayErrorCode(error) : ErrorCodes.CLIENT_UNKNOWN)
 
   return (
     <div className="min-h-[400px] flex items-center justify-center px-4">
@@ -208,8 +225,13 @@ export function ErrorFallback({
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
           {displayTitle}
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
+        <p className="text-gray-600 dark:text-gray-400 mb-4">
           {displayMessage}
+        </p>
+
+        {/* Error Code */}
+        <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">
+          Error code: <code className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">{displayCode}</code>
         </p>
 
         {/* Error Details (Development Only) */}

@@ -1,16 +1,16 @@
 'use client'
 
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
+import { useReducer, useCallback, useMemo, useRef, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Course, UserProgress, Lesson, PracticeProblem, StructuredWorkedSolution } from '@/types'
+import { type Course, type UserProgress, type Lesson, type PracticeProblem, type StructuredWorkedSolution } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { hasMasteredConcept, calculateMasteryLevel, getNextDifficulty } from '@/lib/learning/intensity-config'
 import { MathSolutionRenderer, isStructuredMathSolution } from './MathSolutionRenderer'
 import { MathText } from '@/components/ui/MathRenderer'
 
 // ============================================================================
-// Types
+// Types & Reducer
 // ============================================================================
 
 interface DeepPracticeState {
@@ -24,6 +24,139 @@ interface DeepPracticeState {
   hintLevel: 0 | 1 | 2
   showingWorkedSolution: boolean
   wrongAttemptsOnCurrent: number
+  // Additional UI state (moved from separate useState calls)
+  selectedAnswer: number | null
+  showFeedback: boolean
+  isCorrect: boolean
+  isSaving: boolean
+}
+
+type DeepPracticeAction =
+  | { type: 'GO_TO_PHASE'; phase: DeepPracticeState['phase'] }
+  | { type: 'SELECT_ANSWER'; index: number }
+  | { type: 'SUBMIT_ANSWER'; isCorrect: boolean; maxProblems: number }
+  | { type: 'CONTINUE_AFTER_FEEDBACK'; maxProblems: number; isMastered: boolean }
+  | { type: 'SHOW_HINT' }
+  | { type: 'SHOW_SOLUTION' }
+  | { type: 'SET_SAVING'; isSaving: boolean }
+  | { type: 'RESET_FEEDBACK' }
+
+const initialState: DeepPracticeState = {
+  phase: 'intro',
+  currentProblemIndex: 0,
+  correctCount: 0,
+  totalAttempts: 0,
+  correctStreak: 0,
+  currentDifficulty: 1,
+  showingHint: false,
+  hintLevel: 0,
+  showingWorkedSolution: false,
+  wrongAttemptsOnCurrent: 0,
+  selectedAnswer: null,
+  showFeedback: false,
+  isCorrect: false,
+  isSaving: false,
+}
+
+function deepPracticeReducer(state: DeepPracticeState, action: DeepPracticeAction): DeepPracticeState {
+  switch (action.type) {
+    case 'GO_TO_PHASE':
+      return { ...state, phase: action.phase }
+
+    case 'SELECT_ANSWER':
+      return { ...state, selectedAnswer: action.index }
+
+    case 'SUBMIT_ANSWER': {
+      const newState = {
+        ...state,
+        showFeedback: true,
+        isCorrect: action.isCorrect,
+        totalAttempts: state.totalAttempts + 1,
+      }
+
+      if (action.isCorrect) {
+        newState.correctCount = state.correctCount + 1
+        newState.correctStreak = state.correctStreak + 1
+        newState.wrongAttemptsOnCurrent = 0
+
+        // Increase difficulty after 3 correct in a row
+        if (newState.correctStreak >= 3 && newState.currentDifficulty < 3) {
+          newState.currentDifficulty = getNextDifficulty(state.currentDifficulty, newState.correctStreak, 0)
+          newState.correctStreak = 0
+        }
+      } else {
+        newState.correctStreak = 0
+        newState.wrongAttemptsOnCurrent = state.wrongAttemptsOnCurrent + 1
+      }
+
+      return newState
+    }
+
+    case 'CONTINUE_AFTER_FEEDBACK': {
+      // Check if mastery achieved
+      if (action.isMastered) {
+        return {
+          ...state,
+          phase: 'mastery_complete',
+          showFeedback: false,
+          selectedAnswer: null,
+          showingHint: false,
+          hintLevel: 0,
+          showingWorkedSolution: false,
+        }
+      }
+
+      // Move to next problem if correct
+      if (state.isCorrect) {
+        return {
+          ...state,
+          showFeedback: false,
+          selectedAnswer: null,
+          showingHint: false,
+          hintLevel: 0,
+          showingWorkedSolution: false,
+          currentProblemIndex: Math.min(state.currentProblemIndex + 1, action.maxProblems - 1),
+          wrongAttemptsOnCurrent: 0,
+        }
+      }
+
+      // Wrong answer - reset for retry
+      return {
+        ...state,
+        showFeedback: false,
+        selectedAnswer: null,
+        showingHint: false,
+        hintLevel: 0,
+        showingWorkedSolution: false,
+      }
+    }
+
+    case 'SHOW_HINT':
+      return {
+        ...state,
+        showingHint: true,
+        hintLevel: Math.min(2, state.hintLevel + 1) as 0 | 1 | 2,
+      }
+
+    case 'SHOW_SOLUTION':
+      return { ...state, showingWorkedSolution: true }
+
+    case 'SET_SAVING':
+      return { ...state, isSaving: action.isSaving }
+
+    case 'RESET_FEEDBACK':
+      return {
+        ...state,
+        showFeedback: false,
+        selectedAnswer: null,
+        showingHint: false,
+        hintLevel: 0,
+        showingWorkedSolution: false,
+      }
+
+    default:
+      return state
+  }
 }
 
 interface DeepPracticeLessonViewProps {
@@ -106,24 +239,8 @@ export default function DeepPracticeLessonView({
     setIsMounted(true)
   }, [])
 
-  // State
-  const [state, setState] = useState<DeepPracticeState>({
-    phase: 'intro',
-    currentProblemIndex: 0,
-    correctCount: 0,
-    totalAttempts: 0,
-    correctStreak: 0,
-    currentDifficulty: 1,
-    showingHint: false,
-    hintLevel: 0,
-    showingWorkedSolution: false,
-    wrongAttemptsOnCurrent: 0,
-  })
-
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
-  const [showFeedback, setShowFeedback] = useState(false)
-  const [isCorrect, setIsCorrect] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
+  // State managed by reducer
+  const [state, dispatch] = useReducer(deepPracticeReducer, initialState)
 
   // Session tracking
   const _sessionStartRef = useRef<number>(Date.now())
@@ -141,91 +258,48 @@ export default function DeepPracticeLessonView({
 
   // Handle phase transitions
   const goToPhase = useCallback((phase: DeepPracticeState['phase']) => {
-    setState(prev => ({ ...prev, phase }))
+    dispatch({ type: 'GO_TO_PHASE', phase })
   }, [])
 
   // Handle answer submission
   const handleAnswerSubmit = useCallback(() => {
-    if (selectedAnswer === null || !currentProblem) return
+    if (state.selectedAnswer === null || !currentProblem) return
 
-    const correct = selectedAnswer === currentProblem.correctAnswer
-    setIsCorrect(correct)
-    setShowFeedback(true)
-
-    setState(prev => {
-      const newState = {
-        ...prev,
-        totalAttempts: prev.totalAttempts + 1,
-      }
-
-      if (correct) {
-        newState.correctCount = prev.correctCount + 1
-        newState.correctStreak = prev.correctStreak + 1
-        newState.wrongAttemptsOnCurrent = 0
-
-        // Increase difficulty after 3 correct in a row
-        if (newState.correctStreak >= 3 && newState.currentDifficulty < 3) {
-          newState.currentDifficulty = getNextDifficulty(prev.currentDifficulty, newState.correctStreak, 0)
-          newState.correctStreak = 0
-        }
-      } else {
-        newState.correctStreak = 0
-        newState.wrongAttemptsOnCurrent = prev.wrongAttemptsOnCurrent + 1
-      }
-
-      return newState
+    const correct = state.selectedAnswer === currentProblem.correctAnswer
+    dispatch({
+      type: 'SUBMIT_ANSWER',
+      isCorrect: correct,
+      maxProblems: lessonData.practiceProblems.length,
     })
-  }, [selectedAnswer, currentProblem])
+  }, [state.selectedAnswer, currentProblem, lessonData.practiceProblems.length])
 
   // Handle continue after feedback
   const handleContinueAfterFeedback = useCallback(() => {
-    setShowFeedback(false)
-    setSelectedAnswer(null)
-    setState(prev => ({
-      ...prev,
-      showingHint: false,
-      hintLevel: 0,
-      showingWorkedSolution: false,
-    }))
+    // Check if mastery will be achieved
+    const willBeMastered = isMastered || (state.isCorrect && hasMasteredConcept(
+      'deep_practice',
+      state.correctCount + (state.isCorrect ? 0 : 0), // Already incremented in SUBMIT_ANSWER
+      state.totalAttempts,
+      5
+    ))
 
-    // Check if mastery achieved
-    if (isMastered || (isCorrect && hasMasteredConcept('deep_practice', state.correctCount + 1, state.totalAttempts + 1, 5))) {
-      goToPhase('mastery_complete')
-      return
-    }
-
-    // Move to next problem if correct
-    if (isCorrect) {
-      setState(prev => ({
-        ...prev,
-        currentProblemIndex: Math.min(prev.currentProblemIndex + 1, lessonData.practiceProblems.length - 1),
-        wrongAttemptsOnCurrent: 0,
-      }))
-    }
-  }, [isCorrect, isMastered, state.correctCount, state.totalAttempts, lessonData.practiceProblems.length, goToPhase])
+    dispatch({
+      type: 'CONTINUE_AFTER_FEEDBACK',
+      maxProblems: lessonData.practiceProblems.length,
+      isMastered: willBeMastered,
+    })
+  }, [state.isCorrect, state.correctCount, state.totalAttempts, isMastered, lessonData.practiceProblems.length])
 
   // Handle hint request
   const handleShowHint = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      showingHint: true,
-      hintLevel: Math.min(2, prev.hintLevel + 1) as 0 | 1 | 2,
-    }))
-  }, [])
-
-  // Handle show worked solution (available for future use)
-  const _handleShowSolution = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      showingWorkedSolution: true,
-    }))
+    dispatch({ type: 'SHOW_HINT' })
   }, [])
 
   // Save progress and complete lesson
   const saveCompletionAndExit = useCallback(async () => {
     if (!initialProgress.id) return
 
-    setIsSaving(true)
+    dispatch({ type: 'SET_SAVING', isSaving: true })
     try {
       // Safely handle null/undefined completed_lessons from database
       const existingCompleted = initialProgress.completed_lessons || []
@@ -261,7 +335,7 @@ export default function DeepPracticeLessonView({
     } catch {
       // Continue anyway
     } finally {
-      setIsSaving(false)
+      dispatch({ type: 'SET_SAVING', isSaving: false })
     }
   }, [supabase, initialProgress, lessonIndex, course.id, lesson.title, masteryLevel, state, router])
 
@@ -403,10 +477,10 @@ export default function DeepPracticeLessonView({
 
           <button
             onClick={saveCompletionAndExit}
-            disabled={isSaving}
+            disabled={state.isSaving}
             className="w-full max-w-md py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold text-lg transition-all disabled:opacity-50"
           >
-            {isSaving ? tDeep('saving') : tDeep('completeLesson')}
+            {state.isSaving ? tDeep('saving') : tDeep('completeLesson')}
           </button>
         </div>
       </div>
@@ -478,19 +552,19 @@ export default function DeepPracticeLessonView({
               {(currentProblem.options || []).map((option, idx) => (
                 <button
                   key={idx}
-                  onClick={() => !showFeedback && setSelectedAnswer(idx)}
-                  disabled={showFeedback}
+                  onClick={() => !state.showFeedback && dispatch({ type: 'SELECT_ANSWER', index: idx })}
+                  disabled={state.showFeedback}
                   className={`
                     w-full p-4 text-left rounded-xl border-2 transition-all
-                    ${selectedAnswer === idx
-                      ? showFeedback
-                        ? isCorrect
+                    ${state.selectedAnswer === idx
+                      ? state.showFeedback
+                        ? state.isCorrect
                           ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
                           : 'border-red-500 bg-red-50 dark:bg-red-900/20'
                         : 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                     }
-                    ${showFeedback && idx === currentProblem.correctAnswer && !isCorrect
+                    ${state.showFeedback && idx === currentProblem.correctAnswer && !state.isCorrect
                       ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
                       : ''
                     }
@@ -504,16 +578,16 @@ export default function DeepPracticeLessonView({
             </div>
 
             {/* Feedback */}
-            {showFeedback && (
-              <div className={`rounded-xl p-4 mb-6 ${isCorrect ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+            {state.showFeedback && (
+              <div className={`rounded-xl p-4 mb-6 ${state.isCorrect ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-2xl">{isCorrect ? '✅' : '❌'}</span>
+                  <span className="text-2xl">{state.isCorrect ? '✅' : '❌'}</span>
                   <span className="font-semibold text-gray-900 dark:text-white">
-                    {isCorrect ? tDeep('correct') : tDeep('incorrect')}
+                    {state.isCorrect ? tDeep('correct') : tDeep('incorrect')}
                   </span>
                 </div>
 
-                {!isCorrect && currentProblem.workedSolution && (
+                {!state.isCorrect && currentProblem.workedSolution && (
                   <div className="text-gray-700 dark:text-gray-300 text-sm">
                     {isStructuredMathSolution(currentProblem.workedSolution) ? (
                       <MathSolutionRenderer solution={currentProblem.workedSolution} />
@@ -526,7 +600,7 @@ export default function DeepPracticeLessonView({
             )}
 
             {/* Hints */}
-            {!showFeedback && state.showingHint && currentProblem.hints.length > 0 && (
+            {!state.showFeedback && state.showingHint && currentProblem.hints.length > 0 && (
               <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 mb-6">
                 <p className="text-amber-800 dark:text-amber-200 text-sm">
                   💡 {currentProblem.hints[Math.min(state.hintLevel, currentProblem.hints.length - 1)]}
@@ -544,16 +618,16 @@ export default function DeepPracticeLessonView({
       {/* Footer Actions */}
       <footer className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg">
         <div className="container mx-auto px-4 py-4 max-w-2xl">
-          {showFeedback ? (
+          {state.showFeedback ? (
             <button
               onClick={handleContinueAfterFeedback}
               className={`w-full py-4 rounded-xl font-semibold text-lg transition-all ${
-                isCorrect
+                state.isCorrect
                   ? 'bg-green-600 hover:bg-green-700 text-white'
                   : 'bg-indigo-600 hover:bg-indigo-700 text-white'
               }`}
             >
-              {isCorrect ? tDeep('nextProblem') : tDeep('tryAgain')}
+              {state.isCorrect ? tDeep('nextProblem') : tDeep('tryAgain')}
             </button>
           ) : (
             <div className="flex gap-3">
@@ -567,9 +641,9 @@ export default function DeepPracticeLessonView({
               )}
               <button
                 onClick={handleAnswerSubmit}
-                disabled={selectedAnswer === null}
+                disabled={state.selectedAnswer === null}
                 className={`flex-1 py-4 rounded-xl font-semibold text-lg transition-all ${
-                  selectedAnswer !== null
+                  state.selectedAnswer !== null
                     ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
                 }`}

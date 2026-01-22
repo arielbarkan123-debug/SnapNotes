@@ -1,3 +1,20 @@
+/**
+ * useProgress Hook
+ *
+ * Fetches comprehensive progress data including study time, accuracy charts,
+ * mastery maps, weak/strong areas, and AI-generated insights.
+ *
+ * @example
+ * ```tsx
+ * const { data, isLoading } = useProgress()
+ *
+ * if (data) {
+ *   console.log(`Weekly study time: ${data.overview.studyTime.week} minutes`)
+ *   console.log(`Overall mastery: ${data.overview.mastery.percent}%`)
+ * }
+ * ```
+ */
+
 'use client'
 
 import { useCallback } from 'react'
@@ -100,6 +117,11 @@ export const PROGRESS_CACHE_KEY = '/api/progress'
 // Hook Implementation
 // ============================================================================
 
+/**
+ * Hook for fetching comprehensive learning progress data
+ *
+ * @returns Object containing progress data, loading state, and control functions
+ */
 export function useProgress(): UseProgressReturn {
   const {
     data,

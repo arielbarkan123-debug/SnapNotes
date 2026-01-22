@@ -8,7 +8,7 @@
  * PUT: Update refinement settings (locks, sync)
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
   type QuestionSignal,

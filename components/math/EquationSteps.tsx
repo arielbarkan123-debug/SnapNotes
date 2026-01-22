@@ -1,11 +1,11 @@
 'use client'
 
 import { useMemo } from 'react'
-import { motion, AnimatePresence, Variants } from 'framer-motion'
+import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import {
-  EquationData,
-  EquationStep,
-  MathDiagramStepConfig,
+  type EquationData,
+  type EquationStep,
+  type MathDiagramStepConfig,
 } from '@/types/math'
 import { COLORS, MATH_OPERATION_COLORS } from '@/lib/diagram-theme'
 import { prefersReducedMotion } from '@/lib/diagram-animations'

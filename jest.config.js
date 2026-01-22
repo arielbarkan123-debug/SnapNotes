@@ -16,6 +16,7 @@ const customJestConfig = {
   collectCoverageFrom: [
     'app/api/**/*.ts',
     'lib/**/*.ts',
+    'hooks/**/*.ts',
     '!lib/**/*.d.ts',
     '!**/*.test.ts',
   ],

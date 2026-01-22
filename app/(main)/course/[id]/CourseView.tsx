@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { Course, UserProgress, GeneratedCourse, Lesson } from '@/types'
+import { type Course, type UserProgress, type GeneratedCourse, type Lesson } from '@/types'
 import { ChatTutor } from '@/components/chat/ChatTutor'
 import { useCourseMastery } from '@/hooks'
 import { useGenerationStatus } from '@/hooks/useGenerationStatus'

@@ -22,11 +22,11 @@ import {
   cleanJsonResponse,
   validateExtractedContent,
   formatExtractedContentForPrompt,
-  ExtractedContent,
-  UserLearningContext,
+  type ExtractedContent,
+  type UserLearningContext,
 } from './prompts'
 import type { ExtractedDocument } from '@/lib/documents'
-import { GeneratedCourse, Lesson, LessonOutline, LessonIntensityMode, StepType, LearningObjective } from '@/types'
+import { type GeneratedCourse, type Lesson, type LessonOutline, type LessonIntensityMode, type StepType, type LearningObjective } from '@/types'
 import { filterForbiddenContent } from './course-validator'
 
 // ============================================================================
@@ -1543,8 +1543,8 @@ export async function generateCourseFromDocument(
     }
 
     // Validate required fields (AI may return "sections" or "lessons")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hasLessons = course.lessons || (course as any).sections
+    const courseWithSections = course as GeneratedCourse & { sections?: Lesson[] }
+    const hasLessons = course.lessons || courseWithSections.sections
     if (!course.title || !course.overview || !hasLessons) {
       throw new ClaudeAPIError(
         'Generated course is missing required fields',
@@ -1700,8 +1700,8 @@ export async function generateCourseFromText(
     }
 
     // Validate required fields (AI may return "sections" or "lessons")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hasLessons = course.lessons || (course as any).sections
+    const courseWithSections = course as GeneratedCourse & { sections?: Lesson[] }
+    const hasLessons = course.lessons || courseWithSections.sections
     if (!course.title || !course.overview || !hasLessons) {
       throw new ClaudeAPIError(
         'Generated course is missing required fields',

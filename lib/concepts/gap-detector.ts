@@ -231,10 +231,12 @@ export async function detectKnowledgeGaps(input: GapDetectionInput): Promise<Gap
     // Group by concept
     const perfByConcept = new Map<string, typeof recentPerformance>()
     for (const p of recentPerformance) {
-      if (!perfByConcept.has(p.conceptId)) {
-        perfByConcept.set(p.conceptId, [])
+      const existing = perfByConcept.get(p.conceptId)
+      if (existing) {
+        existing.push(p)
+      } else {
+        perfByConcept.set(p.conceptId, [p])
       }
-      perfByConcept.get(p.conceptId)!.push(p)
     }
 
     for (const [conceptId, perf] of perfByConcept) {

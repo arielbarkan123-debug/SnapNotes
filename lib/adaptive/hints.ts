@@ -5,8 +5,8 @@
  * to help them understand concepts better.
  */
 
-import { Step, StepType } from '@/types'
-import { UserPerformance, calculateMastery } from './mastery'
+import { type Step, type StepType } from '@/types'
+import { type UserPerformance, calculateMastery } from './mastery'
 
 // ============================================
 // TYPES

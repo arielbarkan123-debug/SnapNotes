@@ -1,3 +1,28 @@
+/**
+ * useConceptMastery Hook
+ *
+ * Records concept performance data for mastery tracking.
+ * Updates user's mastery levels based on question answers.
+ *
+ * @example
+ * ```tsx
+ * const { recordPerformance, isUpdating } = useConceptMastery()
+ *
+ * // Record a single answer
+ * await recordPerformance({
+ *   conceptId: 'concept-123',
+ *   isCorrect: true,
+ *   responseTimeMs: 5000
+ * })
+ *
+ * // Record multiple answers at once
+ * await recordPerformance([
+ *   { conceptId: 'c1', isCorrect: true, responseTimeMs: 3000 },
+ *   { conceptId: 'c2', isCorrect: false, responseTimeMs: 8000 }
+ * ])
+ * ```
+ */
+
 import { useCallback, useState } from 'react'
 
 interface ConceptPerformance {
@@ -19,6 +44,11 @@ interface UseConceptMasteryReturn {
   lastError: string | null
 }
 
+/**
+ * Hook for recording concept performance and updating mastery levels
+ *
+ * @returns Object containing recordPerformance function and loading state
+ */
 export function useConceptMastery(): UseConceptMasteryReturn {
   const [isUpdating, setIsUpdating] = useState(false)
   const [lastError, setLastError] = useState<string | null>(null)

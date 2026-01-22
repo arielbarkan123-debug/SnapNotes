@@ -2,79 +2,17 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import type { HomeworkSession, ConversationMessage, HintLevel, TutorDiagramState } from '@/lib/homework/types'
-import { PhysicsDiagramRenderer } from '@/components/physics'
-import { MathDiagramRenderer } from '@/components/math'
-import type { DiagramState as PhysicsDiagramState } from '@/types/physics'
-import type { MathDiagramState } from '@/types/math'
+import type { HomeworkSession, ConversationMessage, HintLevel } from '@/lib/homework/types'
 
-// Combined diagram type that can be either physics or math
-type DiagramState = PhysicsDiagramState | MathDiagramState
-
-// Physics diagram types
-const PHYSICS_DIAGRAM_TYPES = ['fbd', 'inclined_plane', 'projectile', 'pulley', 'circuit', 'wave', 'optics', 'motion']
-
-// Math diagram types
-const MATH_DIAGRAM_TYPES = ['long_division', 'equation', 'fraction', 'number_line', 'coordinate_plane', 'triangle', 'circle', 'bar_model', 'area_model']
-
-// Chemistry diagram types
-const CHEMISTRY_DIAGRAM_TYPES = ['molecule', 'reaction', 'energy_diagram']
-
-// Biology diagram types
-const BIOLOGY_DIAGRAM_TYPES = ['cell', 'system', 'process_flow']
-
-function isPhysicsDiagram(diagram: DiagramState): diagram is PhysicsDiagramState {
-  return PHYSICS_DIAGRAM_TYPES.includes(diagram.type as string)
-}
-
-function isMathDiagram(diagram: DiagramState): diagram is MathDiagramState {
-  return MATH_DIAGRAM_TYPES.includes(diagram.type as string)
-}
-
-// Placeholder functions for future chemistry/biology diagram renderers
-function _isChemistryDiagram(diagram: DiagramState): boolean {
-  return CHEMISTRY_DIAGRAM_TYPES.includes(diagram.type as string)
-}
-
-function _isBiologyDiagram(diagram: DiagramState): boolean {
-  return BIOLOGY_DIAGRAM_TYPES.includes(diagram.type as string)
-}
-
-/**
- * Get human-readable diagram type name
- */
-function getDiagramTypeName(type: string): string {
-  const names: Record<string, string> = {
-    // Physics diagrams
-    fbd: 'Free Body Diagram',
-    inclined_plane: 'Inclined Plane',
-    projectile: 'Projectile Motion',
-    pulley: 'Pulley System',
-    circuit: 'Circuit Diagram',
-    wave: 'Wave Diagram',
-    optics: 'Optics',
-    motion: 'Motion Diagram',
-    // Math diagrams
-    long_division: 'Long Division',
-    equation: 'Equation Solving',
-    fraction: 'Fractions',
-    number_line: 'Number Line',
-    coordinate_plane: 'Coordinate Plane',
-    triangle: 'Triangle',
-    circle: 'Circle',
-    bar_model: 'Bar Model',
-    area_model: 'Area Model',
-    // Chemistry diagrams
-    molecule: 'Molecule Structure',
-    reaction: 'Chemical Reaction',
-    energy_diagram: 'Energy Diagram',
-    // Biology diagrams
-    cell: 'Cell Structure',
-    system: 'System Diagram',
-    process_flow: 'Process Flow',
-  }
-  return names[type] || type.replace(/_/g, ' ')
-}
+// Import diagram components
+import {
+  type DiagramState,
+  DiagramPanel,
+  MobileDiagramPanel,
+  InlineDiagram,
+  getLatestDiagram,
+  convertToDiagramState,
+} from './diagram'
 
 // ============================================================================
 // Types
@@ -94,6 +32,22 @@ interface TutoringChatProps {
 
 const CHAT_DRAFT_KEY_PREFIX = 'notesnap_chat_draft_'
 
+interface ChatDraftStorage {
+  text: string
+  savedAt: number
+}
+
+function isChatDraftStorage(value: unknown): value is ChatDraftStorage {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'text' in value &&
+    'savedAt' in value &&
+    typeof (value as ChatDraftStorage).text === 'string' &&
+    typeof (value as ChatDraftStorage).savedAt === 'number'
+  )
+}
+
 function getDraftKey(sessionId: string): string {
   return `${CHAT_DRAFT_KEY_PREFIX}${sessionId}`
 }
@@ -102,10 +56,8 @@ function saveDraft(sessionId: string, text: string): void {
   if (typeof window === 'undefined') return
   try {
     if (text.trim()) {
-      localStorage.setItem(getDraftKey(sessionId), JSON.stringify({
-        text,
-        savedAt: Date.now(),
-      }))
+      const draft: ChatDraftStorage = { text, savedAt: Date.now() }
+      localStorage.setItem(getDraftKey(sessionId), JSON.stringify(draft))
     } else {
       localStorage.removeItem(getDraftKey(sessionId))
     }
@@ -120,14 +72,19 @@ function loadDraft(sessionId: string): string {
     const stored = localStorage.getItem(getDraftKey(sessionId))
     if (!stored) return ''
 
-    const draft = JSON.parse(stored)
-    // Only use draft if saved within last 24 hours
-    const maxAge = 24 * 60 * 60 * 1000
-    if (Date.now() - draft.savedAt > maxAge) {
+    const parsed: unknown = JSON.parse(stored)
+    if (!isChatDraftStorage(parsed)) {
       localStorage.removeItem(getDraftKey(sessionId))
       return ''
     }
-    return draft.text || ''
+
+    // Only use draft if saved within last 24 hours
+    const maxAge = 24 * 60 * 60 * 1000
+    if (Date.now() - parsed.savedAt > maxAge) {
+      localStorage.removeItem(getDraftKey(sessionId))
+      return ''
+    }
+    return parsed.text
   } catch {
     return ''
   }
@@ -143,57 +100,15 @@ function clearDraft(sessionId: string): void {
 }
 
 // ============================================================================
-// Diagram Helpers (Physics + Math)
-// ============================================================================
-
-/**
- * Convert TutorDiagramState from API response to DiagramState for renderer
- * Handles both physics and math diagram types
- */
-function convertToDiagramState(tutorDiagram: TutorDiagramState): DiagramState {
-  const diagramType = tutorDiagram.type as string
-
-  // Check if it's a physics diagram
-  if (PHYSICS_DIAGRAM_TYPES.includes(diagramType)) {
-    return {
-      type: tutorDiagram.type as PhysicsDiagramState['type'],
-      data: tutorDiagram.data as unknown as PhysicsDiagramState['data'],
-      visibleStep: tutorDiagram.visibleStep,
-      totalSteps: tutorDiagram.totalSteps,
-      stepConfig: tutorDiagram.stepConfig,
-    } as PhysicsDiagramState
-  }
-
-  // It's a math diagram
-  return {
-    type: tutorDiagram.type as MathDiagramState['type'],
-    data: tutorDiagram.data as unknown as MathDiagramState['data'],
-    visibleStep: tutorDiagram.visibleStep,
-    totalSteps: tutorDiagram.totalSteps,
-    stepConfig: tutorDiagram.stepConfig,
-  } as MathDiagramState
-}
-
-/**
- * Extract the latest diagram from conversation messages
- * Returns the most recent diagram that a tutor message included
- */
-function getLatestDiagram(messages: ConversationMessage[]): DiagramState | null {
-  // Iterate from end to find most recent tutor message with diagram
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i]
-    if (msg.role === 'tutor' && msg.diagram) {
-      return convertToDiagramState(msg.diagram)
-    }
-  }
-  return null
-}
-
-// ============================================================================
 // Sub-components
 // ============================================================================
 
-function MessageBubble({ message, t, diagramStep, onStepAdvance }: {
+function MessageBubble({
+  message,
+  t,
+  diagramStep,
+  onStepAdvance,
+}: {
   message: ConversationMessage
   t: ReturnType<typeof useTranslations<'chat'>>
   diagramStep?: number
@@ -232,44 +147,13 @@ function MessageBubble({ message, t, diagramStep, onStepAdvance }: {
         >
           <p className="whitespace-pre-wrap">{message.content}</p>
 
-          {/* Inline Diagram - shows directly in message when diagram is present */}
+          {/* Inline Diagram */}
           {diagramState && (
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">
-                  📊 {getDiagramTypeName(diagramState.type)}
-                </span>
-              </div>
-              <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 overflow-x-auto">
-                {isPhysicsDiagram(diagramState) ? (
-                  <PhysicsDiagramRenderer
-                    diagram={diagramState}
-                    currentStep={diagramStep ?? 0}
-                    animate={true}
-                    showControls={true}
-                    onStepAdvance={onStepAdvance}
-                    language="en"
-                    width={350}
-                    height={280}
-                  />
-                ) : isMathDiagram(diagramState) ? (
-                  <MathDiagramRenderer
-                    diagram={diagramState}
-                    currentStep={diagramStep ?? 0}
-                    animate={true}
-                    showControls={true}
-                    onStepAdvance={onStepAdvance}
-                    language="en"
-                    width={350}
-                    height={280}
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-32 text-gray-500 dark:text-gray-400 text-xs">
-                    Diagram visualization coming soon
-                  </div>
-                )}
-              </div>
-            </div>
+            <InlineDiagram
+              diagram={diagramState}
+              currentStep={diagramStep ?? 0}
+              onStepAdvance={onStepAdvance}
+            />
           )}
         </div>
       </div>
@@ -326,7 +210,7 @@ function HintButtons({
   )
 }
 
-function ProgressBar({
+function ChatProgressBar({
   currentStep,
   totalSteps,
   t,
@@ -353,6 +237,28 @@ function ProgressBar({
   )
 }
 
+function LoadingIndicator({ t }: { t: ReturnType<typeof useTranslations<'chat'>> }) {
+  return (
+    <div className="flex justify-start">
+      <div className="max-w-[85%]">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-sm">
+            🎓
+          </div>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('tutor')}</span>
+        </div>
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-tl-md px-4 py-3">
+          <div className="flex gap-1">
+            <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+            <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+            <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ============================================================================
 // Main Component
 // ============================================================================
@@ -366,18 +272,15 @@ export default function TutoringChat({
 }: TutoringChatProps) {
   const t = useTranslations('chat')
   const [input, setInput] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false) // Local state to prevent double-submit
-  const [diagramStep, setDiagramStep] = useState(0) // Track manual diagram step advances
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [diagramStep, setDiagramStep] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Get the current physics diagram from conversation (if any)
-  const currentDiagram = useMemo(() => {
+  // Get the current diagram from conversation (if any)
+  const currentDiagram = useMemo<DiagramState | null>(() => {
     return getLatestDiagram(session.conversation)
   }, [session.conversation])
-
-  // Determine if diagram uses auto-advance mode
-  const isAutoAdvance = currentDiagram?.evolutionMode === 'auto-advance'
 
   // Track previous diagram step for animation detection
   const prevDiagramStepRef = useRef<number>(0)
@@ -407,7 +310,7 @@ export default function TutoringChat({
 
     const timeoutId = setTimeout(() => {
       saveDraft(session.id, input)
-    }, 500) // Debounce 500ms
+    }, 500)
 
     return () => clearTimeout(timeoutId)
   }, [session.id, input])
@@ -430,7 +333,6 @@ export default function TutoringChat({
 
       setIsSubmitting(true)
       setInput('')
-      // Clear draft since message is being sent
       if (session.id) {
         clearDraft(session.id)
       }
@@ -461,12 +363,16 @@ export default function TutoringChat({
     [isLoading, isSubmitting, onRequestHint]
   )
 
+  const handleStepAdvance = useCallback(() => {
+    setDiagramStep(prev => Math.min(prev + 1, (currentDiagram?.totalSteps || 10) - 1))
+  }, [currentDiagram?.totalSteps])
+
   return (
     <div className="flex h-full bg-gray-50 dark:bg-gray-900">
       {/* Main Chat Area */}
       <div className={`flex flex-col ${currentDiagram ? 'flex-1 lg:w-1/2' : 'w-full'}`}>
         {/* Progress */}
-        <ProgressBar
+        <ChatProgressBar
           currentStep={session.current_step}
           totalSteps={session.total_estimated_steps || 5}
           t={t}
@@ -480,29 +386,11 @@ export default function TutoringChat({
               message={msg}
               t={t}
               diagramStep={diagramStep}
-              onStepAdvance={() => setDiagramStep(prev => Math.min(prev + 1, (currentDiagram?.totalSteps || 10) - 1))}
+              onStepAdvance={handleStepAdvance}
             />
           ))}
 
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="max-w-[85%]">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-sm">
-                    🎓
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('tutor')}</span>
-                </div>
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-tl-md px-4 py-3">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          {isLoading && <LoadingIndicator t={t} />}
 
           <div ref={messagesEndRef} />
         </div>
@@ -533,18 +421,8 @@ export default function TutoringChat({
               disabled={!input.trim() || isLoading}
               className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
             </button>
           </form>
@@ -562,174 +440,26 @@ export default function TutoringChat({
         </div>
       </div>
 
-      {/* Physics Diagram Panel - shows when diagram is present */}
+      {/* Desktop Diagram Panel */}
       {currentDiagram && (
-        <div className="hidden lg:flex lg:w-1/2 flex-col border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          {/* Diagram Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
-                <svg className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {t('diagramTitle') || 'Diagram'}
-              </span>
-            </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              {getDiagramTypeName(currentDiagram.type)}
-            </span>
-          </div>
-
-          {/* Diagram Content */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="sticky top-0">
-              {isPhysicsDiagram(currentDiagram) ? (
-                <PhysicsDiagramRenderer
-                  diagram={currentDiagram}
-                  currentStep={diagramStep}
-                  animate={true}
-                  showControls={!isAutoAdvance}
-                  onStepAdvance={() => setDiagramStep(prev => Math.min(prev + 1, (currentDiagram.totalSteps || 10) - 1))}
-                  language="en"
-                />
-              ) : isMathDiagram(currentDiagram) ? (
-                <MathDiagramRenderer
-                  diagram={currentDiagram}
-                  currentStep={diagramStep}
-                  animate={true}
-                  showControls={!isAutoAdvance}
-                  onStepAdvance={() => setDiagramStep(prev => Math.min(prev + 1, (currentDiagram.totalSteps || 10) - 1))}
-                  language="en"
-                />
-              ) : (
-                // Placeholder for chemistry/biology diagrams (coming soon)
-                <div className="flex items-center justify-center h-64 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-                  <div className="text-center px-4">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {getDiagramTypeName((currentDiagram as { type: string }).type)}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Diagram visualization coming soon
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Diagram Instructions */}
-          <div className="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-indigo-700 dark:text-indigo-300">
-              {isAutoAdvance
-                ? (t('diagramAutoAdvance') || 'The diagram reveals more as the tutor explains each concept.')
-                : (t('diagramInstructions') || 'Use the controls above to step through the diagram as you follow along with the explanation.')}
-            </p>
-          </div>
-        </div>
+        <DiagramPanel
+          diagram={currentDiagram}
+          diagramStep={diagramStep}
+          onStepAdvance={handleStepAdvance}
+          title={t('diagramTitle') || 'Diagram'}
+          autoAdvanceText={t('diagramAutoAdvance') || 'The diagram reveals more as the tutor explains each concept.'}
+          manualControlsText={t('diagramInstructions') || 'Use the controls above to step through the diagram as you follow along with the explanation.'}
+        />
       )}
 
-      {/* Mobile Diagram (collapsible) - shows on small screens when diagram is present */}
+      {/* Mobile Diagram Panel */}
       {currentDiagram && (
         <MobileDiagramPanel
           diagram={currentDiagram}
           diagramStep={diagramStep}
-          onStepAdvance={() => setDiagramStep(prev => Math.min(prev + 1, (currentDiagram.totalSteps || 10) - 1))}
-          t={t}
+          onStepAdvance={handleStepAdvance}
+          title={t('diagramTitle') || undefined}
         />
-      )}
-    </div>
-  )
-}
-
-// ============================================================================
-// Mobile Diagram Panel (for smaller screens)
-// ============================================================================
-
-function MobileDiagramPanel({
-  diagram,
-  diagramStep,
-  onStepAdvance,
-  t,
-}: {
-  diagram: DiagramState
-  diagramStep: number
-  onStepAdvance: () => void
-  t: ReturnType<typeof useTranslations<'chat'>>
-}) {
-  const [isOpen, setIsOpen] = useState(false)
-
-  return (
-    <div className="lg:hidden fixed bottom-20 right-4 z-50">
-      {/* Toggle Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-12 h-12 rounded-full bg-indigo-600 text-white shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-colors"
-      >
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          {isOpen ? (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          ) : (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          )}
-        </svg>
-      </button>
-
-      {/* Popup Panel */}
-      {isOpen && (
-        <div className="absolute bottom-16 right-0 w-[calc(100vw-2rem)] max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t('diagramTitle') || getDiagramTypeName(diagram.type)}
-            </span>
-            <button onClick={() => setIsOpen(false)} className="text-gray-500 hover:text-gray-700">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="p-3 max-h-[60vh] overflow-y-auto">
-            {isPhysicsDiagram(diagram) ? (
-              <PhysicsDiagramRenderer
-                diagram={diagram}
-                currentStep={diagramStep}
-                animate={true}
-                showControls={diagram.evolutionMode !== 'auto-advance'}
-                onStepAdvance={onStepAdvance}
-                width={350}
-                height={280}
-                language="en"
-              />
-            ) : isMathDiagram(diagram) ? (
-              <MathDiagramRenderer
-                diagram={diagram}
-                currentStep={diagramStep}
-                animate={true}
-                showControls={diagram.evolutionMode !== 'auto-advance'}
-                onStepAdvance={onStepAdvance}
-                width={350}
-                height={280}
-                language="en"
-              />
-            ) : (
-              // Placeholder for chemistry/biology diagrams (coming soon)
-              <div className="flex items-center justify-center h-48 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-                <div className="text-center px-4">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {getDiagramTypeName((diagram as { type: string }).type)}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Coming soon
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
       )}
     </div>
   )

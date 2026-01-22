@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useCallback, useState, useRef, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useCallback, useState, useRef, useEffect, type ReactNode } from 'react'
 import { XPPopupContainer, type XPPopupData } from '@/components/gamification/XPPopup'
 import { getLevelTitle } from '@/lib/gamification/xp'
 

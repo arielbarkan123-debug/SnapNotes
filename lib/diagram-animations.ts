@@ -10,7 +10,7 @@
  * Uses Framer Motion for React integration
  */
 
-import { Variants, Transition, TargetAndTransition } from 'framer-motion'
+import { type Variants, type Transition, type TargetAndTransition } from 'framer-motion'
 
 // ============================================================================
 // Animation Types

@@ -3,13 +3,13 @@
 import { useState, useCallback } from 'react'
 import { useLocale } from 'next-intl'
 import Link from 'next/link'
-import { MathProblemType, MathDifficulty, MATH_PROBLEM_CONFIG } from '@/lib/practice/types'
+import { type MathProblemType, type MathDifficulty, MATH_PROBLEM_CONFIG } from '@/lib/practice/types'
 import {
   generateMathProblem,
-  LongDivisionProblem,
-  FractionProblem,
-  EquationProblem,
-  MathProblem,
+  type LongDivisionProblem,
+  type FractionProblem,
+  type EquationProblem,
+  type MathProblem,
 } from '@/lib/practice/math-problem-generator'
 import LongDivisionWorkspace from '@/components/practice/LongDivisionWorkspace'
 import FractionWorkspace from '@/components/practice/FractionWorkspace'

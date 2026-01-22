@@ -1,3 +1,17 @@
+/**
+ * useExams Hook
+ *
+ * Fetches and manages exam data for the current user with SWR caching.
+ *
+ * @example
+ * ```tsx
+ * const { exams, isLoading, refetch } = useExams()
+ *
+ * // Filter by course
+ * const { exams } = useExams({ courseId: 'course-123' })
+ * ```
+ */
+
 'use client'
 
 import { useCallback } from 'react'
@@ -56,6 +70,13 @@ export function getExamsCacheKey(courseId?: string) {
 // Hook Implementation
 // ============================================================================
 
+/**
+ * Hook for fetching and managing exam data
+ *
+ * @param options - Configuration options
+ * @param options.courseId - Optional course ID to filter exams
+ * @returns Object containing exams data, loading state, and control functions
+ */
 export function useExams(options: UseExamsOptions = {}): UseExamsReturn {
   const { courseId } = options
 

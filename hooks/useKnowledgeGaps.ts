@@ -1,3 +1,18 @@
+/**
+ * useKnowledgeGaps Hook
+ *
+ * Fetches detected knowledge gaps for the user across all courses
+ * or filtered by a specific course. Uses SWR for caching.
+ *
+ * @example
+ * ```tsx
+ * const { gaps, totalGaps, criticalGaps } = useKnowledgeGaps()
+ *
+ * // Filter by course
+ * const { gaps } = useKnowledgeGaps({ courseId: 'course-123' })
+ * ```
+ */
+
 import useSWR from 'swr'
 import type { UserGapsResponse } from '@/lib/concepts/types'
 
@@ -26,6 +41,14 @@ export interface UseKnowledgeGapsReturn {
   refetch: () => Promise<void>
 }
 
+/**
+ * Hook for fetching user knowledge gaps
+ *
+ * @param options - Configuration options
+ * @param options.courseId - Optional course ID to filter gaps
+ * @param options.enabled - Whether to fetch (default: true)
+ * @returns Object containing gaps data, counts, and loading state
+ */
 export function useKnowledgeGaps(options?: UseKnowledgeGapsOptions): UseKnowledgeGapsReturn {
   const { courseId, enabled = true } = options || {}
 

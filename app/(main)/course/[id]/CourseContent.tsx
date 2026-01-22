@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CourseSection } from '@/types'
+import { type CourseSection } from '@/types'
 
 interface CourseContentProps {
   sections: CourseSection[]

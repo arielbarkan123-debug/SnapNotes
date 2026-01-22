@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, createContext, useContext, useState, useEffect } from 'react'
+import { type ReactNode, createContext, useContext, useState, useEffect } from 'react'
 import { useServiceWorker } from '@/hooks'
 
 interface PWAContextType {

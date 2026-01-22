@@ -3,7 +3,7 @@
  * POST: Trigger or retry AI analysis of a past exam template
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzeExamImage, getMediaTypeFromExtension } from '@/lib/past-exams'
 import type { PastExamTemplate, PastExamAnalyzeResponse } from '@/types/past-exam'

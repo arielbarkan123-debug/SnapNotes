@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { HelpContext, HelpRequestType, HelpAPIResponse } from '@/types'
+import { type HelpContext, type HelpRequestType, type HelpAPIResponse } from '@/types'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
 
 interface HelpModalProps {
@@ -106,7 +106,7 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
             {view === 'custom' ? 'Ask a Question' : view === 'response' ? 'Here\'s Help' : view === 'loading' ? 'Thinking...' : 'Need Help?'}
           </h2>
           {view !== 'loading' && (
-            <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1">✕</button>
+            <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1" aria-label="Close help">✕</button>
           )}
         </div>
 

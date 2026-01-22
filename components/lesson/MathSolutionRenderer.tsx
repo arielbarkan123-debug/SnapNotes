@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { ChevronDown, ChevronRight, Check, BarChart3 } from 'lucide-react'
-import { MathSolution, MathStep, MathVisual, StructuredWorkedSolution } from '@/types'
+import { type MathSolution, type MathStep, type MathVisual, type StructuredWorkedSolution } from '@/types'
 import { MathRenderer, MathText } from '@/components/ui/MathRenderer'
 import { useTranslations } from 'next-intl'
 import {

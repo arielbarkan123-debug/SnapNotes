@@ -633,7 +633,7 @@ function truncateText(text: string, maxWords: number): string {
  * Useful for showing user how many cards they'll get
  * Supports both new steps format and legacy format
  */
-export function estimateCardCount(course: GeneratedCourse & { sections?: CourseSection[]; lessons?: CourseSection[] }): number {
+export function estimateCardCount(course: GeneratedCourse & { sections?: CourseSection[]; lessons?: CourseSection[]; keyConcepts?: string[] }): number {
   let count = 0
 
   // Handle both "sections" and "lessons"
@@ -643,8 +643,7 @@ export function estimateCardCount(course: GeneratedCourse & { sections?: CourseS
     // Check for new steps format
     if (section.steps && Array.isArray(section.steps) && section.steps.length > 0) {
       // Count questions and key_points from steps
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      section.steps.forEach((step: any) => {
+      section.steps.forEach((step) => {
         if (step.type === 'question' || step.type === 'key_point') {
           count += 1
         }
@@ -668,10 +667,8 @@ export function estimateCardCount(course: GeneratedCourse & { sections?: CourseS
   })
 
   // Key concepts (max 5 from first section) - legacy format only
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const keyConcepts = (course as any).keyConcepts
-  if (keyConcepts && Array.isArray(keyConcepts)) {
-    count += Math.min(keyConcepts.length, 5)
+  if (course.keyConcepts && Array.isArray(course.keyConcepts)) {
+    count += Math.min(course.keyConcepts.length, 5)
   }
 
   return count
@@ -683,7 +680,7 @@ export function estimateCardCount(course: GeneratedCourse & { sections?: CourseS
  * Uses new card types: flashcard, multiple_choice, true_false, short_answer, formula
  */
 export function getCardTypeSummary(
-  course: GeneratedCourse & { sections?: CourseSection[]; lessons?: CourseSection[] }
+  course: GeneratedCourse & { sections?: CourseSection[]; lessons?: CourseSection[]; keyConcepts?: string[] }
 ): Partial<Record<CardType, number>> {
   const summary: Partial<Record<CardType, number>> = {
     flashcard: 0,
@@ -699,8 +696,7 @@ export function getCardTypeSummary(
   lessonsData.forEach((section: CourseSection) => {
     // Check for new steps format
     if (section.steps && Array.isArray(section.steps) && section.steps.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      section.steps.forEach((step: any) => {
+      section.steps.forEach((step) => {
         if (step.type === 'question') {
           const options = step.options || []
           const cardType = determineQuestionCardType(options)
@@ -737,10 +733,8 @@ export function getCardTypeSummary(
   })
 
   // Key concepts count as flashcard - legacy format only
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const keyConcepts2 = (course as any).keyConcepts
-  if (keyConcepts2 && Array.isArray(keyConcepts2)) {
-    summary.flashcard = (summary.flashcard || 0) + Math.min(keyConcepts2.length, 5)
+  if (course.keyConcepts && Array.isArray(course.keyConcepts)) {
+    summary.flashcard = (summary.flashcard || 0) + Math.min(course.keyConcepts.length, 5)
   }
 
   return summary

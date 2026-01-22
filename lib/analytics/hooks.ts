@@ -7,7 +7,7 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react'
 import { usePathname } from 'next/navigation'
 import { analytics } from './client'
-import { EventCategory, TrackedFeature } from './types'
+import { type EventCategory, type TrackedFeature } from './types'
 
 /**
  * Initialize analytics and track page views automatically

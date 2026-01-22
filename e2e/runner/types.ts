@@ -3,7 +3,7 @@
  * Type definitions for the E2E testing system
  */
 
-import { TestFlow } from '../config'
+import { type TestFlow } from '../config'
 
 // ============================================================================
 // Test Scenario Types

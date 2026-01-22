@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { LessonStep } from '@/types'
+import { type LessonStep } from '@/types'
 
 // =============================================================================
 // Types

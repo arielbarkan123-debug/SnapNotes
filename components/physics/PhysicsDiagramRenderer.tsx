@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import {
-  DiagramState,
-  FreeBodyDiagramData,
-  InclinedPlaneData,
-  DiagramStepConfig,
+  type DiagramState,
+  type FreeBodyDiagramData,
+  type InclinedPlaneData,
+  type DiagramStepConfig,
 } from '@/types/physics'
 import { FreeBodyDiagram } from './FreeBodyDiagram'
 import { InclinedPlane } from './InclinedPlane'

@@ -1,3 +1,19 @@
+/**
+ * useCurriculumStatus Hook
+ *
+ * Fetches the user's curriculum setup status including selected
+ * study system, grade level, and subjects.
+ *
+ * @example
+ * ```tsx
+ * const { status, loading, refetch } = useCurriculumStatus()
+ *
+ * if (status && !status.isComplete) {
+ *   // Redirect to curriculum setup
+ * }
+ * ```
+ */
+
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -12,6 +28,11 @@ interface UseCurriculumStatusResult {
   refetch: () => Promise<void>
 }
 
+/**
+ * Hook for fetching user's curriculum setup status
+ *
+ * @returns Object containing curriculum status, loading state, and refetch function
+ */
 export function useCurriculumStatus(): UseCurriculumStatusResult {
   const [status, setStatus] = useState<CurriculumSetupStatus | null>(null)
   const [loading, setLoading] = useState(true)

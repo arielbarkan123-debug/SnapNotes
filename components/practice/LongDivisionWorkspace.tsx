@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { StepStatus } from '@/lib/practice/types'
+import { type StepStatus } from '@/lib/practice/types'
 
 interface DivisionStep {
   type: 'quotient_digit' | 'multiply' | 'subtract' | 'bring_down'

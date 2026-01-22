@@ -1,7 +1,7 @@
 'use client'
 
 import { SWRConfig } from 'swr'
-import { ReactNode, useRef } from 'react'
+import { type ReactNode, useRef } from 'react'
 import { fetcher } from '@/lib/fetcher'
 
 interface SWRProviderProps {

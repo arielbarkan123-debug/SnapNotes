@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzeHomework } from '@/lib/homework/checker-engine'
 import type { CreateCheckRequest } from '@/lib/homework/types'
@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
   // Create a streaming response to keep mobile connections alive
   const encoder = new TextEncoder()
   let heartbeatInterval: NodeJS.Timeout | null = null
+  let streamClosed = false
   const startTime = Date.now()
 
   // Safari needs more frequent heartbeats to prevent connection drops
@@ -38,14 +39,36 @@ export async function POST(request: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
-      // Helper to send a JSON line
+      // Helper to send a JSON line (with closed stream protection)
       const send = (data: Record<string, unknown>) => {
-        controller.enqueue(encoder.encode(JSON.stringify(data) + '\n'))
+        if (streamClosed) return // Prevent sending to closed stream
+        try {
+          controller.enqueue(encoder.encode(JSON.stringify(data) + '\n'))
+        } catch {
+          // Stream may have been closed by client disconnect
+          streamClosed = true
+        }
+      }
+
+      // Helper to safely close the stream
+      const closeStream = () => {
+        if (streamClosed) return
+        streamClosed = true
+        if (heartbeatInterval) {
+          clearInterval(heartbeatInterval)
+          heartbeatInterval = null
+        }
+        try {
+          closeStream()
+        } catch {
+          // Stream may already be closed
+        }
       }
 
       // Start heartbeat to keep connection alive
       // Safari gets more frequent heartbeats (3s vs 5s)
       heartbeatInterval = setInterval(() => {
+        if (streamClosed) return // Don't send heartbeat if stream is closed
         const elapsed = Math.round((Date.now() - startTime) / 1000)
         send({ type: 'heartbeat', status: 'analyzing', elapsed })
       }, heartbeatFrequency)
@@ -61,7 +84,7 @@ export async function POST(request: NextRequest) {
 
         if (userError || !user) {
           send({ type: 'error', error: 'Unauthorized' })
-          controller.close()
+          closeStream()
           return
         }
 
@@ -71,13 +94,13 @@ export async function POST(request: NextRequest) {
           body = await request.json()
         } catch {
           send({ type: 'error', error: 'Invalid request body' })
-          controller.close()
+          closeStream()
           return
         }
 
         if (!body.taskImageUrl) {
           send({ type: 'error', error: 'At least one image is required' })
-          controller.close()
+          closeStream()
           return
         }
 
@@ -108,7 +131,7 @@ export async function POST(request: NextRequest) {
             ? 'Database schema error. Please contact support.'
             : 'Failed to create homework check. Please try again.'
           send({ type: 'error', error: errorMsg })
-          controller.close()
+          closeStream()
           return
         }
 
@@ -146,7 +169,7 @@ export async function POST(request: NextRequest) {
             : 'Failed to analyze homework. Please try again.'
 
           send({ type: 'error', error: errorMessage, checkId: check.id })
-          controller.close()
+          closeStream()
           return
         }
 
@@ -178,7 +201,7 @@ export async function POST(request: NextRequest) {
               .eq('user_id', user.id)
 
             send({ type: 'error', error: 'Failed to save analysis results. Please try again.', checkId: check.id })
-            controller.close()
+            closeStream()
             return
           }
 
@@ -186,7 +209,7 @@ export async function POST(request: NextRequest) {
 
           // Send final result
           send({ type: 'result', check: updatedCheck })
-          controller.close()
+          closeStream()
         } catch (saveError) {
           console.error('[Homework Check] Save threw error:', saveError)
 
@@ -202,23 +225,23 @@ export async function POST(request: NextRequest) {
           }
 
           send({ type: 'error', error: 'Failed to save results. Please try again.' })
-          controller.close()
+          closeStream()
         }
       } catch (error) {
         console.error('Homework check error:', error)
         send({ type: 'error', error: 'An unexpected error occurred' })
-        controller.close()
+        closeStream()
       } finally {
-        // Clean up heartbeat interval
-        if (heartbeatInterval) {
-          clearInterval(heartbeatInterval)
-        }
+        // Ensure cleanup on any exit path
+        closeStream()
       }
     },
     cancel() {
       // Clean up if client disconnects
+      streamClosed = true
       if (heartbeatInterval) {
         clearInterval(heartbeatInterval)
+        heartbeatInterval = null
       }
     }
   })

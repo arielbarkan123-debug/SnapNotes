@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { processDocument, type ExtractedDocument } from '@/lib/documents'
 import { ErrorCodes, createErrorResponse, logError } from '@/lib/api/errors'
 

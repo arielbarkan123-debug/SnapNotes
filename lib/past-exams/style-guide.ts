@@ -183,8 +183,8 @@ function aggregateImageAnalyses(imageAnalyses: ImageAnalysis[]): ImageAnalysis |
 
   // Find most common labeling style
   const labelingStyles = imageAnalyses
-    .filter((ia) => ia.labeling_style)
-    .map((ia) => ia.labeling_style!)
+    .map((ia) => ia.labeling_style)
+    .filter((style): style is LabelingStyle => style !== undefined && style !== null)
   const labelingStyleCounts = labelingStyles.reduce((acc, style) => {
     acc[style] = (acc[style] || 0) + 1
     return acc
@@ -259,8 +259,8 @@ export function buildExamStyleGuide(
 ): string {
   // Filter to only completed analyses
   const analyses = templates
-    .filter((t) => t.extracted_analysis)
-    .map((t) => t.extracted_analysis!)
+    .map((t) => t.extracted_analysis)
+    .filter((analysis): analysis is ExamAnalysis => analysis !== null && analysis !== undefined)
 
   if (analyses.length === 0) {
     return ''
@@ -389,8 +389,8 @@ export function getAggregatedImageAnalysis(
   templates: Pick<PastExamTemplate, 'extracted_analysis'>[]
 ): ImageAnalysis | undefined {
   const imageAnalyses = templates
-    .filter((t) => t.extracted_analysis?.image_analysis)
-    .map((t) => t.extracted_analysis!.image_analysis!)
+    .map((t) => t.extracted_analysis?.image_analysis)
+    .filter((analysis): analysis is ImageAnalysis => analysis !== undefined && analysis !== null)
 
   return aggregateImageAnalyses(imageAnalyses)
 }

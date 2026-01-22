@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Course, UserProgress, GeneratedCourse, Lesson, LessonIntensityMode } from '@/types'
+import { type Course, type UserProgress, type GeneratedCourse, type Lesson, type LessonIntensityMode } from '@/types'
 import LessonView from './LessonView'
 import DeepPracticeLessonView from '@/components/lesson/DeepPracticeLessonView'
 import LockedLessonRedirect from './LockedLessonRedirect'

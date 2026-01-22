@@ -1,3 +1,26 @@
+/**
+ * Practice Session Hooks
+ *
+ * Client-side state management for practice sessions including question
+ * navigation, answer submission, and session lifecycle management.
+ * Features localStorage persistence to prevent progress loss on refresh.
+ *
+ * @example
+ * ```tsx
+ * // Start and manage a practice session
+ * const {
+ *   session,
+ *   currentQuestion,
+ *   submitAnswer,
+ *   nextQuestion,
+ *   completeSession
+ * } = usePracticeSession(sessionId)
+ *
+ * // Get practice statistics
+ * const { stats, activeSessions } = usePracticeStats()
+ * ```
+ */
+
 'use client'
 
 // =============================================================================
@@ -30,6 +53,24 @@ export const PRACTICE_STATS_KEY = '/api/practice/session?include=stats,active,re
 
 const PRACTICE_STATE_KEY_PREFIX = 'notesnap_practice_state_'
 
+interface PracticeStateStorage {
+  questionIndex: number
+  savedAt: number
+}
+
+function isPracticeStateStorage(value: unknown): value is PracticeStateStorage {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'questionIndex' in value &&
+    'savedAt' in value &&
+    typeof (value as PracticeStateStorage).questionIndex === 'number' &&
+    typeof (value as PracticeStateStorage).savedAt === 'number' &&
+    Number.isInteger((value as PracticeStateStorage).questionIndex) &&
+    (value as PracticeStateStorage).questionIndex >= 0
+  )
+}
+
 function getPracticeStateKey(sessionId: string): string {
   return `${PRACTICE_STATE_KEY_PREFIX}${sessionId}`
 }
@@ -37,10 +78,11 @@ function getPracticeStateKey(sessionId: string): string {
 function savePracticeState(sessionId: string, questionIndex: number): void {
   if (typeof window === 'undefined') return
   try {
-    localStorage.setItem(getPracticeStateKey(sessionId), JSON.stringify({
+    const state: PracticeStateStorage = {
       questionIndex,
       savedAt: Date.now(),
-    }))
+    }
+    localStorage.setItem(getPracticeStateKey(sessionId), JSON.stringify(state))
   } catch {
     // localStorage might be full or unavailable - silently continue
   }
@@ -52,14 +94,21 @@ function loadPracticeState(sessionId: string): number | null {
     const stored = localStorage.getItem(getPracticeStateKey(sessionId))
     if (!stored) return null
 
-    const state = JSON.parse(stored)
-    // Only use state if saved within last 24 hours
-    const maxAge = 24 * 60 * 60 * 1000
-    if (Date.now() - state.savedAt > maxAge) {
+    const parsed: unknown = JSON.parse(stored)
+
+    // Validate the structure with type guard
+    if (!isPracticeStateStorage(parsed)) {
       localStorage.removeItem(getPracticeStateKey(sessionId))
       return null
     }
-    return state.questionIndex
+
+    // Only use state if saved within last 24 hours
+    const maxAge = 24 * 60 * 60 * 1000
+    if (Date.now() - parsed.savedAt > maxAge) {
+      localStorage.removeItem(getPracticeStateKey(sessionId))
+      return null
+    }
+    return parsed.questionIndex
   } catch {
     return null
   }
@@ -153,6 +202,16 @@ export interface UsePracticeStatsReturn {
 // usePracticeSession Hook
 // -----------------------------------------------------------------------------
 
+/**
+ * Hook for managing a practice session
+ *
+ * Handles session data fetching, question navigation, answer submission,
+ * and session lifecycle (pause, resume, complete, abandon).
+ * Automatically persists question index to localStorage.
+ *
+ * @param sessionId - The practice session ID to manage
+ * @returns Object containing session state and control functions
+ */
 export function usePracticeSession(sessionId?: string): UsePracticeSessionReturn {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [result, setResult] = useState<SessionResult | null>(null)
@@ -193,7 +252,7 @@ export function usePracticeSession(sessionId?: string): UsePracticeSessionReturn
         setCurrentQuestionIndex(session.current_question_index)
       }
     }
-  }, [session?.id]) // Only run when session first loads
+  }, [session?.id, sessionId, questions.length]) // Re-run when session or questions change
 
   // Save question index to localStorage whenever it changes
   useEffect(() => {
@@ -425,6 +484,14 @@ export function usePracticeSession(sessionId?: string): UsePracticeSessionReturn
 // usePracticeStats Hook
 // -----------------------------------------------------------------------------
 
+/**
+ * Hook for fetching practice statistics and session history
+ *
+ * Provides aggregate statistics, active sessions, and recent session history.
+ * Auto-refreshes every minute and on focus.
+ *
+ * @returns Object containing stats, sessions lists, and loading state
+ */
 export function usePracticeStats(): UsePracticeStatsReturn {
   const { data, error, isLoading, mutate: mutateStats } = useSWR(
     PRACTICE_STATS_KEY,

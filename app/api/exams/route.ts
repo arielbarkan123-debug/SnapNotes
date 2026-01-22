@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { CreateExamRequest } from '@/types'
+import { type CreateExamRequest } from '@/types'
 import Anthropic from '@anthropic-ai/sdk'
 import { buildExamContext, formatContextForPrompt } from '@/lib/curriculum'
 import type { StudySystem, ExamFormat } from '@/lib/curriculum'

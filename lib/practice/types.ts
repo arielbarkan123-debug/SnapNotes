@@ -2,7 +2,7 @@
 // Practice Question Bank Types
 // =============================================================================
 
-import { CognitiveLevel, DifficultyLevel } from '@/lib/adaptive/types'
+import { type CognitiveLevel, type DifficultyLevel } from '@/lib/adaptive/types'
 
 // -----------------------------------------------------------------------------
 // Question Types

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { SubmitExamRequest, MatchingPair, SubQuestion } from '@/types'
+import { type SubmitExamRequest, type MatchingPair, type SubQuestion } from '@/types'
 
 function calculateGrade(percentage: number): string {
   if (percentage >= 90) return 'A'

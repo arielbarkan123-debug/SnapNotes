@@ -2,9 +2,9 @@
 
 import { useMemo } from 'react'
 import {
-  LongDivisionData,
-  LongDivisionStep,
-  MathDiagramStepConfig,
+  type LongDivisionData,
+  type LongDivisionStep,
+  type MathDiagramStepConfig,
   MATH_COLORS,
 } from '@/types/math'
 

@@ -1,3 +1,27 @@
+/**
+ * useServiceWorker Hook
+ *
+ * Manages service worker registration, update detection, and offline caching.
+ * Handles WebSocket subscription with polling fallback for browsers that
+ * don't support WebSocket (e.g., Safari private mode).
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   isSupported,
+ *   isInstalled,
+ *   isOnline,
+ *   updateAvailable,
+ *   applyUpdate,
+ *   cacheForOffline
+ * } = useServiceWorker()
+ *
+ * if (updateAvailable) {
+ *   // Show "Update available" banner
+ * }
+ * ```
+ */
+
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
@@ -24,6 +48,11 @@ function canUseServiceWorker(): boolean {
   return true
 }
 
+/**
+ * Hook for managing service worker registration and offline capabilities
+ *
+ * @returns Object containing service worker state and control functions
+ */
 export function useServiceWorker() {
   const [state, setState] = useState<ServiceWorkerState>({
     isSupported: false,

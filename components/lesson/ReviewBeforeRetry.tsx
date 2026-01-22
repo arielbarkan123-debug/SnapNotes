@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { Step } from '@/types'
+import { type Step } from '@/types'
 
 interface ReviewBeforeRetryProps {
   questionStep: Step

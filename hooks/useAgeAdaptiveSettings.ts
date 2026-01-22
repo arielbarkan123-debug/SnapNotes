@@ -33,6 +33,7 @@ import {
   getBadgeStyle,
   type XPFeedback,
 } from '@/lib/gamification/age-adaptive-xp'
+import { type XPRewardType } from '@/lib/gamification/xp'
 import { type EffectiveProfile } from '@/lib/profile/profile-sync'
 
 export interface AgeAdaptiveSettings {
@@ -53,7 +54,7 @@ export interface AgeAdaptiveSettings {
   getAnswerFeedback: (isCorrect: boolean, explanation?: string) => AnswerFeedback
   getLessonCompletionFeedback: (accuracy: number, lessonTitle: string) => LessonCompletionFeedback
   getProgressFeedback: (percentComplete: number) => ProgressFeedback
-  getXPFeedback: (amount: number, eventType: string, leveledUp?: boolean) => XPFeedback
+  getXPFeedback: (amount: number, eventType: XPRewardType, leveledUp?: boolean) => XPFeedback
   getStreakFeedback: (streakDays: number) => ReturnType<typeof getStreakFeedback>
 }
 
@@ -125,8 +126,8 @@ export function useAgeAdaptiveSettings(): AgeAdaptiveSettings {
   )
 
   const getXPFeedbackFn = useCallback(
-    (amount: number, eventType: string, leveledUp?: boolean) =>
-      getXPFeedback(amount, educationLevel, eventType as any, leveledUp),
+    (amount: number, eventType: XPRewardType, leveledUp?: boolean) =>
+      getXPFeedback(amount, educationLevel, eventType, leveledUp),
     [educationLevel]
   )
 

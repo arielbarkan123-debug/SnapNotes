@@ -1,8 +1,30 @@
+/**
+ * useCourses Hook
+ *
+ * Comprehensive hook for fetching, searching, sorting, and filtering courses.
+ * Features debounced search, sort order toggle, and SWR caching.
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   filteredCourses,
+ *   searchQuery,
+ *   setSearchQuery,
+ *   sortOrder,
+ *   toggleSortOrder,
+ *   isLoading
+ * } = useCourses()
+ *
+ * // With initial data (SSR)
+ * const { courses } = useCourses({ initialCourses: serverCourses })
+ * ```
+ */
+
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
 import useSWR from 'swr'
-import { Course } from '@/types'
+import { type Course } from '@/types'
 import { useDebounce } from './useDebounce'
 
 // ============================================================================
@@ -62,6 +84,16 @@ export const COURSES_CACHE_KEY = '/api/courses'
 // Hook Implementation
 // ============================================================================
 
+/**
+ * Hook for managing courses with search, sort, and filter capabilities
+ *
+ * @param options - Configuration options
+ * @param options.initialCourses - Initial courses data for SSR hydration
+ * @param options.initialSearchQuery - Initial search query
+ * @param options.initialSortOrder - Initial sort order ('newest' | 'oldest')
+ * @param options.debounceDelay - Debounce delay for search in milliseconds (default: 300)
+ * @returns Object containing courses data, search/sort controls, and loading state
+ */
 export function useCourses(options: UseCoursesOptions = {}): UseCoursesReturn {
   const {
     initialCourses = [],

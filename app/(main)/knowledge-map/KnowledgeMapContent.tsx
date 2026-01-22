@@ -343,10 +343,12 @@ export default function KnowledgeMapContent({
     const groups = new Map<string, Concept[]>()
     for (const concept of filteredConcepts) {
       const key = `${concept.subject} / ${concept.topic}`
-      if (!groups.has(key)) {
-        groups.set(key, [])
+      const existing = groups.get(key)
+      if (existing) {
+        existing.push(concept)
+      } else {
+        groups.set(key, [concept])
       }
-      groups.get(key)!.push(concept)
     }
     return groups
   }, [filteredConcepts])

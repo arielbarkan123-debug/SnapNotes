@@ -1,3 +1,19 @@
+/**
+ * useStreak Hook
+ *
+ * Fetches and manages user streak data including current streak,
+ * longest streak, and risk status. Uses SWR for caching.
+ *
+ * @example
+ * ```tsx
+ * const { streak, streakExtended, streakBroken } = useStreak()
+ *
+ * if (streak?.isAtRisk) {
+ *   console.log(`Streak at risk! ${streak.hoursRemaining}h remaining`)
+ * }
+ * ```
+ */
+
 'use client'
 
 import { useCallback } from 'react'
@@ -42,6 +58,11 @@ export const STREAK_CACHE_KEY = '/api/gamification/streak'
 // Hook Implementation
 // ============================================================================
 
+/**
+ * Hook for fetching user streak data
+ *
+ * @returns Object containing streak data, loading state, and control functions
+ */
 export function useStreak(): UseStreakReturn {
   const {
     data,

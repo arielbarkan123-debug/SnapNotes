@@ -1,3 +1,20 @@
+/**
+ * useCourseMastery Hook
+ *
+ * Fetches mastery data for a specific course, including overall mastery
+ * percentage and per-lesson mastery breakdown.
+ *
+ * @example
+ * ```tsx
+ * const { overallMastery, lessonMastery, isLoading } = useCourseMastery({
+ *   courseId: 'course-123'
+ * })
+ *
+ * // Get mastery for a specific lesson
+ * const lesson2Mastery = lessonMastery.get(2)
+ * ```
+ */
+
 import useSWR from 'swr'
 
 interface LessonMastery {
@@ -38,6 +55,14 @@ export interface UseCourseMasteryReturn {
   error: Error | undefined
 }
 
+/**
+ * Hook for fetching course mastery data
+ *
+ * @param options - Configuration options
+ * @param options.courseId - The course ID to fetch mastery for
+ * @param options.enabled - Whether to fetch (default: true)
+ * @returns Object containing mastery data, lesson mastery map, and loading state
+ */
 export function useCourseMastery(options: UseCourseMasteryOptions): UseCourseMasteryReturn {
   const { courseId, enabled = true } = options
 

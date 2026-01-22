@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getDailyRecommendation, getSessionSuggestion, getRecommendations } from '@/lib/profile/recommendations'
-import { UserLearningProfile } from '@/lib/profile/analysis'
+import { type UserLearningProfile } from '@/lib/profile/analysis'
 
 /**
  * GET /api/recommendations

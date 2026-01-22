@@ -6,7 +6,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
-import { UserLearningProfile } from './analysis'
+import { type UserLearningProfile } from './analysis'
 
 // =============================================================================
 // Types

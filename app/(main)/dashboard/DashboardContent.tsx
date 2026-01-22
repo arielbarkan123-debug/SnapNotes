@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, Component, ReactNode, ErrorInfo } from 'react'
+import { useState, useEffect, useRef, Component, type ReactNode, type ErrorInfo } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
@@ -47,7 +47,7 @@ class SilentErrorBoundary extends Component<SilentErrorBoundaryProps, SilentErro
 }
 
 // Safe wrapper for CourseCard that handles any errors in individual cards
-function SafeCourseCard({ course }: { course: import('@/types').Course }) {
+function SafeCourseCard({ course }: { course: Course }) {
   try {
     // Validate course data before rendering
     if (!course || typeof course !== 'object') {
@@ -119,7 +119,7 @@ const PracticeWidget = dynamic(
     </div>
   )}
 )
-import { Course } from '@/types'
+import { type Course } from '@/types'
 import { useCourses } from '@/hooks'
 import { useToast } from '@/contexts/ToastContext'
 import { useCurriculumStatus } from '@/hooks/useCurriculumStatus'

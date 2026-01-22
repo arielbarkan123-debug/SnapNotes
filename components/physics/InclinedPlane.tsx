@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import {
-  InclinedPlaneData,
-  DiagramStepConfig,
-  Force,
+  type InclinedPlaneData,
+  type DiagramStepConfig,
+  type Force,
   FORCE_COLORS,
 } from '@/types/physics'
 import { ForceVector } from './ForceVector'

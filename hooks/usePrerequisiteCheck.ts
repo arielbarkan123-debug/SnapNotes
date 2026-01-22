@@ -1,3 +1,22 @@
+/**
+ * usePrerequisiteCheck Hook
+ *
+ * Checks for prerequisite knowledge gaps before starting a lesson.
+ * Identifies missing concepts that may hinder understanding of new material.
+ *
+ * @example
+ * ```tsx
+ * const { gaps, hasBlockingGaps, shouldShowCheck, dismissCheck } = usePrerequisiteCheck({
+ *   courseId: 'course-123',
+ *   lessonIndex: 2
+ * })
+ *
+ * if (shouldShowCheck) {
+ *   // Show prerequisite gap modal
+ * }
+ * ```
+ */
+
 import { useState, useEffect, useCallback } from 'react'
 import type { DetectedGap, GapDetectionResult } from '@/lib/concepts/types'
 
@@ -17,6 +36,15 @@ interface UsePrerequisiteCheckResult {
   refetch: () => void
 }
 
+/**
+ * Hook for checking prerequisite knowledge gaps before a lesson
+ *
+ * @param options - Configuration options
+ * @param options.courseId - The course ID
+ * @param options.lessonIndex - The lesson index to check prerequisites for
+ * @param options.enabled - Whether to run the check (default: true)
+ * @returns Object containing gaps data, blocking status, and control functions
+ */
 export function usePrerequisiteCheck({
   courseId,
   lessonIndex,

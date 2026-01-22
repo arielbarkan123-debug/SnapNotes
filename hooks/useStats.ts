@@ -1,3 +1,20 @@
+/**
+ * useStats Hook
+ *
+ * Fetches gamification statistics including XP, level, streak, and achievements.
+ * Uses SWR for caching and automatic revalidation.
+ *
+ * @example
+ * ```tsx
+ * const { stats, isLoading } = useStats()
+ *
+ * if (stats) {
+ *   console.log(`Level ${stats.level}: ${stats.totalXP} XP`)
+ *   console.log(`Streak: ${stats.streak.current} days`)
+ * }
+ * ```
+ */
+
 'use client'
 
 import { useCallback } from 'react'
@@ -63,6 +80,11 @@ export const STATS_CACHE_KEY = '/api/gamification/stats'
 // Hook Implementation
 // ============================================================================
 
+/**
+ * Hook for fetching gamification statistics
+ *
+ * @returns Object containing stats data, loading state, and control functions
+ */
 export function useStats(): UseStatsReturn {
   const {
     data,

@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { useXP } from '@/contexts/XPContext'
-import { LessonStep } from '@/types'
+import { type LessonStep } from '@/types'
 import LessonRecap from './LessonRecap'
 
 // =============================================================================
