@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 export interface StartSessionRequest {
   sessionType: 'lesson' | 'practice' | 'review' | 'exam'
@@ -24,17 +25,14 @@ export async function POST(request: Request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const body: StartSessionRequest = await request.json()
     const { sessionType, courseId, lessonIndex } = body
 
     if (!sessionType) {
-      return NextResponse.json(
-        { success: false, error: 'Session type is required' },
-        { status: 400 }
-      )
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Session type is required')
     }
 
     // Check for any unclosed sessions and close them
@@ -65,19 +63,13 @@ export async function POST(request: Request) {
       if (error.code !== 'PGRST205') {
         console.error('[Study Sessions API] Start error:', error)
       }
-      return NextResponse.json(
-        { success: false, error: 'Failed to start session' },
-        { status: 500 }
-      )
+      return createErrorResponse(ErrorCodes.ANLYT_SESSION_CREATE_FAILED)
     }
 
     return NextResponse.json({ success: true, session })
   } catch (error) {
     console.error('[Study Sessions API] Error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Server error' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
 
@@ -91,17 +83,14 @@ export async function PATCH(request: Request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const body: EndSessionRequest = await request.json()
     const { sessionId, cardsReviewed, questionsAnswered, questionsCorrect } = body
 
     if (!sessionId) {
-      return NextResponse.json(
-        { success: false, error: 'Session ID is required' },
-        { status: 400 }
-      )
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Session ID is required')
     }
 
     // Verify ownership - include user_id in query to prevent timing attacks
@@ -113,10 +102,7 @@ export async function PATCH(request: Request) {
       .single()
 
     if (!existingSession) {
-      return NextResponse.json(
-        { success: false, error: 'Session not found' },
-        { status: 404 }
-      )
+      return createErrorResponse(ErrorCodes.ANLYT_SESSION_NOT_FOUND)
     }
 
     // Update session
@@ -147,19 +133,13 @@ export async function PATCH(request: Request) {
       if (error.code !== 'PGRST205') {
         console.error('[Study Sessions API] End error:', error)
       }
-      return NextResponse.json(
-        { success: false, error: 'Failed to end session' },
-        { status: 500 }
-      )
+      return createErrorResponse(ErrorCodes.ANLYT_SESSION_END_FAILED)
     }
 
     return NextResponse.json({ success: true, session })
   } catch (error) {
     console.error('[Study Sessions API] Error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Server error' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
 
@@ -173,7 +153,7 @@ export async function GET(request: Request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { searchParams } = new URL(request.url)
@@ -243,9 +223,6 @@ export async function GET(request: Request) {
     })
   } catch (error) {
     console.error('[Study Sessions API] Error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Server error' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }

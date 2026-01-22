@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { type CreateExamRequest } from '@/types'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import Anthropic from '@anthropic-ai/sdk'
 import { buildExamContext, formatContextForPrompt } from '@/lib/curriculum'
 import type { StudySystem, ExamFormat } from '@/lib/curriculum'
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { searchParams } = new URL(request.url)
@@ -62,14 +63,14 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error('[Exams API] Fetch error:', error)
-      return NextResponse.json({ success: false, error: 'Failed to fetch exams' }, { status: 500 })
+      return createErrorResponse(ErrorCodes.EXAM_FETCH_FAILED)
     }
 
     return NextResponse.json({ success: true, exams })
 
   } catch (error) {
     console.error('[Exams API] Error:', error)
-    return NextResponse.json({ success: false, error: 'Server error' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.EXAM_UNKNOWN)
   }
 }
 
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     // Check rate limit
@@ -87,25 +88,28 @@ export async function POST(request: NextRequest) {
     const rateLimit = checkRateLimit(rateLimitId, RATE_LIMITS.generateExam)
 
     if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { success: false, error: 'Too many requests. Please wait before generating another exam.' },
-        { status: 429, headers: getRateLimitHeaders(rateLimit) }
-      )
+      const response = createErrorResponse(ErrorCodes.API_RATE_LIMITED, 'Too many requests. Please wait before generating another exam.')
+      // Add rate limit headers to the response
+      const headers = getRateLimitHeaders(rateLimit)
+      Object.entries(headers).forEach(([key, value]) => {
+        response.headers.set(key, value)
+      })
+      return response
     }
 
     const body: CreateExamRequest = await request.json()
     const { courseId, questionCount, timeLimitMinutes } = body
 
     if (!courseId || !questionCount || !timeLimitMinutes) {
-      return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Missing required fields: courseId, questionCount, timeLimitMinutes')
     }
 
     if (questionCount < 5 || questionCount > 50) {
-      return NextResponse.json({ success: false, error: 'Question count must be 5-50' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_OUT_OF_RANGE, 'Question count must be 5-50')
     }
 
     if (timeLimitMinutes < 5 || timeLimitMinutes > 180) {
-      return NextResponse.json({ success: false, error: 'Time limit must be 5-180 minutes' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_OUT_OF_RANGE, 'Time limit must be 5-180 minutes')
     }
 
     const { data: course, error: courseError } = await supabase
@@ -115,11 +119,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (courseError || !course) {
-      return NextResponse.json({ success: false, error: 'Course not found' }, { status: 404 })
+      return createErrorResponse(ErrorCodes.COURSE_NOT_FOUND)
     }
 
     if (course.user_id !== user.id) {
-      return NextResponse.json({ success: false, error: 'Not authorized' }, { status: 403 })
+      return createErrorResponse(ErrorCodes.FORBIDDEN)
     }
 
     const generatedCourse = course.generated_course as {
@@ -129,7 +133,7 @@ export async function POST(request: NextRequest) {
     const lessons = generatedCourse?.lessons || generatedCourse?.sections || []
 
     if (!lessons.length) {
-      return NextResponse.json({ success: false, error: 'Course has no content' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.COURSE_CONTENT_REQUIRED, 'Course has no content')
     }
 
     // Fetch user learning profile for curriculum context (may not exist for new users)
@@ -455,11 +459,11 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
       questionsData = JSON.parse(jsonText)
     } catch (e) {
       console.error('[Exams API] JSON parse error:', e)
-      return NextResponse.json({ success: false, error: 'Failed to generate questions' }, { status: 500 })
+      return createErrorResponse(ErrorCodes.RESPONSE_PARSE_FAILED, 'Failed to generate questions')
     }
 
     if (!questionsData.questions || !Array.isArray(questionsData.questions)) {
-      return NextResponse.json({ success: false, error: 'Invalid question format' }, { status: 500 })
+      return createErrorResponse(ErrorCodes.RESPONSE_INVALID_FORMAT, 'Invalid question format')
     }
 
     // =========================================================================
@@ -594,10 +598,7 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
     // Check if we have enough questions after validation
     if (validatedQuestions.length < Math.ceil(questionCount * 0.5)) {
       console.error('[Exams API] Too many questions rejected, only', validatedQuestions.length, 'remain')
-      return NextResponse.json({
-        success: false,
-        error: 'Failed to generate enough quality questions. Please try again.'
-      }, { status: 500 })
+      return createErrorResponse(ErrorCodes.EXAM_TOO_FEW_QUESTIONS, 'Failed to generate enough quality questions. Please try again.')
     }
 
     // Process image_label questions to fetch actual images
@@ -681,7 +682,7 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
 
     if (examError || !exam) {
       console.error('[Exams API] Exam insert error:', examError)
-      return NextResponse.json({ success: false, error: 'Failed to create exam' }, { status: 500 })
+      return createErrorResponse(ErrorCodes.EXAM_CREATE_FAILED)
     }
 
     const questionsToInsert = questionsData.questions.map((q: GeneratedQuestion, index: number) => ({
@@ -712,7 +713,7 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
     if (questionsError) {
       console.error('[Exams API] Questions insert error:', questionsError)
       await supabase.from('exams').delete().eq('id', exam.id)
-      return NextResponse.json({ success: false, error: 'Failed to save questions' }, { status: 500 })
+      return createErrorResponse(ErrorCodes.INSERT_FAILED, 'Failed to save questions')
     }
 
     return NextResponse.json({
@@ -723,6 +724,6 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
 
   } catch (error) {
     console.error('[Exams API] Error:', error)
-    return NextResponse.json({ success: false, error: 'Failed to create exam' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.EXAM_CREATE_FAILED)
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { type HelpAPIRequest, type HelpAPIResponse, type HelpRequestType } from '@/types'
+import { type HelpAPIRequest, type HelpRequestType } from '@/types'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import Anthropic from '@anthropic-ai/sdk'
 
 // Allow 90 seconds for AI help generation (Claude API call)
@@ -9,39 +10,39 @@ export const maxDuration = 90
 const AI_MODEL = 'claude-sonnet-4-5-20250929'
 const MAX_CONTENT_LENGTH = 4000
 
-export async function POST(request: Request): Promise<NextResponse<HelpAPIResponse>> {
+export async function POST(request: Request): Promise<NextResponse> {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     let body: HelpAPIRequest
     try {
       body = await request.json()
     } catch {
-      return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.BODY_INVALID_JSON, 'Invalid request body')
     }
 
     const { questionType, context, customQuestion } = body
 
     if (!questionType || !context || !context.courseId) {
-      return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Missing required fields')
     }
 
     if (!context.stepContent?.trim()) {
-      return NextResponse.json({ success: false, error: 'No content to explain' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'No content to explain')
     }
 
     const validTypes: HelpRequestType[] = ['explain', 'example', 'hint', 'custom']
     if (!validTypes.includes(questionType)) {
-      return NextResponse.json({ success: false, error: 'Invalid question type' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Invalid question type')
     }
 
     if (questionType === 'custom' && !customQuestion?.trim()) {
-      return NextResponse.json({ success: false, error: 'Please enter a question' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Please enter a question')
     }
 
     const { data: course, error: courseError } = await supabase
@@ -51,11 +52,11 @@ export async function POST(request: Request): Promise<NextResponse<HelpAPIRespon
       .single()
 
     if (courseError || !course) {
-      return NextResponse.json({ success: false, error: 'Course not found' }, { status: 404 })
+      return createErrorResponse(ErrorCodes.COURSE_NOT_FOUND)
     }
 
     if (course.user_id !== user.id) {
-      return NextResponse.json({ success: false, error: 'Not authorized' }, { status: 403 })
+      return createErrorResponse(ErrorCodes.FORBIDDEN)
     }
 
     const generatedCourse = course.generated_course as {
@@ -181,6 +182,6 @@ RULES:
 
   } catch (error) {
     console.error('[Help API] Error:', error)
-    return NextResponse.json({ success: false, error: 'Failed to get help. Please try again.' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.HELP_UNKNOWN)
   }
 }

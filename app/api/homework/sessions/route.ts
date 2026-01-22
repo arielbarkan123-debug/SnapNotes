@@ -10,6 +10,7 @@ import type {
 import { analyzeQuestion } from '@/lib/homework/question-analyzer'
 import { analyzeReferences } from '@/lib/homework/reference-analyzer'
 import { generateInitialGreeting } from '@/lib/homework/tutor-engine'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 // Allow 90 seconds for session creation (includes AI analysis)
 export const maxDuration = 90
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     // Parse request
@@ -37,14 +38,11 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json()
     } catch {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.BODY_INVALID_JSON)
     }
 
     if (!body.questionImageUrl) {
-      return NextResponse.json(
-        { error: 'Question image is required' },
-        { status: 400 }
-      )
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Question image is required')
     }
 
     // Step 1: Analyze the question image using Claude Vision

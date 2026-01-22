@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export interface UpdateLessonProgressRequest {
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const body: UpdateLessonProgressRequest = await request.json()
@@ -37,10 +38,7 @@ export async function POST(request: Request) {
     } = body
 
     if (!courseId || lessonIndex === undefined) {
-      return NextResponse.json(
-        { success: false, error: 'Course ID and lesson index are required' },
-        { status: 400 }
-      )
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Course ID and lesson index are required')
     }
 
     // Calculate mastery from step_performance (returns 0 if table doesn't exist)
@@ -151,10 +149,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, progress })
   } catch (error) {
     console.error('[Lesson Progress API] Error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to update progress' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.PROGRESS_SAVE_FAILED)
   }
 }
 
@@ -168,7 +163,7 @@ export async function GET(request: Request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { searchParams } = new URL(request.url)
@@ -198,10 +193,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, progress })
   } catch (error) {
     console.error('[Lesson Progress API] Error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Server error' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.PROGRESS_FETCH_FAILED)
   }
 }
 

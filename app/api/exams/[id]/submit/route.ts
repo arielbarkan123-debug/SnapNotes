@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { type SubmitExamRequest, type MatchingPair, type SubQuestion } from '@/types'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 function calculateGrade(percentage: number): string {
   if (percentage >= 90) return 'A'
@@ -118,14 +119,14 @@ export async function POST(
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const body: SubmitExamRequest = await request.json()
     const { answers } = body
 
     if (!answers || !Array.isArray(answers)) {
-      return NextResponse.json({ success: false, error: 'Answers required' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Answers required')
     }
 
     const { data: exam, error: examError } = await supabase
@@ -135,19 +136,19 @@ export async function POST(
       .single()
 
     if (examError || !exam) {
-      return NextResponse.json({ success: false, error: 'Exam not found' }, { status: 404 })
+      return createErrorResponse(ErrorCodes.EXAM_NOT_FOUND)
     }
 
     if (exam.user_id !== user.id) {
-      return NextResponse.json({ success: false, error: 'Not authorized' }, { status: 403 })
+      return createErrorResponse(ErrorCodes.FORBIDDEN)
     }
 
     if (exam.status === 'completed') {
-      return NextResponse.json({ success: false, error: 'Exam already submitted' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.SUBMIT_ALREADY_SUBMITTED, 'Exam already submitted')
     }
 
     if (exam.status === 'pending') {
-      return NextResponse.json({ success: false, error: 'Exam not started' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Exam not started')
     }
 
     const { data: questions, error: questionsError } = await supabase
@@ -156,7 +157,7 @@ export async function POST(
       .eq('exam_id', id)
 
     if (questionsError || !questions) {
-      return NextResponse.json({ success: false, error: 'Failed to load questions' }, { status: 500 })
+      return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to load questions')
     }
 
     let score = 0
@@ -304,7 +305,7 @@ export async function POST(
 
     if (examUpdateError) {
       console.error('[Submit API] Exam update error:', examUpdateError)
-      return NextResponse.json({ success: false, error: 'Failed to save results' }, { status: 500 })
+      return createErrorResponse(ErrorCodes.SUBMIT_FAILED, 'Failed to save results')
     }
 
     return NextResponse.json({
@@ -319,6 +320,6 @@ export async function POST(
 
   } catch (error) {
     console.error('[Submit API] Error:', error)
-    return NextResponse.json({ success: false, error: 'Failed to submit exam' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.SUBMIT_FAILED)
   }
 }

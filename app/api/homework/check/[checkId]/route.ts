@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 // ============================================================================
 // GET - Get a specific homework check
@@ -19,7 +20,7 @@ export async function GET(
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { data: check, error } = await supabase
@@ -31,22 +32,16 @@ export async function GET(
 
     if (error) {
       if (error.code === 'PGRST116') {
-        return NextResponse.json({ error: 'Check not found' }, { status: 404 })
+        return createErrorResponse(ErrorCodes.CHECK_NOT_FOUND)
       }
       console.error('Fetch error:', error)
-      return NextResponse.json(
-        { error: 'Failed to fetch homework check' },
-        { status: 500 }
-      )
+      return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch homework check')
     }
 
     return NextResponse.json({ check })
   } catch (error) {
     console.error('Get check error:', error)
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.HOMEWORK_UNKNOWN)
   }
 }
 
@@ -68,7 +63,7 @@ export async function DELETE(
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { error } = await supabase
@@ -79,18 +74,12 @@ export async function DELETE(
 
     if (error) {
       console.error('Delete error:', error)
-      return NextResponse.json(
-        { error: 'Failed to delete homework check' },
-        { status: 500 }
-      )
+      return createErrorResponse(ErrorCodes.DELETE_FAILED, 'Failed to delete homework check')
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Delete check error:', error)
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.HOMEWORK_UNKNOWN)
   }
 }

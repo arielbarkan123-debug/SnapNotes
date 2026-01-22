@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 export async function GET(
   request: Request,
@@ -11,7 +12,7 @@ export async function GET(
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { data: exam, error: examError } = await supabase
@@ -21,11 +22,11 @@ export async function GET(
       .single()
 
     if (examError || !exam) {
-      return NextResponse.json({ success: false, error: 'Exam not found' }, { status: 404 })
+      return createErrorResponse(ErrorCodes.EXAM_NOT_FOUND)
     }
 
     if (exam.user_id !== user.id) {
-      return NextResponse.json({ success: false, error: 'Not authorized' }, { status: 403 })
+      return createErrorResponse(ErrorCodes.FORBIDDEN)
     }
 
     const { data: questions, error: questionsError } = await supabase
@@ -36,7 +37,7 @@ export async function GET(
 
     if (questionsError) {
       console.error('[Exam API] Questions fetch error:', questionsError)
-      return NextResponse.json({ success: false, error: 'Failed to load questions' }, { status: 500 })
+      return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to load questions')
     }
 
     const safeQuestions = (questions || []).map(q => {
@@ -62,7 +63,7 @@ export async function GET(
 
   } catch (error) {
     console.error('[Exam API] Error:', error)
-    return NextResponse.json({ success: false, error: 'Server error' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.EXAM_UNKNOWN)
   }
 }
 
@@ -76,7 +77,7 @@ export async function PATCH(
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const body = await request.json()
@@ -90,16 +91,16 @@ export async function PATCH(
       .single()
 
     if (examError || !exam) {
-      return NextResponse.json({ success: false, error: 'Exam not found' }, { status: 404 })
+      return createErrorResponse(ErrorCodes.EXAM_NOT_FOUND)
     }
 
     if (exam.user_id !== user.id) {
-      return NextResponse.json({ success: false, error: 'Not authorized' }, { status: 403 })
+      return createErrorResponse(ErrorCodes.FORBIDDEN)
     }
 
     if (action === 'start') {
       if (exam.status !== 'pending') {
-        return NextResponse.json({ success: false, error: 'Exam already started' }, { status: 400 })
+        return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Exam already started')
       }
 
       const { error: updateError } = await supabase
@@ -111,16 +112,16 @@ export async function PATCH(
         .eq('id', id)
 
       if (updateError) {
-        return NextResponse.json({ success: false, error: 'Failed to start exam' }, { status: 500 })
+        return createErrorResponse(ErrorCodes.UPDATE_FAILED, 'Failed to start exam')
       }
 
       return NextResponse.json({ success: true, message: 'Exam started' })
     }
 
-    return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 })
+    return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Invalid action')
 
   } catch (error) {
     console.error('[Exam API] Error:', error)
-    return NextResponse.json({ success: false, error: 'Server error' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.EXAM_UNKNOWN)
   }
 }

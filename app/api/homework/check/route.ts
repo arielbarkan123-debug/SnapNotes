@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzeHomework } from '@/lib/homework/checker-engine'
 import type { CreateCheckRequest } from '@/lib/homework/types'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 // Allow 3 minutes for homework analysis (vision AI + analysis)
 // Increased to handle slower mobile network connections
@@ -273,7 +274,7 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { searchParams } = new URL(request.url)
@@ -289,18 +290,12 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Fetch error:', error)
-      return NextResponse.json(
-        { error: 'Failed to fetch homework checks' },
-        { status: 500 }
-      )
+      return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch homework checks')
     }
 
     return NextResponse.json({ checks })
   } catch (error) {
     console.error('Get checks error:', error)
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.HOMEWORK_UNKNOWN)
   }
 }
