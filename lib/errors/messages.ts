@@ -426,6 +426,10 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   // Aggregation errors
   [ErrorCodes.AGGREGATION_FAILED]: 'Could not aggregate analytics data.',
 
+  // Admin analytics errors
+  [ErrorCodes.ADMIN_ANALYTICS_FETCH_FAILED]: 'Failed to fetch admin analytics data.',
+  [ErrorCodes.ADMIN_ANALYTICS_EXPORT_FAILED]: 'Failed to export analytics data.',
+
   // Generic analytics errors
   [ErrorCodes.ANALYTICS_UNKNOWN]: 'An analytics error occurred. Please try again.',
 
@@ -567,6 +571,9 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCodes.VAL_QUERY_INVALID]: 'Invalid query parameters.',
   [ErrorCodes.QUERY_PARAM_REQUIRED]: 'Required query parameter is missing.',
 
+  // HTTP method errors
+  [ErrorCodes.METHOD_NOT_ALLOWED]: 'This HTTP method is not allowed for this endpoint.',
+
   // Generic validation errors
   [ErrorCodes.VALIDATION_UNKNOWN]: 'Validation error. Please check your input.',
 
@@ -588,6 +595,10 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCodes.RESEND_SEND_FAILED]: 'Could not send email. Please try again.',
   [ErrorCodes.RESEND_RATE_LIMITED]: 'Too many emails sent. Please wait.',
   [ErrorCodes.RESEND_INVALID_EMAIL]: 'Invalid email address.',
+
+  // Cron job errors
+  [ErrorCodes.CRON_SECRET_MISSING]: 'Cron job secret is not configured.',
+  [ErrorCodes.CRON_AUTH_FAILED]: 'Cron job authentication failed.',
 
   // Generic external errors
   [ErrorCodes.EXTERNAL_UNKNOWN]: 'External service error. Please try again.',

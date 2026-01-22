@@ -15,6 +15,7 @@ import {
   aggregateLearningEffectiveness,
   type EngagementEventType,
 } from '@/lib/metrics'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 // =============================================================================
 // GET: Fetch engagement metrics
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { searchParams } = new URL(request.url)
@@ -81,14 +82,11 @@ export async function GET(request: NextRequest) {
       }
 
       default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+        return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Invalid action')
     }
   } catch (error) {
     console.error('Error in engagement GET:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch engagement metrics' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
 
@@ -132,7 +130,7 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const body: EventPayload = await request.json()
@@ -142,10 +140,7 @@ export async function POST(request: NextRequest) {
       // Validate all event types
       for (const event of body.events) {
         if (!VALID_EVENT_TYPES.includes(event.eventType)) {
-          return NextResponse.json(
-            { error: `Invalid event type: ${event.eventType}` },
-            { status: 400 }
-          )
+          return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, `Invalid event type: ${event.eventType}`)
         }
       }
 
@@ -157,7 +152,7 @@ export async function POST(request: NextRequest) {
       )
 
       if (!result.success) {
-        return NextResponse.json({ error: result.error }, { status: 500 })
+        return createErrorResponse(ErrorCodes.INSERT_FAILED, result.error || 'Failed to record events')
       }
 
       return NextResponse.json({
@@ -168,14 +163,11 @@ export async function POST(request: NextRequest) {
 
     // Handle single event
     if (!body.eventType) {
-      return NextResponse.json({ error: 'Event type is required' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Event type is required')
     }
 
     if (!VALID_EVENT_TYPES.includes(body.eventType)) {
-      return NextResponse.json(
-        { error: `Invalid event type: ${body.eventType}` },
-        { status: 400 }
-      )
+      return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, `Invalid event type: ${body.eventType}`)
     }
 
     const result = await recordEngagementEvent({
@@ -191,7 +183,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 500 })
+      return createErrorResponse(ErrorCodes.INSERT_FAILED, result.error || 'Failed to record event')
     }
 
     return NextResponse.json({
@@ -200,9 +192,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error in engagement POST:', error)
-    return NextResponse.json(
-      { error: 'Failed to record engagement event' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }

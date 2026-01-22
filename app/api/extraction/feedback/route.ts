@@ -15,6 +15,7 @@ import {
   generateQualityReport,
   type ExtractionFeedback,
 } from '@/lib/extraction/confidence-scorer'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 // =============================================================================
 // GET: Fetch extraction feedback
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { searchParams } = new URL(request.url)
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
     const action = searchParams.get('action') || 'list'
 
     if (!courseId) {
-      return NextResponse.json({ error: 'Course ID is required' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Course ID is required')
     }
 
     switch (action) {
@@ -49,20 +50,17 @@ export async function GET(request: NextRequest) {
       case 'report': {
         const report = await generateQualityReport(courseId)
         if (!report) {
-          return NextResponse.json({ error: 'Could not generate report' }, { status: 404 })
+          return createErrorResponse(ErrorCodes.RECORD_NOT_FOUND, 'Could not generate report')
         }
         return NextResponse.json({ success: true, report })
       }
 
       default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+        return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Invalid action')
     }
   } catch (error) {
     console.error('Error in extraction feedback GET:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch extraction feedback' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch extraction feedback')
   }
 }
 
@@ -92,27 +90,27 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const body: FeedbackPayload = await request.json()
 
     // Validate required fields
     if (!body.courseId) {
-      return NextResponse.json({ error: 'Course ID is required' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Course ID is required')
     }
 
     if (!body.contentType || !VALID_CONTENT_TYPES.includes(body.contentType)) {
-      return NextResponse.json(
-        { error: `Invalid content type. Must be one of: ${VALID_CONTENT_TYPES.join(', ')}` },
-        { status: 400 }
+      return createErrorResponse(
+        ErrorCodes.FIELD_INVALID_FORMAT,
+        `Invalid content type. Must be one of: ${VALID_CONTENT_TYPES.join(', ')}`
       )
     }
 
     if (!body.feedbackType || !VALID_FEEDBACK_TYPES.includes(body.feedbackType)) {
-      return NextResponse.json(
-        { error: `Invalid feedback type. Must be one of: ${VALID_FEEDBACK_TYPES.join(', ')}` },
-        { status: 400 }
+      return createErrorResponse(
+        ErrorCodes.FIELD_INVALID_FORMAT,
+        `Invalid feedback type. Must be one of: ${VALID_FEEDBACK_TYPES.join(', ')}`
       )
     }
 
@@ -129,7 +127,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 500 })
+      return createErrorResponse(ErrorCodes.INSERT_FAILED, result.error || 'Failed to submit feedback')
     }
 
     return NextResponse.json({
@@ -138,10 +136,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error in extraction feedback POST:', error)
-    return NextResponse.json(
-      { error: 'Failed to submit extraction feedback' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.INSERT_FAILED, 'Failed to submit extraction feedback')
   }
 }
 
@@ -164,34 +159,31 @@ export async function PATCH(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const body: StatusUpdatePayload = await request.json()
 
     if (!body.feedbackId) {
-      return NextResponse.json({ error: 'Feedback ID is required' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Feedback ID is required')
     }
 
     if (!body.status || !VALID_STATUSES.includes(body.status)) {
-      return NextResponse.json(
-        { error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` },
-        { status: 400 }
+      return createErrorResponse(
+        ErrorCodes.FIELD_INVALID_FORMAT,
+        `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`
       )
     }
 
     const result = await updateFeedbackStatus(body.feedbackId, body.status)
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 500 })
+      return createErrorResponse(ErrorCodes.UPDATE_FAILED, result.error || 'Failed to update feedback')
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error in extraction feedback PATCH:', error)
-    return NextResponse.json(
-      { error: 'Failed to update feedback status' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.UPDATE_FAILED, 'Failed to update feedback status')
   }
 }

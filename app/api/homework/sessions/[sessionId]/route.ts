@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 // ============================================================================
 // GET - Get a single homework help session
@@ -19,7 +20,7 @@ export async function GET(
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { data: session, error } = await supabase
@@ -31,22 +32,16 @@ export async function GET(
 
     if (error) {
       if (error.code === 'PGRST116') {
-        return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+        return createErrorResponse(ErrorCodes.HW_SESSION_NOT_FOUND)
       }
       console.error('Fetch error:', error)
-      return NextResponse.json(
-        { error: 'Failed to fetch session' },
-        { status: 500 }
-      )
+      return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch session')
     }
 
     return NextResponse.json({ session })
   } catch (error) {
     console.error('Get session error:', error)
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.HOMEWORK_UNKNOWN)
   }
 }
 
@@ -68,14 +63,14 @@ export async function PATCH(
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     let updates: Record<string, unknown>
     try {
       updates = await request.json()
     } catch {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.BODY_INVALID_JSON)
     }
 
     // Only allow certain fields to be updated
@@ -100,7 +95,7 @@ export async function PATCH(
     }
 
     if (Object.keys(filteredUpdates).length === 0) {
-      return NextResponse.json({ error: 'No valid updates provided' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'No valid updates provided')
     }
 
     const { data: session, error } = await supabase
@@ -113,21 +108,15 @@ export async function PATCH(
 
     if (error) {
       if (error.code === 'PGRST116') {
-        return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+        return createErrorResponse(ErrorCodes.HW_SESSION_NOT_FOUND)
       }
       console.error('Update error:', error)
-      return NextResponse.json(
-        { error: 'Failed to update session' },
-        { status: 500 }
-      )
+      return createErrorResponse(ErrorCodes.UPDATE_FAILED, 'Failed to update session')
     }
 
     return NextResponse.json({ session })
   } catch (error) {
     console.error('Update session error:', error)
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.HOMEWORK_UNKNOWN)
   }
 }

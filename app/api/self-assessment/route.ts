@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 /**
  * POST /api/self-assessment
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const body = await request.json()
@@ -30,34 +31,22 @@ export async function POST(request: Request) {
 
     // Validate required fields
     if (!courseId || lessonIndex === undefined || !selfConfidence || !perceivedDifficulty) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Missing required fields')
     }
 
     // Validate confidence (1-4)
     if (selfConfidence < 1 || selfConfidence > 4) {
-      return NextResponse.json(
-        { error: 'Invalid confidence value' },
-        { status: 400 }
-      )
+      return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Confidence must be between 1 and 4')
     }
 
     // Validate difficulty
     if (!['too_easy', 'just_right', 'too_hard'].includes(perceivedDifficulty)) {
-      return NextResponse.json(
-        { error: 'Invalid difficulty value' },
-        { status: 400 }
-      )
+      return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Invalid difficulty value')
     }
 
     // Validate goal_achieved if provided
     if (goalAchieved && !['yes', 'partially', 'no'].includes(goalAchieved)) {
-      return NextResponse.json(
-        { error: 'Invalid goal_achieved value' },
-        { status: 400 }
-      )
+      return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Invalid goal_achieved value')
     }
 
     // Insert self-assessment
@@ -80,10 +69,7 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error('Self-assessment insert error:', error)
-      return NextResponse.json(
-        { error: 'Failed to save self-assessment' },
-        { status: 500 }
-      )
+      return createErrorResponse(ErrorCodes.INSERT_FAILED, 'Failed to save self-assessment')
     }
 
     // Analyze confidence vs performance correlation
@@ -99,10 +85,7 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error('Self-assessment error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
 
@@ -117,7 +100,7 @@ export async function GET(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { searchParams } = new URL(request.url)
@@ -137,10 +120,7 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error('Self-assessment fetch error:', error)
-      return NextResponse.json(
-        { error: 'Failed to fetch self-assessments' },
-        { status: 500 }
-      )
+      return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch self-assessments')
     }
 
     // Calculate aggregate stats
@@ -152,10 +132,7 @@ export async function GET(request: Request) {
     })
   } catch (error) {
     console.error('Self-assessment GET error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
 

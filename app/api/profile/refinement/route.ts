@@ -28,6 +28,7 @@ import {
   unlockAttribute,
   getLockedAttributes,
 } from '@/lib/profile/profile-sync'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 // =============================================================================
 // GET: Fetch refinement state and effective profile
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     // Parse query params
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
     ])
 
     if (!profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+      return createErrorResponse(ErrorCodes.PROFILE_NOT_FOUND)
     }
 
     // Calculate effective profile
@@ -82,10 +83,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching refinement state:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch refinement state' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
 
@@ -106,7 +104,7 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const body: SignalPayload = await request.json()
@@ -122,10 +120,7 @@ export async function POST(request: NextRequest) {
 
     // Validate signal data
     if (!body.data) {
-      return NextResponse.json(
-        { error: 'Signal data is required' },
-        { status: 400 }
-      )
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Signal data is required')
     }
 
     // Process the signal - construct properly typed signal object
@@ -151,10 +146,7 @@ export async function POST(request: NextRequest) {
         })
         break
       default:
-        return NextResponse.json(
-          { error: 'Invalid signal type' },
-          { status: 400 }
-        )
+        return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Invalid signal type')
     }
 
     // Get updated state
@@ -175,10 +167,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error processing signal:', error)
-    return NextResponse.json(
-      { error: 'Failed to process signal' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
 
@@ -203,7 +192,7 @@ export async function PUT(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const body: SettingsPayload = await request.json()
@@ -211,10 +200,7 @@ export async function PUT(request: NextRequest) {
     switch (body.action) {
       case 'lock': {
         if (!body.attribute) {
-          return NextResponse.json(
-            { error: 'Attribute is required for lock action' },
-            { status: 400 }
-          )
+          return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Attribute is required for lock action')
         }
         const success = await lockAttribute(user.id, body.attribute)
         return NextResponse.json({ success, action: 'lock', attribute: body.attribute })
@@ -222,10 +208,7 @@ export async function PUT(request: NextRequest) {
 
       case 'unlock': {
         if (!body.attribute) {
-          return NextResponse.json(
-            { error: 'Attribute is required for unlock action' },
-            { status: 400 }
-          )
+          return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Attribute is required for unlock action')
         }
         const success = await unlockAttribute(user.id, body.attribute)
         return NextResponse.json({ success, action: 'unlock', attribute: body.attribute })
@@ -234,10 +217,7 @@ export async function PUT(request: NextRequest) {
       case 'sync': {
         const refinementState = await getRefinementState(user.id)
         if (!refinementState) {
-          return NextResponse.json(
-            { error: 'No refinement state to sync' },
-            { status: 400 }
-          )
+          return createErrorResponse(ErrorCodes.RECORD_NOT_FOUND, 'No refinement state to sync')
         }
         const result = await syncRefinementToProfile(
           user.id,
@@ -249,23 +229,17 @@ export async function PUT(request: NextRequest) {
 
       case 'rollback': {
         if (!body.snapshotId) {
-          return NextResponse.json(
-            { error: 'Snapshot ID is required for rollback action' },
-            { status: 400 }
-          )
+          return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Snapshot ID is required for rollback action')
         }
         const success = await rollbackProfile(user.id, body.snapshotId)
         return NextResponse.json({ success, action: 'rollback', snapshotId: body.snapshotId })
       }
 
       default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+        return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Invalid action')
     }
   } catch (error) {
     console.error('Error updating refinement settings:', error)
-    return NextResponse.json(
-      { error: 'Failed to update settings' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }

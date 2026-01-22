@@ -9,6 +9,7 @@ import {
   resolveGap,
 } from '@/lib/concepts'
 import type { UserGapsResponse } from '@/lib/concepts/types'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 /**
  * GET /api/user/gaps
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { searchParams } = new URL(request.url)
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
         .single()
 
       if (!course) {
-        return NextResponse.json({ error: 'Course not found' }, { status: 404 })
+        return createErrorResponse(ErrorCodes.COURSE_NOT_FOUND)
       }
 
       const lessonIdx = lessonIndex ? parseInt(lessonIndex, 10) : undefined
@@ -108,7 +109,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response)
   } catch (error) {
     console.error('[User Gaps API] Error:', error)
-    return NextResponse.json({ error: 'Failed to fetch gaps' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
 
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { courseId, lessonIndex, targetConcepts, recentPerformance } = await request.json()
@@ -151,7 +152,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result)
   } catch (error) {
     console.error('[User Gaps API] Detection error:', error)
-    return NextResponse.json({ error: 'Gap detection failed' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN, 'Gap detection failed')
   }
 }
 
@@ -168,13 +169,13 @@ export async function PATCH(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { gapId } = await request.json()
 
     if (!gapId) {
-      return NextResponse.json({ error: 'gapId is required' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'gapId is required')
     }
 
     // Verify the gap belongs to this user
@@ -185,7 +186,7 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (!gap || gap.user_id !== user.id) {
-      return NextResponse.json({ error: 'Gap not found' }, { status: 404 })
+      return createErrorResponse(ErrorCodes.RECORD_NOT_FOUND, 'Gap not found')
     }
 
     await resolveGap(gapId)
@@ -193,6 +194,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('[User Gaps API] Resolve error:', error)
-    return NextResponse.json({ error: 'Failed to resolve gap' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.UPDATE_FAILED, 'Failed to resolve gap')
   }
 }

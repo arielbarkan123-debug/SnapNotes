@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateCourseImage } from '@/lib/ai/image-generation'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 export const maxDuration = 60
 
@@ -10,27 +11,21 @@ export async function POST(request: Request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const body = await request.json()
     const { courseId, title } = body
 
     if (!courseId || !title) {
-      return NextResponse.json(
-        { error: 'Course ID and title are required' },
-        { status: 400 }
-      )
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Course ID and title are required')
     }
 
     // Generate the cover image URL
     const result = await generateCourseImage(title)
 
     if (!result.success || !result.imageUrl) {
-      return NextResponse.json(
-        { error: result.error || 'Failed to generate image' },
-        { status: 500 }
-      )
+      return createErrorResponse(ErrorCodes.AI_UNKNOWN, result.error || 'Failed to generate image')
     }
 
     // Update course with cover image URL
@@ -42,10 +37,7 @@ export async function POST(request: Request) {
 
     if (updateError) {
       console.error('Failed to update course with cover image:', updateError)
-      return NextResponse.json(
-        { error: 'Failed to save cover image' },
-        { status: 500 }
-      )
+      return createErrorResponse(ErrorCodes.UPDATE_FAILED, 'Failed to save cover image')
     }
 
     return NextResponse.json({
@@ -54,9 +46,6 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error('Generate cover error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.AI_UNKNOWN)
   }
 }

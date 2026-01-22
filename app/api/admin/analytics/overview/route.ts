@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { checkAdminAccess, parseDateRange, formatDateForSQL } from '@/lib/admin/utils'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 /**
  * GET /api/admin/analytics/overview
@@ -154,6 +155,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('[Admin Analytics] Overview error:', error)
-    return NextResponse.json({ error: 'Failed to fetch overview data' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.ADMIN_ANALYTICS_FETCH_FAILED)
   }
 }

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 // ============================================================================
 // Types
@@ -37,10 +38,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!body.errorMessage) {
-      return NextResponse.json(
-        { error: 'errorMessage is required' },
-        { status: 400 }
-      )
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'errorMessage is required')
     }
 
     const supabase = await createClient()
@@ -96,7 +94,7 @@ export async function GET(request: NextRequest) {
     // Check if user is admin
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { data: adminUser } = await supabase
@@ -106,7 +104,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (!adminUser) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+      return createErrorResponse(ErrorCodes.FORBIDDEN, 'Admin access required')
     }
 
     // Parse query params
@@ -180,10 +178,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (err) {
     console.error('[Error Monitoring] GET error:', err)
-    return NextResponse.json(
-      { error: 'Failed to fetch error logs' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch error logs')
   }
 }
 
@@ -198,7 +193,7 @@ export async function DELETE(request: NextRequest) {
     // Check if user is admin
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { data: adminUser } = await supabase
@@ -208,7 +203,7 @@ export async function DELETE(request: NextRequest) {
       .single()
 
     if (!adminUser) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+      return createErrorResponse(ErrorCodes.FORBIDDEN, 'Admin access required')
     }
 
     const { searchParams } = new URL(request.url)
@@ -232,10 +227,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ deleted: count || 0 })
   } catch (err) {
     console.error('[Error Monitoring] DELETE error:', err)
-    return NextResponse.json(
-      { error: 'Failed to delete error logs' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.DELETE_FAILED, 'Failed to delete error logs')
   }
 }
 

@@ -110,10 +110,7 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error('Insert error:', insertError)
-      return NextResponse.json(
-        { error: 'Failed to create homework session' },
-        { status: 500 }
-      )
+      return createErrorResponse(ErrorCodes.HW_SESSION_CREATE_FAILED)
     }
 
     const createdSession = session as HomeworkSession
@@ -175,10 +172,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Homework session error:', error)
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.HOMEWORK_UNKNOWN)
   }
 }
 
@@ -215,7 +209,7 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { searchParams } = new URL(request.url)
@@ -238,18 +232,12 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Fetch error:', error)
-      return NextResponse.json(
-        { error: 'Failed to fetch homework sessions' },
-        { status: 500 }
-      )
+      return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch sessions')
     }
 
     return NextResponse.json({ sessions })
   } catch (error) {
     console.error('Get sessions error:', error)
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.HOMEWORK_UNKNOWN)
   }
 }

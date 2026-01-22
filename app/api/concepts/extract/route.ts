@@ -4,6 +4,7 @@ import { extractAndStoreConcepts } from '@/lib/concepts'
 import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
 import type { GeneratedCourse } from '@/types'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 // Allow 2 minutes for concept extraction (involves AI processing)
 export const maxDuration = 120
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     let courseId: string
@@ -30,16 +31,16 @@ export async function POST(request: NextRequest) {
       const body = await request.json()
       courseId = body.courseId
     } catch {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.BODY_INVALID_JSON)
     }
 
     if (!courseId) {
-      return NextResponse.json({ error: 'courseId is required' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'courseId is required')
     }
 
     // Validate API key
     if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({ error: 'Concept extraction service not configured' }, { status: 503 })
+      return createErrorResponse(ErrorCodes.API_KEY_NOT_CONFIGURED)
     }
 
     // Get the course
@@ -51,11 +52,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (courseError || !course) {
-      return NextResponse.json({ error: 'Course not found' }, { status: 404 })
+      return createErrorResponse(ErrorCodes.COURSE_NOT_FOUND)
     }
 
     if (!course.generated_course) {
-      return NextResponse.json({ error: 'Course has no generated content' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Course has no generated content')
     }
 
     // Get user's learning profile for curriculum context
@@ -119,10 +120,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('[Concept Extraction API] Error:', error)
-    // Don't expose raw error messages to users
-    return NextResponse.json(
-      { error: 'Failed to extract concepts. Please try again later.' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.CONCEPT_EXTRACTION_FAILED)
   }
 }

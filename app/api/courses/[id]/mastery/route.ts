@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 interface LessonMastery {
   lessonIndex: number
@@ -36,7 +37,7 @@ export async function GET(
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     // Verify course belongs to user
@@ -48,7 +49,7 @@ export async function GET(
       .single()
 
     if (courseError || !course) {
-      return NextResponse.json({ error: 'Course not found' }, { status: 404 })
+      return createErrorResponse(ErrorCodes.COURSE_NOT_FOUND)
     }
 
     // Get content-concept mappings for this course
@@ -171,6 +172,6 @@ export async function GET(
     })
   } catch (error) {
     console.error('[Course Mastery API] Error:', error)
-    return NextResponse.json({ error: 'Failed to fetch mastery' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.MASTERY_FETCH_FAILED)
   }
 }

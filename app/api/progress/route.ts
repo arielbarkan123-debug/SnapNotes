@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 /**
  * GET /api/progress
@@ -20,7 +21,7 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     // Calculate date ranges
@@ -340,10 +341,7 @@ export async function GET() {
     })
   } catch (error) {
     console.error('Progress API error:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch progress data' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.PROGRESS_FETCH_FAILED)
   }
 }
 

@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { checkAdminAccess, parseDateRange } from '@/lib/admin/utils'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 /**
  * GET /api/admin/analytics/export
@@ -111,7 +112,7 @@ export async function GET(request: NextRequest) {
       }
 
       default:
-        return NextResponse.json({ error: 'Invalid data type' }, { status: 400 })
+        return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Invalid data type')
     }
 
     if (format === 'csv') {
@@ -151,6 +152,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('[Admin Analytics] Export error:', error)
-    return NextResponse.json({ error: 'Failed to export data' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.ADMIN_ANALYTICS_EXPORT_FAILED)
   }
 }

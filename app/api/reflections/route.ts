@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 /**
  * POST /api/reflections
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const body = await request.json()
@@ -34,19 +35,13 @@ export async function POST(request: Request) {
 
     // Validate reflection type
     if (!reflectionType || !['session', 'weekly'].includes(reflectionType)) {
-      return NextResponse.json(
-        { error: 'Invalid reflection type' },
-        { status: 400 }
-      )
+      return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Invalid reflection type')
     }
 
     // Validate weekly rating if provided
     if (reflectionType === 'weekly' && rating !== undefined) {
       if (rating < 1 || rating > 5) {
-        return NextResponse.json(
-          { error: 'Rating must be between 1 and 5' },
-          { status: 400 }
-        )
+        return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Rating must be between 1 and 5')
       }
     }
 
@@ -84,10 +79,7 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error('Reflection insert error:', error)
-      return NextResponse.json(
-        { error: 'Failed to save reflection' },
-        { status: 500 }
-      )
+      return createErrorResponse(ErrorCodes.INSERT_FAILED, 'Failed to save reflection')
     }
 
     return NextResponse.json({
@@ -96,10 +88,7 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error('Reflection error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
 
@@ -119,7 +108,7 @@ export async function GET(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { searchParams } = new URL(request.url)
@@ -149,10 +138,7 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error('Reflection fetch error:', error)
-      return NextResponse.json(
-        { error: 'Failed to fetch reflections' },
-        { status: 500 }
-      )
+      return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch reflections')
     }
 
     // Calculate stats
@@ -164,10 +150,7 @@ export async function GET(request: Request) {
     })
   } catch (error) {
     console.error('Reflection GET error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
 

@@ -15,6 +15,7 @@ import {
   SELF_EFFICACY_ITEMS,
   LIKERT_OPTIONS,
 } from '@/lib/metrics'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 // =============================================================================
 // GET: Fetch self-efficacy data
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { searchParams } = new URL(request.url)
@@ -66,14 +67,11 @@ export async function GET(request: NextRequest) {
       }
 
       default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+        return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Invalid action')
     }
   } catch (error) {
     console.error('Error in self-efficacy GET:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch self-efficacy data' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
 
@@ -103,24 +101,21 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const body: SurveyPayload = await request.json()
 
     // Validate survey type
     if (!['pre_course', 'post_lesson', 'post_course', 'weekly', 'periodic'].includes(body.surveyType)) {
-      return NextResponse.json({ error: 'Invalid survey type' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Invalid survey type')
     }
 
     // Validate responses (1-5 range)
     const { responses } = body
     for (const [key, value] of Object.entries(responses)) {
       if (value !== undefined && (value < 1 || value > 5)) {
-        return NextResponse.json(
-          { error: `Invalid response value for ${key}: must be 1-5` },
-          { status: 400 }
-        )
+        return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, `Invalid response value for ${key}: must be 1-5`)
       }
     }
 
@@ -138,7 +133,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 500 })
+      return createErrorResponse(ErrorCodes.INSERT_FAILED, result.error || 'Failed to record survey')
     }
 
     // Get updated analysis
@@ -152,9 +147,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error in self-efficacy POST:', error)
-    return NextResponse.json(
-      { error: 'Failed to record survey' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }

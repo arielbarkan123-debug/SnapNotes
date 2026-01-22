@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateCourseImage } from '@/lib/ai/image-generation'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 export const maxDuration = 300 // 5 minutes for multiple images
 
@@ -14,7 +15,7 @@ export async function POST() {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     // Get all courses without cover images
@@ -25,7 +26,7 @@ export async function POST() {
       .is('cover_image_url', null)
 
     if (fetchError) {
-      return NextResponse.json({ error: 'Failed to fetch courses' }, { status: 500 })
+      return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch courses')
     }
 
     if (!courses || courses.length === 0) {
@@ -109,9 +110,6 @@ export async function POST() {
     })
   } catch (error) {
     console.error('Generate all covers error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.AI_UNKNOWN)
   }
 }

@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { checkAdminAccess, parseDateRange } from '@/lib/admin/utils'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 /**
  * GET /api/admin/analytics/page-views
@@ -76,6 +77,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('[Admin Analytics] Page views error:', error)
-    return NextResponse.json({ error: 'Failed to fetch page view data' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.ADMIN_ANALYTICS_FETCH_FAILED)
   }
 }

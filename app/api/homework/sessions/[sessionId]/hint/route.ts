@@ -15,6 +15,7 @@ import {
   getHintLevelInfo,
 } from '@/lib/homework/hint-generator'
 import { addMessage, updateProgress } from '@/lib/homework/session-manager'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 // Allow 60 seconds for hint generation
 export const maxDuration = 60
@@ -38,7 +39,7 @@ export async function POST(
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     // Parse request
@@ -46,15 +47,12 @@ export async function POST(
     try {
       body = await request.json()
     } catch {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.BODY_INVALID_JSON)
     }
 
     const hintLevel = body.hintLevel
     if (!hintLevel || hintLevel < 1 || hintLevel > 5) {
-      return NextResponse.json(
-        { error: 'Invalid hint level. Must be 1-5' },
-        { status: 400 }
-      )
+      return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Hint level must be 1-5')
     }
 
     // Get the session
@@ -66,7 +64,7 @@ export async function POST(
       .single()
 
     if (sessionError || !session) {
-      return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+      return createErrorResponse(ErrorCodes.HW_SESSION_NOT_FOUND)
     }
 
     const homeworkSession = session as HomeworkSession
@@ -135,7 +133,7 @@ export async function POST(
         .single()
 
       if (updateError) {
-        return NextResponse.json({ error: 'Failed to save hint' }, { status: 500 })
+        return createErrorResponse(ErrorCodes.UPDATE_FAILED, 'Failed to save hint')
       }
       updatedSession = updated as HomeworkSession
     }
@@ -178,10 +176,7 @@ export async function POST(
     })
   } catch (error) {
     console.error('Hint error:', error)
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.HINT_GENERATION_FAILED)
   }
 }
 

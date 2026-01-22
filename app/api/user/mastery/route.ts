@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { UserMasteryResponse } from '@/lib/concepts/types'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 /**
  * GET /api/user/mastery
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { searchParams } = new URL(request.url)
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
         .single()
 
       if (!course) {
-        return NextResponse.json({ error: 'Course not found' }, { status: 404 })
+        return createErrorResponse(ErrorCodes.COURSE_NOT_FOUND)
       }
 
       // Now fetch concepts for the verified course
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('[User Mastery API] Error:', error)
-      return NextResponse.json({ error: 'Failed to fetch mastery data' }, { status: 500 })
+      return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch mastery data')
     }
 
     // Filter by subject/topic if specified (since we can't filter joined tables easily)
@@ -132,7 +133,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response)
   } catch (error) {
     console.error('[User Mastery API] Error:', error)
-    return NextResponse.json({ error: 'Failed to fetch mastery data' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
 
@@ -149,13 +150,13 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { conceptId, isCorrect, usedHint, responseTimeMs } = await request.json()
 
     if (!conceptId) {
-      return NextResponse.json({ error: 'conceptId is required' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'conceptId is required')
     }
 
     // Get current mastery
@@ -223,7 +224,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('[User Mastery API] Update error:', error)
-      return NextResponse.json({ error: 'Failed to update mastery' }, { status: 500 })
+      return createErrorResponse(ErrorCodes.UPDATE_FAILED, 'Failed to update mastery')
     }
 
     return NextResponse.json({
@@ -235,6 +236,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('[User Mastery API] Error:', error)
-    return NextResponse.json({ error: 'Failed to update mastery' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }

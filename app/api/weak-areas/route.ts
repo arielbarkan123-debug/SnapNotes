@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 interface WeakArea {
   courseId: string
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { searchParams } = new URL(request.url)
@@ -170,6 +171,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ weakAreas, summary })
   } catch (error) {
     console.error('[Weak Areas API] Error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }

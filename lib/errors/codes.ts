@@ -443,6 +443,10 @@ export const AnalyticsErrorCodes = {
   // Aggregation errors (040-049)
   AGGREGATION_FAILED: 'NS-ANLYT-040',
 
+  // Admin analytics errors (050-059)
+  ADMIN_ANALYTICS_FETCH_FAILED: 'NS-ANLYT-050',
+  ADMIN_ANALYTICS_EXPORT_FAILED: 'NS-ANLYT-051',
+
   // Generic analytics errors (090-099)
   ANALYTICS_UNKNOWN: 'NS-ANLYT-099',
 } as const
@@ -592,6 +596,9 @@ export const ValidationErrorCodes = {
   VAL_QUERY_INVALID: 'NS-VAL-030',
   QUERY_PARAM_REQUIRED: 'NS-VAL-031',
 
+  // HTTP method errors (040-049)
+  METHOD_NOT_ALLOWED: 'NS-VAL-040',
+
   // Generic validation errors (090-099)
   VALIDATION_UNKNOWN: 'NS-VAL-099',
 } as const
@@ -615,6 +622,10 @@ export const ExternalErrorCodes = {
   RESEND_SEND_FAILED: 'NS-EXT-020',
   RESEND_RATE_LIMITED: 'NS-EXT-021',
   RESEND_INVALID_EMAIL: 'NS-EXT-022',
+
+  // Cron job errors (030-039)
+  CRON_SECRET_MISSING: 'NS-EXT-030',
+  CRON_AUTH_FAILED: 'NS-EXT-031',
 
   // Generic external errors (090-099)
   EXTERNAL_UNKNOWN: 'NS-EXT-099',

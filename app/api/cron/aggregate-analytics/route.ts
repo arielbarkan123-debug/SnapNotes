@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 // Secret key for cron authentication (REQUIRED in environment variables)
 const CRON_SECRET = process.env.CRON_SECRET
@@ -23,12 +24,12 @@ const CRON_SECRET = process.env.CRON_SECRET
 export async function POST(request: NextRequest) {
   // Verify cron secret for security (REQUIRED)
   if (!CRON_SECRET) {
-    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.CRON_SECRET_MISSING)
   }
 
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return createErrorResponse(ErrorCodes.UNAUTHORIZED)
   }
 
   const supabase = createServiceClient()
@@ -84,10 +85,8 @@ export async function POST(request: NextRequest) {
       aggregatedAt: new Date().toISOString(),
     })
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Aggregation failed', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    )
+    console.error('Aggregation failed:', error)
+    return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
 
@@ -98,7 +97,7 @@ export async function GET(request: NextRequest) {
   // Only allow in development or with secret
   const authHeader = request.headers.get('authorization')
   if (process.env.NODE_ENV !== 'development' && authHeader !== `Bearer ${CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Use POST for cron jobs' }, { status: 405 })
+    return createErrorResponse(ErrorCodes.METHOD_NOT_ALLOWED, 'Use POST for cron jobs')
   }
 
   return POST(request)

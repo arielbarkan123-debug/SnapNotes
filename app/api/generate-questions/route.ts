@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
 import { getAnthropicApiKey } from '@/lib/env'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 // Allow 90 seconds for question generation (Claude API with curriculum context)
 export const maxDuration = 90
@@ -34,14 +35,14 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     const { courseId, lessonIndex, topic, wrongQuestion, count = 3 } = await request.json()
 
     // Validate API key is configured
     if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({ error: 'Question service not configured' }, { status: 503 })
+      return createErrorResponse(ErrorCodes.API_KEY_NOT_CONFIGURED)
     }
 
     // Validate count parameter
@@ -170,7 +171,7 @@ Return JSON in this exact format:
     const jsonMatch = responseText.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       console.error('No JSON found in response:', responseText)
-      return NextResponse.json({ error: 'Failed to parse questions' }, { status: 500 })
+      return createErrorResponse(ErrorCodes.RESPONSE_PARSE_FAILED)
     }
 
     let parsed: { questions?: GeneratedQuestion[] }
@@ -178,7 +179,7 @@ Return JSON in this exact format:
       parsed = JSON.parse(jsonMatch[0])
     } catch (parseError) {
       console.error('Failed to parse JSON:', parseError, jsonMatch[0])
-      return NextResponse.json({ error: 'Failed to parse questions' }, { status: 500 })
+      return createErrorResponse(ErrorCodes.RESPONSE_PARSE_FAILED)
     }
 
     const questions: GeneratedQuestion[] = parsed.questions || []
@@ -201,9 +202,6 @@ Return JSON in this exact format:
     })
   } catch (error) {
     console.error('[Generate Questions API] Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to generate questions' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.QUESTION_GENERATION_FAILED)
   }
 }

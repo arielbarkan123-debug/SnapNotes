@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 // UUID v4 regex pattern
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
     const { sessionId, userId, events, pageViews, errors, funnelSteps, sessionUpdate } = batch
 
     if (!sessionId) {
-      return NextResponse.json({ error: 'Session ID is required' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Session ID is required')
     }
 
     // Validate UUID format to prevent database errors
@@ -228,6 +229,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, results })
   } catch (error) {
     console.error('[Analytics] Batch insert error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.ANALYTICS_UNKNOWN)
   }
 }

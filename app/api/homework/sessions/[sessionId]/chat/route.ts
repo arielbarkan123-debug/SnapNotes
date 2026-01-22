@@ -9,6 +9,7 @@ import type {
 } from '@/lib/homework/types'
 import { generateTutorResponse, checkForSolution } from '@/lib/homework/tutor-engine'
 import { addMessage, updateProgress, getRecentMessages } from '@/lib/homework/session-manager'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 // Allow 60 seconds for chat response generation
 export const maxDuration = 60
@@ -32,7 +33,7 @@ export async function POST(
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
 
     // Parse request
@@ -40,11 +41,11 @@ export async function POST(
     try {
       body = await request.json()
     } catch {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.BODY_INVALID_JSON)
     }
 
     if (!body.message || typeof body.message !== 'string') {
-      return NextResponse.json({ error: 'Message is required' }, { status: 400 })
+      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Message is required')
     }
 
     // Get the session
@@ -56,7 +57,7 @@ export async function POST(
       .single()
 
     if (sessionError || !session) {
-      return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+      return createErrorResponse(ErrorCodes.HW_SESSION_NOT_FOUND)
     }
 
     const homeworkSession = session as HomeworkSession
@@ -83,7 +84,7 @@ export async function POST(
         .single()
 
       if (updateError) {
-        return NextResponse.json({ error: 'Failed to save message' }, { status: 500 })
+        return createErrorResponse(ErrorCodes.CHAT_FAILED, 'Failed to save message')
       }
       sessionAfterStudentMsg = updated as HomeworkSession
     }
@@ -191,10 +192,7 @@ export async function POST(
     })
   } catch (error) {
     console.error('Chat error:', error)
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    )
+    return createErrorResponse(ErrorCodes.CHAT_FAILED)
   }
 }
 

@@ -18,6 +18,7 @@ export const HttpStatus = {
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
   NOT_FOUND: 404,
+  METHOD_NOT_ALLOWED: 405,
   CONFLICT: 409,
   GONE: 410,
   UNPROCESSABLE_ENTITY: 422,
@@ -436,6 +437,9 @@ export const ErrorHttpStatus: Record<ErrorCode, number> = {
 
   [ErrorCodes.AGGREGATION_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
 
+  [ErrorCodes.ADMIN_ANALYTICS_FETCH_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.ADMIN_ANALYTICS_EXPORT_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+
   [ErrorCodes.ANALYTICS_UNKNOWN]: HttpStatus.INTERNAL_SERVER_ERROR,
 
   // ============================================================================
@@ -552,6 +556,8 @@ export const ErrorHttpStatus: Record<ErrorCode, number> = {
   [ErrorCodes.VAL_QUERY_INVALID]: HttpStatus.BAD_REQUEST,
   [ErrorCodes.QUERY_PARAM_REQUIRED]: HttpStatus.BAD_REQUEST,
 
+  [ErrorCodes.METHOD_NOT_ALLOWED]: HttpStatus.METHOD_NOT_ALLOWED,
+
   [ErrorCodes.VALIDATION_UNKNOWN]: HttpStatus.BAD_REQUEST,
 
   // ============================================================================
@@ -569,6 +575,9 @@ export const ErrorHttpStatus: Record<ErrorCode, number> = {
   [ErrorCodes.RESEND_SEND_FAILED]: HttpStatus.BAD_GATEWAY,
   [ErrorCodes.RESEND_RATE_LIMITED]: HttpStatus.TOO_MANY_REQUESTS,
   [ErrorCodes.RESEND_INVALID_EMAIL]: HttpStatus.BAD_REQUEST,
+
+  [ErrorCodes.CRON_SECRET_MISSING]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.CRON_AUTH_FAILED]: HttpStatus.UNAUTHORIZED,
 
   [ErrorCodes.EXTERNAL_UNKNOWN]: HttpStatus.BAD_GATEWAY,
 

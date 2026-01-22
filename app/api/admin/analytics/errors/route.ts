@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { checkAdminAccess, parseDateRange } from '@/lib/admin/utils'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 /**
  * DELETE /api/admin/analytics/errors
@@ -32,7 +33,7 @@ export async function DELETE() {
     })
   } catch (err) {
     console.error('[Admin Analytics] Clear errors error:', err)
-    return NextResponse.json({ error: 'Failed to clear errors' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.DELETE_FAILED, 'Failed to clear errors')
   }
 }
 
@@ -125,6 +126,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('[Admin Analytics] Errors error:', error)
-    return NextResponse.json({ error: 'Failed to fetch error data' }, { status: 500 })
+    return createErrorResponse(ErrorCodes.ADMIN_ANALYTICS_FETCH_FAILED)
   }
 }
