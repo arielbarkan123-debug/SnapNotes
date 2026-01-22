@@ -484,6 +484,10 @@ export const ErrorHttpStatus: Record<ErrorCode, number> = {
   [ErrorCodes.NETWORK_OFFLINE]: HttpStatus.SERVICE_UNAVAILABLE,
   [ErrorCodes.NETWORK_SLOW]: HttpStatus.GATEWAY_TIMEOUT,
   [ErrorCodes.SSL_ERROR]: HttpStatus.BAD_GATEWAY,
+  [ErrorCodes.WEBSOCKET_DISCONNECTED]: HttpStatus.SERVICE_UNAVAILABLE,
+  [ErrorCodes.WEBSOCKET_CONNECT_FAILED]: HttpStatus.SERVICE_UNAVAILABLE,
+  [ErrorCodes.CONNECTION_SWITCHED]: HttpStatus.SERVICE_UNAVAILABLE,
+  [ErrorCodes.CAPTIVE_PORTAL_DETECTED]: HttpStatus.SERVICE_UNAVAILABLE,
 
   [ErrorCodes.JSON_PARSE_ERROR]: HttpStatus.BAD_REQUEST,
   [ErrorCodes.CORS_BLOCKED]: HttpStatus.FORBIDDEN,
@@ -493,6 +497,8 @@ export const ErrorHttpStatus: Record<ErrorCode, number> = {
   [ErrorCodes.PROMISE_REJECTION]: HttpStatus.INTERNAL_SERVER_ERROR,
   [ErrorCodes.RENDER_ERROR]: HttpStatus.INTERNAL_SERVER_ERROR,
   [ErrorCodes.HYDRATION_ERROR]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.CHUNK_LOAD_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.SCRIPT_LOAD_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
 
   [ErrorCodes.FORM_VALIDATION_FAILED]: HttpStatus.BAD_REQUEST,
   [ErrorCodes.FORM_SUBMIT_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
@@ -500,21 +506,167 @@ export const ErrorHttpStatus: Record<ErrorCode, number> = {
   [ErrorCodes.IMAGE_LOAD_FAILED]: HttpStatus.BAD_GATEWAY,
   [ErrorCodes.AUDIO_LOAD_FAILED]: HttpStatus.BAD_GATEWAY,
   [ErrorCodes.VIDEO_LOAD_FAILED]: HttpStatus.BAD_GATEWAY,
+  [ErrorCodes.FONT_LOAD_FAILED]: HttpStatus.BAD_GATEWAY,
+  [ErrorCodes.WEBGL_UNAVAILABLE]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.CANVAS_ERROR]: HttpStatus.INTERNAL_SERVER_ERROR,
 
   [ErrorCodes.LOCALSTORAGE_QUOTA]: HttpStatus.INTERNAL_SERVER_ERROR,
   [ErrorCodes.LOCALSTORAGE_ACCESS]: HttpStatus.INTERNAL_SERVER_ERROR,
   [ErrorCodes.INDEXEDDB_ERROR]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.SESSIONSTORAGE_QUOTA]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.COOKIE_BLOCKED]: HttpStatus.INTERNAL_SERVER_ERROR,
 
   [ErrorCodes.SW_REGISTRATION_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
   [ErrorCodes.SW_UPDATE_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
   [ErrorCodes.CACHE_ERROR]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.SW_TIMEOUT]: HttpStatus.GATEWAY_TIMEOUT,
+  [ErrorCodes.CACHE_STORAGE_FULL]: HttpStatus.INTERNAL_SERVER_ERROR,
 
   [ErrorCodes.INSTALL_PROMPT_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.APP_UPDATE_AVAILABLE]: HttpStatus.OK,
+  [ErrorCodes.STANDALONE_MODE_REQUIRED]: HttpStatus.BAD_REQUEST,
 
   [ErrorCodes.BROWSER_NOT_SUPPORTED]: HttpStatus.BAD_REQUEST,
   [ErrorCodes.FEATURE_NOT_SUPPORTED]: HttpStatus.BAD_REQUEST,
+  [ErrorCodes.WEBVIEW_RESTRICTED]: HttpStatus.BAD_REQUEST,
+  [ErrorCodes.PRIVATE_BROWSING_LIMITED]: HttpStatus.BAD_REQUEST,
 
   [ErrorCodes.CLIENT_UNKNOWN]: HttpStatus.INTERNAL_SERVER_ERROR,
+
+  // ============================================================================
+  // Device & Permission Errors (NS-DEV-XXX)
+  // ============================================================================
+
+  // Camera/Photo errors
+  [ErrorCodes.CAMERA_PERMISSION_DENIED]: HttpStatus.FORBIDDEN,
+  [ErrorCodes.CAMERA_NOT_AVAILABLE]: HttpStatus.SERVICE_UNAVAILABLE,
+  [ErrorCodes.CAMERA_IN_USE]: HttpStatus.CONFLICT,
+  [ErrorCodes.PHOTO_CAPTURE_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.GALLERY_ACCESS_DENIED]: HttpStatus.FORBIDDEN,
+  [ErrorCodes.FILE_PICKER_CANCELLED]: HttpStatus.BAD_REQUEST,
+  [ErrorCodes.FILE_PICKER_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+
+  // Microphone errors
+  [ErrorCodes.MICROPHONE_PERMISSION_DENIED]: HttpStatus.FORBIDDEN,
+  [ErrorCodes.MICROPHONE_NOT_AVAILABLE]: HttpStatus.SERVICE_UNAVAILABLE,
+  [ErrorCodes.MICROPHONE_IN_USE]: HttpStatus.CONFLICT,
+  [ErrorCodes.AUDIO_RECORDING_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+
+  // Notification errors
+  [ErrorCodes.NOTIFICATION_PERMISSION_DENIED]: HttpStatus.FORBIDDEN,
+  [ErrorCodes.NOTIFICATION_NOT_SUPPORTED]: HttpStatus.BAD_REQUEST,
+  [ErrorCodes.PUSH_SUBSCRIPTION_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.PUSH_DELIVERY_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+
+  // Clipboard errors
+  [ErrorCodes.CLIPBOARD_PERMISSION_DENIED]: HttpStatus.FORBIDDEN,
+  [ErrorCodes.CLIPBOARD_READ_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.CLIPBOARD_WRITE_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+
+  // Geolocation errors
+  [ErrorCodes.GEOLOCATION_PERMISSION_DENIED]: HttpStatus.FORBIDDEN,
+  [ErrorCodes.GEOLOCATION_UNAVAILABLE]: HttpStatus.SERVICE_UNAVAILABLE,
+  [ErrorCodes.GEOLOCATION_TIMEOUT]: HttpStatus.GATEWAY_TIMEOUT,
+
+  // Touch/Input errors
+  [ErrorCodes.TOUCH_NOT_SUPPORTED]: HttpStatus.BAD_REQUEST,
+  [ErrorCodes.GESTURE_RECOGNITION_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.KEYBOARD_INPUT_ERROR]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.VIRTUAL_KEYBOARD_ISSUE]: HttpStatus.INTERNAL_SERVER_ERROR,
+
+  // Screen/Display errors
+  [ErrorCodes.SCREEN_ORIENTATION_LOCKED]: HttpStatus.FORBIDDEN,
+  [ErrorCodes.FULLSCREEN_DENIED]: HttpStatus.FORBIDDEN,
+  [ErrorCodes.SCREEN_WAKE_LOCK_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.DISPLAY_MODE_UNSUPPORTED]: HttpStatus.BAD_REQUEST,
+  [ErrorCodes.DARK_MODE_DETECTION_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+
+  // Haptic/Vibration errors
+  [ErrorCodes.VIBRATION_NOT_SUPPORTED]: HttpStatus.BAD_REQUEST,
+  [ErrorCodes.HAPTIC_FEEDBACK_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+
+  // Share API errors
+  [ErrorCodes.SHARE_NOT_SUPPORTED]: HttpStatus.BAD_REQUEST,
+  [ErrorCodes.SHARE_CANCELLED]: HttpStatus.BAD_REQUEST,
+  [ErrorCodes.SHARE_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+
+  // Generic device errors
+  [ErrorCodes.DEVICE_UNKNOWN]: HttpStatus.INTERNAL_SERVER_ERROR,
+
+  // ============================================================================
+  // Platform-Specific Errors (NS-PLAT-XXX)
+  // ============================================================================
+
+  // iOS/Safari errors
+  [ErrorCodes.IOS_SAFARI_AUDIO_BLOCKED]: HttpStatus.BAD_REQUEST,
+  [ErrorCodes.IOS_SAFARI_STORAGE_LIMITED]: HttpStatus.BAD_REQUEST,
+  [ErrorCodes.IOS_SAFARI_PWA_SCOPE_ERROR]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.IOS_SAFARI_FULLSCREEN_LIMITED]: HttpStatus.BAD_REQUEST,
+  [ErrorCodes.IOS_KEYBOARD_VIEWPORT_BUG]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.IOS_SCROLL_BOUNCE_ISSUE]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.IOS_INPUT_ZOOM_ISSUE]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.IOS_WEBVIEW_COOKIE_BLOCKED]: HttpStatus.FORBIDDEN,
+  [ErrorCodes.IOS_LOW_POWER_MODE]: HttpStatus.OK,
+
+  // Android/Chrome errors
+  [ErrorCodes.ANDROID_BACK_BUTTON_ISSUE]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.ANDROID_WEBVIEW_LIMITED]: HttpStatus.BAD_REQUEST,
+  [ErrorCodes.ANDROID_INTENT_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.ANDROID_SHARE_INTENT_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.ANDROID_LOW_MEMORY]: HttpStatus.SERVICE_UNAVAILABLE,
+  [ErrorCodes.ANDROID_BATTERY_SAVER_ON]: HttpStatus.OK,
+
+  // Desktop browser errors
+  [ErrorCodes.DESKTOP_POPUP_BLOCKED]: HttpStatus.FORBIDDEN,
+  [ErrorCodes.DESKTOP_DOWNLOAD_BLOCKED]: HttpStatus.FORBIDDEN,
+  [ErrorCodes.DESKTOP_EXTENSION_CONFLICT]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.DESKTOP_AD_BLOCKER_ISSUE]: HttpStatus.INTERNAL_SERVER_ERROR,
+
+  // Tablet-specific errors
+  [ErrorCodes.TABLET_ORIENTATION_ISSUE]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.TABLET_SPLIT_SCREEN_ISSUE]: HttpStatus.INTERNAL_SERVER_ERROR,
+
+  // Cross-platform errors
+  [ErrorCodes.VIEWPORT_SIZE_UNSUPPORTED]: HttpStatus.BAD_REQUEST,
+  [ErrorCodes.PIXEL_RATIO_ISSUE]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.SAFE_AREA_INSET_ISSUE]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.RTL_LAYOUT_ISSUE]: HttpStatus.INTERNAL_SERVER_ERROR,
+
+  // Generic platform errors
+  [ErrorCodes.PLATFORM_UNKNOWN]: HttpStatus.INTERNAL_SERVER_ERROR,
+
+  // ============================================================================
+  // Memory & Performance Errors (NS-MEM-XXX)
+  // ============================================================================
+
+  // Memory errors
+  [ErrorCodes.LOW_MEMORY_WARNING]: HttpStatus.SERVICE_UNAVAILABLE,
+  [ErrorCodes.OUT_OF_MEMORY]: HttpStatus.SERVICE_UNAVAILABLE,
+  [ErrorCodes.MEMORY_PRESSURE_HIGH]: HttpStatus.SERVICE_UNAVAILABLE,
+  [ErrorCodes.LARGE_ARRAY_ALLOCATION_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.DOM_SIZE_EXCEEDED]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [ErrorCodes.IMAGE_DECODE_MEMORY]: HttpStatus.BAD_REQUEST,
+
+  // Performance errors
+  [ErrorCodes.LONG_TASK_DETECTED]: HttpStatus.OK,
+  [ErrorCodes.MAIN_THREAD_BLOCKED]: HttpStatus.SERVICE_UNAVAILABLE,
+  [ErrorCodes.ANIMATION_FRAME_DROPPED]: HttpStatus.OK,
+  [ErrorCodes.SCROLL_JANK_DETECTED]: HttpStatus.OK,
+  [ErrorCodes.INPUT_LATENCY_HIGH]: HttpStatus.OK,
+  [ErrorCodes.LAYOUT_THRASHING]: HttpStatus.OK,
+
+  // CPU/Throttling errors
+  [ErrorCodes.CPU_THROTTLED]: HttpStatus.SERVICE_UNAVAILABLE,
+  [ErrorCodes.BACKGROUND_TAB_THROTTLED]: HttpStatus.OK,
+  [ErrorCodes.HEAVY_COMPUTATION_BLOCKED]: HttpStatus.SERVICE_UNAVAILABLE,
+
+  // Resource loading errors
+  [ErrorCodes.RESOURCE_LOAD_SLOW]: HttpStatus.GATEWAY_TIMEOUT,
+  [ErrorCodes.RESOURCE_BLOCKED]: HttpStatus.FORBIDDEN,
+  [ErrorCodes.BUNDLE_TOO_LARGE]: HttpStatus.OK,
+
+  // Generic memory errors
+  [ErrorCodes.MEMORY_UNKNOWN]: HttpStatus.INTERNAL_SERVER_ERROR,
 
   // ============================================================================
   // Rate Limiting Errors (NS-RATE-XXX)

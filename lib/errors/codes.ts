@@ -502,6 +502,10 @@ export const ClientErrorCodes = {
   NETWORK_OFFLINE: 'NS-CLIENT-003',
   NETWORK_SLOW: 'NS-CLIENT-004',
   SSL_ERROR: 'NS-CLIENT-005',
+  WEBSOCKET_DISCONNECTED: 'NS-CLIENT-006',
+  WEBSOCKET_CONNECT_FAILED: 'NS-CLIENT-007',
+  CONNECTION_SWITCHED: 'NS-CLIENT-008', // WiFi → cellular
+  CAPTIVE_PORTAL_DETECTED: 'NS-CLIENT-009',
 
   // Parsing errors (010-019)
   JSON_PARSE_ERROR: 'NS-CLIENT-010',
@@ -513,6 +517,8 @@ export const ClientErrorCodes = {
   PROMISE_REJECTION: 'NS-CLIENT-021',
   RENDER_ERROR: 'NS-CLIENT-022',
   HYDRATION_ERROR: 'NS-CLIENT-023',
+  CHUNK_LOAD_FAILED: 'NS-CLIENT-024', // Webpack chunk loading
+  SCRIPT_LOAD_FAILED: 'NS-CLIENT-025',
 
   // Form errors (030-039)
   FORM_VALIDATION_FAILED: 'NS-CLIENT-030',
@@ -522,26 +528,178 @@ export const ClientErrorCodes = {
   IMAGE_LOAD_FAILED: 'NS-CLIENT-040',
   AUDIO_LOAD_FAILED: 'NS-CLIENT-041',
   VIDEO_LOAD_FAILED: 'NS-CLIENT-042',
+  FONT_LOAD_FAILED: 'NS-CLIENT-043',
+  WEBGL_UNAVAILABLE: 'NS-CLIENT-044',
+  CANVAS_ERROR: 'NS-CLIENT-045',
 
   // Storage errors (050-059)
   LOCALSTORAGE_QUOTA: 'NS-CLIENT-050',
   LOCALSTORAGE_ACCESS: 'NS-CLIENT-051',
   INDEXEDDB_ERROR: 'NS-CLIENT-052',
+  SESSIONSTORAGE_QUOTA: 'NS-CLIENT-053',
+  COOKIE_BLOCKED: 'NS-CLIENT-054',
 
   // Service worker errors (060-069)
   SW_REGISTRATION_FAILED: 'NS-CLIENT-060',
   SW_UPDATE_FAILED: 'NS-CLIENT-061',
   CACHE_ERROR: 'NS-CLIENT-062',
+  SW_TIMEOUT: 'NS-CLIENT-063',
+  CACHE_STORAGE_FULL: 'NS-CLIENT-064',
 
   // PWA errors (070-079)
   INSTALL_PROMPT_FAILED: 'NS-CLIENT-070',
+  APP_UPDATE_AVAILABLE: 'NS-CLIENT-071',
+  STANDALONE_MODE_REQUIRED: 'NS-CLIENT-072',
 
   // Browser compatibility errors (080-089)
   BROWSER_NOT_SUPPORTED: 'NS-CLIENT-080',
   FEATURE_NOT_SUPPORTED: 'NS-CLIENT-081',
+  WEBVIEW_RESTRICTED: 'NS-CLIENT-082', // In-app browser restrictions
+  PRIVATE_BROWSING_LIMITED: 'NS-CLIENT-083',
 
   // Generic client errors (090-099)
   CLIENT_UNKNOWN: 'NS-CLIENT-099',
+} as const
+
+// ============================================================================
+// Device & Permission Errors (NS-DEV-XXX)
+// ============================================================================
+
+export const DeviceErrorCodes = {
+  // Camera/Photo errors (001-009)
+  CAMERA_PERMISSION_DENIED: 'NS-DEV-001',
+  CAMERA_NOT_AVAILABLE: 'NS-DEV-002',
+  CAMERA_IN_USE: 'NS-DEV-003',
+  PHOTO_CAPTURE_FAILED: 'NS-DEV-004',
+  GALLERY_ACCESS_DENIED: 'NS-DEV-005',
+  FILE_PICKER_CANCELLED: 'NS-DEV-006',
+  FILE_PICKER_FAILED: 'NS-DEV-007',
+
+  // Microphone errors (010-019)
+  MICROPHONE_PERMISSION_DENIED: 'NS-DEV-010',
+  MICROPHONE_NOT_AVAILABLE: 'NS-DEV-011',
+  MICROPHONE_IN_USE: 'NS-DEV-012',
+  AUDIO_RECORDING_FAILED: 'NS-DEV-013',
+
+  // Notification errors (020-029)
+  NOTIFICATION_PERMISSION_DENIED: 'NS-DEV-020',
+  NOTIFICATION_NOT_SUPPORTED: 'NS-DEV-021',
+  PUSH_SUBSCRIPTION_FAILED: 'NS-DEV-022',
+  PUSH_DELIVERY_FAILED: 'NS-DEV-023',
+
+  // Clipboard errors (030-039)
+  CLIPBOARD_PERMISSION_DENIED: 'NS-DEV-030',
+  CLIPBOARD_READ_FAILED: 'NS-DEV-031',
+  CLIPBOARD_WRITE_FAILED: 'NS-DEV-032',
+
+  // Geolocation errors (040-049)
+  GEOLOCATION_PERMISSION_DENIED: 'NS-DEV-040',
+  GEOLOCATION_UNAVAILABLE: 'NS-DEV-041',
+  GEOLOCATION_TIMEOUT: 'NS-DEV-042',
+
+  // Touch/Input errors (050-059)
+  TOUCH_NOT_SUPPORTED: 'NS-DEV-050',
+  GESTURE_RECOGNITION_FAILED: 'NS-DEV-051',
+  KEYBOARD_INPUT_ERROR: 'NS-DEV-052',
+  VIRTUAL_KEYBOARD_ISSUE: 'NS-DEV-053',
+
+  // Screen/Display errors (060-069)
+  SCREEN_ORIENTATION_LOCKED: 'NS-DEV-060',
+  FULLSCREEN_DENIED: 'NS-DEV-061',
+  SCREEN_WAKE_LOCK_FAILED: 'NS-DEV-062',
+  DISPLAY_MODE_UNSUPPORTED: 'NS-DEV-063',
+  DARK_MODE_DETECTION_FAILED: 'NS-DEV-064',
+
+  // Haptic/Vibration errors (070-079)
+  VIBRATION_NOT_SUPPORTED: 'NS-DEV-070',
+  HAPTIC_FEEDBACK_FAILED: 'NS-DEV-071',
+
+  // Share API errors (080-089)
+  SHARE_NOT_SUPPORTED: 'NS-DEV-080',
+  SHARE_CANCELLED: 'NS-DEV-081',
+  SHARE_FAILED: 'NS-DEV-082',
+
+  // Generic device errors (090-099)
+  DEVICE_UNKNOWN: 'NS-DEV-099',
+} as const
+
+// ============================================================================
+// Platform-Specific Errors (NS-PLAT-XXX)
+// ============================================================================
+
+export const PlatformErrorCodes = {
+  // iOS/Safari errors (001-019)
+  IOS_SAFARI_AUDIO_BLOCKED: 'NS-PLAT-001', // Autoplay restrictions
+  IOS_SAFARI_STORAGE_LIMITED: 'NS-PLAT-002', // 7-day ITP limit
+  IOS_SAFARI_PWA_SCOPE_ERROR: 'NS-PLAT-003',
+  IOS_SAFARI_FULLSCREEN_LIMITED: 'NS-PLAT-004',
+  IOS_KEYBOARD_VIEWPORT_BUG: 'NS-PLAT-005',
+  IOS_SCROLL_BOUNCE_ISSUE: 'NS-PLAT-006',
+  IOS_INPUT_ZOOM_ISSUE: 'NS-PLAT-007',
+  IOS_WEBVIEW_COOKIE_BLOCKED: 'NS-PLAT-008',
+  IOS_LOW_POWER_MODE: 'NS-PLAT-009',
+
+  // Android/Chrome errors (020-039)
+  ANDROID_BACK_BUTTON_ISSUE: 'NS-PLAT-020',
+  ANDROID_WEBVIEW_LIMITED: 'NS-PLAT-021',
+  ANDROID_INTENT_FAILED: 'NS-PLAT-022',
+  ANDROID_SHARE_INTENT_FAILED: 'NS-PLAT-023',
+  ANDROID_LOW_MEMORY: 'NS-PLAT-024',
+  ANDROID_BATTERY_SAVER_ON: 'NS-PLAT-025',
+
+  // Desktop browser errors (040-059)
+  DESKTOP_POPUP_BLOCKED: 'NS-PLAT-040',
+  DESKTOP_DOWNLOAD_BLOCKED: 'NS-PLAT-041',
+  DESKTOP_EXTENSION_CONFLICT: 'NS-PLAT-042',
+  DESKTOP_AD_BLOCKER_ISSUE: 'NS-PLAT-043',
+
+  // Tablet-specific errors (060-069)
+  TABLET_ORIENTATION_ISSUE: 'NS-PLAT-060',
+  TABLET_SPLIT_SCREEN_ISSUE: 'NS-PLAT-061',
+
+  // Cross-platform errors (070-079)
+  VIEWPORT_SIZE_UNSUPPORTED: 'NS-PLAT-070',
+  PIXEL_RATIO_ISSUE: 'NS-PLAT-071',
+  SAFE_AREA_INSET_ISSUE: 'NS-PLAT-072',
+  RTL_LAYOUT_ISSUE: 'NS-PLAT-073', // Hebrew RTL support issues
+
+  // Generic platform errors (090-099)
+  PLATFORM_UNKNOWN: 'NS-PLAT-099',
+} as const
+
+// ============================================================================
+// Memory & Performance Errors (NS-MEM-XXX)
+// ============================================================================
+
+export const MemoryErrorCodes = {
+  // Memory errors (001-019)
+  LOW_MEMORY_WARNING: 'NS-MEM-001',
+  OUT_OF_MEMORY: 'NS-MEM-002',
+  MEMORY_PRESSURE_HIGH: 'NS-MEM-003',
+  LARGE_ARRAY_ALLOCATION_FAILED: 'NS-MEM-004',
+  DOM_SIZE_EXCEEDED: 'NS-MEM-005',
+  IMAGE_DECODE_MEMORY: 'NS-MEM-006',
+
+  // Performance errors (020-039)
+  LONG_TASK_DETECTED: 'NS-MEM-020',
+  MAIN_THREAD_BLOCKED: 'NS-MEM-021',
+  ANIMATION_FRAME_DROPPED: 'NS-MEM-022',
+  SCROLL_JANK_DETECTED: 'NS-MEM-023',
+  INPUT_LATENCY_HIGH: 'NS-MEM-024',
+  LAYOUT_THRASHING: 'NS-MEM-025',
+
+  // CPU/Throttling errors (040-049)
+  CPU_THROTTLED: 'NS-MEM-040',
+  BACKGROUND_TAB_THROTTLED: 'NS-MEM-041',
+  HEAVY_COMPUTATION_BLOCKED: 'NS-MEM-042',
+
+  // Resource loading errors (050-059)
+  RESOURCE_LOAD_SLOW: 'NS-MEM-050',
+  RESOURCE_BLOCKED: 'NS-MEM-051',
+  BUNDLE_TOO_LARGE: 'NS-MEM-052',
+
+  // Generic memory errors (090-099)
+  MEMORY_UNKNOWN: 'NS-MEM-099',
 } as const
 
 // ============================================================================
@@ -707,6 +865,9 @@ export const ErrorCodes = {
   ...AnalyticsErrorCodes,
   ...UserErrorCodes,
   ...ClientErrorCodes,
+  ...DeviceErrorCodes,
+  ...PlatformErrorCodes,
+  ...MemoryErrorCodes,
   ...RateLimitErrorCodes,
   ...ValidationErrorCodes,
   ...ExternalErrorCodes,
@@ -736,6 +897,9 @@ export type ErrorCategory =
   | 'ANLYT'
   | 'USER'
   | 'CLIENT'
+  | 'DEV'
+  | 'PLAT'
+  | 'MEM'
   | 'RATE'
   | 'VAL'
   | 'EXT'

@@ -481,6 +481,10 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCodes.NETWORK_OFFLINE]: 'You appear to be offline. Please check your connection.',
   [ErrorCodes.NETWORK_SLOW]: 'Your connection seems slow. Please wait or try again later.',
   [ErrorCodes.SSL_ERROR]: 'Secure connection error. Please try again.',
+  [ErrorCodes.WEBSOCKET_DISCONNECTED]: 'Real-time connection lost. Reconnecting...',
+  [ErrorCodes.WEBSOCKET_CONNECT_FAILED]: 'Could not establish real-time connection. Please refresh.',
+  [ErrorCodes.CONNECTION_SWITCHED]: 'Network changed. Please wait while we reconnect.',
+  [ErrorCodes.CAPTIVE_PORTAL_DETECTED]: 'Please sign in to your WiFi network first.',
 
   // Parsing errors
   [ErrorCodes.JSON_PARSE_ERROR]: 'Server error. Please try again.',
@@ -492,6 +496,8 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCodes.PROMISE_REJECTION]: 'An error occurred. Please try again.',
   [ErrorCodes.RENDER_ERROR]: 'Display error. Please refresh the page.',
   [ErrorCodes.HYDRATION_ERROR]: 'Page loading error. Please refresh.',
+  [ErrorCodes.CHUNK_LOAD_FAILED]: 'Failed to load app component. Please refresh.',
+  [ErrorCodes.SCRIPT_LOAD_FAILED]: 'Failed to load required script. Please refresh.',
 
   // Form errors
   [ErrorCodes.FORM_VALIDATION_FAILED]: 'Please check the form for errors.',
@@ -501,26 +507,172 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCodes.IMAGE_LOAD_FAILED]: 'Could not load image. Please try again.',
   [ErrorCodes.AUDIO_LOAD_FAILED]: 'Could not load audio. Please try again.',
   [ErrorCodes.VIDEO_LOAD_FAILED]: 'Could not load video. Please try again.',
+  [ErrorCodes.FONT_LOAD_FAILED]: 'Font loading issue. Display may look different.',
+  [ErrorCodes.WEBGL_UNAVAILABLE]: 'Graphics acceleration not available.',
+  [ErrorCodes.CANVAS_ERROR]: 'Could not render graphics. Please try a different browser.',
 
   // Storage errors
   [ErrorCodes.LOCALSTORAGE_QUOTA]: 'Browser storage is full. Please clear some space.',
   [ErrorCodes.LOCALSTORAGE_ACCESS]: 'Cannot access browser storage. Please check your settings.',
   [ErrorCodes.INDEXEDDB_ERROR]: 'Browser database error. Please try refreshing.',
+  [ErrorCodes.SESSIONSTORAGE_QUOTA]: 'Session storage is full. Please close some tabs.',
+  [ErrorCodes.COOKIE_BLOCKED]: 'Cookies are blocked. Some features may not work.',
 
   // Service worker errors
   [ErrorCodes.SW_REGISTRATION_FAILED]: 'Could not enable offline support.',
   [ErrorCodes.SW_UPDATE_FAILED]: 'Could not update the app. Please refresh.',
   [ErrorCodes.CACHE_ERROR]: 'Caching error. Please refresh the page.',
+  [ErrorCodes.SW_TIMEOUT]: 'Offline service is slow. Please wait.',
+  [ErrorCodes.CACHE_STORAGE_FULL]: 'Cache storage is full. Please clear browser data.',
 
   // PWA errors
   [ErrorCodes.INSTALL_PROMPT_FAILED]: 'Could not show install prompt.',
+  [ErrorCodes.APP_UPDATE_AVAILABLE]: 'An update is available. Please refresh to get the latest version.',
+  [ErrorCodes.STANDALONE_MODE_REQUIRED]: 'Please install the app for this feature.',
 
   // Browser compatibility errors
   [ErrorCodes.BROWSER_NOT_SUPPORTED]: 'Your browser is not supported. Please use a modern browser.',
   [ErrorCodes.FEATURE_NOT_SUPPORTED]: 'This feature is not supported in your browser.',
+  [ErrorCodes.WEBVIEW_RESTRICTED]: 'Please open this in your browser app for full functionality.',
+  [ErrorCodes.PRIVATE_BROWSING_LIMITED]: 'Some features are limited in private browsing mode.',
 
   // Generic client errors
   [ErrorCodes.CLIENT_UNKNOWN]: 'An error occurred. Please refresh the page.',
+
+  // ============================================================================
+  // Device & Permission Errors (NS-DEV-XXX)
+  // ============================================================================
+
+  // Camera/Photo errors
+  [ErrorCodes.CAMERA_PERMISSION_DENIED]: 'Camera access denied. Please allow camera permission in your settings.',
+  [ErrorCodes.CAMERA_NOT_AVAILABLE]: 'No camera found. Please connect a camera or use file upload.',
+  [ErrorCodes.CAMERA_IN_USE]: 'Camera is being used by another app. Please close it and try again.',
+  [ErrorCodes.PHOTO_CAPTURE_FAILED]: 'Could not capture photo. Please try again.',
+  [ErrorCodes.GALLERY_ACCESS_DENIED]: 'Photo library access denied. Please allow permission in settings.',
+  [ErrorCodes.FILE_PICKER_CANCELLED]: 'File selection was cancelled.',
+  [ErrorCodes.FILE_PICKER_FAILED]: 'Could not open file picker. Please try again.',
+
+  // Microphone errors
+  [ErrorCodes.MICROPHONE_PERMISSION_DENIED]: 'Microphone access denied. Please allow permission in settings.',
+  [ErrorCodes.MICROPHONE_NOT_AVAILABLE]: 'No microphone found.',
+  [ErrorCodes.MICROPHONE_IN_USE]: 'Microphone is being used by another app.',
+  [ErrorCodes.AUDIO_RECORDING_FAILED]: 'Could not record audio. Please try again.',
+
+  // Notification errors
+  [ErrorCodes.NOTIFICATION_PERMISSION_DENIED]: 'Notification permission denied. Enable in settings for reminders.',
+  [ErrorCodes.NOTIFICATION_NOT_SUPPORTED]: 'Notifications are not supported on this device.',
+  [ErrorCodes.PUSH_SUBSCRIPTION_FAILED]: 'Could not enable push notifications.',
+  [ErrorCodes.PUSH_DELIVERY_FAILED]: 'Could not deliver notification.',
+
+  // Clipboard errors
+  [ErrorCodes.CLIPBOARD_PERMISSION_DENIED]: 'Clipboard access denied. Please allow permission.',
+  [ErrorCodes.CLIPBOARD_READ_FAILED]: 'Could not read from clipboard.',
+  [ErrorCodes.CLIPBOARD_WRITE_FAILED]: 'Could not copy to clipboard. Please try again.',
+
+  // Geolocation errors
+  [ErrorCodes.GEOLOCATION_PERMISSION_DENIED]: 'Location access denied.',
+  [ErrorCodes.GEOLOCATION_UNAVAILABLE]: 'Location service is not available.',
+  [ErrorCodes.GEOLOCATION_TIMEOUT]: 'Could not determine location in time.',
+
+  // Touch/Input errors
+  [ErrorCodes.TOUCH_NOT_SUPPORTED]: 'Touch input is not supported on this device.',
+  [ErrorCodes.GESTURE_RECOGNITION_FAILED]: 'Could not recognize gesture.',
+  [ErrorCodes.KEYBOARD_INPUT_ERROR]: 'Keyboard input error. Please try typing again.',
+  [ErrorCodes.VIRTUAL_KEYBOARD_ISSUE]: 'Keyboard display issue. Please tap the input field again.',
+
+  // Screen/Display errors
+  [ErrorCodes.SCREEN_ORIENTATION_LOCKED]: 'Screen rotation is locked. Unlock to change orientation.',
+  [ErrorCodes.FULLSCREEN_DENIED]: 'Fullscreen mode was denied.',
+  [ErrorCodes.SCREEN_WAKE_LOCK_FAILED]: 'Could not keep screen awake.',
+  [ErrorCodes.DISPLAY_MODE_UNSUPPORTED]: 'This display mode is not supported.',
+  [ErrorCodes.DARK_MODE_DETECTION_FAILED]: 'Could not detect system theme preference.',
+
+  // Haptic/Vibration errors
+  [ErrorCodes.VIBRATION_NOT_SUPPORTED]: 'Vibration is not supported on this device.',
+  [ErrorCodes.HAPTIC_FEEDBACK_FAILED]: 'Haptic feedback not available.',
+
+  // Share API errors
+  [ErrorCodes.SHARE_NOT_SUPPORTED]: 'Sharing is not available on this device.',
+  [ErrorCodes.SHARE_CANCELLED]: 'Share was cancelled.',
+  [ErrorCodes.SHARE_FAILED]: 'Could not share. Please try again.',
+
+  // Generic device errors
+  [ErrorCodes.DEVICE_UNKNOWN]: 'A device error occurred. Please try again.',
+
+  // ============================================================================
+  // Platform-Specific Errors (NS-PLAT-XXX)
+  // ============================================================================
+
+  // iOS/Safari errors
+  [ErrorCodes.IOS_SAFARI_AUDIO_BLOCKED]: 'Tap anywhere to enable audio on iOS.',
+  [ErrorCodes.IOS_SAFARI_STORAGE_LIMITED]: 'Safari limits storage. Consider adding to Home Screen.',
+  [ErrorCodes.IOS_SAFARI_PWA_SCOPE_ERROR]: 'Please reinstall the app from your Home Screen.',
+  [ErrorCodes.IOS_SAFARI_FULLSCREEN_LIMITED]: 'Fullscreen is limited on iOS. Add to Home Screen for better experience.',
+  [ErrorCodes.IOS_KEYBOARD_VIEWPORT_BUG]: 'Scroll up to see the input field.',
+  [ErrorCodes.IOS_SCROLL_BOUNCE_ISSUE]: 'Scroll issue detected. Please try again.',
+  [ErrorCodes.IOS_INPUT_ZOOM_ISSUE]: 'If the page zooms when typing, rotate your device.',
+  [ErrorCodes.IOS_WEBVIEW_COOKIE_BLOCKED]: 'Please open in Safari for full functionality.',
+  [ErrorCodes.IOS_LOW_POWER_MODE]: 'Low Power Mode may affect performance. Disable for best experience.',
+
+  // Android/Chrome errors
+  [ErrorCodes.ANDROID_BACK_BUTTON_ISSUE]: 'Use in-app navigation for best experience.',
+  [ErrorCodes.ANDROID_WEBVIEW_LIMITED]: 'Please open in Chrome for full functionality.',
+  [ErrorCodes.ANDROID_INTENT_FAILED]: 'Could not open external app.',
+  [ErrorCodes.ANDROID_SHARE_INTENT_FAILED]: 'Could not share. Please try a different method.',
+  [ErrorCodes.ANDROID_LOW_MEMORY]: 'Your device is low on memory. Close other apps.',
+  [ErrorCodes.ANDROID_BATTERY_SAVER_ON]: 'Battery Saver may affect performance.',
+
+  // Desktop browser errors
+  [ErrorCodes.DESKTOP_POPUP_BLOCKED]: 'Popup was blocked. Please allow popups for this site.',
+  [ErrorCodes.DESKTOP_DOWNLOAD_BLOCKED]: 'Download was blocked. Please allow downloads.',
+  [ErrorCodes.DESKTOP_EXTENSION_CONFLICT]: 'A browser extension may be causing issues. Try disabling extensions.',
+  [ErrorCodes.DESKTOP_AD_BLOCKER_ISSUE]: 'Ad blocker may be interfering. Please whitelist this site.',
+
+  // Tablet-specific errors
+  [ErrorCodes.TABLET_ORIENTATION_ISSUE]: 'Please rotate your tablet for better viewing.',
+  [ErrorCodes.TABLET_SPLIT_SCREEN_ISSUE]: 'Exit split-screen mode for full functionality.',
+
+  // Cross-platform errors
+  [ErrorCodes.VIEWPORT_SIZE_UNSUPPORTED]: 'Your screen size may affect some features.',
+  [ErrorCodes.PIXEL_RATIO_ISSUE]: 'Display scaling issue detected.',
+  [ErrorCodes.SAFE_AREA_INSET_ISSUE]: 'Content may be hidden by device notch or rounded corners.',
+  [ErrorCodes.RTL_LAYOUT_ISSUE]: 'Right-to-left layout issue. Please refresh.',
+
+  // Generic platform errors
+  [ErrorCodes.PLATFORM_UNKNOWN]: 'A platform-specific error occurred. Please try again.',
+
+  // ============================================================================
+  // Memory & Performance Errors (NS-MEM-XXX)
+  // ============================================================================
+
+  // Memory errors
+  [ErrorCodes.LOW_MEMORY_WARNING]: 'Your device is running low on memory. Close other apps.',
+  [ErrorCodes.OUT_OF_MEMORY]: 'Out of memory. Please close other apps and refresh.',
+  [ErrorCodes.MEMORY_PRESSURE_HIGH]: 'Memory is limited. Some features may be slower.',
+  [ErrorCodes.LARGE_ARRAY_ALLOCATION_FAILED]: 'Could not process large data set. Please try with less data.',
+  [ErrorCodes.DOM_SIZE_EXCEEDED]: 'Page is too complex. Please refresh.',
+  [ErrorCodes.IMAGE_DECODE_MEMORY]: 'Image is too large to display. Please use a smaller image.',
+
+  // Performance errors
+  [ErrorCodes.LONG_TASK_DETECTED]: 'Processing is taking longer than expected.',
+  [ErrorCodes.MAIN_THREAD_BLOCKED]: 'The app is busy. Please wait.',
+  [ErrorCodes.ANIMATION_FRAME_DROPPED]: 'Animation may appear choppy.',
+  [ErrorCodes.SCROLL_JANK_DETECTED]: 'Scrolling may be slow. Please wait for content to load.',
+  [ErrorCodes.INPUT_LATENCY_HIGH]: 'Input is delayed. Please wait.',
+  [ErrorCodes.LAYOUT_THRASHING]: 'Layout is recalculating. Please wait.',
+
+  // CPU/Throttling errors
+  [ErrorCodes.CPU_THROTTLED]: 'Your device is running hot. Performance may be reduced.',
+  [ErrorCodes.BACKGROUND_TAB_THROTTLED]: 'This tab was paused in background. Please refresh if needed.',
+  [ErrorCodes.HEAVY_COMPUTATION_BLOCKED]: 'Heavy processing was blocked to keep the app responsive.',
+
+  // Resource loading errors
+  [ErrorCodes.RESOURCE_LOAD_SLOW]: 'Resources are loading slowly. Please wait.',
+  [ErrorCodes.RESOURCE_BLOCKED]: 'Some resources were blocked. Features may be limited.',
+  [ErrorCodes.BUNDLE_TOO_LARGE]: 'App is loading. Please wait on slow connections.',
+
+  // Generic memory errors
+  [ErrorCodes.MEMORY_UNKNOWN]: 'A memory-related error occurred. Please refresh.',
 
   // ============================================================================
   // Rate Limiting Errors (NS-RATE-XXX)
