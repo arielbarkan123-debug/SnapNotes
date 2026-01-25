@@ -509,8 +509,27 @@ export class ClaudeAPIError extends Error {
 const IMAGE_FETCH_TIMEOUT_MS = 30000
 
 /**
+ * Check if buffer contains HEIC/HEIF magic bytes
+ * HEIC files have 'ftyp' box at bytes 4-7 with HEIC brand
+ */
+function isHeicByMagicBytes(buffer: ArrayBuffer): boolean {
+  if (buffer.byteLength < 12) return false
+  const bytes = new Uint8Array(buffer)
+
+  // Check for 'ftyp' at bytes 4-7
+  if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) {
+    // Check for HEIC brands at bytes 8-11
+    const brand = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11]).toLowerCase()
+    const heicBrands = ['heic', 'heix', 'hevc', 'hevx', 'mif1', 'msf1']
+    return heicBrands.includes(brand)
+  }
+  return false
+}
+
+/**
  * Fetches an image from URL and converts it to base64
  * Includes timeout protection for slow/unresponsive CDNs
+ * Also validates actual file format by magic bytes to catch mislabeled HEIC files
  */
 export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
   try {
@@ -542,6 +561,17 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
       )
     }
 
+    // CRITICAL: Check actual file format by magic bytes
+    // iOS Safari often uploads HEIC files with wrong content-type (image/jpeg)
+    // This catches mislabeled HEIC files before sending to Claude
+    if (isHeicByMagicBytes(arrayBuffer)) {
+      console.error('[fetchImageAsBase64] HEIC detected by magic bytes but content-type was:', contentType)
+      throw new ClaudeAPIError(
+        'This image is in HEIC format which is not supported. Please convert to JPEG (on iPhone: Settings > Camera > Formats > Most Compatible).',
+        'INVALID_IMAGE'
+      )
+    }
+
     const base64 = Buffer.from(arrayBuffer).toString('base64')
     const mediaType = getMediaType(contentType)
 
@@ -566,8 +596,16 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
 
 /**
  * Maps content-type header to Anthropic's expected media types
+ * Throws error for unsupported formats like HEIC
  */
 function getMediaType(contentType: string): ImageMediaType {
+  // Check for HEIC/HEIF - Claude Vision doesn't support these
+  if (contentType.includes('heic') || contentType.includes('heif')) {
+    throw new ClaudeAPIError(
+      'HEIC/HEIF images are not supported. Please convert to JPEG or PNG before uploading.',
+      'INVALID_IMAGE'
+    )
+  }
   if (contentType.includes('png')) return 'image/png'
   if (contentType.includes('gif')) return 'image/gif'
   if (contentType.includes('webp')) return 'image/webp'
@@ -1841,7 +1879,11 @@ export function getUserFriendlyError(error: unknown): string {
         // Be specific about retry for Safari users who may see this more often
         return 'AI service is temporarily busy. Please wait a moment and try again.'
       case 'INVALID_IMAGE':
-        return 'Could not read the image. Please upload a clearer photo.'
+        // If the error message mentions HEIC, use it directly (more specific)
+        if (error.message.toLowerCase().includes('heic') || error.message.toLowerCase().includes('heif')) {
+          return error.message
+        }
+        return 'Could not read the image. Please upload a clearer photo or convert to JPEG/PNG format.'
       case 'PARSE_ERROR':
         return 'Failed to process the notes. Please try again.'
       case 'NETWORK_ERROR':

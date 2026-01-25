@@ -7,7 +7,37 @@ import { createBrowserClient } from '@supabase/ssr'
 type ProgressCallback = (progress: number) => void
 
 /**
- * Check if file is HEIC/HEIF format
+ * Check if file is HEIC/HEIF format by reading magic bytes
+ * iOS Safari often reports wrong MIME type for HEIC files, so we must check actual file content
+ */
+async function isHeicFileByMagicBytes(file: File): Promise<boolean> {
+  try {
+    // Read first 12 bytes for HEIC signature detection
+    const slice = file.slice(0, 12)
+    const buffer = await slice.arrayBuffer()
+    const bytes = new Uint8Array(buffer)
+
+    // HEIC/HEIF files have 'ftyp' box at bytes 4-7
+    // Format: [4 bytes size][4 bytes 'ftyp'][4+ bytes brand]
+    if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) {
+      // Check for HEIC brands: heic, heix, hevc, hevx, mif1, msf1
+      const brand = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11])
+      const heicBrands = ['heic', 'heix', 'hevc', 'hevx', 'mif1', 'msf1']
+      if (heicBrands.includes(brand.toLowerCase())) {
+        console.log('[HEIC Detection] Detected HEIC by magic bytes, brand:', brand)
+        return true
+      }
+    }
+    return false
+  } catch (error) {
+    console.warn('[HEIC Detection] Failed to read magic bytes:', error)
+    return false
+  }
+}
+
+/**
+ * Check if file is HEIC/HEIF format (quick check by extension/MIME)
+ * For reliable detection, use isHeicFileByMagicBytes instead
  */
 function isHeicFile(file: File): boolean {
   const ext = file.name.split('.').pop()?.toLowerCase()
@@ -213,13 +243,36 @@ export async function uploadImagesToStorage(
   // Upload files sequentially to show accurate progress
   for (let i = 0; i < files.length; i++) {
     let file = files[i]
+    const originalFilename = file.name
+
+    // Check for HEIC format - use magic bytes for reliable detection
+    // iOS Safari often reports wrong MIME type (empty or image/jpeg) for HEIC files
+    let isHeic = isHeicFile(file)
+    if (!isHeic) {
+      // Quick check failed - try magic bytes detection
+      // This catches HEIC files that iOS mislabeled as JPEG
+      isHeic = await isHeicFileByMagicBytes(file)
+      if (isHeic) {
+        console.log(`[Upload] File ${originalFilename} detected as HEIC by magic bytes (MIME was: ${file.type || 'empty'})`)
+      }
+    }
 
     // Convert HEIC to JPEG before uploading (Claude Vision doesn't support HEIC)
-    if (isHeicFile(file)) {
+    if (isHeic) {
       try {
+        console.log(`[Upload] Converting HEIC file: ${originalFilename}`)
         file = await convertHeicToJpeg(file)
-      } catch {
-        errors.push(`${files[i].name}: Failed to convert HEIC image`)
+        console.log(`[Upload] HEIC conversion successful: ${originalFilename} -> ${file.name}`)
+      } catch (conversionError) {
+        const errorMsg = conversionError instanceof Error ? conversionError.message : 'Unknown error'
+        console.error(`[Upload] HEIC conversion failed for ${originalFilename}:`, errorMsg)
+
+        // Provide specific error message for Safari users
+        if (errorMsg.includes('SecurityError') || errorMsg.includes('not supported')) {
+          errors.push(`${originalFilename}: HEIC format not supported on this browser. Please convert to JPEG first, or go to iPhone Settings > Camera > Formats and select "Most Compatible" to take photos in JPEG format.`)
+        } else {
+          errors.push(`${originalFilename}: Failed to convert HEIC image - ${errorMsg}`)
+        }
         continue
       }
     }
