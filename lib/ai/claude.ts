@@ -527,6 +527,53 @@ function isHeicByMagicBytes(buffer: ArrayBuffer): boolean {
 }
 
 /**
+ * Convert HEIC buffer to JPEG using heic-convert (server-side)
+ * This is the fallback when client-side conversion fails (common on Safari mobile)
+ */
+async function convertHeicToJpegServerSide(heicBuffer: Buffer): Promise<Buffer> {
+  try {
+    // Dynamic import to avoid loading unless needed
+    const heicConvert = (await import('heic-convert')).default
+
+    console.log('[HEIC Server Convert] Converting HEIC to JPEG, input size:', heicBuffer.byteLength)
+
+    // Convert Node.js Buffer to ArrayBuffer (required by heic-convert types)
+    const arrayBuffer = heicBuffer.buffer.slice(
+      heicBuffer.byteOffset,
+      heicBuffer.byteOffset + heicBuffer.byteLength
+    )
+
+    const jpegArrayBuffer = await heicConvert({
+      buffer: arrayBuffer,
+      format: 'JPEG',
+      quality: 0.9
+    })
+
+    // Validate output
+    if (!jpegArrayBuffer || jpegArrayBuffer.byteLength < 1024) {
+      throw new Error('Conversion produced invalid output')
+    }
+
+    // Convert to Uint8Array for magic byte verification
+    const jpegBytes = new Uint8Array(jpegArrayBuffer)
+
+    // Verify it's actually JPEG (magic bytes: FF D8 FF)
+    if (jpegBytes[0] !== 0xFF || jpegBytes[1] !== 0xD8 || jpegBytes[2] !== 0xFF) {
+      throw new Error('Conversion did not produce valid JPEG')
+    }
+
+    console.log('[HEIC Server Convert] Success, output size:', jpegArrayBuffer.byteLength)
+    return Buffer.from(jpegArrayBuffer)
+  } catch (error) {
+    console.error('[HEIC Server Convert] Failed:', error)
+    throw new ClaudeAPIError(
+      'Failed to process HEIC image. Please try taking a new photo or converting to JPEG.',
+      'INVALID_IMAGE'
+    )
+  }
+}
+
+/**
  * Check if buffer contains valid JPEG magic bytes
  */
 function isValidJpegByMagicBytes(buffer: ArrayBuffer): boolean {
@@ -602,39 +649,53 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
       )
     }
 
-    // CRITICAL: Check actual file format by magic bytes
-    // iOS Safari often uploads HEIC files with wrong content-type (image/jpeg)
+    // Check actual file format by magic bytes
+    let finalBuffer: Buffer = Buffer.from(arrayBuffer)
+    let finalMediaType: ImageMediaType = 'image/jpeg'
+
+    // If HEIC detected, automatically convert to JPEG (server-side)
+    // This handles the common case where iOS Safari uploads HEIC with wrong content-type
     if (isHeicByMagicBytes(arrayBuffer)) {
-      console.error('[fetchImageAsBase64] HEIC detected by magic bytes but content-type was:', contentType)
-      throw new ClaudeAPIError(
-        'This image is in HEIC format which is not supported. Please convert to JPEG (on iPhone: Settings > Camera > Formats > Most Compatible).',
-        'INVALID_IMAGE'
-      )
+      console.log('[fetchImageAsBase64] HEIC detected by magic bytes, converting server-side. Original content-type:', contentType)
+      try {
+        finalBuffer = await convertHeicToJpegServerSide(finalBuffer)
+        finalMediaType = 'image/jpeg'
+        console.log('[fetchImageAsBase64] HEIC conversion successful')
+      } catch (conversionError) {
+        // If server-side conversion fails, throw with helpful message
+        console.error('[fetchImageAsBase64] HEIC conversion failed:', conversionError)
+        throw conversionError // Already a ClaudeAPIError
+      }
+    } else {
+      // Validate it's actually a valid image format
+      const isJpeg = isValidJpegByMagicBytes(arrayBuffer)
+      const isPng = isValidPngByMagicBytes(arrayBuffer)
+
+      if (isJpeg) {
+        finalMediaType = 'image/jpeg'
+      } else if (isPng) {
+        finalMediaType = 'image/png'
+      } else if (contentType.includes('gif')) {
+        finalMediaType = 'image/gif'
+      } else if (contentType.includes('webp')) {
+        finalMediaType = 'image/webp'
+      } else {
+        console.error('[fetchImageAsBase64] Unknown image format. Content-type:', contentType, 'First bytes:', getFirstBytesAsHex(arrayBuffer))
+        throw new ClaudeAPIError(
+          'Could not read the image. The file may be corrupted or in an unsupported format. Please try uploading as JPEG or PNG.',
+          'INVALID_IMAGE'
+        )
+      }
     }
 
-    // Validate it's actually a valid image format
-    const isJpeg = isValidJpegByMagicBytes(arrayBuffer)
-    const isPng = isValidPngByMagicBytes(arrayBuffer)
-
-    if (!isJpeg && !isPng && !contentType.includes('gif') && !contentType.includes('webp')) {
-      console.error('[fetchImageAsBase64] Unknown image format. Content-type:', contentType, 'First bytes:', getFirstBytesAsHex(arrayBuffer))
-      throw new ClaudeAPIError(
-        'Could not read the image. The file may be corrupted or in an unsupported format. Please try uploading as JPEG or PNG.',
-        'INVALID_IMAGE'
-      )
-    }
-
-    const base64 = Buffer.from(arrayBuffer).toString('base64')
-    const mediaType = getMediaType(contentType)
+    const base64 = finalBuffer.toString('base64')
 
     console.log('[fetchImageAsBase64] Success:', {
-      mediaType,
+      mediaType: finalMediaType,
       base64Length: base64.length,
-      isJpeg,
-      isPng
     })
 
-    return { base64, mediaType }
+    return { base64, mediaType: finalMediaType }
   } catch (error) {
     if (error instanceof ClaudeAPIError) {
       throw error
@@ -653,24 +714,6 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
       'NETWORK_ERROR'
     )
   }
-}
-
-/**
- * Maps content-type header to Anthropic's expected media types
- * Throws error for unsupported formats like HEIC
- */
-function getMediaType(contentType: string): ImageMediaType {
-  // Check for HEIC/HEIF - Claude Vision doesn't support these
-  if (contentType.includes('heic') || contentType.includes('heif')) {
-    throw new ClaudeAPIError(
-      'HEIC/HEIF images are not supported. Please convert to JPEG or PNG before uploading.',
-      'INVALID_IMAGE'
-    )
-  }
-  if (contentType.includes('png')) return 'image/png'
-  if (contentType.includes('gif')) return 'image/gif'
-  if (contentType.includes('webp')) return 'image/webp'
-  return 'image/jpeg'
 }
 
 // ============================================================================
