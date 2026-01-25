@@ -862,6 +862,30 @@ export async function analyzeNotebookImage(imageUrl: string): Promise<AnalysisRe
       )
     }
 
+    // Check if Claude indicated it couldn't read the image (before trying to parse JSON)
+    // This catches cases where Claude returns a plain text apology instead of JSON
+    const lowerResponse = rawText.toLowerCase()
+    const unreadableIndicators = [
+      'cannot read', "can't read", 'unable to read',
+      'cannot see', "can't see", 'unable to see',
+      'image is unclear', 'image is too', 'blurry', 'low quality',
+      'cannot extract', "can't extract", 'unable to extract',
+      'no visible text', 'no readable text', 'no text visible',
+      'cannot make out', "can't make out",
+    ]
+
+    // Only flag as unreadable if the response doesn't look like valid JSON
+    // and contains unreadable indicators
+    if (!rawText.trim().startsWith('{') && rawText.length < 1000) {
+      if (unreadableIndicators.some(indicator => lowerResponse.includes(indicator))) {
+        console.error('[analyzeNotebookImage] Claude indicated image unreadable:', rawText.substring(0, 300))
+        throw new ClaudeAPIError(
+          'The image could not be read clearly. Please try a clearer, well-lit photo with visible text.',
+          'EMPTY_CONTENT'
+        )
+      }
+    }
+
     // Parse JSON response
     const jsonText = cleanJsonResponse(rawText)
     let extractedContent: ExtractedContent
@@ -869,8 +893,12 @@ export async function analyzeNotebookImage(imageUrl: string): Promise<AnalysisRe
     try {
       extractedContent = JSON.parse(jsonText)
     } catch {
+      // If JSON parsing fails and the response is short, might be an error message
+      if (rawText.length < 500) {
+        console.error('[analyzeNotebookImage] Non-JSON response (possible error):', rawText.substring(0, 300))
+      }
       throw new ClaudeAPIError(
-        'Failed to parse extracted content as JSON. The AI response format was unexpected.',
+        'Failed to process the image. Please try uploading a clearer photo.',
         'PARSE_ERROR'
       )
     }

@@ -73,6 +73,86 @@ async function convertHeicToJpeg(file: File): Promise<File> {
   const { convertHeicToJpeg: convert } = await import('./heic-converter')
   return convert(file)
 }
+
+/**
+ * Compress/resize large images to prevent upload timeouts and improve processing speed.
+ * Only compresses if image is > 4MB or dimensions are very large.
+ * Target: max 2048px on longest side, JPEG quality 0.85
+ */
+const MAX_IMAGE_DIMENSION = 2048
+const COMPRESSION_THRESHOLD_BYTES = 4 * 1024 * 1024 // 4MB
+const JPEG_QUALITY = 0.85
+
+async function compressImageIfNeeded(file: File): Promise<File> {
+  // Skip compression for small files
+  if (file.size <= COMPRESSION_THRESHOLD_BYTES) {
+    return file
+  }
+
+  // Only compress JPEG/PNG (not HEIC - that's handled separately)
+  const type = file.type.toLowerCase()
+  if (!type.includes('jpeg') && !type.includes('jpg') && !type.includes('png')) {
+    return file
+  }
+
+  console.log(`[Upload] Compressing large image: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`)
+
+  return new Promise((resolve) => {
+    const img = new Image()
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+
+    img.onload = () => {
+      let { width, height } = img
+
+      // Calculate new dimensions (maintain aspect ratio)
+      if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
+        if (width > height) {
+          height = Math.round((height * MAX_IMAGE_DIMENSION) / width)
+          width = MAX_IMAGE_DIMENSION
+        } else {
+          width = Math.round((width * MAX_IMAGE_DIMENSION) / height)
+          height = MAX_IMAGE_DIMENSION
+        }
+      }
+
+      canvas.width = width
+      canvas.height = height
+      ctx?.drawImage(img, 0, 0, width, height)
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob && blob.size < file.size) {
+            // Only use compressed version if it's actually smaller
+            const compressedFile = new File(
+              [blob],
+              file.name.replace(/\.(png|PNG)$/, '.jpg'),
+              { type: 'image/jpeg' }
+            )
+            console.log(`[Upload] Compressed: ${(file.size / 1024 / 1024).toFixed(1)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(1)}MB`)
+            resolve(compressedFile)
+          } else {
+            // Compression didn't help, use original
+            console.log(`[Upload] Compression skipped (no size reduction)`)
+            resolve(file)
+          }
+        },
+        'image/jpeg',
+        JPEG_QUALITY
+      )
+    }
+
+    img.onerror = () => {
+      // If image loading fails, return original
+      console.warn(`[Upload] Image load failed for compression, using original`)
+      resolve(file)
+    }
+
+    // Load image from file
+    img.src = URL.createObjectURL(file)
+  })
+}
+
 export type FileType = 'image' | 'pptx' | 'docx'
 
 const ALLOWED_TYPES: Record<string, FileType> = {
@@ -307,34 +387,75 @@ export async function uploadImagesToStorage(
       }
     }
 
+    // Compress large images to prevent upload timeouts and improve processing speed
+    // Only applies to JPEG/PNG (HEIC is handled by conversion above or server-side)
+    if (!isHeic && file.size > COMPRESSION_THRESHOLD_BYTES) {
+      try {
+        file = await compressImageIfNeeded(file)
+      } catch (compressionError) {
+        // Compression failed - continue with original file
+        console.warn(`[Upload] Compression failed for ${originalFilename}, using original:`, compressionError)
+      }
+    }
+
     const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
     const storagePath = `${userId}/${courseId}/page-${i}.${ext}`
 
-    try {
-      const { error } = await supabase.storage
-        .from(IMAGE_BUCKET)
-        .upload(storagePath, file, {
-          contentType: file.type || `image/${ext}`,
-          cacheControl: '3600',
-          upsert: false,
-        })
+    // Retry upload up to 3 times with exponential backoff
+    let uploadSuccess = false
+    let lastUploadError: string | null = null
 
-      if (error) {
-        errors.push(`${file.name}: ${error.message}`)
-        continue
+    for (let uploadAttempt = 1; uploadAttempt <= 3; uploadAttempt++) {
+      try {
+        console.log(`[Upload] Uploading ${file.name} attempt ${uploadAttempt}/3`)
+
+        const { error } = await supabase.storage
+          .from(IMAGE_BUCKET)
+          .upload(storagePath, file, {
+            contentType: file.type || `image/${ext}`,
+            cacheControl: '3600',
+            upsert: uploadAttempt > 1, // Allow upsert on retry (file might be partially uploaded)
+          })
+
+        if (error) {
+          lastUploadError = error.message
+          console.warn(`[Upload] Attempt ${uploadAttempt} failed for ${file.name}:`, error.message)
+
+          // Don't retry on certain errors (duplicate, permission, etc.)
+          if (error.message.includes('duplicate') || error.message.includes('permission') || error.message.includes('policy')) {
+            break
+          }
+
+          if (uploadAttempt < 3) {
+            await new Promise(r => setTimeout(r, 1000 * uploadAttempt)) // 1s, 2s backoff
+            continue
+          }
+        } else {
+          uploadSuccess = true
+          break
+        }
+      } catch (err) {
+        lastUploadError = err instanceof Error ? err.message : 'Upload failed'
+        console.warn(`[Upload] Attempt ${uploadAttempt} exception for ${file.name}:`, lastUploadError)
+
+        if (uploadAttempt < 3) {
+          await new Promise(r => setTimeout(r, 1000 * uploadAttempt))
+        }
       }
-
-      results.push({
-        storagePath,
-        index: i,
-        filename: file.name,
-      })
-
-      onProgress?.(i + 1, files.length)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Upload failed'
-      errors.push(`${file.name}: ${message}`)
     }
+
+    if (!uploadSuccess) {
+      errors.push(`${file.name}: ${lastUploadError || 'Upload failed after 3 attempts'}`)
+      continue
+    }
+
+    results.push({
+      storagePath,
+      index: i,
+      filename: file.name,
+    })
+
+    onProgress?.(i + 1, files.length)
   }
 
   // If all uploads failed, throw error
