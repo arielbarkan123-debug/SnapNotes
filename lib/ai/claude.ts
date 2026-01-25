@@ -527,11 +527,43 @@ function isHeicByMagicBytes(buffer: ArrayBuffer): boolean {
 }
 
 /**
+ * Check if buffer contains valid JPEG magic bytes
+ */
+function isValidJpegByMagicBytes(buffer: ArrayBuffer): boolean {
+  if (buffer.byteLength < 3) return false
+  const bytes = new Uint8Array(buffer)
+  // JPEG magic bytes: FF D8 FF
+  return bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF
+}
+
+/**
+ * Check if buffer contains valid PNG magic bytes
+ */
+function isValidPngByMagicBytes(buffer: ArrayBuffer): boolean {
+  if (buffer.byteLength < 4) return false
+  const bytes = new Uint8Array(buffer)
+  // PNG magic bytes: 89 50 4E 47
+  return bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47
+}
+
+/**
+ * Get first 12 bytes of buffer as hex string for logging
+ */
+function getFirstBytesAsHex(buffer: ArrayBuffer, count: number = 12): string {
+  const bytes = new Uint8Array(buffer.slice(0, count))
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' ')
+}
+
+/**
  * Fetches an image from URL and converts it to base64
  * Includes timeout protection for slow/unresponsive CDNs
  * Also validates actual file format by magic bytes to catch mislabeled HEIC files
  */
 export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
+  // Log URL (truncated for privacy)
+  const urlForLog = imageUrl.length > 100 ? imageUrl.substring(0, 100) + '...' : imageUrl
+  console.log('[fetchImageAsBase64] Fetching image:', urlForLog)
+
   try {
     // Create AbortController for timeout
     const controller = new AbortController()
@@ -544,6 +576,7 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
     clearTimeout(timeoutId)
 
     if (!response.ok) {
+      console.error('[fetchImageAsBase64] HTTP error:', response.status, response.statusText)
       throw new ClaudeAPIError(
         `Failed to fetch image: HTTP ${response.status}`,
         'INVALID_IMAGE',
@@ -553,8 +586,16 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
 
     const contentType = response.headers.get('content-type') || 'image/jpeg'
     const arrayBuffer = await response.arrayBuffer()
+    const byteLength = arrayBuffer.byteLength
 
-    if (arrayBuffer.byteLength === 0) {
+    console.log('[fetchImageAsBase64] Received:', {
+      contentType,
+      byteLength,
+      firstBytes: getFirstBytesAsHex(arrayBuffer)
+    })
+
+    if (byteLength === 0) {
+      console.error('[fetchImageAsBase64] Empty file received')
       throw new ClaudeAPIError(
         'Image file is empty',
         'INVALID_IMAGE'
@@ -563,7 +604,6 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
 
     // CRITICAL: Check actual file format by magic bytes
     // iOS Safari often uploads HEIC files with wrong content-type (image/jpeg)
-    // This catches mislabeled HEIC files before sending to Claude
     if (isHeicByMagicBytes(arrayBuffer)) {
       console.error('[fetchImageAsBase64] HEIC detected by magic bytes but content-type was:', contentType)
       throw new ClaudeAPIError(
@@ -572,8 +612,27 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
       )
     }
 
+    // Validate it's actually a valid image format
+    const isJpeg = isValidJpegByMagicBytes(arrayBuffer)
+    const isPng = isValidPngByMagicBytes(arrayBuffer)
+
+    if (!isJpeg && !isPng && !contentType.includes('gif') && !contentType.includes('webp')) {
+      console.error('[fetchImageAsBase64] Unknown image format. Content-type:', contentType, 'First bytes:', getFirstBytesAsHex(arrayBuffer))
+      throw new ClaudeAPIError(
+        'Could not read the image. The file may be corrupted or in an unsupported format. Please try uploading as JPEG or PNG.',
+        'INVALID_IMAGE'
+      )
+    }
+
     const base64 = Buffer.from(arrayBuffer).toString('base64')
     const mediaType = getMediaType(contentType)
+
+    console.log('[fetchImageAsBase64] Success:', {
+      mediaType,
+      base64Length: base64.length,
+      isJpeg,
+      isPng
+    })
 
     return { base64, mediaType }
   } catch (error) {
@@ -582,11 +641,13 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
     }
     // Handle timeout specifically
     if (error instanceof Error && error.name === 'AbortError') {
+      console.error('[fetchImageAsBase64] Timeout after', IMAGE_FETCH_TIMEOUT_MS, 'ms')
       throw new ClaudeAPIError(
         'Image fetch timed out. The image server is taking too long to respond.',
         'TIMEOUT'
       )
     }
+    console.error('[fetchImageAsBase64] Unexpected error:', error)
     throw new ClaudeAPIError(
       'Failed to fetch image. Please check the URL and try again.',
       'NETWORK_ERROR'
