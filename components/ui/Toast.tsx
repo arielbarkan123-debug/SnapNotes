@@ -13,6 +13,7 @@ export interface Toast {
   type: ToastType
   message: string
   duration?: number
+  errorCode?: string // Error code for error toasts (e.g., NS-AI-001)
 }
 
 interface ToastItemProps {
@@ -158,22 +159,29 @@ export function ToastItem({ toast, onDismiss }: ToastItemProps) {
   return (
     <div
       className={`
-        flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg
+        flex items-start gap-3 px-4 py-3 rounded-lg border shadow-lg
         transform transition-all duration-300 ease-out
         ${styles.container}
         ${isVisible && !isLeaving ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}
       `}
       role="alert"
     >
-      <div className={styles.icon}>
+      <div className={`${styles.icon} mt-0.5`}>
         <Icon />
       </div>
-      <p className="flex-1 text-sm font-medium text-gray-900 dark:text-white">
-        {toast.message}
-      </p>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-900 dark:text-white">
+          {toast.message}
+        </p>
+        {toast.errorCode && toast.type === 'error' && (
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Code: <code className="font-mono">{toast.errorCode}</code>
+          </p>
+        )}
+      </div>
       <button
         onClick={handleDismiss}
-        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0"
         aria-label="Dismiss"
       >
         <CloseIcon />

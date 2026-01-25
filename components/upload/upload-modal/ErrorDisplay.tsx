@@ -36,6 +36,11 @@ export default function ErrorDisplay({
             </svg>
             <div className="flex-1">
               <p className="text-red-700 dark:text-red-400 text-sm">{error.message}</p>
+              {error.code && (
+                <p className="mt-1 text-xs text-red-500/70 dark:text-red-400/70">
+                  Code: <code className="font-mono">{error.code}</code>
+                </p>
+              )}
               {error.isRetryable && !isUploading && hasFiles && (
                 <button
                   onClick={onRetry}

@@ -8,6 +8,9 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useXP } from '@/contexts/XPContext'
 import { useFunnelTracking } from '@/lib/analytics'
+// Error code utilities available if needed:
+// import { getDisplayErrorCode, parseAPIError } from '@/lib/errors/client'
+import { ErrorCodes } from '@/lib/errors'
 // Import types from the dedicated types file to avoid bundling mammoth/jszip
 import type { ExtractedDocument } from '@/lib/documents/types'
 
@@ -18,6 +21,7 @@ import type { ExtractedDocument } from '@/lib/documents/types'
 interface ProcessingState {
   status: 'processing' | 'success' | 'error'
   error?: string
+  errorCode?: string
   retryable?: boolean
   courseId?: string
   cardsGenerated?: number
@@ -364,7 +368,8 @@ function ProcessingContent() {
     errorMessage: string,
     retryable: boolean,
     processingKey: string | null,
-    retryFn: () => void
+    retryFn: () => void,
+    errorCode?: string
   ) => {
     // Check if we should auto-retry transient errors
     if (retryable && isTransientError(errorMessage) && autoRetryCountRef.current < MAX_AUTO_RETRIES) {
@@ -393,6 +398,7 @@ function ProcessingContent() {
     setState({
       status: 'error',
       error: errorMessage,
+      errorCode: errorCode || ErrorCodes.COURSE_UNKNOWN,
       retryable,
     })
     return false
@@ -486,7 +492,8 @@ function ProcessingContent() {
           `Server error (${response.status}). Please try again.`,
           true,
           processingKey,
-          generateCourse
+          generateCourse,
+          ErrorCodes.GENERATION_FAILED
         )
         if (wasRetried) return
         return
@@ -520,7 +527,7 @@ function ProcessingContent() {
               })
               return
             } else if (message.type === 'error') {
-              console.error('[Processing] ERROR from text fallback:', message.error)
+              console.error('[Processing] ERROR from text fallback:', message.error, message.code)
               clearTimeout(timeoutId)
               if (processingKey) {
                 sessionStorage.removeItem(processingKey)
@@ -529,7 +536,8 @@ function ProcessingContent() {
                 message.error || 'Failed to generate course',
                 message.retryable ?? true,
                 processingKey,
-                generateCourse
+                generateCourse,
+                message.code || ErrorCodes.GENERATION_FAILED
               )
               if (wasRetried) return
               return
@@ -688,7 +696,7 @@ function ProcessingContent() {
               }
 
               case 'error': {
-                console.error('[Processing] ERROR from server:', message.error)
+                console.error('[Processing] ERROR from server:', message.error, message.code)
                 // Clear timeout and processing flag so retry can work
                 clearTimeout(timeoutId)
                 if (processingKey) {
@@ -698,7 +706,8 @@ function ProcessingContent() {
                   message.error || 'Failed to generate course',
                   message.retryable ?? true,
                   processingKey,
-                  generateCourse
+                  generateCourse,
+                  message.code || ErrorCodes.GENERATION_FAILED
                 )
                 if (wasRetried) return
                 return
@@ -733,7 +742,7 @@ function ProcessingContent() {
             })
             return
           } else if (message.type === 'error') {
-            console.error('[Processing] ERROR found in remaining buffer:', message.error)
+            console.error('[Processing] ERROR found in remaining buffer:', message.error, message.code)
             clearTimeout(timeoutId)
             if (processingKey) {
               sessionStorage.removeItem(processingKey)
@@ -742,7 +751,8 @@ function ProcessingContent() {
               message.error || 'Failed to generate course',
               message.retryable ?? true,
               processingKey,
-              generateCourse
+              generateCourse,
+              message.code || ErrorCodes.GENERATION_FAILED
             )
             if (wasRetried) return
             return
@@ -783,7 +793,8 @@ function ProcessingContent() {
         'Connection closed unexpectedly. Please try again.',
         true,
         processingKey,
-        generateCourse
+        generateCourse,
+        ErrorCodes.STREAM_CONNECTION_LOST
       )
       if (wasRetried) return
 
@@ -817,6 +828,7 @@ function ProcessingContent() {
         setState({
           status: 'error',
           error: 'Generation is taking longer than expected. Please try again or use a smaller document.',
+          errorCode: ErrorCodes.GENERATION_TIMEOUT,
           retryable: true,
         })
       } else {
@@ -825,7 +837,8 @@ function ProcessingContent() {
           'Connection error. Please check your internet and try again.',
           true,
           processingKey,
-          generateCourse
+          generateCourse,
+          ErrorCodes.NETWORK_REQUEST_FAILED
         )
         if (wasRetried) return
       }
@@ -900,6 +913,7 @@ function ProcessingContent() {
         {state.status === 'error' && (
           <ErrorView
             error={state.error || 'An error occurred'}
+            errorCode={state.errorCode}
             retryable={state.retryable}
             onRetry={handleRetry}
             t={t}
@@ -1242,12 +1256,13 @@ function SuccessView({ cardsGenerated, xpAwarded, generationStatus, lessonsReady
 
 interface ErrorViewProps {
   error: string
+  errorCode?: string
   retryable?: boolean
   onRetry: () => void
   t: ReturnType<typeof useTranslations<'processing'>>
 }
 
-function ErrorView({ error, retryable, onRetry, t }: ErrorViewProps) {
+function ErrorView({ error, errorCode, retryable, onRetry, t }: ErrorViewProps) {
   return (
     <div className="text-center">
       {/* Error Icon */}
@@ -1272,9 +1287,16 @@ function ErrorView({ error, retryable, onRetry, t }: ErrorViewProps) {
       <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
         {t('error.title')}
       </h2>
-      <p className="text-gray-600 dark:text-gray-400 mb-6">
+      <p className="text-gray-600 dark:text-gray-400 mb-4">
         {error}
       </p>
+
+      {/* Error Code */}
+      {errorCode && (
+        <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
+          Error code: <code className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">{errorCode}</code>
+        </p>
+      )}
 
       {/* Action Buttons */}
       <div className="space-y-3">

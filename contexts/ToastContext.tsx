@@ -9,10 +9,10 @@ import { ToastContainer, type Toast, type ToastType } from '@/components/ui/Toas
 
 interface ToastContextValue {
   toasts: Toast[]
-  addToast: (type: ToastType, message: string, duration?: number) => void
+  addToast: (type: ToastType, message: string, duration?: number, errorCode?: string) => void
   removeToast: (id: string) => void
   success: (message: string, duration?: number) => void
-  error: (message: string, duration?: number) => void
+  error: (message: string, durationOrCode?: number | string, errorCode?: string) => void
   warning: (message: string, duration?: number) => void
   info: (message: string, duration?: number) => void
   clearAll: () => void
@@ -37,9 +37,9 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
   const generateId = () => `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
-  const addToast = useCallback((type: ToastType, message: string, duration?: number) => {
+  const addToast = useCallback((type: ToastType, message: string, duration?: number, errorCode?: string) => {
     const id = generateId()
-    const newToast: Toast = { id, type, message, duration }
+    const newToast: Toast = { id, type, message, duration, errorCode }
 
     setToasts((prev) => {
       // Limit to 5 toasts max
@@ -59,8 +59,28 @@ export function ToastProvider({ children }: ToastProviderProps) {
     addToast('success', message, duration)
   }, [addToast])
 
-  const error = useCallback((message: string, duration?: number) => {
-    addToast('error', message, duration ?? 7000) // Errors show longer
+  const error = useCallback((message: string, durationOrCode?: number | string, errorCode?: string) => {
+    // Support both signatures:
+    // error(message, duration) - old signature
+    // error(message, errorCode) - new signature with code
+    // error(message, duration, errorCode) - full signature
+    let duration: number | undefined
+    let code: string | undefined
+
+    if (typeof durationOrCode === 'string') {
+      // error(message, errorCode)
+      code = durationOrCode
+      duration = 7000
+    } else if (typeof durationOrCode === 'number') {
+      // error(message, duration, errorCode)
+      duration = durationOrCode
+      code = errorCode
+    } else {
+      // error(message)
+      duration = 7000
+    }
+
+    addToast('error', message, duration, code)
   }, [addToast])
 
   const warning = useCallback((message: string, duration?: number) => {
