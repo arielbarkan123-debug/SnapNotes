@@ -290,24 +290,20 @@ export async function uploadImagesToStorage(
     // Check for HEIC format - magic bytes validation already detected it
     const isHeic = magicBytesValid.format === 'heic'
 
-    // Convert HEIC to JPEG before uploading (Claude Vision doesn't support HEIC)
+    // Try to convert HEIC to JPEG on client-side (faster if it works)
+    // If conversion fails (common on Safari mobile), upload HEIC anyway - server will convert it
     if (isHeic) {
-      console.log(`[Upload] File ${originalFilename} is HEIC, attempting conversion...`)
+      console.log(`[Upload] File ${originalFilename} is HEIC, attempting client-side conversion...`)
       try {
-        console.log(`[Upload] Converting HEIC file: ${originalFilename}`)
         file = await convertHeicToJpeg(file)
         console.log(`[Upload] HEIC conversion successful: ${originalFilename} -> ${file.name}`)
       } catch (conversionError) {
+        // Client-side conversion failed - this is OK!
+        // The server will detect HEIC by magic bytes and convert it automatically
         const errorMsg = conversionError instanceof Error ? conversionError.message : 'Unknown error'
-        console.error(`[Upload] HEIC conversion failed for ${originalFilename}:`, errorMsg)
-
-        // Provide specific error message for Safari users
-        if (errorMsg.includes('SecurityError') || errorMsg.includes('not supported')) {
-          errors.push(`${originalFilename}: HEIC format not supported on this browser. Please convert to JPEG first, or go to iPhone Settings > Camera > Formats and select "Most Compatible" to take photos in JPEG format.`)
-        } else {
-          errors.push(`${originalFilename}: Failed to convert HEIC image - ${errorMsg}`)
-        }
-        continue
+        console.log(`[Upload] Client-side HEIC conversion failed (expected on Safari): ${errorMsg}`)
+        console.log(`[Upload] Uploading raw HEIC - server will convert automatically`)
+        // Continue with original HEIC file - don't push to errors, don't skip
       }
     }
 
