@@ -527,49 +527,70 @@ function isHeicByMagicBytes(buffer: ArrayBuffer): boolean {
 }
 
 /**
- * Convert HEIC buffer to JPEG using heic-convert (server-side)
+ * Convert HEIC buffer to JPEG using sharp (server-side)
+ * Sharp is battle-tested and works reliably in Vercel serverless environments
  * This is the fallback when client-side conversion fails (common on Safari mobile)
  */
 async function convertHeicToJpegServerSide(heicBuffer: Buffer): Promise<Buffer> {
   try {
-    // Dynamic import to avoid loading unless needed
-    const heicConvert = (await import('heic-convert')).default
+    // Use sharp - it's already installed and much more reliable than heic-convert
+    const sharp = (await import('sharp')).default
 
-    console.log('[HEIC Server Convert] Converting HEIC to JPEG, input size:', heicBuffer.byteLength)
+    console.log('[HEIC Server Convert] Converting HEIC to JPEG using sharp, input size:', heicBuffer.byteLength)
 
-    // Convert Node.js Buffer to ArrayBuffer (required by heic-convert types)
-    const arrayBuffer = heicBuffer.buffer.slice(
-      heicBuffer.byteOffset,
-      heicBuffer.byteOffset + heicBuffer.byteLength
-    )
-
-    const jpegArrayBuffer = await heicConvert({
-      buffer: arrayBuffer,
-      format: 'JPEG',
-      quality: 0.9
-    })
+    const jpegBuffer = await sharp(heicBuffer)
+      .jpeg({ quality: 90 })
+      .toBuffer()
 
     // Validate output
-    if (!jpegArrayBuffer || jpegArrayBuffer.byteLength < 1024) {
+    if (!jpegBuffer || jpegBuffer.byteLength < 1024) {
       throw new Error('Conversion produced invalid output')
     }
 
-    // Convert to Uint8Array for magic byte verification
-    const jpegBytes = new Uint8Array(jpegArrayBuffer)
-
     // Verify it's actually JPEG (magic bytes: FF D8 FF)
-    if (jpegBytes[0] !== 0xFF || jpegBytes[1] !== 0xD8 || jpegBytes[2] !== 0xFF) {
+    if (jpegBuffer[0] !== 0xFF || jpegBuffer[1] !== 0xD8 || jpegBuffer[2] !== 0xFF) {
       throw new Error('Conversion did not produce valid JPEG')
     }
 
-    console.log('[HEIC Server Convert] Success, output size:', jpegArrayBuffer.byteLength)
-    return Buffer.from(jpegArrayBuffer)
+    console.log('[HEIC Server Convert] Success with sharp, output size:', jpegBuffer.byteLength)
+    return jpegBuffer
   } catch (error) {
-    console.error('[HEIC Server Convert] Failed:', error)
-    throw new ClaudeAPIError(
-      'Failed to process HEIC image. Please try taking a new photo or converting to JPEG.',
-      'INVALID_IMAGE'
-    )
+    console.error('[HEIC Server Convert] Sharp conversion failed:', error)
+
+    // Try heic-convert as fallback (in case sharp doesn't have HEIC support in this env)
+    try {
+      console.log('[HEIC Server Convert] Trying heic-convert as fallback...')
+      const heicConvert = (await import('heic-convert')).default
+
+      const arrayBuffer = heicBuffer.buffer.slice(
+        heicBuffer.byteOffset,
+        heicBuffer.byteOffset + heicBuffer.byteLength
+      )
+
+      const jpegArrayBuffer = await heicConvert({
+        buffer: arrayBuffer,
+        format: 'JPEG',
+        quality: 0.9
+      })
+
+      if (!jpegArrayBuffer || jpegArrayBuffer.byteLength < 1024) {
+        throw new Error('Fallback conversion produced invalid output')
+      }
+
+      const jpegBytes = new Uint8Array(jpegArrayBuffer)
+      if (jpegBytes[0] !== 0xFF || jpegBytes[1] !== 0xD8 || jpegBytes[2] !== 0xFF) {
+        throw new Error('Fallback conversion did not produce valid JPEG')
+      }
+
+      console.log('[HEIC Server Convert] Fallback heic-convert succeeded, output size:', jpegArrayBuffer.byteLength)
+      return Buffer.from(jpegArrayBuffer)
+    } catch (fallbackError) {
+      console.error('[HEIC Server Convert] Both sharp and heic-convert failed:', fallbackError)
+      throw new ClaudeAPIError(
+        'Failed to process HEIC image. Please try taking a new photo in JPEG format (iPhone: Settings > Camera > Formats > Most Compatible).',
+        'INVALID_IMAGE'
+      )
+    }
   }
 }
 
