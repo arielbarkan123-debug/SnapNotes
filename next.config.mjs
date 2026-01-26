@@ -108,6 +108,13 @@ const nextConfig = {
   // Improve production performance
   poweredByHeader: false,
 
+  // Strip console.log in production (keep console.error and console.warn)
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
+  },
+
   // Bundle optimization
   experimental: {
     // Optimize package imports - only import what's used

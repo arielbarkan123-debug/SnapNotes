@@ -5,6 +5,52 @@ import { TextEncoder, TextDecoder } from 'util'
 global.TextEncoder = TextEncoder
 global.TextDecoder = TextDecoder as typeof global.TextDecoder
 
+// Polyfill for ReadableStream in Node environment
+if (typeof global.ReadableStream === 'undefined') {
+  // @ts-ignore
+  global.ReadableStream = class ReadableStream {
+    private controller: any = null
+    private reader: any = null
+
+    constructor(underlyingSource?: any) {
+      if (underlyingSource?.start) {
+        const controller = {
+          enqueue: (chunk: any) => {
+            if (this.reader && this.reader.onData) {
+              this.reader.onData(chunk)
+            }
+          },
+          close: () => {
+            if (this.reader && this.reader.onClose) {
+              this.reader.onClose()
+            }
+          },
+          error: (err: any) => {
+            if (this.reader && this.reader.onError) {
+              this.reader.onError(err)
+            }
+          }
+        }
+        this.controller = controller
+        underlyingSource.start(controller)
+      }
+    }
+
+    getReader() {
+      const reader = {
+        onData: null as ((chunk: any) => void) | null,
+        onClose: null as (() => void) | null,
+        onError: null as ((err: any) => void) | null,
+        read: () => Promise.resolve({ done: true, value: undefined }),
+        releaseLock: () => {},
+        closed: Promise.resolve()
+      }
+      this.reader = reader
+      return reader
+    }
+  }
+}
+
 // Mock Request and Response for Next.js API route testing
 // These are needed because Next.js server components use these globals
 if (typeof global.Request === 'undefined') {
