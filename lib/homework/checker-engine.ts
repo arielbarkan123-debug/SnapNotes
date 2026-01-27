@@ -19,7 +19,38 @@ import type {
   AnnotatedFeedbackPoint,
   AnnotationRegion,
   AnnotationData,
+  InputMode,
 } from './types'
+
+// ============================================================================
+// Error Codes for Homework Checker Engine
+// ============================================================================
+
+const ENGINE_ERROR_CODES = {
+  // Text mode errors
+  ENG_TXT_001: 'ENG_TXT_001', // Text analysis failed
+  ENG_TXT_002: 'ENG_TXT_002', // Text analysis timeout
+  ENG_TXT_003: 'ENG_TXT_003', // Text analysis rate limit
+
+  // Image mode errors
+  ENG_IMG_001: 'ENG_IMG_001', // Image fetch failed
+  ENG_IMG_002: 'ENG_IMG_002', // Image analysis failed
+  ENG_IMG_003: 'ENG_IMG_003', // Image analysis timeout
+  ENG_IMG_004: 'ENG_IMG_004', // Task image URL required
+  ENG_IMG_005: 'ENG_IMG_005', // HEIC/HEIF format not supported
+
+  // Common errors
+  ENG_API_001: 'ENG_API_001', // API key not set
+  ENG_API_002: 'ENG_API_002', // API overloaded
+} as const
+
+/**
+ * Format error message with code for debugging
+ */
+function formatEngineError(code: string, message: string, details?: string): string {
+  const detailSuffix = details ? ` (${details})` : ''
+  return `[${code}] ${message}${detailSuffix}`
+}
 
 // ============================================================================
 // Configuration
@@ -103,8 +134,8 @@ async function fetchImageAsBase64(url: string): Promise<FetchedImage> {
     if (contentType.includes('heic') || contentType.includes('heif')) {
       // HEIC/HEIF not supported by Claude
       // Client-side conversion should have handled this, but if it got through:
-      console.error('[Checker] HEIC/HEIF image received - client conversion may have failed')
-      throw new Error('This image format is not supported. Please try uploading again or use a JPEG/PNG image.')
+      console.error('[CheckerEngine/ImageFetch] HEIC/HEIF image received - client conversion may have failed')
+      throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_IMG_005, 'This image format is not supported. Please try uploading again or use a JPEG/PNG image.', 'CheckerEngine/ImageFetch/HEIC'))
     } else if (contentType.includes('pdf')) {
       // PDF is supported by Claude Vision API
       mediaType = 'application/pdf'
@@ -318,7 +349,7 @@ function getAnthropicClient(): Anthropic {
   if (!anthropicClient) {
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY environment variable is not set')
+      throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_API_001, 'ANTHROPIC_API_KEY environment variable is not set', 'CheckerEngine/Config'))
     }
     anthropicClient = new Anthropic({
       apiKey,
@@ -333,10 +364,19 @@ function getAnthropicClient(): Anthropic {
 // ============================================================================
 
 export interface CheckerInput {
-  taskImageUrl: string
+  // Input mode indicator
+  inputMode: InputMode
+
+  // Image-based (optional if text provided)
+  taskImageUrl?: string
   answerImageUrl?: string  // Optional - if not provided, will analyze task only
   referenceImageUrls?: string[]
   teacherReviewUrls?: string[]
+
+  // Text-based (optional if image provided)
+  taskText?: string
+  answerText?: string
+
   // Extracted text from DOCX files (DOCX not supported by Claude Vision directly)
   taskDocumentText?: string
   answerDocumentText?: string
@@ -353,6 +393,22 @@ export interface CheckerOutput {
 export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutput> {
   try {
     const client = getAnthropicClient()
+
+    // ============================================================================
+    // TEXT MODE: Skip image fetching, use text directly
+    // ============================================================================
+    if (input.inputMode === 'text') {
+      console.log('[Checker] Text mode - skipping image fetch, analyzing text directly...')
+      return analyzeHomeworkText(client, input)
+    }
+
+    // ============================================================================
+    // IMAGE MODE: Fetch images and analyze with vision
+    // ============================================================================
+    // Validate that taskImageUrl exists for image mode
+    if (!input.taskImageUrl) {
+      throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_IMG_004, 'Task image URL is required for image mode', 'CheckerEngine/ImageMode/Validation'))
+    }
 
     // Fetch images and convert to base64
     // Note: The API route uses streaming with heartbeats to keep mobile connections alive
@@ -793,16 +849,171 @@ Return your analysis as JSON in this exact format:
     const errorName = error instanceof Error ? error.name : ''
 
     if (errorMessage.includes('timeout') || errorName === 'AbortError' || errorMessage.includes('timed out')) {
-      throw new Error('Analysis took too long. Please try again with clearer images.')
+      throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_IMG_003, 'Analysis took too long. Please try again with clearer images.', 'CheckerEngine/ImageMode/Timeout'))
     }
 
     if (errorMessage.includes('overloaded') || errorMessage.includes('529')) {
-      throw new Error('Our AI is busy right now. Please try again in a moment.')
+      throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_API_002, 'Our AI is busy right now. Please try again in a moment.', 'CheckerEngine/API/Overloaded'))
     }
 
     // Re-throw the original error for the route to handle
-    throw error
+    // If it already has a code, keep it; otherwise wrap it
+    if (error instanceof Error && error.message.startsWith('[')) {
+      throw error
+    }
+    throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_IMG_002, error instanceof Error ? error.message : 'Analysis failed', 'CheckerEngine/ImageMode/Unknown'))
   }
+}
+
+// ============================================================================
+// Text-Based Analysis (No Vision API)
+// ============================================================================
+
+/**
+ * Analyze homework from text input (cheaper - no Vision API)
+ */
+async function analyzeHomeworkText(client: Anthropic, input: CheckerInput): Promise<CheckerOutput> {
+  const taskText = input.taskText || ''
+  const answerText = input.answerText || ''
+
+  // Build the prompt for text-based analysis
+  const promptContent = `
+## HOMEWORK TASK:
+${taskText}
+
+${answerText ? `## STUDENT'S ANSWER:\n${answerText}` : '## NOTE: No student answer was provided. Please analyze the task/question and provide guidance on how to approach and solve it.'}
+
+## YOUR TASK: ACCURATE HOMEWORK GRADING
+Analyze the homework submission with EXTREME attention to accuracy.
+
+### CRITICAL ACCURACY RULES:
+1. **VERIFY BEFORE JUDGING**: For ANY math/calculation problem, COMPUTE THE ANSWER YOURSELF before deciding if the student is correct.
+2. **NEVER CONTRADICT YOURSELF**: Do NOT say "incorrect" and then change your mind. Verify FIRST, then state your conclusion ONCE.
+3. **ANSWER IS KING**: If the student's final answer matches the correct answer, the problem is 100% CORRECT.
+4. **STYLE ≠ ERRORS**: Feedback about work organization or presentation should NEVER reduce the grade.
+
+### ANALYSIS STEPS:
+**STEP 1**: Extract ALL problems/questions from the task. List them.
+
+**STEP 2**: For EACH problem:
+  a) What is the question asking?
+  b) What answer did the student provide?
+  c) COMPUTE the correct answer yourself (show your calculation)
+  d) Does student's answer = correct answer?
+  e) If CORRECT → goes in correctPoints
+  f) If WRONG → goes in improvementPoints with appropriate severity
+
+**STEP 3**: Count results
+  - X problems correct out of Y total
+  - Calculate: gradeEstimate = (X / Y) × 100
+
+**STEP 4**: Generate feedback JSON
+
+### SEVERITY GUIDE:
+- "moderate": Wrong answer but showed correct approach
+- "major": Completely wrong answer, fundamental misunderstanding
+
+Return your analysis as JSON in this exact format:
+{
+  "subject": "The academic subject (e.g., Math, Science, History)",
+  "topic": "The specific topic within the subject",
+  "taskText": "The homework task/question",
+  "answerText": "Summary of what the student answered",
+  "feedback": {
+    "gradeLevel": "excellent" | "good" | "needs_improvement" | "incomplete",
+    "gradeEstimate": "A grade like 85/100 - MUST match your correctPoints/improvementPoints ratio!",
+    "summary": "2-3 sentence overall assessment. State X/Y problems correct.",
+    "correctPoints": [
+      {
+        "title": "Problem X - Correct",
+        "description": "The student correctly solved [problem]. Their answer of [X] is correct because [reason]."
+      }
+    ],
+    "improvementPoints": [
+      {
+        "title": "Problem X - Error",
+        "description": "The correct answer is [X], but the student wrote [Y]. Here's how to solve it: [explanation]",
+        "severity": "major"
+      }
+    ],
+    "suggestions": [
+      "Specific actionable suggestions for improvement"
+    ],
+    "teacherStyleNotes": null,
+    "expectationComparison": null,
+    "encouragement": "A positive, encouraging message for the student"
+  }
+}
+
+### FINAL CHECK:
+□ Did I verify each calculation myself?
+□ Does my gradeEstimate match the ratio of correctPoints to total problems?
+□ Are improvementPoints ONLY for wrong answers (not style issues)?
+□ If all answers are correct, is my grade 95-100%?
+`
+
+  console.log('[CheckerEngine/TextMode] Sending text-based request to Claude...')
+
+  // Use text-only API (cheaper than Vision)
+  let response: Anthropic.Message | null = null
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const stream = client.messages.stream({
+        model: AI_MODEL,
+        max_tokens: MAX_TOKENS,
+        messages: [{ role: 'user', content: promptContent }],
+      })
+
+      for await (const event of stream) {
+        void event
+      }
+
+      response = await stream.finalMessage()
+      console.log('[CheckerEngine/TextMode] Response received, tokens used:', response.usage?.output_tokens)
+      break
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+
+      // Check for specific error types
+      const errorMessage = lastError.message.toLowerCase()
+      if (errorMessage.includes('timeout') || lastError.name === 'AbortError') {
+        throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_TXT_002, 'Analysis took too long. Please try again.', 'CheckerEngine/TextMode/Timeout'))
+      }
+      if (errorMessage.includes('overloaded') || errorMessage.includes('529')) {
+        throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_API_002, 'Our AI is busy right now. Please try again in a moment.', 'CheckerEngine/TextMode/Overloaded'))
+      }
+      if (errorMessage.includes('rate') && errorMessage.includes('limit')) {
+        throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_TXT_003, 'Rate limit exceeded. Please try again in a moment.', 'CheckerEngine/TextMode/RateLimit'))
+      }
+
+      if (!isRetryableError(error) || attempt === MAX_RETRIES) {
+        console.error(`[CheckerEngine/TextMode] Attempt ${attempt}/${MAX_RETRIES} failed (not retrying):`, lastError.message)
+        throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_TXT_001, lastError.message, `CheckerEngine/TextMode/Attempt:${attempt}`))
+      }
+
+      const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1)
+      console.warn(`[CheckerEngine/TextMode] Attempt ${attempt}/${MAX_RETRIES} failed: ${lastError.message}. Retrying in ${delay}ms...`)
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
+
+  if (!response) {
+    throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_TXT_001, lastError?.message || 'Failed to get response from AI', 'CheckerEngine/TextMode/NoResponse'))
+  }
+
+  // Parse response and apply consistency validation
+  const result = parseCheckerResponse(response)
+
+  // For text mode, we don't have annotations (no image to annotate)
+  if (result.feedback.annotations) {
+    result.feedback.annotations.hasAnnotations = false
+    result.feedback.annotations.correctAnnotations = []
+    result.feedback.annotations.errorAnnotations = []
+  }
+
+  return ensureGradeConsistency(result)
 }
 
 // ============================================================================

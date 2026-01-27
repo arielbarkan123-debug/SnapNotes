@@ -51,5 +51,18 @@
   "tryAgain": "נסה שוב בגישה אחרת",
   "notFound": "בדיקת שיעורי הבית לא נמצאה",
   "loadError": "טעינת התוצאות נכשלה",
-  "homeworkCheck": "בדיקת שיעורי בית"
+  "homeworkCheck": "בדיקת שיעורי בית",
+  "inputMode": {
+    "uploadImage": "העלאת תמונה",
+    "pasteText": "הדבקת טקסט",
+    "howToSubmit": "איך תרצה להגיש?",
+    "taskTextLabel": "השאלה/מטלה שלך",
+    "taskTextPlaceholder": "הדבק או הקלד את שאלת שיעורי הבית שלך כאן...",
+    "answerTextLabel": "התשובה שלך",
+    "answerTextPlaceholder": "הדבק או הקלד את התשובה שלך כאן...",
+    "questionTextLabel": "השאלה שלך",
+    "questionTextPlaceholder": "הדבק או הקלד את שאלת שיעורי הבית שלך כאן...",
+    "textMinLength": "נא להזין לפחות {min} תווים",
+    "optional": "אופציונלי"
+  }
 }

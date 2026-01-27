@@ -7,10 +7,34 @@ import type {
   QuestionAnalysis,
   ReferenceAnalysis,
 } from '@/lib/homework/types'
-import { analyzeQuestion } from '@/lib/homework/question-analyzer'
+import { analyzeQuestion, analyzeQuestionText } from '@/lib/homework/question-analyzer'
 import { analyzeReferences } from '@/lib/homework/reference-analyzer'
 import { generateInitialGreeting } from '@/lib/homework/tutor-engine'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+
+// ============================================================================
+// Error Codes for Homework Sessions API
+// ============================================================================
+
+const API_ERROR_CODES = {
+  // Validation errors
+  API_SES_VAL_001: 'API_SES_VAL_001', // Question text required (text mode)
+  API_SES_VAL_002: 'API_SES_VAL_002', // Question image required (image mode)
+
+  // Analysis errors
+  API_SES_AI_001: 'API_SES_AI_001', // Question analysis failed
+
+  // Database errors
+  API_SES_DB_001: 'API_SES_DB_001', // Failed to create session
+} as const
+
+/**
+ * Format error message with code for debugging
+ */
+function formatApiError(code: string, message: string, details?: string): string {
+  const detailSuffix = details ? ` (${details})` : ''
+  return `[${code}] ${message}${detailSuffix}`
+}
 
 // Allow 90 seconds for session creation (includes AI analysis)
 export const maxDuration = 90
@@ -41,19 +65,36 @@ export async function POST(request: NextRequest) {
       return createErrorResponse(ErrorCodes.BODY_INVALID_JSON)
     }
 
-    if (!body.questionImageUrl) {
-      return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Question image is required')
+    // Validate based on input mode
+    const inputMode = body.inputMode || 'image'
+
+    if (inputMode === 'text') {
+      // Text mode: require questionText
+      if (!body.questionText || body.questionText.trim().length < 10) {
+        return createErrorResponse(ErrorCodes.FIELD_REQUIRED, formatApiError(API_ERROR_CODES.API_SES_VAL_001, 'Question text is required (minimum 10 characters)', 'API/HomeworkSessions/TextMode/Validation'))
+      }
+    } else {
+      // Image mode: require questionImageUrl
+      if (!body.questionImageUrl) {
+        return createErrorResponse(ErrorCodes.FIELD_REQUIRED, formatApiError(API_ERROR_CODES.API_SES_VAL_002, 'Question image is required', 'API/HomeworkSessions/ImageMode/Validation'))
+      }
     }
 
-    // Step 1: Analyze the question image using Claude Vision
+    // Step 1: Analyze the question (image or text)
     let questionAnalysis: QuestionAnalysis
     try {
-      questionAnalysis = await analyzeQuestion(body.questionImageUrl)
+      if (inputMode === 'text') {
+        // Text mode: analyze the text directly
+        questionAnalysis = await analyzeQuestionText(body.questionText!)
+      } else {
+        // Image mode: use vision to analyze the image
+        questionAnalysis = await analyzeQuestion(body.questionImageUrl!)
+      }
     } catch (error) {
-      console.error('Question analysis error:', error)
-      // Fall back to minimal analysis if vision fails
+      console.error(`[API/HomeworkSessions/Analysis] Question analysis error (${inputMode} mode):`, error)
+      // Fall back to minimal analysis if analysis fails
       questionAnalysis = {
-        questionText: 'Could not extract question text',
+        questionText: inputMode === 'text' ? body.questionText! : 'Could not extract question text',
         subject: 'other',
         topic: 'Unknown',
         questionType: 'unknown',
@@ -84,7 +125,8 @@ export async function POST(request: NextRequest) {
       .from('homework_sessions')
       .insert({
         user_id: user.id,
-        question_image_url: body.questionImageUrl,
+        // For text mode, question_image_url is null and question_text comes from user input
+        question_image_url: inputMode === 'image' ? body.questionImageUrl : null,
         question_text: questionAnalysis.questionText,
         question_type: questionAnalysis.questionType,
         detected_subject: questionAnalysis.subject,
@@ -109,8 +151,12 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      console.error('Insert error:', insertError)
-      return createErrorResponse(ErrorCodes.HW_SESSION_CREATE_FAILED)
+      console.error(`[API/HomeworkSessions/DB] Insert error (${inputMode} mode):`, insertError)
+      // Return error with detailed code
+      return NextResponse.json(
+        { error: formatApiError(API_ERROR_CODES.API_SES_DB_001, 'Failed to create session', `API/HomeworkSessions/DB/Insert/${inputMode}Mode/Code:${insertError.code}`) },
+        { status: 500 }
+      )
     }
 
     const createdSession = session as HomeworkSession

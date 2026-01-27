@@ -109,11 +109,23 @@ export interface AnnotationData {
 // API Request/Response Types
 // ============================================================================
 
+// Input mode for homework submission
+export type InputMode = 'image' | 'text'
+
 export interface CreateCheckRequest {
-  taskImageUrl: string
+  // Input mode indicator
+  inputMode: InputMode
+
+  // Image-based (optional if text provided)
+  taskImageUrl?: string
   answerImageUrl?: string
   referenceImageUrls?: string[]
   teacherReviewUrls?: string[]
+
+  // Text-based (optional if image provided)
+  taskText?: string
+  answerText?: string
+
   // Extracted text from DOCX files (DOCX not supported by Claude Vision directly)
   taskDocumentText?: string
   answerDocumentText?: string
@@ -134,10 +146,19 @@ export interface AnalyzeCheckResponse {
 
 // Session management request types
 export interface CreateSessionRequest {
-  questionImageUrl: string
+  // Input mode indicator
+  inputMode: InputMode
+
+  // Image-based (optional if text provided)
+  questionImageUrl?: string
+  referenceImageUrls?: string[]
+
+  // Text-based (optional if image provided)
+  questionText?: string
+
+  // Common fields
   comfortLevel?: ComfortLevel
   initialAttempt?: string
-  referenceImageUrls?: string[]
 }
 
 export interface UpdateSessionRequest {

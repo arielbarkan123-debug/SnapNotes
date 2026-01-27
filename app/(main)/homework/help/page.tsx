@@ -8,6 +8,35 @@ import Button from '@/components/ui/Button'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
 
+import type { InputMode } from '@/lib/homework/types'
+
+// ============================================================================
+// Error Codes for Homework Helper Page
+// ============================================================================
+
+const ERROR_CODES = {
+  // Validation errors
+  HH_VAL_001: 'HH_VAL_001', // No image uploaded (image mode)
+  HH_VAL_002: 'HH_VAL_002', // Question text too short (text mode)
+
+  // Upload errors
+  HH_UPL_001: 'HH_UPL_001', // Upload failed
+
+  // Session creation errors (text mode)
+  HH_TXT_001: 'HH_TXT_001', // Failed to create session
+
+  // Session creation errors (image mode)
+  HH_IMG_001: 'HH_IMG_001', // Failed to create session
+} as const
+
+/**
+ * Format error message with code for debugging
+ */
+function formatError(code: string, message: string, details?: string): string {
+  const detailSuffix = details ? ` (${details})` : ''
+  return `[${code}] ${message}${detailSuffix}`
+}
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -18,6 +47,9 @@ interface UploadedImage {
 }
 
 type ComfortLevel = 'new' | 'some_idea' | 'stuck'
+
+// Minimum text length for question input
+const MIN_QUESTION_TEXT_LENGTH = 10
 
 // ============================================================================
 // Image Uploader Component
@@ -262,6 +294,115 @@ function MultiImageUploader({
 }
 
 // ============================================================================
+// Input Mode Toggle Component
+// ============================================================================
+
+function InputModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: InputMode
+  onChange: (mode: InputMode) => void
+}) {
+  return (
+    <div className="mb-6">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+        How would you like to submit your question?
+      </label>
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => onChange('image')}
+          className={`
+            flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all
+            ${mode === 'image'
+              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+              : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700'
+            }
+          `}
+        >
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+            mode === 'image' ? 'bg-purple-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+          }`}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <span className={`text-sm font-medium ${
+            mode === 'image' ? 'text-purple-700 dark:text-purple-300' : 'text-gray-700 dark:text-gray-300'
+          }`}>
+            Upload Image
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onChange('text')}
+          className={`
+            flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all
+            ${mode === 'text'
+              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+              : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700'
+            }
+          `}
+        >
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+            mode === 'text' ? 'bg-purple-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+          }`}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </div>
+          <span className={`text-sm font-medium ${
+            mode === 'text' ? 'text-purple-700 dark:text-purple-300' : 'text-gray-700 dark:text-gray-300'
+          }`}>
+            Paste Text
+          </span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// Question Text Input Component
+// ============================================================================
+
+function QuestionTextInput({
+  questionText,
+  onChange,
+}: {
+  questionText: string
+  onChange: (text: string) => void
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        Your Question <span className="text-red-500">*</span>
+      </label>
+      <textarea
+        value={questionText}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Paste or type your homework question here...
+
+Example:
+Solve for x: 2x + 5 = 13
+
+Or:
+Find the derivative of f(x) = 3x² + 2x - 5"
+        rows={6}
+        className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+      />
+      {questionText.length > 0 && questionText.length < MIN_QUESTION_TEXT_LENGTH && (
+        <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+          Please enter at least {MIN_QUESTION_TEXT_LENGTH} characters ({MIN_QUESTION_TEXT_LENGTH - questionText.length} more needed)
+        </p>
+      )}
+    </div>
+  )
+}
+
+// ============================================================================
 // Comfort Level Selector
 // ============================================================================
 
@@ -325,9 +466,13 @@ export default function HomeworkHelpPage() {
     trackFeature('homework_helper_view', { source: 'direct' })
   }, [trackStep, trackFeature])
 
+  // Input mode: 'image' or 'text'
+  const [inputMode, setInputMode] = useState<InputMode>('image')
+
   // Form states
   const [questionImage, setQuestionImage] = useState<UploadedImage | null>(null)
   const [referenceImages, setReferenceImages] = useState<UploadedImage[]>([])
+  const [questionText, setQuestionText] = useState('')
   const [whatTried, setWhatTried] = useState('')
   const [comfortLevel, setComfortLevel] = useState<ComfortLevel>('some_idea')
 
@@ -359,9 +504,18 @@ export default function HomeworkHelpPage() {
   }, [createSafeObjectURL])
 
   const handleSubmit = async () => {
-    if (!questionImage) {
-      setError('Please upload your homework question')
-      return
+    // Validate based on input mode
+    if (inputMode === 'image') {
+      if (!questionImage) {
+        setError(formatError(ERROR_CODES.HH_VAL_001, 'Please upload your homework question', 'HomeworkHelper/ImageMode'))
+        return
+      }
+    } else {
+      // Text mode validation
+      if (!questionText || questionText.trim().length < MIN_QUESTION_TEXT_LENGTH) {
+        setError(formatError(ERROR_CODES.HH_VAL_002, `Please enter at least ${MIN_QUESTION_TEXT_LENGTH} characters for your question`, 'HomeworkHelper/TextMode'))
+        return
+      }
     }
 
     setIsSubmitting(true)
@@ -370,15 +524,53 @@ export default function HomeworkHelpPage() {
     // Track context provided and session start
     trackStep('context_provided', 3)
     trackFeature('homework_helper_submit', {
+      inputMode,
       comfortLevel,
       hasWhatTried: whatTried.length > 0,
       referenceCount: referenceImages.length,
+      questionTextLength: inputMode === 'text' ? questionText.length : undefined,
     })
 
     try {
+      // ============================================================================
+      // TEXT MODE: Skip image upload, go directly to session creation
+      // ============================================================================
+      if (inputMode === 'text') {
+        const sessionRes = await fetch('/api/homework/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            inputMode: 'text',
+            questionText: questionText.trim(),
+            comfortLevel,
+            initialAttempt: whatTried || null,
+          }),
+        })
+
+        if (!sessionRes.ok) {
+          const errorData = await sessionRes.json()
+          throw new Error(formatError(ERROR_CODES.HH_TXT_001, errorData.error || 'Failed to create session', `HomeworkHelper/TextMode/CreateSession/Status:${sessionRes.status}`))
+        }
+
+        const { session } = await sessionRes.json()
+
+        trackStep('session_started', 4)
+        trackFeature('homework_helper_session_start', {
+          sessionId: session.id,
+          comfortLevel,
+          inputMode: 'text',
+        })
+
+        router.push(`/homework/${session.id}?type=help`)
+        return
+      }
+
+      // ============================================================================
+      // IMAGE MODE: Upload images first, then create session
+      // ============================================================================
       // Step 1: Upload images
       const formData = new FormData()
-      formData.append('files', questionImage.file)
+      formData.append('files', questionImage!.file)
       referenceImages.forEach((img) => {
         formData.append('files', img.file)
       })
@@ -391,7 +583,7 @@ export default function HomeworkHelpPage() {
       const uploadData = await uploadRes.json()
 
       if (!uploadRes.ok) {
-        throw new Error(uploadData.error || 'Failed to upload images')
+        throw new Error(formatError(ERROR_CODES.HH_UPL_001, uploadData.error || 'Failed to upload images', `HomeworkHelper/ImageMode/Upload/Status:${uploadRes.status}`))
       }
 
       const { images } = uploadData
@@ -403,6 +595,7 @@ export default function HomeworkHelpPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          inputMode: 'image',
           questionImageUrl,
           referenceImageUrls,
           comfortLevel,
@@ -412,7 +605,7 @@ export default function HomeworkHelpPage() {
 
       if (!sessionRes.ok) {
         const errorData = await sessionRes.json()
-        throw new Error(errorData.error || 'Failed to create session')
+        throw new Error(formatError(ERROR_CODES.HH_IMG_001, errorData.error || 'Failed to create session', `HomeworkHelper/ImageMode/CreateSession/Status:${sessionRes.status}`))
       }
 
       const { session } = await sessionRes.json()
@@ -425,16 +618,24 @@ export default function HomeworkHelpPage() {
 
       router.push(`/homework/${session.id}?type=help`)
     } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Unknown error'
       trackFeature('homework_helper_error', {
-        error: err instanceof Error ? err.message : 'Unknown error',
+        error: errMsg,
       })
-      setError(sanitizeError(err, 'Something went wrong'))
+      // If error already has a code (starts with [), use it directly
+      if (errMsg.startsWith('[')) {
+        setError(errMsg)
+      } else {
+        setError(sanitizeError(err, 'Something went wrong'))
+      }
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const canSubmit = questionImage && !isSubmitting
+  const canSubmit = inputMode === 'image'
+    ? questionImage && !isSubmitting
+    : questionText.trim().length >= MIN_QUESTION_TEXT_LENGTH && !isSubmitting
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
@@ -509,31 +710,48 @@ export default function HomeworkHelpPage() {
           {/* Question Upload */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h3 className="font-semibold text-gray-900 dark:text-white mb-5">Your Question</h3>
-            <ImageUploader
-              label="Homework Question"
-              description="Upload the problem you need help with"
-              image={questionImage}
-              onUpload={handleQuestionUpload}
-              onRemove={() => setQuestionImage(null)}
-              required
-              icon="❓"
-            />
+
+            {/* Input Mode Toggle */}
+            <InputModeToggle mode={inputMode} onChange={setInputMode} />
+
+            {/* Conditional: Image Mode */}
+            {inputMode === 'image' && (
+              <ImageUploader
+                label="Homework Question"
+                description="Upload the problem you need help with"
+                image={questionImage}
+                onUpload={handleQuestionUpload}
+                onRemove={() => setQuestionImage(null)}
+                required
+                icon="❓"
+              />
+            )}
+
+            {/* Conditional: Text Mode */}
+            {inputMode === 'text' && (
+              <QuestionTextInput
+                questionText={questionText}
+                onChange={setQuestionText}
+              />
+            )}
           </div>
 
-          {/* Reference Materials */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Reference Materials</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Optional: add textbook pages, notes, or examples</p>
-            <MultiImageUploader
-              label="References"
-              description="Add helpful context"
-              images={referenceImages}
-              onUpload={handleReferenceUpload}
-              onRemove={(index) => setReferenceImages(prev => prev.filter((_, i) => i !== index))}
-              maxImages={10}
-              icon="📚"
-            />
-          </div>
+          {/* Reference Materials - only show in image mode */}
+          {inputMode === 'image' && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Reference Materials</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Optional: add textbook pages, notes, or examples</p>
+              <MultiImageUploader
+                label="References"
+                description="Add helpful context"
+                images={referenceImages}
+                onUpload={handleReferenceUpload}
+                onRemove={(index) => setReferenceImages(prev => prev.filter((_, i) => i !== index))}
+                maxImages={10}
+                icon="📚"
+              />
+            </div>
+          )}
 
           {/* Context */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">

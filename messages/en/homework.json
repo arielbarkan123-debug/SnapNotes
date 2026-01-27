@@ -51,5 +51,18 @@
   "tryAgain": "Try again with a different approach",
   "notFound": "Homework check not found",
   "loadError": "Failed to load results",
-  "homeworkCheck": "Homework Check"
+  "homeworkCheck": "Homework Check",
+  "inputMode": {
+    "uploadImage": "Upload Image",
+    "pasteText": "Paste Text",
+    "howToSubmit": "How would you like to submit?",
+    "taskTextLabel": "Your Question/Task",
+    "taskTextPlaceholder": "Paste or type your homework question here...",
+    "answerTextLabel": "Your Answer",
+    "answerTextPlaceholder": "Paste or type your answer here...",
+    "questionTextLabel": "Your Question",
+    "questionTextPlaceholder": "Paste or type your homework question here...",
+    "textMinLength": "Please enter at least {min} characters",
+    "optional": "optional"
+  }
 }

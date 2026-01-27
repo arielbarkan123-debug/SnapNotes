@@ -7,6 +7,32 @@ import Anthropic from '@anthropic-ai/sdk'
 import type { QuestionAnalysis, QuestionSubject } from './types'
 
 // ============================================================================
+// Error Codes for Question Analyzer
+// ============================================================================
+
+const ANALYZER_ERROR_CODES = {
+  // Image mode errors
+  QA_IMG_001: 'QA_IMG_001', // Image analysis failed
+  QA_IMG_002: 'QA_IMG_002', // Image could not be processed
+  QA_IMG_003: 'QA_IMG_003', // Rate limit exceeded
+
+  // Text mode errors
+  QA_TXT_001: 'QA_TXT_001', // Text analysis failed
+  QA_TXT_002: 'QA_TXT_002', // Rate limit exceeded
+
+  // Common errors
+  QA_API_001: 'QA_API_001', // API key not set
+} as const
+
+/**
+ * Format error message with code for debugging
+ */
+function formatAnalyzerError(code: string, message: string, details?: string): string {
+  const detailSuffix = details ? ` (${details})` : ''
+  return `[${code}] ${message}${detailSuffix}`
+}
+
+// ============================================================================
 // Configuration
 // ============================================================================
 
@@ -20,7 +46,7 @@ function getAnthropicClient(): Anthropic {
   if (!anthropicClient) {
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY environment variable is not set')
+      throw new Error(formatAnalyzerError(ANALYZER_ERROR_CODES.QA_API_001, 'ANTHROPIC_API_KEY environment variable is not set', 'QuestionAnalyzer/Config'))
     }
     anthropicClient = new Anthropic({ apiKey })
   }
@@ -118,13 +144,17 @@ export async function analyzeQuestion(imageUrl: string): Promise<QuestionAnalysi
   } catch (error) {
     if (error instanceof Anthropic.APIError) {
       if (error.status === 429) {
-        throw new Error('Rate limit exceeded. Please wait a moment and try again.')
+        throw new Error(formatAnalyzerError(ANALYZER_ERROR_CODES.QA_IMG_003, 'Rate limit exceeded. Please wait a moment and try again.', 'QuestionAnalyzer/ImageMode/RateLimit'))
       }
       if (error.status === 400) {
-        throw new Error('Could not process the image. Please ensure it is clear and readable.')
+        throw new Error(formatAnalyzerError(ANALYZER_ERROR_CODES.QA_IMG_002, 'Could not process the image. Please ensure it is clear and readable.', `QuestionAnalyzer/ImageMode/BadRequest/Status:${error.status}`))
       }
     }
-    throw error
+    // Wrap unknown errors
+    if (error instanceof Error && error.message.startsWith('[')) {
+      throw error
+    }
+    throw new Error(formatAnalyzerError(ANALYZER_ERROR_CODES.QA_IMG_001, error instanceof Error ? error.message : 'Image analysis failed', 'QuestionAnalyzer/ImageMode/Unknown'))
   }
 }
 
@@ -168,6 +198,83 @@ Note: Multiple images have been provided. They may show different parts of the s
   }
 
   return parseAnalysisResponse(textContent.text)
+}
+
+// ============================================================================
+// Text-Based Analysis (No Vision API)
+// ============================================================================
+
+/**
+ * Analyze a homework question from text input (cheaper - no Vision API)
+ */
+export async function analyzeQuestionText(questionText: string): Promise<QuestionAnalysis> {
+  const client = getAnthropicClient()
+
+  // Simpler prompt for text-based analysis
+  const prompt = `You are an expert educational analyst. Analyze this homework question text and extract detailed information.
+
+## Question Text:
+${questionText}
+
+## Your task:
+1. Identify the academic subject and specific topic
+2. Determine the type of question (word problem, calculation, proof, etc.)
+3. Estimate difficulty level (1-5, where 1=elementary, 5=advanced college)
+4. List the concepts and skills needed to solve this
+5. Identify common mistakes students make on this type of problem
+6. Describe the general approach to solving it (without giving the answer)
+7. Estimate how many steps the solution requires
+
+Return your analysis as JSON in this exact format:
+{
+  "questionText": "The question text as provided",
+  "subject": "math" | "science" | "history" | "language" | "other",
+  "topic": "Specific topic (e.g., 'Quadratic Equations', 'Photosynthesis')",
+  "questionType": "word_problem" | "multiple_choice" | "proof" | "calculation" | "essay" | "fill_blank" | "short_answer",
+  "difficultyEstimate": 1-5,
+  "requiredConcepts": ["concept1", "concept2", ...],
+  "commonMistakes": ["mistake1", "mistake2", ...],
+  "solutionApproach": "High-level description of how to approach this problem - DO NOT include the answer",
+  "estimatedSteps": 5
+}
+
+## Important:
+- The solutionApproach should guide thinking, NOT give the answer
+- List at least 2-3 required concepts and common mistakes`
+
+  try {
+    const response = await client.messages.create({
+      model: AI_MODEL,
+      max_tokens: MAX_TOKENS,
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    })
+
+    const textContent = response.content.find((block) => block.type === 'text')
+    if (!textContent || textContent.type !== 'text') {
+      throw new Error('No text response from Claude')
+    }
+
+    const analysis = parseAnalysisResponse(textContent.text)
+    // Ensure we preserve the original question text
+    analysis.questionText = questionText
+    return analysis
+  } catch (error) {
+    if (error instanceof Anthropic.APIError) {
+      if (error.status === 429) {
+        throw new Error(formatAnalyzerError(ANALYZER_ERROR_CODES.QA_TXT_002, 'Rate limit exceeded. Please wait a moment and try again.', 'QuestionAnalyzer/TextMode/RateLimit'))
+      }
+    }
+    // Wrap unknown errors
+    if (error instanceof Error && error.message.startsWith('[')) {
+      throw error
+    }
+    throw new Error(formatAnalyzerError(ANALYZER_ERROR_CODES.QA_TXT_001, error instanceof Error ? error.message : 'Text analysis failed', 'QuestionAnalyzer/TextMode/Unknown'))
+  }
 }
 
 // ============================================================================

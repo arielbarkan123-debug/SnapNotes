@@ -36,6 +36,50 @@ function isTransientError(errorMessage: string): boolean {
   )
 }
 
+import type { InputMode } from '@/lib/homework/types'
+
+// ============================================================================
+// Error Codes for Homework Checker Page
+// ============================================================================
+
+const ERROR_CODES = {
+  // Validation errors
+  HC_VAL_001: 'HC_VAL_001', // No image uploaded (image mode)
+  HC_VAL_002: 'HC_VAL_002', // Task text too short (text mode)
+
+  // Upload errors
+  HC_UPL_001: 'HC_UPL_001', // Upload timeout
+  HC_UPL_002: 'HC_UPL_002', // Non-JSON response from upload
+  HC_UPL_003: 'HC_UPL_003', // JSON parse error
+  HC_UPL_004: 'HC_UPL_004', // Upload failed
+  HC_UPL_005: 'HC_UPL_005', // No files uploaded successfully
+
+  // Analysis errors (text mode)
+  HC_TXT_001: 'HC_TXT_001', // Failed to connect to analysis service
+  HC_TXT_002: 'HC_TXT_002', // Failed to start stream
+  HC_TXT_003: 'HC_TXT_003', // Stream error from server
+  HC_TXT_004: 'HC_TXT_004', // No result returned
+  HC_TXT_005: 'HC_TXT_005', // Timeout during analysis
+
+  // Analysis errors (image mode)
+  HC_IMG_001: 'HC_IMG_001', // Failed to connect to analysis service
+  HC_IMG_002: 'HC_IMG_002', // Failed to start stream
+  HC_IMG_003: 'HC_IMG_003', // Stream error from server
+  HC_IMG_004: 'HC_IMG_004', // No result returned
+  HC_IMG_005: 'HC_IMG_005', // Timeout during analysis
+
+  // HEIC errors
+  HC_HEIC_001: 'HC_HEIC_001', // HEIC conversion failed
+} as const
+
+/**
+ * Format error message with code for debugging
+ */
+function formatError(code: string, message: string, details?: string): string {
+  const detailSuffix = details ? ` (${details})` : ''
+  return `[${code}] ${message}${detailSuffix}`
+}
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -47,6 +91,9 @@ interface UploadedImage {
   isDocument?: boolean  // True for PDF/DOCX files
   docType?: 'pdf' | 'docx'  // Document type if isDocument is true
 }
+
+// Minimum text length for task input
+const MIN_TASK_TEXT_LENGTH = 10
 
 interface HeicWarning {
   type: 'task' | 'answer' | 'reference' | 'review'
@@ -409,6 +456,136 @@ function MultiImageUploader({
 }
 
 // ============================================================================
+// Input Mode Toggle Component
+// ============================================================================
+
+function InputModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: InputMode
+  onChange: (mode: InputMode) => void
+}) {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-6">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+        How would you like to submit?
+      </label>
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => onChange('image')}
+          className={`
+            flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all
+            ${mode === 'image'
+              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+              : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700'
+            }
+          `}
+        >
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+            mode === 'image' ? 'bg-indigo-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+          }`}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <span className={`text-sm font-medium ${
+            mode === 'image' ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'
+          }`}>
+            Upload Image
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onChange('text')}
+          className={`
+            flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all
+            ${mode === 'text'
+              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+              : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700'
+            }
+          `}
+        >
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+            mode === 'text' ? 'bg-indigo-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+          }`}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </div>
+          <span className={`text-sm font-medium ${
+            mode === 'text' ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'
+          }`}>
+            Paste Text
+          </span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// Text Input Component
+// ============================================================================
+
+function TextInputSection({
+  taskText,
+  answerText,
+  onTaskTextChange,
+  onAnswerTextChange,
+}: {
+  taskText: string
+  answerText: string
+  onTaskTextChange: (text: string) => void
+  onAnswerTextChange: (text: string) => void
+}) {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-6">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Your Question/Task <span className="text-red-500">*</span>
+        </label>
+        <textarea
+          value={taskText}
+          onChange={(e) => onTaskTextChange(e.target.value)}
+          placeholder="Paste or type your homework question here...
+
+Example:
+Solve for x: 2x + 5 = 13
+
+Or:
+Calculate the area of a rectangle with length 8cm and width 5cm."
+          rows={6}
+          className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+        />
+        {taskText.length > 0 && taskText.length < MIN_TASK_TEXT_LENGTH && (
+          <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+            Please enter at least {MIN_TASK_TEXT_LENGTH} characters ({MIN_TASK_TEXT_LENGTH - taskText.length} more needed)
+          </p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Your Answer <span className="text-gray-400 font-normal">(optional)</span>
+        </label>
+        <textarea
+          value={answerText}
+          onChange={(e) => onAnswerTextChange(e.target.value)}
+          placeholder="Paste or type your answer here...
+
+Leave blank if you just want to understand the question."
+          rows={4}
+          className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+        />
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
 // Page Component
 // ============================================================================
 
@@ -428,11 +605,19 @@ export default function HomeworkCheckPage() {
     trackFeature('homework_checker_view', { source: 'direct' })
   }, [trackStep, trackFeature])
 
-  // Upload states
+  // Input mode: 'image' or 'text'
+  const [inputMode, setInputMode] = useState<InputMode>('image')
+
+  // Upload states (for image mode)
   const [taskImage, setTaskImage] = useState<UploadedImage | null>(null)
   const [answerImage, setAnswerImage] = useState<UploadedImage | null>(null)
   const [referenceImages, setReferenceImages] = useState<UploadedImage[]>([])
   const [teacherReviews, setTeacherReviews] = useState<UploadedImage[]>([])
+
+  // Text states (for text mode)
+  const [taskText, setTaskText] = useState('')
+  const [answerText, setAnswerText] = useState('')
+
   // Status message during submission (for HEIC conversion + upload + analysis)
   const [submissionStatus, setSubmissionStatus] = useState<string | null>(null)
   // HEIC warning modal - shows when user selects HEIC image
@@ -582,8 +767,8 @@ export default function HomeworkCheckPage() {
 
       trackFeature('heic_conversion_success', { type: heicWarning.type })
     } catch (err) {
-      console.error('[HEIC] Unexpected conversion error:', err)
-      setError('Could not convert this image. Please export it as JPEG from your Gallery app.')
+      console.error('[HomeworkChecker/HEIC] Unexpected conversion error:', err)
+      setError(formatError(ERROR_CODES.HC_HEIC_001, 'Could not convert this image. Please export it as JPEG from your Gallery app.', `HomeworkChecker/HEIC/${heicWarning.type}`))
       trackFeature('heic_conversion_error', { type: heicWarning.type, error: err instanceof Error ? err.message : 'unknown' })
     } finally {
       setHeicWarning(null)
@@ -592,9 +777,18 @@ export default function HomeworkCheckPage() {
   }, [heicWarning, createSafeObjectURL, trackStep, trackFeature])
 
   const handleSubmit = async () => {
-    if (!taskImage && !answerImage) {
-      setError('Please upload at least one image')
-      return
+    // Validate based on input mode
+    if (inputMode === 'image') {
+      if (!taskImage && !answerImage) {
+        setError(formatError(ERROR_CODES.HC_VAL_001, 'Please upload at least one image', 'HomeworkChecker/ImageMode'))
+        return
+      }
+    } else {
+      // Text mode validation
+      if (!taskText || taskText.trim().length < MIN_TASK_TEXT_LENGTH) {
+        setError(formatError(ERROR_CODES.HC_VAL_002, `Please enter at least ${MIN_TASK_TEXT_LENGTH} characters for your question`, 'HomeworkChecker/TextMode'))
+        return
+      }
     }
 
     setIsSubmitting(true)
@@ -604,13 +798,133 @@ export default function HomeworkCheckPage() {
     // Track submission
     trackStep('check_submitted', 4)
     trackFeature('homework_check_submit', {
+      inputMode,
       hasReferences: referenceImages.length > 0,
       hasTeacherReviews: teacherReviews.length > 0,
       referenceCount: referenceImages.length,
       teacherReviewCount: teacherReviews.length,
+      taskTextLength: inputMode === 'text' ? taskText.length : undefined,
+      answerTextLength: inputMode === 'text' ? answerText.length : undefined,
     })
 
     try {
+      // ============================================================================
+      // TEXT MODE: Skip image upload, go directly to API with text
+      // ============================================================================
+      if (inputMode === 'text') {
+        setSubmissionStatus('Analyzing homework...')
+
+        // Create AbortController with timeout
+        const isSafari = typeof navigator !== 'undefined' &&
+          /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+        const timeoutMs = isSafari ? 240000 : 210000
+
+        const controller = new AbortController()
+        let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+          controller.abort()
+        }, timeoutMs)
+
+        const clearTimeoutSafely = () => {
+          if (timeoutId) {
+            clearTimeout(timeoutId)
+            timeoutId = null
+          }
+        }
+
+        let response: Response
+        let reader: ReadableStreamDefaultReader<Uint8Array> | null = null
+
+        try {
+          response = await fetch('/api/homework/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({
+              inputMode: 'text',
+              taskText: taskText.trim(),
+              answerText: answerText.trim() || undefined,
+            }),
+          })
+
+          if (!response.ok && !response.body) {
+            throw new Error(formatError(ERROR_CODES.HC_TXT_001, 'Failed to connect to analysis service. Please try again.', 'HomeworkChecker/TextMode/Connect'))
+          }
+
+          reader = response.body?.getReader() || null
+          if (!reader) {
+            throw new Error(formatError(ERROR_CODES.HC_TXT_002, 'Failed to start analysis stream. Please try again.', 'HomeworkChecker/TextMode/Stream'))
+          }
+
+          const decoder = new TextDecoder()
+          let buffer = ''
+          let check = null
+          let streamError: string | null = null
+          let lastHeartbeat = Date.now()
+
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            buffer += decoder.decode(value, { stream: true })
+            const lines = buffer.split('\n')
+            buffer = lines.pop() || ''
+
+            for (const line of lines) {
+              if (!line.trim()) continue
+              try {
+                const message = JSON.parse(line)
+                if (message.type === 'heartbeat') {
+                  lastHeartbeat = Date.now()
+                } else if (message.type === 'result') {
+                  check = message.check
+                } else if (message.type === 'error') {
+                  streamError = message.error
+                }
+              } catch {
+                // Ignore parse errors
+              }
+            }
+
+            if (Date.now() - lastHeartbeat > 30000) {
+              console.warn('[HomeworkCheck] No heartbeat for 30 seconds')
+            }
+          }
+
+          clearTimeoutSafely()
+
+          if (streamError) {
+            throw new Error(formatError(ERROR_CODES.HC_TXT_003, streamError, 'HomeworkChecker/TextMode/StreamError'))
+          }
+
+          if (!check) {
+            throw new Error(formatError(ERROR_CODES.HC_TXT_004, 'Analysis did not return a result. Please try again.', 'HomeworkChecker/TextMode/NoResult'))
+          }
+
+          trackStep('feedback_received', 5)
+          trackFeature('homework_check_success', {
+            checkId: check.id,
+            subject: check.subject,
+            gradeLevel: check.feedback?.gradeLevel,
+            inputMode: 'text',
+          })
+
+          router.push(`/homework/${check.id}`)
+          return
+        } finally {
+          clearTimeoutSafely()
+          if (reader) {
+            try {
+              reader.releaseLock()
+            } catch {
+              // Ignore
+            }
+          }
+        }
+      }
+
+      // ============================================================================
+      // IMAGE MODE: Upload images first, then analyze
+      // ============================================================================
       // Collect all files - HEIC conversion already happened at upload time
       // via the warning modal, so all files should be safe formats now
       const allFiles: File[] = []
@@ -635,23 +949,23 @@ export default function HomeworkCheckPage() {
       // Check if response is JSON before parsing
       const uploadContentType = uploadResponse.headers.get('content-type')
       if (!uploadContentType || !uploadContentType.includes('application/json')) {
-        console.error('[HomeworkCheck] Non-JSON upload response:', uploadResponse.status)
+        console.error('[HomeworkChecker/Upload] Non-JSON response:', uploadResponse.status)
         if (uploadResponse.status === 504 || uploadResponse.status === 503 || uploadResponse.status === 502) {
-          throw new Error('Upload timeout. Please try again with fewer or smaller files.')
+          throw new Error(formatError(ERROR_CODES.HC_UPL_001, 'Upload timeout. Please try again with fewer or smaller files.', `HomeworkChecker/Upload/Status:${uploadResponse.status}`))
         }
-        throw new Error('Server error uploading files. Please try again.')
+        throw new Error(formatError(ERROR_CODES.HC_UPL_002, 'Server error uploading files. Please try again.', `HomeworkChecker/Upload/NonJSON/Status:${uploadResponse.status}`))
       }
 
       let uploadData
       try {
         uploadData = await uploadResponse.json()
       } catch (parseError) {
-        console.error('[HomeworkCheck] JSON parse error:', parseError)
-        throw new Error('Server error. Please try again.')
+        console.error('[HomeworkChecker/Upload] JSON parse error:', parseError)
+        throw new Error(formatError(ERROR_CODES.HC_UPL_003, 'Server error parsing response. Please try again.', 'HomeworkChecker/Upload/JSONParse'))
       }
 
       if (!uploadResponse.ok) {
-        throw new Error(uploadData.error || 'Failed to upload files')
+        throw new Error(formatError(ERROR_CODES.HC_UPL_004, uploadData.error || 'Failed to upload files', `HomeworkChecker/Upload/Failed/Status:${uploadResponse.status}`))
       }
 
       const uploadedFiles = uploadData.images
@@ -669,7 +983,7 @@ export default function HomeworkCheckPage() {
         .map((img: { url: string }) => img.url)
 
       if (!taskFileData && !answerFileData) {
-        throw new Error('Failed to upload files')
+        throw new Error(formatError(ERROR_CODES.HC_UPL_005, 'No files were uploaded successfully. Please try again.', 'HomeworkChecker/Upload/NoFiles'))
       }
 
       // Extract text from DOCX files (DOCX not supported by Claude Vision directly)
@@ -765,6 +1079,7 @@ export default function HomeworkCheckPage() {
           headers: { 'Content-Type': 'application/json' },
           signal: controller.signal,
           body: JSON.stringify({
+            inputMode: 'image',
             taskImageUrl: taskImageUrl || answerImageUrl,  // Use answer as task if no task provided
             answerImageUrl: taskImageUrl ? answerImageUrl : undefined,  // Only include if we have both
             referenceImageUrls,
@@ -776,13 +1091,13 @@ export default function HomeworkCheckPage() {
         })
 
         if (!response.ok && !response.body) {
-          throw new Error('Failed to connect to analysis service. Please try again.')
+          throw new Error(formatError(ERROR_CODES.HC_IMG_001, 'Failed to connect to analysis service. Please try again.', 'HomeworkChecker/ImageMode/Connect'))
         }
 
         // Read streaming NDJSON response
         reader = response.body?.getReader() || null
         if (!reader) {
-          throw new Error('Failed to start analysis stream. Please try again.')
+          throw new Error(formatError(ERROR_CODES.HC_IMG_002, 'Failed to start analysis stream. Please try again.', 'HomeworkChecker/ImageMode/Stream'))
         }
 
         const decoder = new TextDecoder()
@@ -834,12 +1149,12 @@ export default function HomeworkCheckPage() {
 
         // Handle any error from the stream
         if (streamError) {
-          throw new Error(streamError)
+          throw new Error(formatError(ERROR_CODES.HC_IMG_003, streamError, 'HomeworkChecker/ImageMode/StreamError'))
         }
 
         // Ensure we got a result
         if (!check) {
-          throw new Error('Analysis did not return a result. Please try again.')
+          throw new Error(formatError(ERROR_CODES.HC_IMG_004, 'Analysis did not return a result. Please try again.', 'HomeworkChecker/ImageMode/NoResult'))
         }
 
         // Track successful feedback
@@ -889,10 +1204,17 @@ export default function HomeworkCheckPage() {
 
       // Handle timeout/abort specifically with a clearer message
       if (err instanceof Error && err.name === 'AbortError') {
-        setError('Analysis is taking longer than expected. Please try again with clearer images or fewer files.')
+        const timeoutCode = inputMode === 'text' ? ERROR_CODES.HC_TXT_005 : ERROR_CODES.HC_IMG_005
+        setError(formatError(timeoutCode, 'Analysis is taking longer than expected. Please try again with clearer images or fewer files.', `HomeworkChecker/${inputMode === 'text' ? 'TextMode' : 'ImageMode'}/Timeout`))
       } else {
-        // Show sanitized user-friendly error message
-        setError(sanitizeError(err))
+        // Show sanitized user-friendly error message with the original error if it has a code
+        const errMsg = err instanceof Error ? err.message : 'Unknown error'
+        // If error already has a code (starts with [), use it directly
+        if (errMsg.startsWith('[')) {
+          setError(errMsg)
+        } else {
+          setError(sanitizeError(err))
+        }
       }
 
       // Reset auto-retry counter on final error
@@ -902,7 +1224,9 @@ export default function HomeworkCheckPage() {
     }
   }
 
-  const canSubmit = (taskImage || answerImage) && !isSubmitting
+  const canSubmit = inputMode === 'image'
+    ? (taskImage || answerImage) && !isSubmitting
+    : taskText.trim().length >= MIN_TASK_TEXT_LENGTH && !isSubmitting
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
@@ -1023,51 +1347,69 @@ export default function HomeworkCheckPage() {
 
         {/* Upload Form */}
         <div className="space-y-8">
-          {/* Image Uploads */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Upload Images</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">At least one image is required</p>
-            <div className="grid md:grid-cols-2 gap-6">
-              <ImageUploader
-                label="Task / Question"
-                image={taskImage}
-                onUpload={handleTaskUpload}
-                onRemove={() => setTaskImage(null)}
-              />
-              <ImageUploader
-                label="Your Answer"
-                image={answerImage}
-                onUpload={handleAnswerUpload}
-                onRemove={() => setAnswerImage(null)}
-              />
-            </div>
-          </div>
+          {/* Input Mode Toggle */}
+          <InputModeToggle mode={inputMode} onChange={setInputMode} />
 
-          {/* Optional Uploads */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Optional</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Add more context for better feedback</p>
-            <div className="space-y-6">
-              <MultiImageUploader
-                label="Reference Materials"
-                description="Textbook pages, notes, examples"
-                images={referenceImages}
-                onUpload={handleReferenceUpload}
-                onRemove={(index) => setReferenceImages(prev => prev.filter((_, i) => i !== index))}
-                maxImages={5}
-                icon="📚"
-              />
-              <MultiImageUploader
-                label="Previous Teacher Reviews"
-                description="Past graded work to match style"
-                images={teacherReviews}
-                onUpload={handleTeacherReviewUpload}
-                onRemove={(index) => setTeacherReviews(prev => prev.filter((_, i) => i !== index))}
-                maxImages={3}
-                icon="👨‍🏫"
-              />
-            </div>
-          </div>
+          {/* Conditional: Image Mode */}
+          {inputMode === 'image' && (
+            <>
+              {/* Image Uploads */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Upload Images</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">At least one image is required</p>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <ImageUploader
+                    label="Task / Question"
+                    image={taskImage}
+                    onUpload={handleTaskUpload}
+                    onRemove={() => setTaskImage(null)}
+                  />
+                  <ImageUploader
+                    label="Your Answer"
+                    image={answerImage}
+                    onUpload={handleAnswerUpload}
+                    onRemove={() => setAnswerImage(null)}
+                  />
+                </div>
+              </div>
+
+              {/* Optional Uploads */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Optional</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Add more context for better feedback</p>
+                <div className="space-y-6">
+                  <MultiImageUploader
+                    label="Reference Materials"
+                    description="Textbook pages, notes, examples"
+                    images={referenceImages}
+                    onUpload={handleReferenceUpload}
+                    onRemove={(index) => setReferenceImages(prev => prev.filter((_, i) => i !== index))}
+                    maxImages={5}
+                    icon="📚"
+                  />
+                  <MultiImageUploader
+                    label="Previous Teacher Reviews"
+                    description="Past graded work to match style"
+                    images={teacherReviews}
+                    onUpload={handleTeacherReviewUpload}
+                    onRemove={(index) => setTeacherReviews(prev => prev.filter((_, i) => i !== index))}
+                    maxImages={3}
+                    icon="👨‍🏫"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Conditional: Text Mode */}
+          {inputMode === 'text' && (
+            <TextInputSection
+              taskText={taskText}
+              answerText={answerText}
+              onTaskTextChange={setTaskText}
+              onAnswerTextChange={setAnswerText}
+            />
+          )}
 
           {/* Submit Button */}
           <div className="flex flex-col sm:flex-row gap-4">

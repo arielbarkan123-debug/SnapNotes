@@ -4,6 +4,35 @@ import { analyzeHomework } from '@/lib/homework/checker-engine'
 import type { CreateCheckRequest } from '@/lib/homework/types'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
+// ============================================================================
+// Error Codes for Homework Check API
+// ============================================================================
+
+const API_ERROR_CODES = {
+  // Auth errors
+  API_CHK_AUTH_001: 'API_CHK_AUTH_001', // Unauthorized
+
+  // Validation errors
+  API_CHK_VAL_001: 'API_CHK_VAL_001', // Invalid request body
+  API_CHK_VAL_002: 'API_CHK_VAL_002', // Task text required (text mode)
+  API_CHK_VAL_003: 'API_CHK_VAL_003', // Task image required (image mode)
+
+  // Database errors
+  API_CHK_DB_001: 'API_CHK_DB_001', // Failed to create check record
+  API_CHK_DB_002: 'API_CHK_DB_002', // Failed to update check record
+
+  // Analysis errors
+  API_CHK_AI_001: 'API_CHK_AI_001', // Analysis failed
+} as const
+
+/**
+ * Format error message with code for debugging
+ */
+function formatApiError(code: string, message: string, details?: string): string {
+  const detailSuffix = details ? ` (${details})` : ''
+  return `[${code}] ${message}${detailSuffix}`
+}
+
 // Allow 3 minutes for homework analysis (vision AI + analysis)
 // Increased to handle slower mobile network connections
 export const maxDuration = 180
@@ -84,7 +113,7 @@ export async function POST(request: NextRequest) {
         } = await supabase.auth.getUser()
 
         if (userError || !user) {
-          send({ type: 'error', error: 'Unauthorized' })
+          send({ type: 'error', error: formatApiError(API_ERROR_CODES.API_CHK_AUTH_001, 'Unauthorized', 'API/HomeworkCheck/Auth') })
           closeStream()
           return
         }
@@ -94,15 +123,28 @@ export async function POST(request: NextRequest) {
         try {
           body = await request.json()
         } catch {
-          send({ type: 'error', error: 'Invalid request body' })
+          send({ type: 'error', error: formatApiError(API_ERROR_CODES.API_CHK_VAL_001, 'Invalid request body', 'API/HomeworkCheck/ParseBody') })
           closeStream()
           return
         }
 
-        if (!body.taskImageUrl) {
-          send({ type: 'error', error: 'At least one image is required' })
-          closeStream()
-          return
+        // Validate based on input mode
+        const inputMode = body.inputMode || 'image'
+
+        if (inputMode === 'text') {
+          // Text mode: require taskText
+          if (!body.taskText || body.taskText.trim().length < 10) {
+            send({ type: 'error', error: formatApiError(API_ERROR_CODES.API_CHK_VAL_002, 'Task text is required (minimum 10 characters)', 'API/HomeworkCheck/TextMode/Validation') })
+            closeStream()
+            return
+          }
+        } else {
+          // Image mode: require taskImageUrl
+          if (!body.taskImageUrl) {
+            send({ type: 'error', error: formatApiError(API_ERROR_CODES.API_CHK_VAL_003, 'At least one image is required', 'API/HomeworkCheck/ImageMode/Validation') })
+            closeStream()
+            return
+          }
         }
 
         // Create initial check record
@@ -110,8 +152,11 @@ export async function POST(request: NextRequest) {
           .from('homework_checks')
           .insert({
             user_id: user.id,
-            task_image_url: body.taskImageUrl,
-            answer_image_url: body.answerImageUrl || null,  // Optional
+            // For text mode, we store the text directly and leave image URLs null
+            task_image_url: inputMode === 'image' ? body.taskImageUrl : null,
+            task_text: inputMode === 'text' ? body.taskText : null,
+            answer_image_url: inputMode === 'image' ? (body.answerImageUrl || null) : null,
+            answer_text: inputMode === 'text' ? (body.answerText || null) : null,
             reference_image_urls: body.referenceImageUrls || [],
             teacher_review_urls: body.teacherReviewUrls || [],
             status: 'analyzing',
@@ -120,17 +165,19 @@ export async function POST(request: NextRequest) {
           .single()
 
         if (insertError) {
-          console.error('[Homework Check] Insert error:', insertError)
-          console.error('[Homework Check] Insert data was:', {
+          console.error('[API/HomeworkCheck/DB] Insert error:', insertError)
+          console.error('[API/HomeworkCheck/DB] Insert data was:', {
+            input_mode: inputMode,
             task_image_url: body.taskImageUrl,
+            task_text: inputMode === 'text' ? body.taskText?.substring(0, 50) : null,
             answer_image_url: body.answerImageUrl || null,
             reference_image_urls: body.referenceImageUrls || [],
             teacher_review_urls: body.teacherReviewUrls || [],
           })
           // Provide more specific error message
           const errorMsg = insertError.code === '23502' // NOT NULL violation
-            ? 'Database schema error. Please contact support.'
-            : 'Failed to create homework check. Please try again.'
+            ? formatApiError(API_ERROR_CODES.API_CHK_DB_001, 'Database schema error. Please contact support.', `API/HomeworkCheck/DB/Insert/Code:${insertError.code}`)
+            : formatApiError(API_ERROR_CODES.API_CHK_DB_001, 'Failed to create homework check. Please try again.', `API/HomeworkCheck/DB/Insert/Code:${insertError.code}`)
           send({ type: 'error', error: errorMsg })
           closeStream()
           return
@@ -145,17 +192,22 @@ export async function POST(request: NextRequest) {
         let result
         try {
           result = await analyzeHomework({
-            taskImageUrl: body.taskImageUrl,
-            answerImageUrl: body.answerImageUrl,
+            inputMode,
+            // Image-based fields
+            taskImageUrl: inputMode === 'image' ? body.taskImageUrl : undefined,
+            answerImageUrl: inputMode === 'image' ? body.answerImageUrl : undefined,
             referenceImageUrls: body.referenceImageUrls,
             teacherReviewUrls: body.teacherReviewUrls,
+            // Text-based fields
+            taskText: inputMode === 'text' ? body.taskText : undefined,
+            answerText: inputMode === 'text' ? body.answerText : undefined,
             // Pass extracted document text for DOCX files
             taskDocumentText: body.taskDocumentText,
             answerDocumentText: body.answerDocumentText,
           })
           console.log('[Homework Check] Analysis completed, grade:', result.feedback?.gradeEstimate)
         } catch (analysisError) {
-          console.error('[Homework Check] Analysis threw error:', analysisError)
+          console.error('[API/HomeworkCheck/Analysis] Analysis threw error:', analysisError)
 
           // Update check with error status
           await supabase
@@ -165,9 +217,14 @@ export async function POST(request: NextRequest) {
             .eq('user_id', user.id)
 
           // Return more specific error message
-          const errorMessage = analysisError instanceof Error
+          const rawError = analysisError instanceof Error
             ? analysisError.message
             : 'Failed to analyze homework. Please try again.'
+
+          // If error already has a code, use it directly; otherwise, wrap it
+          const errorMessage = rawError.startsWith('[')
+            ? rawError
+            : formatApiError(API_ERROR_CODES.API_CHK_AI_001, rawError, `API/HomeworkCheck/Analysis/${inputMode}Mode`)
 
           send({ type: 'error', error: errorMessage, checkId: check.id })
           closeStream()
@@ -193,7 +250,7 @@ export async function POST(request: NextRequest) {
             .single()
 
           if (updateError) {
-            console.error('[Homework Check] Update error:', updateError)
+            console.error('[API/HomeworkCheck/DB] Update error:', updateError)
             // Mark as error so it doesn't stay stuck in 'analyzing'
             await supabase
               .from('homework_checks')
@@ -201,7 +258,7 @@ export async function POST(request: NextRequest) {
               .eq('id', check.id)
               .eq('user_id', user.id)
 
-            send({ type: 'error', error: 'Failed to save analysis results. Please try again.', checkId: check.id })
+            send({ type: 'error', error: formatApiError(API_ERROR_CODES.API_CHK_DB_002, 'Failed to save analysis results. Please try again.', `API/HomeworkCheck/DB/Update/Code:${updateError.code}`), checkId: check.id })
             closeStream()
             return
           }
