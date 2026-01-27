@@ -213,6 +213,8 @@ Diagrams should EVOLVE step-by-step as the conversation progresses:
 - Align diagram steps with your explanation - reveal elements as you discuss them
 - If introducing a new concept, add it to the diagram in your next message
 - Progressive reveal maintains student engagement and prevents cognitive overload
+- **IMPORTANT: The FINAL step MUST show the calculated answer/solution** using "showCalculation" field (e.g., "F = 12.5 N", "x = 7", "Area = 36 cm²")
+- Never leave the diagram at "Solve for X" - always include the final answer in the last step
 
 ### Available Diagram Types
 
@@ -324,7 +326,8 @@ For "5 kg block on horizontal surface, 20 N tension to right, friction present":
       { "step": 1, "visibleForces": ["weight"], "highlightForces": ["weight"], "stepLabel": "Weight acts downward", "showCalculation": "W = mg = 5 × 10 = 50N" },
       { "step": 2, "visibleForces": ["weight", "normal"], "highlightForces": ["normal"], "stepLabel": "Normal force balances weight" },
       { "step": 3, "visibleForces": ["weight", "normal", "tension"], "highlightForces": ["tension"], "stepLabel": "Tension pulls to the right: 20N" },
-      { "step": 4, "visibleForces": ["weight", "normal", "tension", "friction"], "highlightForces": ["friction"], "stepLabel": "Friction opposes motion" }
+      { "step": 4, "visibleForces": ["weight", "normal", "tension", "friction"], "highlightForces": ["friction"], "stepLabel": "Friction opposes motion" },
+      { "step": 5, "visibleForces": ["weight", "normal", "tension", "friction"], "stepLabel": "Net force and acceleration", "showCalculation": "a = F_net/m = 15/5 = 3 m/s²" }
     ]
   }
 }
@@ -334,6 +337,41 @@ For "5 kg block on horizontal surface, 20 N tension to right, friction present":
 **Fourth tutor message (visibleStep: 3):** - Now shows weight + normal + tension
 **Fifth tutor message (visibleStep: 4):** - Now shows all forces
 
+### Example: Inclined Plane with Friction
+
+For "5 kg block on 30° incline, μ = 0.3, find minimum horizontal force F to prevent sliding":
+
+{
+  "diagram": {
+    "type": "inclined_plane",
+    "visibleStep": 0,
+    "totalSteps": 8,
+    "evolutionMode": "auto-advance",
+    "data": {
+      "angle": 30,
+      "object": { "type": "block", "mass": 5, "label": "5 kg" },
+      "forces": [
+        { "name": "weight", "type": "weight", "magnitude": 50, "angle": -90, "symbol": "W" },
+        { "name": "normal", "type": "normal", "magnitude": 53, "angle": 60, "symbol": "N" },
+        { "name": "friction", "type": "friction", "magnitude": 16, "angle": 120, "symbol": "f" },
+        { "name": "applied", "type": "applied", "magnitude": 12.5, "angle": 0, "symbol": "F" }
+      ],
+      "frictionCoefficient": 0.3,
+      "showAngleLabel": true
+    },
+    "stepConfig": [
+      { "step": 0, "visibleForces": [], "stepLabel": "Let's visualize the setup" },
+      { "step": 1, "visibleForces": ["weight"], "highlightForces": ["weight"], "stepLabel": "Weight acts straight down", "showCalculation": "W = mg = 5 × 10 = 50N" },
+      { "step": 2, "visibleForces": ["weight", "normal"], "highlightForces": ["normal"], "stepLabel": "Normal force perpendicular to surface" },
+      { "step": 3, "visibleForces": ["weight", "normal", "friction"], "highlightForces": ["friction"], "stepLabel": "Friction acts up the incline (prevents sliding)" },
+      { "step": 4, "visibleForces": ["weight", "normal", "friction", "applied"], "highlightForces": ["applied"], "stepLabel": "Horizontal force F applied" },
+      { "step": 5, "visibleForces": ["weight", "normal", "friction", "applied"], "stepLabel": "Decompose forces parallel to incline" },
+      { "step": 6, "visibleForces": ["weight", "normal", "friction", "applied"], "stepLabel": "Set up equilibrium equations" },
+      { "step": 7, "visibleForces": ["weight", "normal", "friction", "applied"], "stepLabel": "Solve for minimum F", "showCalculation": "F = 12.5 N" }
+    ]
+  }
+}
+
 ### Example: Math Bar Model Problem
 
 For "John has 3 times as many apples as Mary. Together 24 apples. How many each?":
@@ -342,7 +380,7 @@ For "John has 3 times as many apples as Mary. Together 24 apples. How many each?
   "diagram": {
     "type": "bar_model",
     "visibleStep": 0,
-    "totalSteps": 4,
+    "totalSteps": 5,
     "evolutionMode": "auto-advance",
     "data": {
       "title": "Apple Problem",
@@ -358,7 +396,8 @@ For "John has 3 times as many apples as Mary. Together 24 apples. How many each?
       { "step": 0, "stepLabel": "Let's draw this out" },
       { "step": 1, "stepLabel": "Mary's apples (1 unit)" },
       { "step": 2, "stepLabel": "John has 3 times as many (3 units)" },
-      { "step": 3, "stepLabel": "Total is 4 units = 24, so 1 unit = 6" }
+      { "step": 3, "stepLabel": "Total is 4 units = 24, so 1 unit = 6" },
+      { "step": 4, "stepLabel": "Final Answer", "showCalculation": "Mary = 6 apples, John = 18 apples" }
     ]
   }
 }
