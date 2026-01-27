@@ -153,6 +153,7 @@ export default function DiagramRenderer({
           animate={animate}
           showControls={showControls}
           onStepAdvance={onStepAdvance}
+          onStepBack={onStepBack}
           language={language}
           width={width}
           height={height}
@@ -188,6 +189,7 @@ export default function DiagramRenderer({
           animate={animate}
           showControls={showControls}
           onStepAdvance={onStepAdvance}
+          onStepBack={onStepBack}
           language={language}
           width={width}
           height={height}
@@ -205,6 +207,7 @@ export default function DiagramRenderer({
           animate={animate}
           showControls={showControls}
           onStepAdvance={onStepAdvance}
+          onStepBack={onStepBack}
           language={language}
           width={width}
           height={height}

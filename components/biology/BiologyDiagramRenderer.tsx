@@ -22,6 +22,8 @@ interface BiologyDiagramRendererProps {
   onStepComplete?: () => void
   /** Callback when user clicks to advance step manually */
   onStepAdvance?: () => void
+  /** Callback when user clicks to go back a step */
+  onStepBack?: () => void
   /** Whether to show step controls */
   showControls?: boolean
   /** Width of the diagram */
@@ -50,6 +52,7 @@ export function BiologyDiagramRenderer({
   animationDuration = 400,
   onStepComplete,
   onStepAdvance,
+  onStepBack,
   showControls = false,
   width,
   height,
@@ -94,8 +97,9 @@ export function BiologyDiagramRenderer({
       if (stepOverride === undefined) {
         setInternalStep(newStep)
       }
+      onStepBack?.()
     }
-  }, [currentStep, stepOverride])
+  }, [currentStep, stepOverride, onStepBack])
 
   // Render the appropriate diagram type
   const renderDiagram = () => {
