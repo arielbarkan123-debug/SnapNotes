@@ -178,6 +178,7 @@ export async function POST(request: NextRequest) {
         content: greeting.message,
         timestamp: new Date().toISOString(),
         pedagogicalIntent: 'probe_understanding',
+        diagram: greeting.diagram,
       }
     } catch (error) {
       console.error('Greeting generation error:', error)

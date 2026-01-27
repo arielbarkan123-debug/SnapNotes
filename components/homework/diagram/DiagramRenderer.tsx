@@ -91,6 +91,7 @@ interface DiagramRendererProps {
   diagram: DiagramState
   currentStep: number
   onStepAdvance?: () => void
+  onStepBack?: () => void
   showControls?: boolean
   animate?: boolean
   width?: number
@@ -108,6 +109,7 @@ export default function DiagramRenderer({
   diagram,
   currentStep,
   onStepAdvance,
+  onStepBack,
   showControls = true,
   animate = true,
   width,
@@ -168,6 +170,7 @@ export default function DiagramRenderer({
           animate={animate}
           showControls={showControls}
           onStepAdvance={onStepAdvance}
+          onStepBack={onStepBack}
           language={language}
           width={width}
           height={height}

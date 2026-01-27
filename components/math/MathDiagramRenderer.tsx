@@ -33,6 +33,8 @@ interface MathDiagramRendererProps {
   onStepComplete?: () => void
   /** Callback when user clicks to advance step manually */
   onStepAdvance?: () => void
+  /** Callback when user clicks to go back a step */
+  onStepBack?: () => void
   /** Whether to show step controls */
   showControls?: boolean
   /** Width of the diagram */
@@ -61,6 +63,7 @@ export function MathDiagramRenderer({
   animationDuration = 400,
   onStepComplete,
   onStepAdvance,
+  onStepBack,
   showControls = false,
   width,
   height,
@@ -88,25 +91,22 @@ export function MathDiagramRenderer({
     onStepComplete?.()
   }, [onStepComplete])
 
-  // Handle manual step advance
+  // Handle manual step advance - always update internal state AND notify parent
   const handleNextStep = useCallback(() => {
     if (currentStep < calculatedTotalSteps - 1) {
       const newStep = currentStep + 1
-      if (stepOverride === undefined) {
-        setInternalStep(newStep)
-      }
+      setInternalStep(newStep)
       onStepAdvance?.()
     }
-  }, [currentStep, calculatedTotalSteps, stepOverride, onStepAdvance])
+  }, [currentStep, calculatedTotalSteps, onStepAdvance])
 
   const handlePrevStep = useCallback(() => {
     if (currentStep > 0) {
       const newStep = currentStep - 1
-      if (stepOverride === undefined) {
-        setInternalStep(newStep)
-      }
+      setInternalStep(newStep)
+      onStepBack?.()
     }
-  }, [currentStep, stepOverride])
+  }, [currentStep, onStepBack])
 
   // Render the appropriate diagram type
   const renderDiagram = () => {

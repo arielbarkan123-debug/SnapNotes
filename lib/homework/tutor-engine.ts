@@ -402,30 +402,41 @@ For "Draw Lewis structure for water H₂O":
 
 For "Divide 7,248 by 8" or "7,248 crayons into 8 boxes":
 
+IMPORTANT: Long division must show EVERY step including when the divisor doesn't fit:
+- First check: "How many 8s in 7?" → 0 (8 is bigger than 7)
+- Then bring down next digit to get 72
+- Then: "How many 8s in 72?" → 9
+
 {
   "message": "Let's work through this division step by step! First, can you tell me - how many times does 8 go into 7?",
   "diagram": {
     "type": "long_division",
     "visibleStep": 0,
-    "totalSteps": 4,
+    "totalSteps": 16,
     "evolutionMode": "auto-advance",
     "data": {
       "dividend": 7248,
       "divisor": 8,
       "quotient": 906,
-      "remainder": 0,
-      "steps": [
-        { "type": "setup", "bringDown": "72", "currentDividend": 72 },
-        { "type": "divide", "quotientDigit": "9", "currentDividend": 72, "product": 72, "difference": 0, "bringDown": "4" },
-        { "type": "divide", "quotientDigit": "0", "currentDividend": 4, "product": 0, "difference": 4, "bringDown": "8" },
-        { "type": "divide", "quotientDigit": "6", "currentDividend": 48, "product": 48, "difference": 0 }
-      ]
+      "remainder": 0
     },
     "stepConfig": [
-      { "step": 0, "stepLabel": "Setup: 8 ) 72" },
-      { "step": 1, "stepLabel": "9 × 8 = 72, bring down 4" },
-      { "step": 2, "stepLabel": "0 × 8 = 0, bring down 8" },
-      { "step": 3, "stepLabel": "6 × 8 = 48, remainder 0" }
+      { "step": 0, "stepLabel": "Set up: 7248 ÷ 8" },
+      { "step": 1, "stepLabel": "How many 8s in 7? → 0 (8 is bigger than 7)" },
+      { "step": 2, "stepLabel": "Bring down 2 to get 72" },
+      { "step": 3, "stepLabel": "How many 8s in 72? → 9" },
+      { "step": 4, "stepLabel": "Multiply: 9 × 8 = 72" },
+      { "step": 5, "stepLabel": "Subtract: 72 - 72 = 0" },
+      { "step": 6, "stepLabel": "Bring down 4 to get 4" },
+      { "step": 7, "stepLabel": "How many 8s in 4? → 0 (8 is bigger than 4)" },
+      { "step": 8, "stepLabel": "Multiply: 0 × 8 = 0" },
+      { "step": 9, "stepLabel": "Subtract: 4 - 0 = 4" },
+      { "step": 10, "stepLabel": "Bring down 8 to get 48" },
+      { "step": 11, "stepLabel": "How many 8s in 48? → 6" },
+      { "step": 12, "stepLabel": "Multiply: 6 × 8 = 48" },
+      { "step": 13, "stepLabel": "Subtract: 48 - 48 = 0" },
+      { "step": 14, "stepLabel": "No more digits to bring down" },
+      { "step": 15, "stepLabel": "Complete! 7248 ÷ 8 = 906" }
     ]
   }
 }

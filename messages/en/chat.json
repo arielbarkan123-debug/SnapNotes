@@ -27,6 +27,7 @@
   "typeAnswer": "Type your answer or question...",
   "markComplete": "Mark as Complete",
 
-  "diagramTitle": "Physics Diagram",
-  "diagramInstructions": "Use the controls to step through the diagram as you follow along with the explanation."
+  "diagramTitle": "Diagram",
+  "diagramInstructions": "Use the controls to step through the diagram as you follow along with the explanation.",
+  "diagramAutoAdvance": "The diagram reveals more as the tutor explains each concept."
 }

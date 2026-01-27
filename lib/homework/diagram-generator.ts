@@ -416,22 +416,52 @@ function calculateLongDivisionSteps(dividend: number, divisor: number): LongDivi
   let digitPosition = 0
   let stepIndex = 0
 
-  // Setup step - bring down first digit(s) until >= divisor
-  while (currentDividend < divisor && digitPosition < dividendStr.length) {
-    currentDividend = currentDividend * 10 + parseInt(dividendStr[digitPosition])
-    digitPosition++
-  }
-
+  // Step 1: Setup - show the division problem
   steps.push({
     step: stepIndex++,
     type: 'setup',
     position: 0,
-    workingNumber: currentDividend,
-    explanation: `Set up: ${divisor} goes into ${currentDividend}`,
+    workingNumber: parseInt(dividendStr[0]),
+    explanation: `Set up: ${dividend} ÷ ${divisor}`,
   })
 
-  // Track quotient digit position for output
-  let quotientPosition = 0
+  // Step 2: Check if divisor fits into first digit
+  const firstDigit = parseInt(dividendStr[0])
+  if (firstDigit < divisor) {
+    // Add explicit "doesn't fit" step - use type 'check' to NOT add to quotient
+    steps.push({
+      step: stepIndex++,
+      type: 'check',
+      position: 0,
+      explanation: `How many ${divisor}s in ${firstDigit}? → 0 (${divisor} is bigger than ${firstDigit})`,
+      calculation: `${firstDigit} < ${divisor}`,
+    })
+  }
+
+  // Bring down digits until we have a number >= divisor
+  while (currentDividend < divisor && digitPosition < dividendStr.length) {
+    const prevDividend = currentDividend
+    currentDividend = currentDividend * 10 + parseInt(dividendStr[digitPosition])
+    digitPosition++
+
+    // Show each bring_down step as we build up the working number
+    steps.push({
+      step: stepIndex++,
+      type: 'bring_down',
+      position: digitPosition - 1,
+      workingNumber: currentDividend,
+      explanation: prevDividend > 0
+        ? `Bring down ${dividendStr[digitPosition - 1]} to get ${currentDividend}`
+        : `Look at ${currentDividend} (first ${digitPosition} digit${digitPosition > 1 ? 's' : ''})`,
+    })
+  }
+
+  // The first quotient digit goes above the last digit we consumed
+  // e.g., for 7248 ÷ 8: we consume "72", so first quotient digit is at position 1 (above "2")
+  const quotientStartPosition = digitPosition - 1
+
+  // Track quotient digit position - starts at the position of the last consumed digit
+  let quotientPosition = quotientStartPosition
 
   // Division steps
   while (digitPosition <= dividendStr.length) {
@@ -1294,6 +1324,22 @@ export function ensureDiagramInResponse(
   existingDiagram?: TutorDiagramState
 ): TutorDiagramState | undefined {
   try {
+    // Special handling for long_division: AI returns stepConfig but not the detailed
+    // steps array needed for visual rendering. We need to merge AI's visibleStep
+    // with programmatically generated step data.
+    if (existingDiagram?.type === 'long_division') {
+      const generated = generateLongDivisionDiagram(analysis.questionText)
+      if (generated) {
+        // Merge: use AI's visibleStep but generated data.steps for visual rendering
+        return validateDiagramState({
+          ...generated,
+          visibleStep: existingDiagram.visibleStep ?? generated.visibleStep,
+          // Keep AI's stepConfig if provided (for custom labels), otherwise use generated
+          stepConfig: existingDiagram.stepConfig ?? generated.stepConfig,
+        }, 'long_division')
+      }
+    }
+
     // If there's already a diagram, validate and return it
     if (existingDiagram) {
       const validated = validateDiagramState(existingDiagram, existingDiagram.type || 'unknown')

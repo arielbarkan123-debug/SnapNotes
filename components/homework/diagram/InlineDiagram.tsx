@@ -7,6 +7,7 @@ interface InlineDiagramProps {
   diagram: DiagramState
   currentStep: number
   onStepAdvance?: () => void
+  onStepBack?: () => void
 }
 
 /**
@@ -16,6 +17,7 @@ export default function InlineDiagram({
   diagram,
   currentStep,
   onStepAdvance,
+  onStepBack,
 }: InlineDiagramProps) {
   return (
     <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
@@ -31,6 +33,7 @@ export default function InlineDiagram({
           animate={true}
           showControls={true}
           onStepAdvance={onStepAdvance}
+          onStepBack={onStepBack}
           width={350}
           height={280}
           language="en"

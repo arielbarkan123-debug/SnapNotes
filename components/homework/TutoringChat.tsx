@@ -7,8 +7,6 @@ import type { HomeworkSession, ConversationMessage, HintLevel } from '@/lib/home
 // Import diagram components
 import {
   type DiagramState,
-  DiagramPanel,
-  MobileDiagramPanel,
   InlineDiagram,
   getLatestDiagram,
   convertToDiagramState,
@@ -108,11 +106,13 @@ function MessageBubble({
   t,
   diagramStep,
   onStepAdvance,
+  onStepBack,
 }: {
   message: ConversationMessage
   t: ReturnType<typeof useTranslations<'chat'>>
   diagramStep?: number
   onStepAdvance?: () => void
+  onStepBack?: () => void
 }) {
   const isTutor = message.role === 'tutor'
   const hasDiagram = isTutor && message.diagram
@@ -153,6 +153,7 @@ function MessageBubble({
               diagram={diagramState}
               currentStep={diagramStep ?? 0}
               onStepAdvance={onStepAdvance}
+              onStepBack={onStepBack}
             />
           )}
         </div>
@@ -286,13 +287,16 @@ export default function TutoringChat({
   const prevDiagramStepRef = useRef<number>(0)
 
   // Reset diagram step when a new diagram arrives (auto-advance)
+  // NOTE: Only run when currentDiagram changes, NOT when diagramStep changes
+  // Otherwise clicking Next/Prev would reset the step back to visibleStep
   useEffect(() => {
     if (currentDiagram) {
       const newStep = currentDiagram.visibleStep
       prevDiagramStepRef.current = diagramStep
       setDiagramStep(newStep)
     }
-  }, [currentDiagram, diagramStep])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDiagram])
 
   // Restore draft from localStorage on mount
   useEffect(() => {
@@ -367,10 +371,14 @@ export default function TutoringChat({
     setDiagramStep(prev => Math.min(prev + 1, (currentDiagram?.totalSteps || 10) - 1))
   }, [currentDiagram?.totalSteps])
 
+  const handleStepBack = useCallback(() => {
+    setDiagramStep(prev => Math.max(prev - 1, 0))
+  }, [])
+
   return (
     <div className="flex h-full bg-gray-50 dark:bg-gray-900">
       {/* Main Chat Area */}
-      <div className={`flex flex-col ${currentDiagram ? 'flex-1 lg:w-1/2' : 'w-full'}`}>
+      <div className="flex flex-col w-full">
         {/* Progress */}
         <ChatProgressBar
           currentStep={session.current_step}
@@ -387,6 +395,7 @@ export default function TutoringChat({
               t={t}
               diagramStep={diagramStep}
               onStepAdvance={handleStepAdvance}
+              onStepBack={handleStepBack}
             />
           ))}
 
@@ -440,27 +449,6 @@ export default function TutoringChat({
         </div>
       </div>
 
-      {/* Desktop Diagram Panel */}
-      {currentDiagram && (
-        <DiagramPanel
-          diagram={currentDiagram}
-          diagramStep={diagramStep}
-          onStepAdvance={handleStepAdvance}
-          title={t('diagramTitle') || 'Diagram'}
-          autoAdvanceText={t('diagramAutoAdvance') || 'The diagram reveals more as the tutor explains each concept.'}
-          manualControlsText={t('diagramInstructions') || 'Use the controls above to step through the diagram as you follow along with the explanation.'}
-        />
-      )}
-
-      {/* Mobile Diagram Panel */}
-      {currentDiagram && (
-        <MobileDiagramPanel
-          diagram={currentDiagram}
-          diagramStep={diagramStep}
-          onStepAdvance={handleStepAdvance}
-          title={t('diagramTitle') || undefined}
-        />
-      )}
     </div>
   )
 }

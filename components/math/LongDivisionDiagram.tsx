@@ -79,16 +79,20 @@ export function LongDivisionDiagram({
     return steps[currentStep] || null
   }, [stepConfig, steps, currentStep])
 
-  // Build the quotient string up to current step
-  const visibleQuotient = useMemo(() => {
-    let q = ''
+  // Build the quotient digits with their positions for proper alignment
+  const quotientDigits = useMemo(() => {
+    const digits: Array<{ digit: number; position: number }> = []
     for (const step of visibleSteps) {
       if (step.type === 'divide' && step.quotientDigit !== undefined) {
-        q += step.quotientDigit.toString()
+        digits.push({ digit: step.quotientDigit, position: step.position })
       }
     }
-    return q
+    return digits
   }, [visibleSteps])
+
+  // For backward compatibility, also keep simple string version
+  const _visibleQuotient = quotientDigits.map(d => d.digit).join('')
+  void _visibleQuotient // Keep for potential future use
 
   // Group steps by position for rendering work rows
   const workRows = useMemo(() => {
@@ -150,6 +154,8 @@ export function LongDivisionDiagram({
     switch (stepData.type) {
       case 'setup':
         return { icon: '📐', label: 'Setup', labelHe: 'התחלה' }
+      case 'check':
+        return { icon: '🤔', label: 'Check', labelHe: 'בדיקה' }
       case 'divide':
         return { icon: '➗', label: 'Divide', labelHe: 'חלוקה' }
       case 'multiply':
@@ -211,183 +217,240 @@ export function LongDivisionDiagram({
 
       {/* Main diagram card */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 p-6">
-        {/* Division bracket visualization */}
+        {/* Division bracket visualization with column grid */}
         <div
           className="flex justify-center"
           style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, monospace' }}
         >
           <div className="inline-block">
-            {/* Quotient row with highlight effect */}
-            <div
-              className="flex justify-end mb-2 pr-3"
-              style={{ fontSize: baseFontSize }}
-            >
-              <div className="relative">
-                <span
-                  className="font-bold tracking-wider transition-all duration-300"
-                  style={{
-                    color: MATH_COLORS.quotient,
-                    textShadow: isComplete ? '0 0 8px rgba(79, 70, 229, 0.3)' : 'none',
-                  }}
-                >
-                  {visibleQuotient}
-                  {!isComplete && (
-                    <span className="animate-pulse text-gray-300 dark:text-gray-600">_</span>
-                  )}
-                </span>
-                {visibleQuotient && (
+            {/* Column width for digit alignment */}
+            {(() => {
+              const colWidth = baseFontSize * 1.4 // Width per digit column
+              const numCols = dividendStr.length
+              const divisorWidth = divisorStr.length * baseFontSize * 0.8 + 24 // divisor width + padding
+
+              return (
+                <div className="relative">
+                  {/* Quotient row - aligned with dividend digits below */}
                   <div
-                    className="absolute -bottom-1 left-0 right-0 h-0.5 rounded-full"
-                    style={{
-                      background: `linear-gradient(90deg, ${MATH_COLORS.quotient}, transparent)`,
-                    }}
-                  />
-                )}
-              </div>
-            </div>
+                    className="flex mb-2"
+                    style={{ fontSize: baseFontSize }}
+                  >
+                    {/* Spacer for divisor width */}
+                    <div style={{ width: divisorWidth }} />
+                    {/* Quotient digits in columns */}
+                    <div className="flex">
+                      {dividendStr.split('').map((_, i) => {
+                        const qDigit = quotientDigits.find(d => d.position === i)
+                        return (
+                          <div
+                            key={i}
+                            className="text-center font-bold transition-all duration-300"
+                            style={{
+                              width: colWidth,
+                              color: qDigit ? MATH_COLORS.quotient : 'transparent',
+                              textShadow: isComplete && qDigit ? '0 0 8px rgba(79, 70, 229, 0.3)' : 'none',
+                            }}
+                          >
+                            {qDigit ? qDigit.digit : '\u00A0'}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
 
-            {/* Division bracket: divisor ⟌ dividend */}
-            <div className="flex items-start" style={{ fontSize: baseFontSize }}>
-              {/* Divisor with subtle background */}
-              <div className="relative">
-                <span
-                  className="font-semibold px-2 py-1 rounded-lg mr-3"
-                  style={{
-                    color: MATH_COLORS.divisor,
-                    backgroundColor: 'rgba(75, 85, 99, 0.08)',
-                  }}
-                >
-                  {divisorStr}
-                </span>
-              </div>
+                  {/* Division bracket: divisor ⟌ dividend with column lines */}
+                  <div className="flex items-start" style={{ fontSize: baseFontSize }}>
+                    {/* Divisor with subtle background */}
+                    <div style={{ width: divisorWidth }} className="flex-shrink-0">
+                      <span
+                        className="font-semibold px-2 py-1 rounded-lg"
+                        style={{
+                          color: MATH_COLORS.divisor,
+                          backgroundColor: 'rgba(75, 85, 99, 0.08)',
+                        }}
+                      >
+                        {divisorStr}
+                      </span>
+                    </div>
 
-              {/* Division bracket with dividend */}
-              <div
-                className="relative pl-4 pt-2"
-                style={{
-                  borderLeft: `3px solid ${MATH_COLORS.dividend}`,
-                  borderTop: `3px solid ${MATH_COLORS.dividend}`,
-                  borderTopLeftRadius: '6px',
-                }}
-              >
-                {/* Dividend with digit separation */}
-                <span
-                  className="tracking-widest font-semibold"
-                  style={{ color: MATH_COLORS.dividend }}
-                >
-                  {dividendStr.split('').map((digit, i) => (
-                    <span
-                      key={i}
-                      className="inline-block transition-all duration-200"
+                    {/* Division bracket with dividend - column grid */}
+                    <div
+                      className="relative"
                       style={{
-                        marginRight: '2px',
-                        opacity: 1,
+                        borderLeft: `3px solid ${MATH_COLORS.dividend}`,
+                        borderTop: `3px solid ${MATH_COLORS.dividend}`,
+                        borderTopLeftRadius: '6px',
                       }}
                     >
-                      {digit}
-                    </span>
-                  ))}
-                </span>
-              </div>
-            </div>
+                      {/* Dividend digits in columns */}
+                      <div className="flex pt-2 pl-1">
+                        {dividendStr.split('').map((digit, i) => (
+                          <div
+                            key={i}
+                            className="text-center font-semibold transition-all duration-200"
+                            style={{
+                              width: colWidth,
+                              color: MATH_COLORS.dividend,
+                              borderRight: i < numCols - 1 ? '1px dashed rgba(156, 163, 175, 0.4)' : 'none',
+                            }}
+                          >
+                            {digit}
+                          </div>
+                        ))}
+                      </div>
 
-            {/* Work area - show steps progressively */}
-            <div
-              className="ml-14 mt-3 space-y-2"
-              style={{ fontSize: baseFontSize * 0.85 }}
-            >
-              {workRows.map((row, rowIndex) => (
-                <div key={rowIndex} className="space-y-1">
-                  {/* Product (subtraction line) */}
-                  {row.showProduct && row.product !== undefined && (
-                    <div
-                      className="flex items-center transition-all duration-300 pl-1"
-                      style={fadeInStyle}
-                    >
-                      <span
-                        className="mr-2 font-medium"
-                        style={{ color: MATH_COLORS.product }}
+                      {/* Work area - show steps progressively */}
+                      <div
+                        className="mt-3 pl-1"
+                        style={{ fontSize: baseFontSize * 0.85 }}
                       >
-                        −
-                      </span>
-                      <span
-                        className="font-semibold tracking-wider"
-                        style={{ color: MATH_COLORS.product }}
-                      >
-                        {row.product}
-                      </span>
-                    </div>
-                  )}
+                        {workRows.map((row, rowIndex) => (
+                          <div key={rowIndex} className="mb-1">
+                            {/* Product (subtraction line) - aligned to columns */}
+                            {row.showProduct && row.product !== undefined && (
+                              <div
+                                className="flex transition-all duration-300 mt-1"
+                                style={fadeInStyle}
+                              >
+                                <span
+                                  className="font-medium"
+                                  style={{ color: MATH_COLORS.product, width: 20 }}
+                                >
+                                  −
+                                </span>
+                                <div className="flex">
+                                  {/* Pad with spaces for column alignment */}
+                                  {dividendStr.split('').map((_, i) => {
+                                    const productStr = row.product!.toString()
+                                    const startCol = row.position - productStr.length + 1
+                                    const digitIndex = i - startCol
+                                    const showDigit = digitIndex >= 0 && digitIndex < productStr.length
+                                    return (
+                                      <div
+                                        key={i}
+                                        className="text-center font-semibold"
+                                        style={{
+                                          width: colWidth,
+                                          color: showDigit ? MATH_COLORS.product : 'transparent',
+                                        }}
+                                      >
+                                        {showDigit ? productStr[digitIndex] : '\u00A0'}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )}
 
-                  {/* Difference (after subtraction) */}
-                  {row.showDifference && row.difference !== undefined && (
-                    <div
-                      className="border-t-2 pt-2 transition-all duration-300"
-                      style={{
-                        borderColor: MATH_COLORS.muted,
-                        ...fadeInStyle,
-                      }}
-                    >
-                      <span
-                        className="font-semibold tracking-wider pl-4"
-                        style={{ color: MATH_COLORS.difference }}
-                      >
-                        {row.difference}
-                      </span>
-                    </div>
-                  )}
+                            {/* Difference (after subtraction) - aligned to columns */}
+                            {row.showDifference && row.difference !== undefined && (
+                              <div
+                                className="border-t-2 pt-1 pb-1 transition-all duration-300"
+                                style={{
+                                  borderColor: MATH_COLORS.muted,
+                                  marginLeft: 20,
+                                  ...fadeInStyle,
+                                }}
+                              >
+                                <div className="flex">
+                                  {dividendStr.split('').map((_, i) => {
+                                    const diffStr = row.difference!.toString()
+                                    const startCol = row.position - diffStr.length + 1
+                                    const digitIndex = i - startCol
+                                    const showDigit = digitIndex >= 0 && digitIndex < diffStr.length
+                                    return (
+                                      <div
+                                        key={i}
+                                        className="text-center font-semibold"
+                                        style={{
+                                          width: colWidth,
+                                          color: showDigit ? MATH_COLORS.difference : 'transparent',
+                                        }}
+                                      >
+                                        {showDigit ? diffStr[digitIndex] : '\u00A0'}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )}
 
-                  {/* Bring down (new working number) */}
-                  {row.showWorkingNumber && row.workingNumber !== undefined && (
-                    <div
-                      className="flex items-center gap-2 transition-all duration-300 pl-4"
-                      style={fadeInStyle}
-                    >
-                      <span
-                        className="font-semibold tracking-wider"
-                        style={{ color: MATH_COLORS.workingNumber }}
-                      >
-                        {row.workingNumber}
-                      </span>
-                      <span
-                        className="text-sm animate-bounce"
-                        style={{ color: MATH_COLORS.workingNumber, animationDuration: '1s' }}
-                      >
-                        ↓
-                      </span>
+                            {/* Bring down (new working number) - aligned to columns */}
+                            {row.showWorkingNumber && row.workingNumber !== undefined && (
+                              <div
+                                className="flex items-center transition-all duration-300 pt-1"
+                                style={{ marginLeft: 20, ...fadeInStyle }}
+                              >
+                                <div className="flex">
+                                  {dividendStr.split('').map((_, i) => {
+                                    const workStr = row.workingNumber!.toString()
+                                    const endCol = row.position
+                                    const startCol = endCol - workStr.length + 1
+                                    const digitIndex = i - startCol
+                                    const showDigit = digitIndex >= 0 && digitIndex < workStr.length
+                                    const isNewDigit = i === endCol
+                                    return (
+                                      <div
+                                        key={i}
+                                        className="text-center font-semibold relative"
+                                        style={{
+                                          width: colWidth,
+                                          color: showDigit ? MATH_COLORS.workingNumber : 'transparent',
+                                        }}
+                                      >
+                                        {showDigit ? workStr[digitIndex] : '\u00A0'}
+                                        {isNewDigit && (
+                                          <span
+                                            className="absolute -top-4 left-1/2 transform -translate-x-1/2 text-xs animate-bounce"
+                                            style={{ color: MATH_COLORS.workingNumber, animationDuration: '1s' }}
+                                          >
+                                            ↓
+                                          </span>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+
+                        {/* Show remainder if we're at the final step */}
+                        {isComplete && remainder > 0 && (
+                          <div
+                            className="border-t-2 pt-3 mt-3 flex items-center gap-2 transition-all duration-300"
+                            style={{
+                              borderColor: MATH_COLORS.muted,
+                              marginLeft: 20,
+                              ...fadeInStyle,
+                            }}
+                          >
+                            <span
+                              className="text-sm font-medium px-2 py-0.5 rounded-full"
+                              style={{
+                                fontSize: smallFontSize,
+                                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                                color: MATH_COLORS.warning,
+                              }}
+                            >
+                              {language === 'he' ? 'שארית' : 'Remainder'}
+                            </span>
+                            <span
+                              className="font-bold text-lg"
+                              style={{ color: MATH_COLORS.warning }}
+                            >
+                              {remainder}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
-              ))}
-
-              {/* Show remainder if we're at the final step */}
-              {isComplete && remainder > 0 && (
-                <div
-                  className="border-t-2 pt-3 mt-3 flex items-center gap-2 transition-all duration-300"
-                  style={{
-                    borderColor: MATH_COLORS.muted,
-                    ...fadeInStyle,
-                  }}
-                >
-                  <span
-                    className="text-sm font-medium px-2 py-0.5 rounded-full"
-                    style={{
-                      fontSize: smallFontSize,
-                      backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                      color: MATH_COLORS.warning,
-                    }}
-                  >
-                    {language === 'he' ? 'שארית' : 'Remainder'}
-                  </span>
-                  <span
-                    className="font-bold text-lg"
-                    style={{ color: MATH_COLORS.warning }}
-                  >
-                    {remainder}
-                  </span>
-                </div>
-              )}
-            </div>
+              )
+            })()}
           </div>
         </div>
       </div>

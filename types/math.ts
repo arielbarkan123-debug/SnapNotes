@@ -11,9 +11,11 @@ export interface LongDivisionStep {
   /** Step number (0-indexed) */
   step: number
   /** Type of operation in this step */
-  type: 'setup' | 'divide' | 'multiply' | 'subtract' | 'bring_down' | 'remainder' | 'complete'
-  /** Position in the division (which digit we're working on) */
+  type: 'setup' | 'divide' | 'multiply' | 'subtract' | 'bring_down' | 'remainder' | 'complete' | 'check'
+  /** Position in the division - for quotient digits, this is the dividend position they align with */
   position: number
+  /** Starting position for quotient (only in 'setup' step) - indicates which dividend digit the first quotient digit aligns above */
+  quotientStartPosition?: number
   /** The quotient digit found in this step (for 'divide' type) */
   quotientDigit?: number
   /** The product written below (for 'multiply' type) */

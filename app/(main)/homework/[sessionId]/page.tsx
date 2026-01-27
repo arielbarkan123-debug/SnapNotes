@@ -349,23 +349,25 @@ export default function HomeworkResultsPage() {
           <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-b border-purple-200 dark:border-purple-800/50">
             <div className="container mx-auto px-4 py-3 max-w-2xl">
               <div className="flex items-start gap-3">
-                {/* Question thumbnail */}
-                <button
-                  onClick={() => setShowTask(true)}
-                  className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 border-white dark:border-gray-700 shadow-sm hover:ring-2 hover:ring-purple-400 transition-all"
-                >
-                  <Image
-                    src={helpSession.question_image_url}
-                    alt="Question"
-                    fill
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                    </svg>
-                  </div>
-                </button>
+                {/* Question thumbnail - only show for image mode */}
+                {helpSession.question_image_url && (
+                  <button
+                    onClick={() => setShowTask(true)}
+                    className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 border-white dark:border-gray-700 shadow-sm hover:ring-2 hover:ring-purple-400 transition-all"
+                  >
+                    <Image
+                      src={helpSession.question_image_url}
+                      alt="Question"
+                      fill
+                      className="object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                      </svg>
+                    </div>
+                  </button>
+                )}
 
                 {/* Question info */}
                 <div className="flex-1 min-w-0">

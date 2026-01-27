@@ -14,6 +14,7 @@ import {
   shouldEncourageAttempt,
   getHintLevelInfo,
 } from '@/lib/homework/hint-generator'
+import { ensureDiagramInResponse } from '@/lib/homework/diagram-generator'
 import { addMessage, updateProgress } from '@/lib/homework/session-manager'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
@@ -103,7 +104,18 @@ export async function POST(
       }
     }
 
-    // Step 4: Add hint to conversation
+    // Step 4: Generate diagram for this hint (if appropriate)
+    // Get existing diagram from conversation to continue building on it
+    const existingDiagram = (homeworkSession.conversation || [])
+      .filter((msg): msg is ConversationMessage & { diagram: NonNullable<ConversationMessage['diagram']> } =>
+        msg.role === 'tutor' && !!msg.diagram
+      )
+      .pop()?.diagram
+
+    // Generate or continue diagram based on question analysis
+    const diagram = ensureDiagramInResponse(questionAnalysis, existingDiagram)
+
+    // Step 5: Add hint to conversation
     const hintMessage: ConversationMessage = {
       role: 'tutor',
       content: hint.content,
@@ -111,6 +123,7 @@ export async function POST(
       hintLevel: hint.hintLevel,
       pedagogicalIntent: hint.isShowAnswer ? 'show_answer' : 'give_hint',
       referencedConcept: hint.relatedConcept,
+      diagram,
     }
 
     let updatedSession: HomeworkSession
@@ -138,7 +151,7 @@ export async function POST(
       updatedSession = updated as HomeworkSession
     }
 
-    // Step 5: Update hint counters
+    // Step 6: Update hint counters
     const newHintsUsed = (homeworkSession.hints_used || 0) + 1
     const usedShowAnswer = hint.isShowAnswer || homeworkSession.used_show_answer
 
