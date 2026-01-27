@@ -53,8 +53,8 @@ export function InclinedPlane({
 }: InclinedPlaneProps) {
   const {
     angle,
-    object,
-    forces,
+    object: rawObject,
+    forces: rawForces,
     showDecomposition = false,
     frictionCoefficient,
     coordinateSystem = 'standard',
@@ -62,6 +62,16 @@ export function InclinedPlane({
     surface,
     title,
   } = data
+
+  // Defensive defaults for missing data
+  const object = rawObject || {
+    type: 'block' as const,
+    position: { x: 0, y: 0 },
+    mass: undefined,
+    label: undefined,
+    color: '#f3f4f6',
+  }
+  const forces = rawForces || []
 
   const [animatingForces, setAnimatingForces] = useState<Set<string>>(new Set())
 
