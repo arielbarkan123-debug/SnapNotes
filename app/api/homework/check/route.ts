@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
           heartbeatInterval = null
         }
         try {
-          closeStream()
+          controller.close()
         } catch {
           // Stream may already be closed
         }
