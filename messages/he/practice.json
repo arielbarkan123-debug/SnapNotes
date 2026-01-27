@@ -30,7 +30,8 @@
     "incorrectBtn": "לא נכון",
     "correctBtn": "נכון",
     "needHelpUnderstanding": "צריך עזרה להבין את זה?",
-    "from": "מתוך"
+    "from": "מתוך",
+    "showAnswer": "הצג תשובה"
   },
   "encouragement": {
     "1": "כמעט! בוא נראה למה זה לא היה בדיוק נכון.",

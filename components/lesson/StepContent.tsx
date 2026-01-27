@@ -4,6 +4,14 @@ import { type Step } from '@/types'
 import Image from 'next/image'
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
+import dynamic from 'next/dynamic'
+import type { DiagramState } from '@/components/homework/diagram/types'
+
+// Dynamic import of DiagramRenderer to avoid SSR issues with SVG
+const DiagramRenderer = dynamic(
+  () => import('@/components/homework/diagram/DiagramRenderer'),
+  { ssr: false, loading: () => <div className="h-48 flex items-center justify-center"><div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /></div> }
+)
 
 interface StepContentProps {
   step: Step
@@ -28,7 +36,7 @@ export default function StepContent({ step, lessonTitle }: StepContentProps) {
     case 'formula':
       return <FormulaStep content={step.content} explanation={step.explanation} t={t} />
     case 'diagram':
-      return <DiagramStep content={step.content} t={t} {...imageProps} />
+      return <DiagramStep content={step.content} t={t} diagramData={step.diagramData} {...imageProps} />
     case 'example':
       return <ExampleStep content={step.content} t={t} {...imageProps} />
     case 'summary':
@@ -196,7 +204,38 @@ function FormulaStep({ content, explanation, t }: FormulaStepProps) {
   )
 }
 
-function DiagramStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl, t }: ImageStepProps) {
+interface DiagramStepProps extends ImageStepProps {
+  diagramData?: Step['diagramData']
+}
+
+function DiagramStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl, diagramData, t }: DiagramStepProps) {
+  const [currentStep, setCurrentStep] = useState(0)
+  const [diagramError, setDiagramError] = useState<string | null>(null)
+
+  // Validate diagramData
+  const isValidDiagramData = diagramData &&
+    typeof diagramData.type === 'string' &&
+    diagramData.type.length > 0 &&
+    diagramData.data &&
+    typeof diagramData.data === 'object'
+
+  // Log validation errors in development
+  if (diagramData && !isValidDiagramData) {
+    console.error('[StepContent] Invalid diagramData:', {
+      hasType: !!diagramData.type,
+      typeIsString: typeof diagramData.type === 'string',
+      hasData: !!diagramData.data,
+      dataIsObject: typeof diagramData.data === 'object',
+      diagramData,
+    })
+  }
+
+  // Error handler for diagram rendering
+  const handleDiagramError = (error: Error) => {
+    console.error('[StepContent] Diagram render error:', error.message)
+    setDiagramError(error.message)
+  }
+
   return (
     <div className="animate-fadeIn">
       <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800 rounded-2xl p-6">
@@ -205,15 +244,71 @@ function DiagramStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, i
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           <span className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
-            {imageUrl ? t('diagramType') : t('diagramReferenceType')}
+            {isValidDiagramData ? t('interactiveDiagram') : imageUrl ? t('diagramType') : t('diagramReferenceType')}
           </span>
         </div>
-        <p className="text-gray-800 dark:text-gray-200 leading-relaxed">
+        <p className="text-gray-800 dark:text-gray-200 leading-relaxed mb-4">
           {content}
         </p>
-        {imageUrl ? (
+
+        {/* Interactive Diagram */}
+        {isValidDiagramData && !diagramError && (
+          <div className="mt-4 bg-white dark:bg-gray-800 rounded-xl p-4 border border-purple-100 dark:border-purple-900">
+            <DiagramRenderer
+              diagram={{
+                type: diagramData.type,
+                data: diagramData.data,
+                visibleStep: diagramData.visibleStep || 0,
+                totalSteps: diagramData.totalSteps,
+                stepConfig: diagramData.stepConfig,
+              } as DiagramState}
+              currentStep={currentStep}
+              onStepAdvance={() => setCurrentStep(prev => Math.min(prev + 1, (diagramData.totalSteps || 1) - 1))}
+              showControls={true}
+              animate={true}
+              onRenderError={handleDiagramError}
+            />
+            {/* Step controls */}
+            {diagramData.totalSteps && diagramData.totalSteps > 1 && (
+              <div className="mt-4 flex items-center justify-center gap-4">
+                <button
+                  onClick={() => setCurrentStep(prev => Math.max(prev - 1, 0))}
+                  disabled={currentStep === 0}
+                  className="px-3 py-1.5 text-sm rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200 dark:hover:bg-purple-800/60 transition"
+                >
+                  ← {t('previousStep')}
+                </button>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {t('stepOf', { current: currentStep + 1, total: diagramData.totalSteps })}
+                </span>
+                <button
+                  onClick={() => setCurrentStep(prev => Math.min(prev + 1, (diagramData.totalSteps || 1) - 1))}
+                  disabled={currentStep === (diagramData.totalSteps || 1) - 1}
+                  className="px-3 py-1.5 text-sm rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200 dark:hover:bg-purple-800/60 transition"
+                >
+                  {t('nextStep')} →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Diagram error fallback */}
+        {diagramError && (
+          <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              Unable to display interactive diagram. {imageUrl ? 'Showing static image instead.' : 'Please refer to the lesson content.'}
+            </p>
+          </div>
+        )}
+
+        {/* Image-based diagram (fallback) */}
+        {!diagramData && imageUrl && (
           <StepImage url={imageUrl} alt={imageAlt || t('diagramType')} caption={imageCaption} credit={imageCredit} creditUrl={imageCreditUrl} t={t} />
-        ) : (
+        )}
+
+        {/* Reference text when no diagram or image */}
+        {!diagramData && !imageUrl && (
           <p className="mt-4 text-sm text-purple-600 dark:text-purple-400 italic">
             {t('referToOriginalImage')}
           </p>

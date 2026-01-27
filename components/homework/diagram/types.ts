@@ -4,9 +4,11 @@
 
 import type { DiagramState as PhysicsDiagramState } from '@/types/physics'
 import type { MathDiagramState } from '@/types/math'
+import type { ChemistryDiagramState } from '@/types/chemistry'
+import type { BiologyDiagramState } from '@/types/biology'
 
-// Combined diagram type that can be either physics or math
-export type DiagramState = PhysicsDiagramState | MathDiagramState
+// Combined diagram type that can be physics, math, chemistry, or biology
+export type DiagramState = PhysicsDiagramState | MathDiagramState | ChemistryDiagramState | BiologyDiagramState
 
 // Physics diagram types
 export const PHYSICS_DIAGRAM_TYPES = [
@@ -33,11 +35,11 @@ export const MATH_DIAGRAM_TYPES = [
   'area_model',
 ]
 
-// Chemistry diagram types (for future use)
-export const CHEMISTRY_DIAGRAM_TYPES = ['molecule', 'reaction', 'energy_diagram']
+// Chemistry diagram types
+export const CHEMISTRY_DIAGRAM_TYPES = ['atom', 'molecule', 'periodic_element', 'bonding']
 
-// Biology diagram types (for future use)
-export const BIOLOGY_DIAGRAM_TYPES = ['cell', 'system', 'process_flow']
+// Biology diagram types
+export const BIOLOGY_DIAGRAM_TYPES = ['cell', 'organelle', 'dna', 'process']
 
 // Human-readable diagram type names
 export const DIAGRAM_TYPE_NAMES: Record<string, string> = {
@@ -61,13 +63,15 @@ export const DIAGRAM_TYPE_NAMES: Record<string, string> = {
   bar_model: 'Bar Model',
   area_model: 'Area Model',
   // Chemistry diagrams
+  atom: 'Atom Structure',
   molecule: 'Molecule Structure',
-  reaction: 'Chemical Reaction',
-  energy_diagram: 'Energy Diagram',
+  periodic_element: 'Periodic Element',
+  bonding: 'Chemical Bonding',
   // Biology diagrams
   cell: 'Cell Structure',
-  system: 'System Diagram',
-  process_flow: 'Process Flow',
+  organelle: 'Organelle',
+  dna: 'DNA Structure',
+  process: 'Biological Process',
 }
 
 /**
@@ -85,16 +89,16 @@ export function isMathDiagram(diagram: DiagramState): diagram is MathDiagramStat
 }
 
 /**
- * Type guard for chemistry diagrams (for future use)
+ * Type guard for chemistry diagrams
  */
-export function isChemistryDiagram(diagram: DiagramState): boolean {
+export function isChemistryDiagram(diagram: DiagramState): diagram is ChemistryDiagramState {
   return CHEMISTRY_DIAGRAM_TYPES.includes(diagram.type as string)
 }
 
 /**
- * Type guard for biology diagrams (for future use)
+ * Type guard for biology diagrams
  */
-export function isBiologyDiagram(diagram: DiagramState): boolean {
+export function isBiologyDiagram(diagram: DiagramState): diagram is BiologyDiagramState {
   return BIOLOGY_DIAGRAM_TYPES.includes(diagram.type as string)
 }
 

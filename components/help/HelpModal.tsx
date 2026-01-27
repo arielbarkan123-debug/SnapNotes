@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
+import ReactMarkdown from 'react-markdown'
 import { type HelpContext, type HelpRequestType, type HelpAPIResponse } from '@/types'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
 
@@ -165,8 +166,28 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
 
           {view === 'response' && (
             <div className="space-y-4">
-              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">{response}</p>
+              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown
+                  components={{
+                    // Style headers
+                    h1: ({ children }) => <h1 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-2">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">{children}</h3>,
+                    // Style paragraphs
+                    p: ({ children }) => <p className="text-gray-800 dark:text-gray-200 leading-relaxed mb-2 last:mb-0">{children}</p>,
+                    // Style lists
+                    ul: ({ children }) => <ul className="list-disc list-inside space-y-1 text-gray-800 dark:text-gray-200 mb-2">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 text-gray-800 dark:text-gray-200 mb-2">{children}</ol>,
+                    li: ({ children }) => <li className="text-gray-800 dark:text-gray-200">{children}</li>,
+                    // Style bold and italic
+                    strong: ({ children }) => <strong className="font-semibold text-gray-900 dark:text-white">{children}</strong>,
+                    em: ({ children }) => <em className="italic">{children}</em>,
+                    // Style code
+                    code: ({ children }) => <code className="bg-gray-200 dark:bg-gray-600 px-1 py-0.5 rounded text-sm font-mono">{children}</code>,
+                  }}
+                >
+                  {response}
+                </ReactMarkdown>
               </div>
               {sourceReference && <p className="text-sm text-gray-500 dark:text-gray-400">📍 From: {sourceReference}</p>}
               <div className="flex gap-3">

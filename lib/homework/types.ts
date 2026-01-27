@@ -331,11 +331,17 @@ export interface TutorDiagramState {
     | 'bar_model'
     | 'area_model'
     // Chemistry diagram types
+    | 'atom'
     | 'molecule'
+    | 'periodic_element'
+    | 'bonding'
     | 'reaction'
     | 'energy_diagram'
     // Biology diagram types
     | 'cell'
+    | 'organelle'
+    | 'dna'
+    | 'process'
     | 'system'
     | 'process_flow'
   /** Diagram-specific data */

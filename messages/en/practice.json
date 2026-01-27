@@ -30,7 +30,8 @@
     "incorrectBtn": "Incorrect",
     "correctBtn": "Correct",
     "needHelpUnderstanding": "Need help understanding this?",
-    "from": "From"
+    "from": "From",
+    "showAnswer": "Show Answer"
   },
   "encouragement": {
     "1": "Almost there! Let's see why this wasn't quite right.",

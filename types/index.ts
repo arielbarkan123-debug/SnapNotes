@@ -731,6 +731,22 @@ export interface Step {
   imageCredit?: string
   /** Link to photographer's profile */
   imageCreditUrl?: string
+  /**
+   * Interactive diagram data for step-synced visualizations
+   * Supports physics (FBD, inclined plane), chemistry (atoms, molecules),
+   * biology (cells, DNA), and math (long division, etc.) diagrams
+   */
+  diagramData?: {
+    type: string
+    data: Record<string, unknown>
+    visibleStep?: number
+    totalSteps?: number
+    stepConfig?: Array<{
+      step: number
+      stepLabel?: string
+      showCalculation?: string
+    }>
+  }
 }
 
 /**
