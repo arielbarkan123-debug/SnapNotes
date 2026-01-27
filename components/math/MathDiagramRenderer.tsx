@@ -13,6 +13,12 @@ import { EquationSteps } from './EquationSteps'
 import { FractionOperation } from './FractionOperation'
 import { NumberLine } from './NumberLine'
 import { CoordinatePlane } from './CoordinatePlane'
+import { FactoringDiagram, type FactoringData } from './FactoringDiagram'
+import { CompletingSquareSteps, type CompletingSquareData } from './CompletingSquareSteps'
+import { PolynomialOperations, type PolynomialOperationsData } from './PolynomialOperations'
+import { RadicalSimplification, type RadicalSimplificationData } from './RadicalSimplification'
+import { SystemsOfEquations, type SystemsOfEquationsData } from './SystemsOfEquations'
+import { InequalityDiagram, type InequalityData } from './InequalityDiagram'
 
 interface MathDiagramRendererProps {
   /** Diagram state from tutor response */
@@ -174,6 +180,78 @@ export function MathDiagramRenderer({
           />
         )
 
+      case 'factoring':
+        return (
+          <FactoringDiagram
+            data={diagram.data as unknown as FactoringData}
+            width={width || 420}
+            height={height || 400}
+            totalSteps={calculatedTotalSteps}
+            showStepCounter={false}
+            {...commonProps}
+          />
+        )
+
+      case 'completing_square':
+        return (
+          <CompletingSquareSteps
+            data={diagram.data as unknown as CompletingSquareData}
+            width={width || 440}
+            height={height || 450}
+            totalSteps={calculatedTotalSteps}
+            showStepCounter={false}
+            {...commonProps}
+          />
+        )
+
+      case 'polynomial':
+        return (
+          <PolynomialOperations
+            data={diagram.data as unknown as PolynomialOperationsData}
+            width={width || 480}
+            height={height || 400}
+            totalSteps={calculatedTotalSteps}
+            showStepCounter={false}
+            {...commonProps}
+          />
+        )
+
+      case 'radical':
+        return (
+          <RadicalSimplification
+            data={diagram.data as unknown as RadicalSimplificationData}
+            width={width || 420}
+            height={height || 400}
+            totalSteps={calculatedTotalSteps}
+            showStepCounter={false}
+            {...commonProps}
+          />
+        )
+
+      case 'systems':
+        return (
+          <SystemsOfEquations
+            data={diagram.data as unknown as SystemsOfEquationsData}
+            width={width || 460}
+            height={height || 500}
+            totalSteps={calculatedTotalSteps}
+            showStepCounter={false}
+            {...commonProps}
+          />
+        )
+
+      case 'inequality':
+        return (
+          <InequalityDiagram
+            data={diagram.data as unknown as InequalityData}
+            width={width || 440}
+            height={height || 450}
+            totalSteps={calculatedTotalSteps}
+            showStepCounter={false}
+            {...commonProps}
+          />
+        )
+
       // Placeholder for future diagram types
       case 'triangle':
       case 'circle':
@@ -202,7 +280,7 @@ export function MathDiagramRenderer({
 
   // Get diagram type display name
   const getDiagramTypeName = (): string => {
-    const names = {
+    const names: Record<string, Record<string, string>> = {
       en: {
         long_division: 'Long Division',
         equation: 'Equation Solving',
@@ -213,6 +291,12 @@ export function MathDiagramRenderer({
         circle: 'Circle',
         bar_model: 'Bar Model',
         area_model: 'Area Model',
+        factoring: 'Factoring',
+        completing_square: 'Completing the Square',
+        polynomial: 'Polynomial Operations',
+        radical: 'Radical Simplification',
+        systems: 'Systems of Equations',
+        inequality: 'Inequalities',
       },
       he: {
         long_division: 'חילוק ארוך',
@@ -224,6 +308,12 @@ export function MathDiagramRenderer({
         circle: 'מעגל',
         bar_model: 'מודל עמודות',
         area_model: 'מודל שטח',
+        factoring: 'פירוק לגורמים',
+        completing_square: 'השלמה לריבוע',
+        polynomial: 'פעולות פולינום',
+        radical: 'פישוט שורשים',
+        systems: 'מערכת משוואות',
+        inequality: 'אי-שוויונות',
       },
     }
     return names[language][diagram.type] || diagram.type

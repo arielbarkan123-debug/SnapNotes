@@ -93,6 +93,11 @@ export function ForceVector({
       return THEME_FORCE_COLORS.applied
     if (type.includes('net') || type.includes('resultant')) return THEME_FORCE_COLORS.net
     if (type.includes('spring')) return THEME_FORCE_COLORS.spring
+    if (type.includes('drive') || type.includes('engine')) return THEME_FORCE_COLORS.drive
+    if (type.includes('resistance')) return THEME_FORCE_COLORS.resistance
+    if (type.includes('thrust')) return THEME_FORCE_COLORS.thrust
+    if (type.includes('lift')) return THEME_FORCE_COLORS.lift
+    if (type.includes('drag')) return THEME_FORCE_COLORS.drag
     return THEME_FORCE_COLORS.applied
   }, [force.type])
 

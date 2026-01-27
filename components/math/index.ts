@@ -1,41 +1,36 @@
 /**
- * Math Visual Components
- *
- * SVG-based components for rendering mathematical visualizations
- * Includes step-synced diagrams for tutoring (long division, equations, fractions, etc.)
+ * Math Components Index
+ * 
+ * All math visualization components for NoteSnap
  */
 
-// Basic visualization components
-export { NumberLine } from './NumberLine'
+// Main renderer
+export { MathDiagramRenderer } from './MathDiagramRenderer'
+
+// Arithmetic & Basic Operations
+export { LongDivisionDiagram } from './LongDivisionDiagram'
+export { FractionOperation } from './FractionOperation'
+
+// Algebra - Equations
+export { EquationSteps } from './EquationSteps'
+export { SystemsOfEquations, type SystemsOfEquationsData, type SystemStep, type SystemEquation } from './SystemsOfEquations'
+export { InequalityDiagram, type InequalityData, type InequalityStep, type InequalityOperator } from './InequalityDiagram'
+
+// Algebra - Expressions
+export { FactoringDiagram, type FactoringData, type FactoringStep, type FactorPair } from './FactoringDiagram'
+export { CompletingSquareSteps, type CompletingSquareData, type CompletingSquareStep } from './CompletingSquareSteps'
+export { PolynomialOperations, type PolynomialOperationsData, type PolynomialStep, type PolynomialTerm } from './PolynomialOperations'
+export { RadicalSimplification, type RadicalSimplificationData, type RadicalStep, type PrimeFactor } from './RadicalSimplification'
+
+// Graphing & Visualization
 export { CoordinatePlane } from './CoordinatePlane'
+export { NumberLine } from './NumberLine'
+
+// Geometry
 export { Triangle } from './Triangle'
 export { Circle } from './Circle'
 export { UnitCircle } from './UnitCircle'
-export { MathTable, SignTable, ValueTable, FactorTable } from './MathTable'
-export { TreeDiagram, ProbabilityTree, CountingTree } from './TreeDiagram'
 
-// Step-synced diagram components (for tutor explanations)
-export { LongDivisionDiagram } from './LongDivisionDiagram'
-export { EquationSteps } from './EquationSteps'
-export { FractionOperation } from './FractionOperation'
-export { MathDiagramRenderer } from './MathDiagramRenderer'
-
-// Re-export types for convenience
-export type {
-  MathDiagramType,
-  MathDiagramData,
-  MathDiagramState,
-  MathDiagramStepConfig,
-  LongDivisionData,
-  LongDivisionStep,
-  EquationData,
-  EquationStep,
-  FractionOperationData,
-  FractionStep,
-  Fraction,
-  NumberLineData,
-  CoordinatePlaneData,
-  TutorMathDiagramResponse,
-} from '@/types/math'
-
-export { MATH_COLORS, FRACTION_COLORS } from '@/types/math'
+// Data Display
+export { MathTable } from './MathTable'
+export { TreeDiagram } from './TreeDiagram'

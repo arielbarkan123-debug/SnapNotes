@@ -289,7 +289,15 @@ export type MathDiagramType =
   | 'circle'
   | 'bar_model'
   | 'area_model'
+  | 'factoring'
+  | 'completing_square'
+  | 'polynomial'
+  | 'radical'
+  | 'systems'
+  | 'inequality'
 
+// Base MathDiagramData - new diagram types use 'unknown' casting in renderer
+// to avoid circular dependencies
 export type MathDiagramData =
   | LongDivisionData
   | EquationData
@@ -298,6 +306,9 @@ export type MathDiagramData =
   | CoordinatePlaneData
   | TriangleData
   | CircleData
+  // New diagram types are handled via unknown casting in MathDiagramRenderer
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  | Record<string, any>
 
 export interface MathDiagramState {
   /** Type of diagram */

@@ -71,6 +71,13 @@ export function FreeBodyDiagram({
     title,
     referenceAngle = 0,
     forceScale = 1,
+    viewpoint = 'side',
+    showAngleLabels = false,
+    externalObjects = [],
+    acceleration,
+    givenInfo,
+    unknowns = [],
+    showForceMagnitudes = true,
   } = data
 
   const _controls = useAnimation()
@@ -171,21 +178,24 @@ export function FreeBodyDiagram({
   // Render physics object with animation
   const renderObject = () => {
     const objSize = 50
-    const objX = centerX - objSize / 2
-    const objY = centerY - objSize / 2
+    const objWidth = object.width || objSize
+    const objHeight = object.height || objSize
+    const objX = centerX - objWidth / 2
+    const objY = centerY - objHeight / 2
     const gradientId = 'object-gradient'
 
     const objectContent = (() => {
       switch (object.type) {
         case 'block':
+        case 'crate':
           return (
             <>
               {/* Shadow */}
               <rect
                 x={objX + 3}
                 y={objY + 3}
-                width={object.width || objSize}
-                height={object.height || objSize}
+                width={objWidth}
+                height={objHeight}
                 fill="rgba(0,0,0,0.1)"
                 rx={6}
               />
@@ -193,8 +203,8 @@ export function FreeBodyDiagram({
               <rect
                 x={objX}
                 y={objY}
-                width={object.width || objSize}
-                height={object.height || objSize}
+                width={objWidth}
+                height={objHeight}
                 fill={`url(#${gradientId})`}
                 stroke={COLORS.gray[400]}
                 strokeWidth={2}
@@ -296,13 +306,735 @@ export function FreeBodyDiagram({
             </>
           )
 
+        case 'boat':
+          // Boat/ship shape - great for tugboat/tanker problems
+          const boatWidth = object.width || 100
+          const boatHeight = object.height || 40
+          const bx = centerX - boatWidth / 2
+          const by = centerY - boatHeight / 2
+          
+          // TOP-DOWN VIEW (bird's eye) - like the reference tanker diagram
+          if (viewpoint === 'top') {
+            const tankerLength = object.width || 160
+            const tankerWidth = object.height || 35
+            const tx = centerX - tankerLength / 2
+            const ty = centerY - tankerWidth / 2
+            return (
+              <>
+                {/* Tanker hull - top-down view (elongated rectangle with pointed bow) */}
+                <path
+                  d={`M ${tx + 15} ${ty}
+                      L ${tx + tankerLength - 20} ${ty}
+                      L ${tx + tankerLength} ${ty + tankerWidth / 2}
+                      L ${tx + tankerLength - 20} ${ty + tankerWidth}
+                      L ${tx + 15} ${ty + tankerWidth}
+                      L ${tx} ${ty + tankerWidth / 2}
+                      Z`}
+                  fill="#d4a574"
+                  stroke="#8b7355"
+                  strokeWidth={2}
+                />
+                {/* Cargo holds - rectangular sections on deck */}
+                {[0.15, 0.30, 0.45, 0.60, 0.75].map((pos, i) => (
+                  <rect
+                    key={i}
+                    x={tx + tankerLength * pos}
+                    y={ty + 5}
+                    width={tankerLength * 0.12}
+                    height={tankerWidth - 10}
+                    fill="#c4956a"
+                    stroke="#8b7355"
+                    strokeWidth={1}
+                    rx={2}
+                  />
+                ))}
+                {/* Bridge/superstructure at stern */}
+                <rect
+                  x={tx + 8}
+                  y={ty + tankerWidth * 0.25}
+                  width={tankerLength * 0.08}
+                  height={tankerWidth * 0.5}
+                  fill="#f5f5f4"
+                  stroke="#8b7355"
+                  strokeWidth={1}
+                  rx={2}
+                />
+                {/* Bow point highlight */}
+                <path
+                  d={`M ${tx + tankerLength - 20} ${ty + 3}
+                      L ${tx + tankerLength - 5} ${ty + tankerWidth / 2}
+                      L ${tx + tankerLength - 20} ${ty + tankerWidth - 3}`}
+                  fill="#60a5fa"
+                  opacity={0.3}
+                />
+              </>
+            )
+          }
+          
+          // SIDE VIEW (original)
+          return (
+            <>
+              {/* Water waves (below boat) */}
+              <path
+                d={`M ${bx - 20} ${by + boatHeight + 5} 
+                    Q ${bx} ${by + boatHeight} ${bx + 20} ${by + boatHeight + 5}
+                    Q ${bx + 40} ${by + boatHeight + 10} ${bx + 60} ${by + boatHeight + 5}
+                    Q ${bx + 80} ${by + boatHeight} ${bx + 100} ${by + boatHeight + 5}
+                    Q ${bx + boatWidth + 20} ${by + boatHeight + 10} ${bx + boatWidth + 40} ${by + boatHeight + 5}`}
+                fill="none"
+                stroke="#60a5fa"
+                strokeWidth={2}
+                opacity={0.5}
+              />
+              {/* Shadow */}
+              <ellipse
+                cx={centerX}
+                cy={by + boatHeight + 8}
+                rx={boatWidth / 2 + 5}
+                ry={6}
+                fill="rgba(0,0,0,0.1)"
+              />
+              {/* Hull (boat body) */}
+              <path
+                d={`M ${bx} ${by + boatHeight * 0.3}
+                    L ${bx + boatWidth * 0.1} ${by + boatHeight}
+                    L ${bx + boatWidth * 0.9} ${by + boatHeight}
+                    L ${bx + boatWidth} ${by + boatHeight * 0.3}
+                    L ${bx + boatWidth * 0.95} ${by}
+                    L ${bx + boatWidth * 0.05} ${by}
+                    Z`}
+                fill={object.color || '#475569'}
+                stroke={COLORS.gray[600]}
+                strokeWidth={2}
+              />
+              {/* Deck */}
+              <rect
+                x={bx + boatWidth * 0.15}
+                y={by - boatHeight * 0.3}
+                width={boatWidth * 0.5}
+                height={boatHeight * 0.4}
+                fill={object.color || '#64748b'}
+                stroke={COLORS.gray[500]}
+                strokeWidth={1.5}
+                rx={3}
+              />
+              {/* Bridge/cabin */}
+              <rect
+                x={bx + boatWidth * 0.25}
+                y={by - boatHeight * 0.6}
+                width={boatWidth * 0.3}
+                height={boatHeight * 0.35}
+                fill="#94a3b8"
+                stroke={COLORS.gray[500]}
+                strokeWidth={1}
+                rx={2}
+              />
+              {/* Windows */}
+              <rect
+                x={bx + boatWidth * 0.28}
+                y={by - boatHeight * 0.55}
+                width={boatWidth * 0.1}
+                height={boatHeight * 0.15}
+                fill="#bfdbfe"
+                rx={1}
+              />
+              <rect
+                x={bx + boatWidth * 0.42}
+                y={by - boatHeight * 0.55}
+                width={boatWidth * 0.1}
+                height={boatHeight * 0.15}
+                fill="#bfdbfe"
+                rx={1}
+              />
+              {/* Labels */}
+              {object.label && (
+                <text
+                  x={centerX}
+                  y={centerY + boatHeight * 0.6}
+                  textAnchor="middle"
+                  fontSize={14}
+                  fontWeight="600"
+                  fontFamily="'Inter', system-ui, sans-serif"
+                  fill={COLORS.gray[700]}
+                >
+                  {object.label}
+                </text>
+              )}
+              {object.mass && (
+                <text
+                  x={centerX}
+                  y={centerY + boatHeight * 0.6 + 16}
+                  textAnchor="middle"
+                  fontSize={11}
+                  fontFamily="'JetBrains Mono', monospace"
+                  fill={COLORS.gray[500]}
+                >
+                  m = {object.mass} kg
+                </text>
+              )}
+            </>
+          )
+
+        case 'car':
+          // Car shape for vehicle problems
+          const carWidth = object.width || 80
+          const carHeight = object.height || 30
+          const cx = centerX - carWidth / 2
+          const cy = centerY - carHeight / 2
+          return (
+            <>
+              {/* Shadow */}
+              <ellipse
+                cx={centerX}
+                cy={cy + carHeight + 8}
+                rx={carWidth / 2}
+                ry={4}
+                fill="rgba(0,0,0,0.15)"
+              />
+              {/* Car body */}
+              <path
+                d={`M ${cx + carWidth * 0.1} ${cy + carHeight}
+                    L ${cx} ${cy + carHeight}
+                    L ${cx} ${cy + carHeight * 0.5}
+                    L ${cx + carWidth * 0.15} ${cy + carHeight * 0.5}
+                    L ${cx + carWidth * 0.25} ${cy}
+                    L ${cx + carWidth * 0.75} ${cy}
+                    L ${cx + carWidth * 0.85} ${cy + carHeight * 0.5}
+                    L ${cx + carWidth} ${cy + carHeight * 0.5}
+                    L ${cx + carWidth} ${cy + carHeight}
+                    L ${cx + carWidth * 0.9} ${cy + carHeight}
+                    Z`}
+                fill={object.color || '#3b82f6'}
+                stroke={COLORS.gray[600]}
+                strokeWidth={2}
+              />
+              {/* Windows */}
+              <path
+                d={`M ${cx + carWidth * 0.28} ${cy + carHeight * 0.1}
+                    L ${cx + carWidth * 0.48} ${cy + carHeight * 0.1}
+                    L ${cx + carWidth * 0.48} ${cy + carHeight * 0.45}
+                    L ${cx + carWidth * 0.2} ${cy + carHeight * 0.45}
+                    Z`}
+                fill="#bfdbfe"
+              />
+              <path
+                d={`M ${cx + carWidth * 0.52} ${cy + carHeight * 0.1}
+                    L ${cx + carWidth * 0.72} ${cy + carHeight * 0.1}
+                    L ${cx + carWidth * 0.8} ${cy + carHeight * 0.45}
+                    L ${cx + carWidth * 0.52} ${cy + carHeight * 0.45}
+                    Z`}
+                fill="#bfdbfe"
+              />
+              {/* Wheels */}
+              <circle
+                cx={cx + carWidth * 0.2}
+                cy={cy + carHeight}
+                r={carHeight * 0.25}
+                fill="#374151"
+                stroke="#1f2937"
+                strokeWidth={2}
+              />
+              <circle
+                cx={cx + carWidth * 0.2}
+                cy={cy + carHeight}
+                r={carHeight * 0.12}
+                fill="#9ca3af"
+              />
+              <circle
+                cx={cx + carWidth * 0.8}
+                cy={cy + carHeight}
+                r={carHeight * 0.25}
+                fill="#374151"
+                stroke="#1f2937"
+                strokeWidth={2}
+              />
+              <circle
+                cx={cx + carWidth * 0.8}
+                cy={cy + carHeight}
+                r={carHeight * 0.12}
+                fill="#9ca3af"
+              />
+              {/* Labels */}
+              {object.label && (
+                <text
+                  x={centerX}
+                  y={cy + carHeight + 25}
+                  textAnchor="middle"
+                  fontSize={13}
+                  fontWeight="600"
+                  fontFamily="'Inter', system-ui, sans-serif"
+                  fill={COLORS.gray[700]}
+                >
+                  {object.label}
+                </text>
+              )}
+              {object.mass && (
+                <text
+                  x={centerX}
+                  y={cy + carHeight + 40}
+                  textAnchor="middle"
+                  fontSize={11}
+                  fontFamily="'JetBrains Mono', monospace"
+                  fill={COLORS.gray[500]}
+                >
+                  m = {object.mass} kg
+                </text>
+              )}
+            </>
+          )
+
+        case 'truck':
+          // Truck shape
+          const truckWidth = object.width || 100
+          const truckHeight = object.height || 40
+          const tx = centerX - truckWidth / 2
+          const ty = centerY - truckHeight / 2
+          return (
+            <>
+              {/* Shadow */}
+              <ellipse
+                cx={centerX}
+                cy={ty + truckHeight + 8}
+                rx={truckWidth / 2}
+                ry={5}
+                fill="rgba(0,0,0,0.15)"
+              />
+              {/* Cargo area */}
+              <rect
+                x={tx}
+                y={ty}
+                width={truckWidth * 0.65}
+                height={truckHeight}
+                fill={object.color || '#64748b'}
+                stroke={COLORS.gray[600]}
+                strokeWidth={2}
+                rx={2}
+              />
+              {/* Cab */}
+              <path
+                d={`M ${tx + truckWidth * 0.65} ${ty + truckHeight}
+                    L ${tx + truckWidth * 0.65} ${ty + truckHeight * 0.3}
+                    L ${tx + truckWidth * 0.75} ${ty}
+                    L ${tx + truckWidth} ${ty}
+                    L ${tx + truckWidth} ${ty + truckHeight}
+                    Z`}
+                fill={object.color ? object.color : '#475569'}
+                stroke={COLORS.gray[600]}
+                strokeWidth={2}
+              />
+              {/* Cab window */}
+              <rect
+                x={tx + truckWidth * 0.78}
+                y={ty + truckHeight * 0.1}
+                width={truckWidth * 0.18}
+                height={truckHeight * 0.35}
+                fill="#bfdbfe"
+                rx={2}
+              />
+              {/* Wheels */}
+              <circle
+                cx={tx + truckWidth * 0.15}
+                cy={ty + truckHeight}
+                r={truckHeight * 0.22}
+                fill="#374151"
+                stroke="#1f2937"
+                strokeWidth={2}
+              />
+              <circle
+                cx={tx + truckWidth * 0.4}
+                cy={ty + truckHeight}
+                r={truckHeight * 0.22}
+                fill="#374151"
+                stroke="#1f2937"
+                strokeWidth={2}
+              />
+              <circle
+                cx={tx + truckWidth * 0.85}
+                cy={ty + truckHeight}
+                r={truckHeight * 0.22}
+                fill="#374151"
+                stroke="#1f2937"
+                strokeWidth={2}
+              />
+              {/* Labels */}
+              {object.label && (
+                <text
+                  x={centerX}
+                  y={ty + truckHeight + 22}
+                  textAnchor="middle"
+                  fontSize={13}
+                  fontWeight="600"
+                  fontFamily="'Inter', system-ui, sans-serif"
+                  fill={COLORS.gray[700]}
+                >
+                  {object.label}
+                </text>
+              )}
+              {object.mass && (
+                <text
+                  x={centerX}
+                  y={ty + truckHeight + 36}
+                  textAnchor="middle"
+                  fontSize={11}
+                  fontFamily="'JetBrains Mono', monospace"
+                  fill={COLORS.gray[500]}
+                >
+                  m = {object.mass} kg
+                </text>
+              )}
+            </>
+          )
+
+        case 'airplane':
+          // Airplane for aerodynamics problems
+          const planeWidth = object.width || 90
+          const planeHeight = object.height || 30
+          const px = centerX - planeWidth / 2
+          const py = centerY - planeHeight / 2
+          return (
+            <>
+              {/* Fuselage */}
+              <ellipse
+                cx={centerX}
+                cy={centerY}
+                rx={planeWidth * 0.45}
+                ry={planeHeight * 0.25}
+                fill={object.color || '#e2e8f0'}
+                stroke={COLORS.gray[400]}
+                strokeWidth={2}
+              />
+              {/* Nose */}
+              <ellipse
+                cx={px + planeWidth * 0.9}
+                cy={centerY}
+                rx={planeWidth * 0.12}
+                ry={planeHeight * 0.18}
+                fill={object.color || '#cbd5e1'}
+                stroke={COLORS.gray[400]}
+                strokeWidth={1.5}
+              />
+              {/* Wings */}
+              <path
+                d={`M ${centerX - planeWidth * 0.1} ${centerY}
+                    L ${centerX - planeWidth * 0.25} ${py - planeHeight * 0.5}
+                    L ${centerX + planeWidth * 0.1} ${py - planeHeight * 0.5}
+                    L ${centerX + planeWidth * 0.05} ${centerY}
+                    Z`}
+                fill="#94a3b8"
+                stroke={COLORS.gray[500]}
+                strokeWidth={1}
+              />
+              <path
+                d={`M ${centerX - planeWidth * 0.1} ${centerY}
+                    L ${centerX - planeWidth * 0.25} ${py + planeHeight * 1.5}
+                    L ${centerX + planeWidth * 0.1} ${py + planeHeight * 1.5}
+                    L ${centerX + planeWidth * 0.05} ${centerY}
+                    Z`}
+                fill="#94a3b8"
+                stroke={COLORS.gray[500]}
+                strokeWidth={1}
+              />
+              {/* Tail */}
+              <path
+                d={`M ${px + planeWidth * 0.05} ${centerY}
+                    L ${px} ${py - planeHeight * 0.3}
+                    L ${px + planeWidth * 0.15} ${centerY}
+                    Z`}
+                fill="#94a3b8"
+                stroke={COLORS.gray[500]}
+                strokeWidth={1}
+              />
+              {/* Windows */}
+              {[0.3, 0.4, 0.5, 0.6].map((offset, i) => (
+                <circle
+                  key={i}
+                  cx={px + planeWidth * offset}
+                  cy={centerY - planeHeight * 0.08}
+                  r={3}
+                  fill="#bfdbfe"
+                />
+              ))}
+              {/* Labels */}
+              {object.label && (
+                <text
+                  x={centerX}
+                  y={py + planeHeight + 25}
+                  textAnchor="middle"
+                  fontSize={13}
+                  fontWeight="600"
+                  fontFamily="'Inter', system-ui, sans-serif"
+                  fill={COLORS.gray[700]}
+                >
+                  {object.label}
+                </text>
+              )}
+              {object.mass && (
+                <text
+                  x={centerX}
+                  y={py + planeHeight + 40}
+                  textAnchor="middle"
+                  fontSize={11}
+                  fontFamily="'JetBrains Mono', monospace"
+                  fill={COLORS.gray[500]}
+                >
+                  m = {object.mass} kg
+                </text>
+              )}
+            </>
+          )
+
+        case 'person':
+          // Stick figure person
+          const personHeight = object.height || 60
+          const headRadius = personHeight * 0.12
+          const bodyTop = centerY - personHeight / 2 + headRadius * 2
+          return (
+            <>
+              {/* Head */}
+              <circle
+                cx={centerX}
+                cy={centerY - personHeight / 2 + headRadius}
+                r={headRadius}
+                fill={object.color || '#fcd34d'}
+                stroke={COLORS.gray[600]}
+                strokeWidth={2}
+              />
+              {/* Body */}
+              <line
+                x1={centerX}
+                y1={bodyTop}
+                x2={centerX}
+                y2={centerY + personHeight * 0.1}
+                stroke={COLORS.gray[600]}
+                strokeWidth={3}
+                strokeLinecap="round"
+              />
+              {/* Arms */}
+              <line
+                x1={centerX - personHeight * 0.25}
+                y1={bodyTop + personHeight * 0.15}
+                x2={centerX + personHeight * 0.25}
+                y2={bodyTop + personHeight * 0.15}
+                stroke={COLORS.gray[600]}
+                strokeWidth={3}
+                strokeLinecap="round"
+              />
+              {/* Legs */}
+              <line
+                x1={centerX}
+                y1={centerY + personHeight * 0.1}
+                x2={centerX - personHeight * 0.15}
+                y2={centerY + personHeight / 2}
+                stroke={COLORS.gray[600]}
+                strokeWidth={3}
+                strokeLinecap="round"
+              />
+              <line
+                x1={centerX}
+                y1={centerY + personHeight * 0.1}
+                x2={centerX + personHeight * 0.15}
+                y2={centerY + personHeight / 2}
+                stroke={COLORS.gray[600]}
+                strokeWidth={3}
+                strokeLinecap="round"
+              />
+              {/* Labels */}
+              {object.label && (
+                <text
+                  x={centerX + personHeight * 0.3}
+                  y={centerY}
+                  textAnchor="start"
+                  fontSize={13}
+                  fontWeight="600"
+                  fontFamily="'Inter', system-ui, sans-serif"
+                  fill={COLORS.gray[700]}
+                >
+                  {object.label}
+                </text>
+              )}
+              {object.mass && (
+                <text
+                  x={centerX}
+                  y={centerY + personHeight / 2 + 18}
+                  textAnchor="middle"
+                  fontSize={11}
+                  fontFamily="'JetBrains Mono', monospace"
+                  fill={COLORS.gray[500]}
+                >
+                  m = {object.mass} kg
+                </text>
+              )}
+            </>
+          )
+
+        case 'rocket':
+          // Rocket for thrust problems
+          const rocketWidth = object.width || 25
+          const rocketHeight = object.height || 70
+          const rx = centerX - rocketWidth / 2
+          const ry = centerY - rocketHeight / 2
+          return (
+            <>
+              {/* Flame */}
+              <path
+                d={`M ${rx + rocketWidth * 0.3} ${ry + rocketHeight}
+                    Q ${centerX} ${ry + rocketHeight + 25} ${rx + rocketWidth * 0.7} ${ry + rocketHeight}
+                    Q ${centerX} ${ry + rocketHeight + 15} ${rx + rocketWidth * 0.3} ${ry + rocketHeight}`}
+                fill="#f97316"
+                opacity={0.9}
+              />
+              <path
+                d={`M ${rx + rocketWidth * 0.4} ${ry + rocketHeight}
+                    Q ${centerX} ${ry + rocketHeight + 15} ${rx + rocketWidth * 0.6} ${ry + rocketHeight}
+                    Q ${centerX} ${ry + rocketHeight + 8} ${rx + rocketWidth * 0.4} ${ry + rocketHeight}`}
+                fill="#fbbf24"
+              />
+              {/* Body */}
+              <path
+                d={`M ${rx} ${ry + rocketHeight * 0.25}
+                    L ${rx} ${ry + rocketHeight}
+                    L ${rx + rocketWidth} ${ry + rocketHeight}
+                    L ${rx + rocketWidth} ${ry + rocketHeight * 0.25}
+                    Q ${rx + rocketWidth} ${ry} ${centerX} ${ry}
+                    Q ${rx} ${ry} ${rx} ${ry + rocketHeight * 0.25}
+                    Z`}
+                fill={object.color || '#e2e8f0'}
+                stroke={COLORS.gray[500]}
+                strokeWidth={2}
+              />
+              {/* Window */}
+              <circle
+                cx={centerX}
+                cy={ry + rocketHeight * 0.35}
+                r={rocketWidth * 0.25}
+                fill="#60a5fa"
+                stroke={COLORS.gray[400]}
+                strokeWidth={1}
+              />
+              {/* Fins */}
+              <path
+                d={`M ${rx} ${ry + rocketHeight * 0.7}
+                    L ${rx - rocketWidth * 0.3} ${ry + rocketHeight}
+                    L ${rx} ${ry + rocketHeight}
+                    Z`}
+                fill="#ef4444"
+                stroke={COLORS.gray[500]}
+                strokeWidth={1}
+              />
+              <path
+                d={`M ${rx + rocketWidth} ${ry + rocketHeight * 0.7}
+                    L ${rx + rocketWidth + rocketWidth * 0.3} ${ry + rocketHeight}
+                    L ${rx + rocketWidth} ${ry + rocketHeight}
+                    Z`}
+                fill="#ef4444"
+                stroke={COLORS.gray[500]}
+                strokeWidth={1}
+              />
+              {/* Labels */}
+              {object.label && (
+                <text
+                  x={centerX + rocketWidth}
+                  y={centerY}
+                  textAnchor="start"
+                  fontSize={13}
+                  fontWeight="600"
+                  fontFamily="'Inter', system-ui, sans-serif"
+                  fill={COLORS.gray[700]}
+                >
+                  {object.label}
+                </text>
+              )}
+              {object.mass && (
+                <text
+                  x={centerX + rocketWidth}
+                  y={centerY + 16}
+                  textAnchor="start"
+                  fontSize={11}
+                  fontFamily="'JetBrains Mono', monospace"
+                  fill={COLORS.gray[500]}
+                >
+                  m = {object.mass} kg
+                </text>
+              )}
+            </>
+          )
+
+        case 'pendulum':
+          // Pendulum bob
+          const bobRadius = object.radius || 20
+          return (
+            <>
+              {/* String/rod to top */}
+              <line
+                x1={centerX}
+                y1={30}
+                x2={centerX}
+                y2={centerY - bobRadius}
+                stroke={COLORS.gray[500]}
+                strokeWidth={2}
+              />
+              {/* Pivot point */}
+              <circle cx={centerX} cy={30} r={4} fill={COLORS.gray[600]} />
+              {/* Bob shadow */}
+              <ellipse
+                cx={centerX + 3}
+                cy={centerY + bobRadius + 5}
+                rx={bobRadius * 0.8}
+                ry={bobRadius * 0.3}
+                fill="rgba(0,0,0,0.15)"
+              />
+              {/* Bob */}
+              <circle
+                cx={centerX}
+                cy={centerY}
+                r={bobRadius}
+                fill={`url(#${gradientId})`}
+                stroke={COLORS.gray[400]}
+                strokeWidth={2}
+              />
+              {/* Highlight */}
+              <ellipse
+                cx={centerX - bobRadius * 0.3}
+                cy={centerY - bobRadius * 0.3}
+                rx={bobRadius * 0.25}
+                ry={bobRadius * 0.2}
+                fill="rgba(255,255,255,0.5)"
+              />
+              {object.label && (
+                <text
+                  x={centerX + bobRadius + 10}
+                  y={centerY}
+                  textAnchor="start"
+                  fontSize={13}
+                  fontWeight="600"
+                  fontFamily="'Inter', system-ui, sans-serif"
+                  fill={COLORS.gray[700]}
+                >
+                  {object.label}
+                </text>
+              )}
+              {object.mass && (
+                <text
+                  x={centerX}
+                  y={centerY + bobRadius + 20}
+                  textAnchor="middle"
+                  fontSize={11}
+                  fontFamily="'JetBrains Mono', monospace"
+                  fill={COLORS.gray[500]}
+                >
+                  m = {object.mass} kg
+                </text>
+              )}
+            </>
+          )
+
         default:
           return (
             <rect
               x={objX}
               y={objY}
-              width={objSize}
-              height={objSize}
+              width={objWidth}
+              height={objHeight}
               fill={`url(#${gradientId})`}
               stroke={COLORS.gray[400]}
               strokeWidth={2}
@@ -436,15 +1168,18 @@ export function FreeBodyDiagram({
           const origin = getForceOrigin(force)
           const animDelay = getForceDelay(force)
 
+          // Check if this force is an unknown (show ? instead of value)
+          const isUnknown = unknowns.includes(force.name) || unknowns.includes(force.symbol || '')
+          
           return (
             <ForceVector
               key={force.name}
-              force={force}
+              force={isUnknown ? { ...force, magnitude: 0 } : force}
               origin={origin}
               scale={forceScale * defaultScale}
               highlighted={isHighlighted}
               showLabel={true}
-              showMagnitude={isHighlighted}
+              showMagnitude={showForceMagnitudes || isHighlighted}
               showAngle={showAngles && isHighlighted}
               referenceAngle={referenceAngle}
               animation="draw"
@@ -628,6 +1363,146 @@ export function FreeBodyDiagram({
 
       {/* Force vectors with choreographed animations */}
       {renderForces()}
+
+      {/* Angle labels for tension vectors */}
+      {showAngleLabels && visibleForces.filter(f => f.type === 'tension').map((force, i) => {
+        const angleRad = (force.angle * Math.PI) / 180
+        const labelDist = 60
+        const labelX = centerX + Math.cos(angleRad) * labelDist
+        const labelY = centerY - Math.sin(angleRad) * labelDist
+        const arcRadius = 35
+        const startAngle = 0
+        const endAngle = force.angle
+        const startX = centerX + arcRadius * Math.cos(startAngle * Math.PI / 180)
+        const startY = centerY - arcRadius * Math.sin(startAngle * Math.PI / 180)
+        const endX = centerX + arcRadius * Math.cos(endAngle * Math.PI / 180)
+        const endY = centerY - arcRadius * Math.sin(endAngle * Math.PI / 180)
+        const largeArc = Math.abs(endAngle - startAngle) > 180 ? 1 : 0
+        const sweep = endAngle > startAngle ? 0 : 1
+        
+        return (
+          <g key={`angle-${i}`}>
+            {/* Angle arc */}
+            <path
+              d={`M ${startX} ${startY} A ${arcRadius} ${arcRadius} 0 ${largeArc} ${sweep} ${endX} ${endY}`}
+              fill="none"
+              stroke="#64748b"
+              strokeWidth={1.5}
+              strokeDasharray="4,2"
+            />
+            {/* Angle label */}
+            <text
+              x={labelX}
+              y={labelY}
+              textAnchor="middle"
+              fontSize={12}
+              fontFamily="'Inter', sans-serif"
+              fill="#374151"
+            >
+              {Math.abs(force.angle).toFixed(1)}°
+            </text>
+          </g>
+        )
+      })}
+
+      {/* External objects (tugboats) */}
+      {externalObjects.map((ext, i) => {
+        const attachedForce = visibleForces.find(f => f.name === ext.attachedTo)
+        if (!attachedForce || ext.type !== 'tugboat') return null
+        
+        const angleRad = (attachedForce.angle * Math.PI) / 180
+        const dist = attachedForce.magnitude * forceScale * 2.5 + 30
+        const tugX = centerX + Math.cos(angleRad) * dist + (ext.offset?.x || 0)
+        const tugY = centerY - Math.sin(angleRad) * dist + (ext.offset?.y || 0)
+        const tugAngle = attachedForce.angle + 180 // Face the tanker
+        
+        return (
+          <g key={`ext-${i}`} transform={`translate(${tugX}, ${tugY}) rotate(${-tugAngle})`}>
+            {/* Simple tugboat shape */}
+            <path
+              d="M -12 -6 L 12 -6 L 15 0 L 12 6 L -12 6 L -15 0 Z"
+              fill="#94a3b8"
+              stroke="#64748b"
+              strokeWidth={1.5}
+            />
+            {/* Cabin */}
+            <rect x="-6" y="-4" width="6" height="8" fill="#cbd5e1" rx={1} />
+          </g>
+        )
+      })}
+
+      {/* Acceleration arrow */}
+      {acceleration && (
+        <g>
+          <defs>
+            <marker id="accel-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#eab308" />
+            </marker>
+          </defs>
+          <line
+            x1={centerX + (object.width || 100) / 2 + 20}
+            y1={centerY}
+            x2={centerX + (object.width || 100) / 2 + 80}
+            y2={centerY}
+            stroke="#eab308"
+            strokeWidth={3}
+            markerEnd="url(#accel-arrow)"
+          />
+          <text
+            x={centerX + (object.width || 100) / 2 + 90}
+            y={centerY + 5}
+            fontSize={14}
+            fontFamily="'Inter', sans-serif"
+            fontWeight="600"
+            fill="#eab308"
+          >
+            {acceleration.displayValue || `${acceleration.label || 'a'}`}
+          </text>
+        </g>
+      )}
+
+      {/* Given Information Box */}
+      {givenInfo && Object.keys(givenInfo).length > 0 && (
+        <g transform={`translate(${width - 140}, 10)`}>
+          <rect
+            x={0}
+            y={0}
+            width={130}
+            height={20 + Object.keys(givenInfo).length * 18 + (unknowns.length > 0 ? 25 : 0)}
+            fill="white"
+            stroke="#e5e7eb"
+            strokeWidth={1}
+            rx={6}
+            style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' }}
+          />
+          <text x={10} y={16} fontSize={11} fontWeight="600" fill="#374151">
+            Given:
+          </text>
+          {Object.entries(givenInfo).map(([key, value], i) => (
+            <text
+              key={key}
+              x={10}
+              y={34 + i * 16}
+              fontSize={11}
+              fontFamily="'JetBrains Mono', monospace"
+              fill="#4b5563"
+            >
+              {key} = {value}
+            </text>
+          ))}
+          {unknowns.length > 0 && (
+            <text 
+              x={10} 
+              y={34 + Object.keys(givenInfo).length * 16 + 6} 
+              fontSize={11} 
+              fontWeight="600" 
+              fill="#dc2626"
+            >
+              Find: {unknowns.join(', ')} = ?
+            </text>
+          )}
+        </g>
+      )}
 
       {/* Net force (if enabled) */}
       {renderNetForce()}

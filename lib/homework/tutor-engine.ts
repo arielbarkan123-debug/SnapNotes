@@ -160,6 +160,30 @@ When helping with SCIENCE/OTHER subjects:
 
 ## INTELLIGENT VISUAL DIAGRAM GENERATION:
 
+### CRITICAL: Display ALL Given Information
+**Every diagram MUST display ALL numerical values from the problem:**
+
+1. **Extract ALL given values** from the problem statement:
+   - Masses, lengths, angles, forces, velocities, accelerations
+   - Constants (g = 9.8 m/s², etc.)
+   - Any numerical data provided
+
+2. **Display values ON the diagram:**
+   - Label objects with their mass: "m = 1.50×10⁸ kg"
+   - Label forces with symbols AND magnitudes: "D = 75.0×10³ N"
+   - Show angles with degree values: "30.0°"
+   - Show acceleration with value: "a = 2.00×10⁻³ m/s²"
+
+3. **Mark unknowns clearly:**
+   - Use "?" for values to solve: "T₁ = ?" "T₂ = ?"
+   - Or highlight with a different color
+
+4. **Include a "Given" info box** when there are many values:
+   "givenInfo": { "m": "1.50×10⁸ kg", "D": "75.0×10³ N", "R": "40.0×10³ N", "a": "2.00×10⁻³ m/s²", "θ": "30.0°" },
+   "unknowns": ["T₁", "T₂"]
+
+**The diagram should be a complete visual representation of the problem - a student should be able to understand the entire problem just by looking at the diagram.**
+
 ### When to Generate Diagrams
 Only include a "diagram" field when visual representation would SIGNIFICANTLY help student understanding beyond text alone. Consider diagrams for:
 
@@ -224,26 +248,76 @@ Return your response as JSON:
   }
 }
 
-### Example: Physics Forces Problem
+### Physics Diagram Viewpoint Selection
+
+**IMPORTANT:** Choose the best viewpoint based on the problem type:
+
+| Problem Type | Viewpoint | Object Type | Why |
+|-------------|-----------|-------------|-----|
+| Tugboat/tanker with angled cables | **top** | boat | Shows cable angles clearly from bird's eye |
+| Car/vehicle with horizontal forces | **top** | car | Shows all horizontal forces clearly |
+| Block on table/floor | **side** | block | Shows weight/normal vertical forces |
+| Inclined plane | **side** | block | Shows the slope and force components |
+| Elevator/vertical motion | **side** | block/person | Shows up/down forces |
+| Atwood machine/pulleys | **side** | block | Shows hanging masses |
+
+### Example: Tugboat/Tanker Problem (USE TOP VIEW)
+
+For "Supertanker (m=1.50×10⁸ kg) towed by two tugboats at 30° angles, D=75.0×10³ N, R=40.0×10³ N, a=2.00×10⁻³ m/s². Find T₁ and T₂":
+
+{
+  "diagram": {
+    "type": "fbd",
+    "visibleStep": 5,
+    "totalSteps": 5,
+    "evolutionMode": "auto-advance",
+    "data": {
+      "object": { "type": "boat", "mass": 150000000, "width": 180, "height": 40, "position": { "x": 0, "y": 0 } },
+      "forces": [
+        { "name": "T1", "type": "tension", "magnitude": 153000, "angle": 30, "symbol": "T", "subscript": "1" },
+        { "name": "T2", "type": "tension", "magnitude": 153000, "angle": -30, "symbol": "T", "subscript": "2" },
+        { "name": "D", "type": "drive", "magnitude": 75000, "angle": 0, "symbol": "D" },
+        { "name": "R", "type": "resistance", "magnitude": 40000, "angle": 180, "symbol": "R" }
+      ],
+      "viewpoint": "top",
+      "showAngleLabels": true,
+      "showForceMagnitudes": true,
+      "acceleration": { "magnitude": 0.002, "angle": 0, "label": "a", "displayValue": "a = 2.00×10⁻³ m/s²" },
+      "givenInfo": {
+        "m": "1.50×10⁸ kg",
+        "D": "75.0×10³ N",
+        "R": "40.0×10³ N",
+        "θ": "30.0°",
+        "a": "2.00×10⁻³ m/s²"
+      },
+      "unknowns": ["T₁", "T₂"],
+      "externalObjects": [
+        { "type": "tugboat", "attachedTo": "T1" },
+        { "type": "tugboat", "attachedTo": "T2" }
+      ]
+    }
+  }
+}
+
+### Example: Block on Surface (USE SIDE VIEW)
 
 For "5 kg block on horizontal surface, 20 N tension to right, friction present":
 
-**First tutor message (visibleStep: 0):**
 {
-  "message": "Great physics problem! Before we check your work together, can you walk me through your reasoning for how you got that friction force of 5N?",
   "diagram": {
     "type": "fbd",
     "visibleStep": 0,
     "totalSteps": 5,
     "evolutionMode": "auto-advance",
     "data": {
-      "object": { "type": "block", "label": "5 kg", "mass": 5, "color": "#e0e7ff" },
+      "object": { "type": "block", "label": "5 kg", "mass": 5, "color": "#e0e7ff", "position": { "x": 0, "y": 0 } },
       "forces": [
         { "name": "weight", "type": "weight", "magnitude": 50, "angle": -90, "symbol": "W" },
         { "name": "normal", "type": "normal", "magnitude": 50, "angle": 90, "symbol": "N" },
         { "name": "tension", "type": "tension", "magnitude": 20, "angle": 0, "symbol": "T" },
         { "name": "friction", "type": "friction", "magnitude": 5, "angle": 180, "symbol": "f" }
-      ]
+      ],
+      "viewpoint": "side"
     },
     "stepConfig": [
       { "step": 0, "visibleForces": [], "stepLabel": "Let's visualize this problem" },

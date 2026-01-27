@@ -31,6 +31,11 @@ export type ForceType =
   | 'net'         // Net/resultant force
   | 'component'   // Component of a force
   | 'custom'      // User-defined force
+  | 'drive'       // Drive/engine/thrust force
+  | 'resistance'  // Resistance force (water, air)
+  | 'thrust'      // Thrust (engines, rockets)
+  | 'lift'        // Lift force (airplanes)
+  | 'reaction'    // Reaction force
 
 /**
  * Force - A force vector with type and optional components
@@ -62,6 +67,14 @@ export type PhysicsObjectType =
   | 'pulley'    // Pulley wheel
   | 'spring'    // Spring element
   | 'rope'      // Rope/string element
+  | 'boat'      // Boat/ship (tugboat, tanker problems)
+  | 'car'       // Car/vehicle
+  | 'truck'     // Truck
+  | 'crate'     // Crate/box (with wood texture)
+  | 'person'    // Person/stick figure
+  | 'airplane'  // Airplane
+  | 'rocket'    // Rocket
+  | 'pendulum'  // Pendulum bob
 
 /**
  * PhysicsObject - An object in a physics diagram
@@ -101,6 +114,32 @@ export interface FreeBodyDiagramData {
   referenceAngle?: number
   /** Scale factor for force arrow lengths */
   forceScale?: number
+  /** Viewpoint: 'side' (default) or 'top' (bird's eye view) */
+  viewpoint?: 'side' | 'top'
+  /** Show angle labels on forces */
+  showAngleLabels?: boolean
+  /** External objects to show (e.g., tugboats at end of tension cables) */
+  externalObjects?: Array<{
+    type: 'tugboat' | 'anchor' | 'pulley' | 'wall'
+    /** Which force this connects to */
+    attachedTo: string
+    /** Offset from force endpoint */
+    offset?: { x: number; y: number }
+  }>
+  /** Show acceleration vector */
+  acceleration?: {
+    magnitude: number
+    angle: number
+    label?: string
+    /** Display value like "a = 2.00×10⁻³ m/s²" */
+    displayValue?: string
+  }
+  /** Given information to display in an info box */
+  givenInfo?: Record<string, string>
+  /** Unknown values to solve for (marked with ?) */
+  unknowns?: string[]
+  /** Show force magnitudes on arrows */
+  showForceMagnitudes?: boolean
 }
 
 /**
@@ -327,6 +366,8 @@ export type PhysicsDiagramType =
   | 'wave'             // Wave diagram
   | 'optics'           // Ray optics
   | 'motion'           // Motion diagram with vectors
+  | 'collision'        // Collision diagram
+  | 'circular'         // Circular motion
 
 /**
  * PhysicsDiagramData - Union type of all physics diagram data types
@@ -404,6 +445,11 @@ export const FORCE_COLORS: Record<ForceType, string> = {
   net: '#000000',         // Black
   component: '#9ca3af',   // Light gray
   custom: '#6366f1',      // Indigo
+  drive: '#10b981',       // Emerald
+  resistance: '#dc2626',  // Red-600
+  thrust: '#059669',      // Emerald-600
+  lift: '#0ea5e9',        // Sky
+  reaction: '#7c3aed',    // Violet
 }
 
 /**
@@ -424,4 +470,9 @@ export const FORCE_SYMBOLS: Record<ForceType, string> = {
   net: 'F_{net}',
   component: '',
   custom: 'F',
+  drive: 'D',
+  resistance: 'R',
+  thrust: 'T',
+  lift: 'L',
+  reaction: 'R',
 }

@@ -148,6 +148,46 @@ export const FORCE_COLORS = {
     dark: '#0d9488',
     gradient: 'linear-gradient(45deg, #2dd4bf 0%, #0d9488 100%)',
   },
+
+  // Drive/engine force - emerald
+  drive: {
+    primary: '#10b981',
+    light: '#34d399',
+    dark: '#059669',
+    gradient: 'linear-gradient(0deg, #34d399 0%, #059669 100%)',
+  },
+
+  // Resistance force - darker red
+  resistance: {
+    primary: '#dc2626',
+    light: '#ef4444',
+    dark: '#991b1b',
+    gradient: 'linear-gradient(180deg, #ef4444 0%, #991b1b 100%)',
+  },
+
+  // Thrust force - green variant
+  thrust: {
+    primary: '#059669',
+    light: '#10b981',
+    dark: '#047857',
+    gradient: 'linear-gradient(0deg, #10b981 0%, #047857 100%)',
+  },
+
+  // Lift force - sky blue
+  lift: {
+    primary: '#0ea5e9',
+    light: '#38bdf8',
+    dark: '#0284c7',
+    gradient: 'linear-gradient(90deg, #38bdf8 0%, #0284c7 100%)',
+  },
+
+  // Drag force - gray
+  drag: {
+    primary: '#6b7280',
+    light: '#9ca3af',
+    dark: '#4b5563',
+    gradient: 'linear-gradient(180deg, #9ca3af 0%, #4b5563 100%)',
+  },
 }
 
 // ============================================================================
@@ -526,13 +566,13 @@ export function getForceColor(forceType: string): typeof FORCE_COLORS.weight {
   if (type.includes('weight') || type.includes('gravity') || type.includes('mg')) {
     return FORCE_COLORS.weight
   }
-  if (type.includes('normal') || type.includes('n')) {
+  if (type.includes('normal')) {
     return FORCE_COLORS.normal
   }
-  if (type.includes('friction') || type.includes('f')) {
+  if (type.includes('friction')) {
     return FORCE_COLORS.friction
   }
-  if (type.includes('tension') || type.includes('t')) {
+  if (type.includes('tension') || type === 't' || type === 't1' || type === 't2') {
     return FORCE_COLORS.tension
   }
   if (type.includes('applied') || type.includes('push') || type.includes('pull')) {
@@ -543,6 +583,21 @@ export function getForceColor(forceType: string): typeof FORCE_COLORS.weight {
   }
   if (type.includes('spring') || type.includes('elastic')) {
     return FORCE_COLORS.spring
+  }
+  if (type.includes('drive') || type.includes('engine') || type === 'd') {
+    return FORCE_COLORS.drive
+  }
+  if (type.includes('resistance') || type === 'r') {
+    return FORCE_COLORS.resistance
+  }
+  if (type.includes('thrust')) {
+    return FORCE_COLORS.thrust
+  }
+  if (type.includes('lift')) {
+    return FORCE_COLORS.lift
+  }
+  if (type.includes('drag') || type.includes('air resistance')) {
+    return FORCE_COLORS.drag
   }
   // Default to applied
   return FORCE_COLORS.applied
@@ -577,11 +632,133 @@ export function createGradientDef(
 // Theme Export
 // ============================================================================
 
+// ============================================================================
+// Chemistry Colors
+// ============================================================================
+
+export const CHEMISTRY_COLORS = {
+  // Element category colors (following periodic table conventions)
+  elements: {
+    alkali_metal: '#ff6b6b',
+    alkaline_earth: '#ffa94d',
+    transition_metal: '#ffd43b',
+    post_transition_metal: '#69db7c',
+    metalloid: '#38d9a9',
+    nonmetal: '#4dabf7',
+    halogen: '#748ffc',
+    noble_gas: '#da77f2',
+    lanthanide: '#ff8787',
+    actinide: '#f783ac',
+  },
+
+  // Common atom colors (CPK coloring convention)
+  atoms: {
+    H: '#FFFFFF',
+    C: '#909090',
+    N: '#3050F8',
+    O: '#FF0D0D',
+    F: '#90E050',
+    Cl: '#1FF01F',
+    Br: '#A62929',
+    I: '#940094',
+    S: '#FFFF30',
+    P: '#FF8000',
+    Na: '#AB5CF2',
+    K: '#8F40D4',
+    Ca: '#3DFF00',
+    Fe: '#E06633',
+    default: '#808080',
+  },
+
+  // Bond colors
+  bonds: {
+    single: '#374151',
+    double: '#374151',
+    triple: '#374151',
+    ionic: '#8b5cf6',
+    hydrogen: '#60a5fa',
+    metallic: '#fbbf24',
+  },
+
+  // Electron shell colors
+  shells: [
+    '#3b82f6', // Shell 1 - blue
+    '#22c55e', // Shell 2 - green
+    '#f59e0b', // Shell 3 - amber
+    '#ef4444', // Shell 4 - red
+    '#8b5cf6', // Shell 5 - purple
+    '#06b6d4', // Shell 6 - cyan
+    '#ec4899', // Shell 7 - pink
+  ],
+
+  // Charge indicators
+  charges: {
+    positive: '#ef4444',
+    negative: '#3b82f6',
+    neutral: '#6b7280',
+    partialPositive: '#fca5a5',
+    partialNegative: '#93c5fd',
+  },
+}
+
+// ============================================================================
+// Biology Colors
+// ============================================================================
+
+export const BIOLOGY_COLORS = {
+  // Organelle colors (educational standard)
+  organelles: {
+    nucleus: '#6366f1',
+    cell_membrane: '#a78bfa',
+    cell_wall: '#65a30d',
+    cytoplasm: '#fef3c7',
+    mitochondria: '#f97316',
+    ribosome: '#0ea5e9',
+    endoplasmic_reticulum_rough: '#14b8a6',
+    endoplasmic_reticulum_smooth: '#2dd4bf',
+    golgi_apparatus: '#eab308',
+    lysosome: '#dc2626',
+    vacuole: '#60a5fa',
+    chloroplast: '#22c55e',
+    centriole: '#8b5cf6',
+    nuclear_membrane: '#818cf8',
+    nucleolus: '#4338ca',
+  },
+
+  // Cell type colors
+  cells: {
+    animal: { membrane: '#a78bfa', cytoplasm: '#fef3c7' },
+    plant: { membrane: '#86efac', cytoplasm: '#dcfce7' },
+    bacteria: { membrane: '#fbbf24', cytoplasm: '#fef9c3' },
+  },
+
+  // DNA/RNA base colors
+  bases: {
+    A: '#ef4444', // Adenine - Red
+    T: '#3b82f6', // Thymine - Blue
+    G: '#22c55e', // Guanine - Green
+    C: '#f59e0b', // Cytosine - Amber
+    U: '#8b5cf6', // Uracil (RNA) - Purple
+  },
+
+  // DNA structure
+  dna: {
+    backbone: '#6b7280',
+    hydrogenBond: '#d1d5db',
+  },
+}
+
+// ============================================================================
+// Theme Export
+// ============================================================================
+
 export const DIAGRAM_THEME = {
   colors: COLORS,
   forces: FORCE_COLORS,
   mathOps: MATH_OPERATION_COLORS,
   geometry: GEOMETRY_COLORS,
+  chemistry: CHEMISTRY_COLORS,
+  biology: BIOLOGY_COLORS,
   shadows: SHADOWS,
   gradients: GRADIENTS,
   typography: TYPOGRAPHY,

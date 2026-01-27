@@ -5,10 +5,16 @@ import {
   type DiagramState,
   type FreeBodyDiagramData,
   type InclinedPlaneData,
+  type ProjectileMotionData,
+  type PulleySystemData,
   type DiagramStepConfig,
 } from '@/types/physics'
 import { FreeBodyDiagram } from './FreeBodyDiagram'
 import { InclinedPlane } from './InclinedPlane'
+import { ProjectileMotion } from './ProjectileMotion'
+import { PulleySystem } from './PulleySystem'
+import { CircularMotion } from './CircularMotion'
+import { CollisionDiagram } from './CollisionDiagram'
 
 interface PhysicsDiagramRendererProps {
   /** Diagram state from tutor response */
@@ -127,13 +133,53 @@ export function PhysicsDiagramRenderer({
           />
         )
 
-      // Placeholder for future diagram types
       case 'projectile':
+        return (
+          <ProjectileMotion
+            data={diagram.data as ProjectileMotionData}
+            width={width || 500}
+            height={height || 350}
+            {...commonProps}
+          />
+        )
+
       case 'pulley':
+        return (
+          <PulleySystem
+            data={diagram.data as PulleySystemData}
+            width={width || 450}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      case 'motion':
+        // CircularMotion handles motion diagrams
+        return (
+          <CircularMotion
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            data={diagram.data as any}
+            width={width || 400}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      case 'collision':
+        return (
+          <CollisionDiagram
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            data={diagram.data as any}
+            width={width || 500}
+            height={height || 350}
+            {...commonProps}
+          />
+        )
+
+      // Placeholder for remaining diagram types
       case 'circuit':
       case 'wave':
       case 'optics':
-      case 'motion':
         return (
           <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
             <p className="text-gray-500">

@@ -4,6 +4,10 @@
 export { ForceVector } from './ForceVector'
 export { FreeBodyDiagram } from './FreeBodyDiagram'
 export { InclinedPlane } from './InclinedPlane'
+export { ProjectileMotion } from './ProjectileMotion'
+export { PulleySystem } from './PulleySystem'
+export { CircularMotion } from './CircularMotion'
+export { CollisionDiagram } from './CollisionDiagram'
 export { PhysicsDiagramRenderer } from './PhysicsDiagramRenderer'
 
 // Re-export types for convenience
