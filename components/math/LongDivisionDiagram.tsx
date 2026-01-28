@@ -221,7 +221,9 @@ export function LongDivisionDiagram({
             >
               {/* Vertical guide lines from each dividend digit */}
               {dividendStr.split('').map((_, i) => {
-                const x = (divisorStr.length * digitWidth * 0.6) + 24 + (i * digitWidth) + (digitWidth / 2)
+                // Position guide lines at the center of each dividend digit column
+                // Dividend starts at: divisorWidth + bracket(16px)
+                const x = (divisorStr.length * digitWidth * 0.6) + 16 + (i * digitWidth) + (digitWidth / 2)
                 return (
                   <line
                     key={`guide-${i}`}
@@ -324,25 +326,30 @@ export function LongDivisionDiagram({
               </div>
             </div>
 
-            {/* Work rows */}
-            <div className="relative" style={{ marginLeft: divisorStr.length * digitWidth * 0.6 + 8 }}>
+            {/* Work rows - aligned with dividend columns */}
+            <div className="relative" style={{ marginLeft: divisorStr.length * digitWidth * 0.6 + 16 }}>
               {workRows.map((row, rowIndex) => (
                 <div key={rowIndex}>
                   {/* Product line (subtraction) */}
                   {row.showProduct && row.product !== undefined && (
                     <div
-                      className="flex items-center transition-all duration-300"
+                      className="relative transition-all duration-300"
                       style={{
                         height: digitHeight,
                         animation: `fadeIn ${animationDuration}ms ease-out`,
                       }}
                     >
-                      {/* Minus sign */}
+                      {/* Minus sign - positioned absolutely so it doesn't shift columns */}
                       <div
-                        className="font-medium"
-                        style={{ width: 20, color: textColor }}
+                        className="absolute font-medium"
+                        style={{
+                          left: -18,
+                          top: 0,
+                          lineHeight: `${digitHeight}px`,
+                          color: textColor
+                        }}
                       >
-                        -
+                        −
                       </div>
 
                       {/* Product digits aligned to columns */}
@@ -376,11 +383,10 @@ export function LongDivisionDiagram({
                   {row.showProduct && (
                     <div
                       style={{
-                        marginLeft: 20,
                         height: 3,
                         background: lineColor,
                         borderRadius: 2,
-                        width: (row.position + 1) * digitWidth - 4,
+                        width: (row.position + 1) * digitWidth,
                       }}
                     />
                   )}
@@ -391,7 +397,6 @@ export function LongDivisionDiagram({
                       className="flex items-center transition-all duration-300"
                       style={{
                         height: digitHeight,
-                        marginLeft: 20,
                         animation: `fadeIn ${animationDuration}ms ease-out`,
                       }}
                     >
@@ -427,7 +432,6 @@ export function LongDivisionDiagram({
                       className="flex items-center transition-all duration-300"
                       style={{
                         height: digitHeight,
-                        marginLeft: 20,
                         animation: `fadeIn ${animationDuration}ms ease-out`,
                       }}
                     >
@@ -480,11 +484,10 @@ export function LongDivisionDiagram({
                   {/* Final subtraction line */}
                   <div
                     style={{
-                      marginLeft: 20,
                       height: 3,
                       background: lineColor,
                       borderRadius: 2,
-                      width: dividendStr.length * digitWidth - 20,
+                      width: dividendStr.length * digitWidth,
                     }}
                   />
 
@@ -493,7 +496,6 @@ export function LongDivisionDiagram({
                     className="flex items-center transition-all duration-300"
                     style={{
                       height: digitHeight,
-                      marginLeft: 20,
                       animation: `fadeIn ${animationDuration}ms ease-out`,
                     }}
                   >
