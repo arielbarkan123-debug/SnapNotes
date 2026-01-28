@@ -162,6 +162,46 @@ export function LongDivisionDiagram({
   const guideLineColor = 'rgba(156, 163, 175, 0.3)'  // Light gray dotted lines
   const textColor = '#1f2937'
 
+  // Calculate bring-down arrow position (for big visual arrow from dividend to working number)
+  const bringDownArrowInfo = useMemo(() => {
+    if (!isBringDownStep || bringDownPosition < 0) return null
+
+    // Check if the bring-down row exists
+    const hasBringDownRow = workRows.some(
+      row => row.position === bringDownPosition && row.showBringDown
+    )
+    if (!hasBringDownRow) return null
+
+    // Calculate pixel positions
+    // X position: center of the digit column at bringDownPosition
+    const divisorWidth = divisorStr.length * digitWidth * 0.6
+    const bracketWidth = 16
+    const xCenter = divisorWidth + bracketWidth + (bringDownPosition * digitWidth) + (digitWidth / 2)
+
+    // Y start: bottom of dividend row (quotient row + dividend row)
+    const yStart = digitHeight + digitHeight + 4 // After quotient and dividend rows
+
+    // Y end: Calculate based on work rows above this bring-down
+    // Count all visible elements before the bring-down row
+    let elementsAbove = 0
+    for (const row of workRows) {
+      if (row.position === bringDownPosition) {
+        // This is our target row - count elements within it before bring-down
+        if (row.showProduct) elementsAbove += 2 // product row + orange line
+        if (row.showDifference) elementsAbove++
+        break
+      }
+      // Count all elements in previous rows
+      if (row.showProduct) elementsAbove += 2 // product row + orange line
+      if (row.showDifference) elementsAbove++
+      if (row.showBringDown) elementsAbove++
+    }
+
+    const yEnd = digitHeight * 2 + (elementsAbove * digitHeight) + 8
+
+    return { xCenter, yStart, yEnd }
+  }, [isBringDownStep, bringDownPosition, workRows, divisorStr.length, digitWidth, digitHeight])
+
   return (
     <div className={`long-division-diagram ${className}`} style={{ width, minHeight: height }}>
 
@@ -242,6 +282,43 @@ export function LongDivisionDiagram({
                   />
                 )
               })}
+
+              {/* Big bring-down arrow - curved arrow from dividend digit to working number */}
+              {bringDownArrowInfo && (
+                <g>
+                  {/* Arrow marker definition */}
+                  <defs>
+                    <marker
+                      id="bringdown-arrowhead"
+                      markerWidth="10"
+                      markerHeight="7"
+                      refX="9"
+                      refY="3.5"
+                      orient="auto"
+                    >
+                      <polygon
+                        points="0 0, 10 3.5, 0 7"
+                        fill={lineColor}
+                      />
+                    </marker>
+                  </defs>
+                  {/* Curved arrow path */}
+                  <path
+                    d={`M ${bringDownArrowInfo.xCenter} ${bringDownArrowInfo.yStart}
+                        C ${bringDownArrowInfo.xCenter + 25} ${bringDownArrowInfo.yStart + (bringDownArrowInfo.yEnd - bringDownArrowInfo.yStart) * 0.3},
+                          ${bringDownArrowInfo.xCenter + 25} ${bringDownArrowInfo.yEnd - (bringDownArrowInfo.yEnd - bringDownArrowInfo.yStart) * 0.3},
+                          ${bringDownArrowInfo.xCenter} ${bringDownArrowInfo.yEnd}`}
+                    fill="none"
+                    stroke={lineColor}
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    markerEnd="url(#bringdown-arrowhead)"
+                    style={{
+                      animation: `fadeIn ${animationDuration}ms ease-out`,
+                    }}
+                  />
+                </g>
+              )}
             </svg>
 
             {/* Quotient row */}
@@ -456,7 +533,6 @@ export function LongDivisionDiagram({
                           const startCol = endCol - workStr.length + 1
                           const digitIndex = i - startCol
                           const showDigit = digitIndex >= 0 && digitIndex < workStr.length
-                          const isNewDigit = i === endCol
 
                           return (
                             <div
@@ -469,15 +545,7 @@ export function LongDivisionDiagram({
                               }}
                             >
                               {showDigit ? workStr[digitIndex] : '\u00A0'}
-                              {/* Bring-down arrow - positioned to the right of the digit, only during bring-down step */}
-                              {isNewDigit && isBringDownStep && row.position === bringDownPosition && (
-                                <span
-                                  className="text-sm font-bold ml-0.5"
-                                  style={{ color: textColor }}
-                                >
-                                  ↓
-                                </span>
-                              )}
+                              {/* Big bring-down arrow is now rendered in SVG above */}
                             </div>
                           )
                         })}
