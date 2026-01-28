@@ -124,8 +124,8 @@ export function MathDiagramRenderer({
         return (
           <LongDivisionDiagram
             data={diagram.data as LongDivisionData}
-            width={width || 400}
-            height={height || 350}
+            width={width || 620}
+            height={height || 450}
             totalSteps={calculatedTotalSteps}
             showStepCounter={false}
             {...commonProps}
@@ -389,16 +389,8 @@ export function MathDiagramRenderer({
         .diagram-wrapper {
           display: flex;
           justify-content: center;
-          background: white;
           border-radius: 8px;
-          padding: 16px;
-          overflow: hidden;
-        }
-
-        @media (prefers-color-scheme: dark) {
-          .diagram-wrapper {
-            background: #1f2937;
-          }
+          overflow-x: auto;
         }
       `}</style>
     </div>
