@@ -326,33 +326,29 @@ export function LongDivisionDiagram({
               </div>
             </div>
 
-            {/* Work rows - aligned with dividend columns */}
-            <div className="relative" style={{ marginLeft: divisorStr.length * digitWidth * 0.6 + 16 }}>
+            {/* Work rows - use same flex+spacer pattern as dividend for exact alignment */}
+            <div className="relative">
               {workRows.map((row, rowIndex) => (
                 <div key={rowIndex}>
                   {/* Product line (subtraction) */}
                   {row.showProduct && row.product !== undefined && (
                     <div
-                      className="relative transition-all duration-300"
+                      className="flex transition-all duration-300"
                       style={{
                         height: digitHeight,
                         animation: `fadeIn ${animationDuration}ms ease-out`,
                       }}
                     >
-                      {/* Minus sign - positioned absolutely so it doesn't shift columns */}
+                      {/* Spacer matching divisor width */}
                       <div
-                        className="absolute font-medium"
-                        style={{
-                          left: -18,
-                          top: 0,
-                          lineHeight: `${digitHeight}px`,
-                          color: textColor
-                        }}
+                        className="flex-shrink-0 flex items-center justify-end pr-1"
+                        style={{ width: divisorStr.length * digitWidth * 0.6 }}
                       >
-                        −
+                        <span style={{ color: textColor }}>−</span>
                       </div>
-
-                      {/* Product digits aligned to columns */}
+                      {/* Spacer matching bracket width */}
+                      <div className="flex-shrink-0" style={{ width: 16 }} />
+                      {/* Product digits - same structure as dividend */}
                       <div className="flex">
                         {dividendStr.split('').map((_, i) => {
                           const productStr = row.product!.toString()
@@ -364,7 +360,7 @@ export function LongDivisionDiagram({
                           return (
                             <div
                               key={i}
-                              className="text-center font-semibold"
+                              className="text-center font-semibold flex-shrink-0"
                               style={{
                                 width: digitWidth,
                                 color: showDigit ? textColor : 'transparent',
@@ -382,24 +378,34 @@ export function LongDivisionDiagram({
                   {/* Subtraction line (orange) */}
                   {row.showProduct && (
                     <div
-                      style={{
-                        height: 3,
-                        background: lineColor,
-                        borderRadius: 2,
-                        width: (row.position + 1) * digitWidth,
-                      }}
-                    />
+                      className="flex"
+                      style={{ height: 3 }}
+                    >
+                      {/* Spacer for divisor + bracket */}
+                      <div className="flex-shrink-0" style={{ width: divisorStr.length * digitWidth * 0.6 + 16 }} />
+                      {/* Orange line spanning the columns */}
+                      <div
+                        style={{
+                          background: lineColor,
+                          borderRadius: 2,
+                          width: (row.position + 1) * digitWidth,
+                        }}
+                      />
+                    </div>
                   )}
 
                   {/* Difference (result after subtraction) */}
                   {row.showDifference && row.difference !== undefined && (
                     <div
-                      className="flex items-center transition-all duration-300"
+                      className="flex transition-all duration-300"
                       style={{
                         height: digitHeight,
                         animation: `fadeIn ${animationDuration}ms ease-out`,
                       }}
                     >
+                      {/* Spacer for divisor + bracket */}
+                      <div className="flex-shrink-0" style={{ width: divisorStr.length * digitWidth * 0.6 + 16 }} />
+                      {/* Difference digits */}
                       <div className="flex">
                         {dividendStr.split('').map((_, i) => {
                           const diffStr = row.difference!.toString()
@@ -411,7 +417,7 @@ export function LongDivisionDiagram({
                           return (
                             <div
                               key={i}
-                              className="text-center font-semibold"
+                              className="text-center font-semibold flex-shrink-0"
                               style={{
                                 width: digitWidth,
                                 color: showDigit ? textColor : 'transparent',
@@ -429,12 +435,15 @@ export function LongDivisionDiagram({
                   {/* Bring down arrow and new working number */}
                   {row.showBringDown && row.workingNumber !== undefined && (
                     <div
-                      className="flex items-center transition-all duration-300"
+                      className="flex transition-all duration-300"
                       style={{
                         height: digitHeight,
                         animation: `fadeIn ${animationDuration}ms ease-out`,
                       }}
                     >
+                      {/* Spacer for divisor + bracket */}
+                      <div className="flex-shrink-0" style={{ width: divisorStr.length * digitWidth * 0.6 + 16 }} />
+                      {/* Working number digits */}
                       <div className="flex relative">
                         {dividendStr.split('').map((_, i) => {
                           const workStr = row.workingNumber!.toString()
@@ -447,7 +456,7 @@ export function LongDivisionDiagram({
                           return (
                             <div
                               key={i}
-                              className="text-center font-semibold relative"
+                              className="text-center font-semibold relative flex-shrink-0"
                               style={{
                                 width: digitWidth,
                                 color: showDigit ? textColor : 'transparent',
@@ -482,23 +491,26 @@ export function LongDivisionDiagram({
               {isComplete && (
                 <div>
                   {/* Final subtraction line */}
-                  <div
-                    style={{
-                      height: 3,
-                      background: lineColor,
-                      borderRadius: 2,
-                      width: dividendStr.length * digitWidth,
-                    }}
-                  />
+                  <div className="flex" style={{ height: 3 }}>
+                    <div className="flex-shrink-0" style={{ width: divisorStr.length * digitWidth * 0.6 + 16 }} />
+                    <div
+                      style={{
+                        background: lineColor,
+                        borderRadius: 2,
+                        width: dividendStr.length * digitWidth,
+                      }}
+                    />
+                  </div>
 
                   {/* Remainder */}
                   <div
-                    className="flex items-center transition-all duration-300"
+                    className="flex transition-all duration-300"
                     style={{
                       height: digitHeight,
                       animation: `fadeIn ${animationDuration}ms ease-out`,
                     }}
                   >
+                    <div className="flex-shrink-0" style={{ width: divisorStr.length * digitWidth * 0.6 + 16 }} />
                     <div className="flex">
                       {dividendStr.split('').map((_, i) => {
                         const remStr = remainder.toString()
@@ -510,7 +522,7 @@ export function LongDivisionDiagram({
                         return (
                           <div
                             key={i}
-                            className="text-center font-bold"
+                            className="text-center font-bold flex-shrink-0"
                             style={{
                               width: digitWidth,
                               color: showDigit ? MATH_COLORS.success : 'transparent',
