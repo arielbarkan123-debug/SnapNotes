@@ -166,12 +166,6 @@ export function LongDivisionDiagram({
   const bringDownArrowInfo = useMemo(() => {
     if (!isBringDownStep || bringDownPosition < 0) return null
 
-    // Check if the bring-down row exists
-    const hasBringDownRow = workRows.some(
-      row => row.position === bringDownPosition && row.showBringDown
-    )
-    if (!hasBringDownRow) return null
-
     // Calculate pixel positions
     // X position: center of the digit column at bringDownPosition
     const divisorWidth = divisorStr.length * digitWidth * 0.6
@@ -182,11 +176,11 @@ export function LongDivisionDiagram({
     const yStart = digitHeight + digitHeight + 4 // After quotient and dividend rows
 
     // Y end: Calculate based on work rows above this bring-down
-    // Count all visible elements before the bring-down row
+    // Count all visible elements in rows before the bring-down position
     let elementsAbove = 0
     for (const row of workRows) {
-      if (row.position === bringDownPosition) {
-        // This is our target row - count elements within it before bring-down
+      if (row.position >= bringDownPosition) {
+        // This row is at or after our target position - count elements within it
         if (row.showProduct) elementsAbove += 2 // product row + orange line
         if (row.showDifference) elementsAbove++
         break
