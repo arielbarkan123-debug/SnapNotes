@@ -219,11 +219,11 @@ export function LongDivisionDiagram({
                 overflow: 'visible',
               }}
             >
-              {/* Vertical guide lines BETWEEN dividend digit columns */}
-              {Array.from({ length: dividendStr.length + 1 }, (_, i) => {
-                // Position guide lines at column boundaries (edges between digits)
+              {/* Vertical guide lines BETWEEN dividend digit columns (not at outer edges) */}
+              {Array.from({ length: dividendStr.length - 1 }, (_, i) => {
+                // Position guide lines between columns (after column i, before column i+1)
                 // Dividend starts at: divisorWidth + bracket(16px)
-                const x = (divisorStr.length * digitWidth * 0.6) + 16 + (i * digitWidth)
+                const x = (divisorStr.length * digitWidth * 0.6) + 16 + ((i + 1) * digitWidth)
                 return (
                   <line
                     key={`guide-${i}`}
