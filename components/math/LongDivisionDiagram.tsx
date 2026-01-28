@@ -66,6 +66,11 @@ export function LongDivisionDiagram({
     return steps.filter((s) => s.step <= currentStep)
   }, [steps, currentStep])
 
+  // Check if current step is a bring-down step (to show arrow only during that step)
+  const currentStepData = steps[currentStep]
+  const isBringDownStep = currentStepData?.type === 'bring_down'
+  const bringDownPosition = isBringDownStep ? currentStepData.position : -1
+
   // Build quotient digits progressively
   const quotientDigits = useMemo(() => {
     const digits: Array<{ digit: number; position: number }> = []
@@ -464,19 +469,14 @@ export function LongDivisionDiagram({
                               }}
                             >
                               {showDigit ? workStr[digitIndex] : '\u00A0'}
-                              {/* Bring-down arrow */}
-                              {isNewDigit && (
-                                <div
-                                  className="absolute text-lg font-bold"
-                                  style={{
-                                    top: -digitHeight - 4,
-                                    left: '50%',
-                                    transform: 'translateX(-50%)',
-                                    color: textColor,
-                                  }}
+                              {/* Bring-down arrow - positioned to the right of the digit, only during bring-down step */}
+                              {isNewDigit && isBringDownStep && row.position === bringDownPosition && (
+                                <span
+                                  className="text-sm font-bold ml-0.5"
+                                  style={{ color: textColor }}
                                 >
                                   ↓
-                                </div>
+                                </span>
                               )}
                             </div>
                           )
