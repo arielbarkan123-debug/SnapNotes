@@ -159,10 +159,6 @@ export function LongDivisionDiagram({
 
   return (
     <div className={`long-division-diagram ${className}`} style={{ width, minHeight: height }}>
-      {/* DEBUG: Test banner to verify deployment */}
-      <div className="bg-red-500 text-white text-center py-2 mb-2 rounded font-bold">
-        v2.0 - With Helper Table
-      </div>
 
       {/* Header */}
       {title && (

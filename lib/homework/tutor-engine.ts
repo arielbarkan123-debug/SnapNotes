@@ -213,8 +213,9 @@ Diagrams should EVOLVE step-by-step as the conversation progresses:
 - Align diagram steps with your explanation - reveal elements as you discuss them
 - If introducing a new concept, add it to the diagram in your next message
 - Progressive reveal maintains student engagement and prevents cognitive overload
-- **IMPORTANT: The FINAL step MUST show the calculated answer/solution** using "showCalculation" field (e.g., "F = 12.5 N", "x = 7", "Area = 36 cm²")
-- Never leave the diagram at "Solve for X" - always include the final answer in the last step
+- **CRITICAL: The FINAL step in stepConfig MUST include "showCalculation" with the numerical answer** (e.g., "showCalculation": "a = 3.45 m/s²", "showCalculation": "F = 12.5 N", "showCalculation": "x = 7")
+- This doesn't conflict with Socratic tutoring - showing the answer in the final diagram step is educational because students navigate there themselves after working through all previous steps
+- Never leave "Find: a = ?" in the final step - replace the "?" with the calculated value
 
 ### Available Diagram Types
 
@@ -245,7 +246,7 @@ Return your response as JSON:
     "stepConfig": [
       { "step": 0, "stepLabel": "First step explanation" },
       { "step": 1, "stepLabel": "Second step explanation" },
-      // Define all steps upfront for progressive reveal
+      { "step": N, "stepLabel": "Final step", "showCalculation": "a = 3.45 m/s²" }  // FINAL STEP MUST have showCalculation with the answer!
     ]
   }
 }
