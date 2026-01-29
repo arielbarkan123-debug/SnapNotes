@@ -11,6 +11,14 @@ import { ErrorCodes } from '@/lib/api/errors'
 export interface UploadModalProps {
   isOpen: boolean
   onClose: () => void
+  /** When set to 'addToCourse', the modal adds material to an existing course instead of creating a new one */
+  mode?: 'create' | 'addToCourse'
+  /** Course ID to add material to (required when mode is 'addToCourse') */
+  courseId?: string
+  /** Course title to display in header (used when mode is 'addToCourse') */
+  courseTitle?: string
+  /** Callback when material is successfully added to existing course */
+  onMaterialAdded?: (result: { newLessonsCount: number; totalLessons: number; cardsGenerated: number }) => void
 }
 
 export interface UploadError {

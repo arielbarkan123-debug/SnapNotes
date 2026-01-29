@@ -13,6 +13,9 @@ const publicRoutes = ['/auth/callback']
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // Auto-detect locale on first visit (no NEXT_LOCALE cookie yet)
+  const hasLocaleCookie = request.cookies.has('NEXT_LOCALE')
+
   // Log auth callback requests for debugging (development only)
   if (pathname.startsWith('/auth/callback')) {
     if (process.env.NODE_ENV === 'development') {
@@ -61,6 +64,17 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
+  }
+
+  // Set locale cookie from Accept-Language on first visit
+  if (!hasLocaleCookie) {
+    const acceptLang = request.headers.get('accept-language') || ''
+    const detectedLocale = acceptLang.includes('he') ? 'he' : 'en'
+    supabaseResponse.cookies.set('NEXT_LOCALE', detectedLocale, {
+      path: '/',
+      maxAge: 365 * 24 * 60 * 60, // 1 year
+      sameSite: 'lax',
+    })
   }
 
   return supabaseResponse

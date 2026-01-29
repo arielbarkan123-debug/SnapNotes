@@ -44,6 +44,10 @@
     "readOnly": "לקריאה בלבד",
     "unsavedChanges": "יש לך שינויים שלא נשמרו"
   },
+  "language": {
+    "switch": "החלף שפה",
+    "current": "עברית"
+  },
   "time": {
     "memberSince": "חבר מאז {date}"
   }

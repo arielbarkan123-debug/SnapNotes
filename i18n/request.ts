@@ -1,5 +1,5 @@
 import { getRequestConfig } from 'next-intl/server'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { defaultLocale, locales, type Locale } from './config'
 
 // Import messages statically to avoid dynamic import issues
@@ -12,14 +12,19 @@ const messagesMap = {
 }
 
 export default getRequestConfig(async () => {
-  // Get locale from cookie, fallback to default
   const cookieStore = await cookies()
   const localeCookie = cookieStore.get('NEXT_LOCALE')?.value
 
-  // Validate locale
-  const locale: Locale = locales.includes(localeCookie as Locale)
-    ? (localeCookie as Locale)
-    : defaultLocale
+  let locale: Locale
+
+  if (locales.includes(localeCookie as Locale)) {
+    locale = localeCookie as Locale
+  } else {
+    // Auto-detect from Accept-Language header
+    const headerStore = await headers()
+    const acceptLang = headerStore.get('accept-language') || ''
+    locale = acceptLang.includes('he') ? 'he' : defaultLocale
+  }
 
   return {
     locale,

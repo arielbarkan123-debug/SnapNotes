@@ -64,6 +64,8 @@ interface GenerateCourseRequest {
   title?: string
   /** Lesson intensity mode: quick (10-15 min), standard (20-30 min), deep_practice (45-60 min) */
   intensityMode?: LessonIntensityMode
+  /** Optional supplementary text context provided alongside file uploads */
+  supplementaryText?: string
 }
 
 type SourceType = 'image' | 'pdf' | 'pptx' | 'docx' | 'text'
@@ -217,14 +219,18 @@ export async function POST(request: NextRequest): Promise<Response> {
         return
       }
 
-      const { imageUrl, imageUrls, documentContent, documentUrl, textContent, title, intensityMode } = body
+      const { imageUrl, imageUrls, documentContent, documentUrl, textContent, supplementaryText, title, intensityMode } = body
 
       // 3. Determine source type and validate input
       let sourceType: SourceType = 'image'
       let urls: string[] = []
 
-      // Check if this is a text-based request
-      if (textContent && typeof textContent === 'string' && textContent.trim().length > 0) {
+      // Check if this is a text-only request (no images/documents alongside)
+      // If we have textContent AND images/documents, it's supplementary text - not text mode
+      const hasImages = (imageUrls && Array.isArray(imageUrls) && imageUrls.length > 0) || (imageUrl && typeof imageUrl === 'string')
+      const hasDocument = documentContent && documentContent.type
+
+      if (textContent && typeof textContent === 'string' && textContent.trim().length > 0 && !hasImages && !hasDocument) {
         sourceType = 'text'
       }
       // Check if this is a document-based request
@@ -354,9 +360,17 @@ export async function POST(request: NextRequest): Promise<Response> {
 
           // Use PROGRESSIVE generation - first 2 lessons + outline (fast ~30s)
           // Remaining lessons will be generated in background by /api/generate-course/continue
-          const result = await generateInitialCourse(documentContent, title, imageUrls, userContext, intensityMode)
+          // Build effective title with supplementary context
+          const effectiveDocTitle = supplementaryText
+            ? `${title || ''}\n\nAdditional context from student: ${supplementaryText}`.trim()
+            : title
+          const result = await generateInitialCourse(documentContent, effectiveDocTitle, imageUrls, userContext, intensityMode)
           generatedCourse = result.generatedCourse
           extractedContent = documentContent.content
+          // Append supplementary text to extracted content for reference
+          if (supplementaryText) {
+            extractedContent += `\n\n--- Student Notes ---\n${supplementaryText}`
+          }
 
           // Store progressive generation metadata for continuation
           ;(generatedCourse as GeneratedCourseWithMetadata)._progressiveMetadata = {
@@ -369,17 +383,33 @@ export async function POST(request: NextRequest): Promise<Response> {
           // Single image - the uploaded image itself can be referenced
           _courseImageUrls = urls
           sendMessage({ type: 'progress', stage: 'Analyzing your image', percent: 35 })
-          const result = await generateCourseFromImage(urls[0], title, userContext, intensityMode)
+          // Build effective title with supplementary context
+          const effectiveTitle = supplementaryText
+            ? `${title || ''}\n\nAdditional context from student: ${supplementaryText}`.trim()
+            : title
+          const result = await generateCourseFromImage(urls[0], effectiveTitle, userContext, intensityMode)
           generatedCourse = result.generatedCourse
           extractedContent = result.extractionRawText
+          // Append supplementary text to extracted content for reference
+          if (supplementaryText) {
+            extractedContent += `\n\n--- Student Notes ---\n${supplementaryText}`
+          }
         } else {
           // Multiple images - use PROGRESSIVE generation (like documents)
           // First 2 lessons + outline fast, rest generated in background
           _courseImageUrls = urls
           sendMessage({ type: 'progress', stage: 'Analyzing your images (fast mode)', percent: 35 })
-          const result = await generateCourseFromMultipleImagesProgressive(urls, title, userContext, intensityMode)
+          // Build effective title with supplementary context
+          const effectiveTitle = supplementaryText
+            ? `${title || ''}\n\nAdditional context from student: ${supplementaryText}`.trim()
+            : title
+          const result = await generateCourseFromMultipleImagesProgressive(urls, effectiveTitle, userContext, intensityMode)
           generatedCourse = result.generatedCourse
           extractedContent = result.extractionRawText
+          // Append supplementary text to extracted content for reference
+          if (supplementaryText) {
+            extractedContent += `\n\n--- Student Notes ---\n${supplementaryText}`
+          }
 
           // Store progressive generation metadata for continuation
           ;(generatedCourse as GeneratedCourseWithMetadata)._progressiveMetadata = {

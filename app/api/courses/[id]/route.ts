@@ -5,6 +5,216 @@ import {
   createErrorResponse,
   logError,
 } from '@/lib/api/errors'
+import {
+  generateCourseFromImage,
+  generateCourseFromMultipleImagesProgressive,
+  generateCourseFromText,
+  generateInitialCourse,
+} from '@/lib/ai'
+import type { UserLearningContext } from '@/lib/ai'
+import type { ExtractedDocument } from '@/lib/documents'
+import type { GeneratedCourse, LessonIntensityMode } from '@/types'
+import { generateCardsFromCourse } from '@/lib/srs'
+import { checkRateLimit, RATE_LIMITS, getIdentifier } from '@/lib/rate-limit'
+
+// ============================================================================
+// PATCH - Add new material to an existing course
+// ============================================================================
+
+export const maxDuration = 240
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<NextResponse> {
+  try {
+    const { id: courseId } = await params
+
+    if (!courseId) {
+      return createErrorResponse(ErrorCodes.MISSING_FIELD, 'Course ID is required')
+    }
+
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED, 'Please log in to update courses')
+    }
+
+    // Rate limit check (uses same limits as course generation)
+    const rateLimitId = getIdentifier(user.id, request)
+    const rateLimit = checkRateLimit(rateLimitId, RATE_LIMITS.generateCourse)
+    if (!rateLimit.allowed) {
+      return createErrorResponse(ErrorCodes.RATE_LIMITED, 'Too many requests. Please wait before adding more material.')
+    }
+
+    // Fetch existing course and verify ownership
+    const { data: course, error: fetchError } = await supabase
+      .from('courses')
+      .select('*')
+      .eq('id', courseId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (fetchError) {
+      logError('AddMaterial:fetch', fetchError)
+      return createErrorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to fetch course')
+    }
+
+    if (!course) {
+      return createErrorResponse(ErrorCodes.NOT_FOUND, 'Course not found')
+    }
+
+    // Parse request body
+    const body = await request.json()
+    const { imageUrls, textContent, supplementaryText, documentContent, title } = body as {
+      imageUrls?: string[]
+      textContent?: string
+      supplementaryText?: string
+      documentContent?: ExtractedDocument
+      title?: string
+      intensityMode?: LessonIntensityMode
+    }
+
+    const intensityMode = (course.intensity_mode as LessonIntensityMode) || 'standard'
+
+    // Fetch user context for personalization
+    let userContext: UserLearningContext | undefined
+    try {
+      const { data: profile } = await supabase
+        .from('user_learning_profile')
+        .select('education_level, study_system, study_goal, learning_styles, language')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (profile) {
+        userContext = {
+          educationLevel: profile.education_level || 'high_school',
+          studySystem: profile.study_system || 'general',
+          studyGoal: profile.study_goal || 'general_learning',
+          learningStyles: profile.learning_styles || ['practice'],
+          language: profile.language || 'en',
+        }
+      }
+    } catch {
+      // Continue without personalization
+    }
+
+    // Generate new content based on what was provided
+    let newLessons: GeneratedCourse['lessons'] = []
+    let newExtractedContent = ''
+
+    try {
+      if (textContent && typeof textContent === 'string' && textContent.trim().length > 0) {
+        // Text-based addition
+        const result = await generateCourseFromText(textContent, title, userContext, intensityMode)
+        newLessons = result.generatedCourse.lessons || []
+        newExtractedContent = textContent
+      } else if (imageUrls && Array.isArray(imageUrls) && imageUrls.length > 0) {
+        // Image-based addition
+        const effectiveTitle = supplementaryText
+          ? `${title || ''}\n\nAdditional context from student: ${supplementaryText}`.trim()
+          : title
+
+        if (imageUrls.length === 1) {
+          const result = await generateCourseFromImage(imageUrls[0], effectiveTitle, userContext, intensityMode)
+          newLessons = result.generatedCourse.lessons || []
+          newExtractedContent = result.extractionRawText
+        } else {
+          const result = await generateCourseFromMultipleImagesProgressive(imageUrls, effectiveTitle, userContext, intensityMode)
+          newLessons = result.generatedCourse.lessons || []
+          newExtractedContent = result.extractionRawText
+        }
+
+        if (supplementaryText) {
+          newExtractedContent += `\n\n--- Student Notes ---\n${supplementaryText}`
+        }
+      } else if (documentContent) {
+        const effectiveTitle = supplementaryText
+          ? `${title || ''}\n\nAdditional context from student: ${supplementaryText}`.trim()
+          : title
+        const result = await generateInitialCourse(documentContent, effectiveTitle, [], userContext, intensityMode)
+        newLessons = result.generatedCourse.lessons || []
+        newExtractedContent = documentContent.content
+        if (supplementaryText) {
+          newExtractedContent += `\n\n--- Student Notes ---\n${supplementaryText}`
+        }
+      } else {
+        return createErrorResponse(ErrorCodes.MISSING_FIELD, 'No content provided. Upload images, text, or a document.')
+      }
+    } catch (error) {
+      logError('AddMaterial:generation', error)
+      return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to generate new content. Please try again.')
+    }
+
+    if (newLessons.length === 0) {
+      return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'No new lessons were generated from the provided content.')
+    }
+
+    // Append new lessons to existing course
+    const existingCourse = (course.generated_course || {}) as GeneratedCourse
+    const existingLessons = existingCourse.lessons || []
+    const updatedLessons = [...existingLessons, ...newLessons]
+    const updatedCourse = { ...existingCourse, lessons: updatedLessons }
+
+    // Append extracted content
+    const existingExtracted = course.extracted_content || ''
+    const updatedExtracted = existingExtracted
+      ? `${existingExtracted}\n\n--- Additional Material ---\n${newExtractedContent}`
+      : newExtractedContent
+
+    // Update course in database
+    const { error: updateError } = await supabase
+      .from('courses')
+      .update({
+        generated_course: updatedCourse,
+        extracted_content: updatedExtracted,
+        total_lessons: updatedLessons.length,
+        lessons_ready: updatedLessons.length,
+        generation_status: 'complete',
+      })
+      .eq('id', courseId)
+
+    if (updateError) {
+      logError('AddMaterial:update', updateError)
+      return createErrorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to update course')
+    }
+
+    // Generate review cards for new lessons only
+    let cardsGenerated = 0
+    try {
+      // Create a temporary course object with only new lessons for card generation
+      const tempCourse = { ...updatedCourse, lessons: newLessons }
+      const cards = generateCardsFromCourse(tempCourse, courseId)
+      if (cards.length > 0) {
+        const cardsWithUser = cards.map((card) => ({
+          ...card,
+          user_id: user.id,
+        }))
+        const { error: cardError } = await supabase
+          .from('review_cards')
+          .insert(cardsWithUser)
+
+        if (!cardError) {
+          cardsGenerated = cardsWithUser.length
+        }
+      }
+    } catch (cardError) {
+      logError('AddMaterial:cards', cardError)
+      // Non-critical, continue
+    }
+
+    return NextResponse.json({
+      success: true,
+      newLessonsCount: newLessons.length,
+      totalLessons: updatedLessons.length,
+      cardsGenerated,
+    })
+  } catch (error) {
+    logError('AddMaterial:unhandled', error)
+    return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to add material to course')
+  }
+}
 
 // ============================================================================
 // DELETE - Delete a course and all associated data

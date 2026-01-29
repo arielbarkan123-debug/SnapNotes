@@ -1,12 +1,15 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { type Course, type UserProgress, type GeneratedCourse, type Lesson } from '@/types'
 import { ChatTutor } from '@/components/chat/ChatTutor'
 import { useCourseMastery } from '@/hooks'
 import { useGenerationStatus } from '@/hooks/useGenerationStatus'
+
+const UploadModal = dynamic(() => import('@/components/upload/upload-modal/UploadModal'), { ssr: false })
 
 interface CourseViewProps {
   course: Course
@@ -19,6 +22,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
   const t = useTranslations('lesson')
   const tc = useTranslations('course')
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false)
 
   // Safely parse generated_course - handle null/undefined cases
   const generatedCourse = (course.generated_course || {}) as GeneratedCourse & { sections?: Lesson[] }
@@ -79,16 +83,27 @@ export default function CourseView({ course, progress }: CourseViewProps) {
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="container mx-auto px-4 py-4 max-w-4xl">
-          {/* Back link */}
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-3 text-sm font-medium transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            {tc('backToDashboard')}
-          </Link>
+          {/* Back link + Add Material */}
+          <div className="flex items-center justify-between mb-3">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              {tc('backToDashboard')}
+            </Link>
+            <button
+              onClick={() => setIsAddMaterialOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              {tc('addMaterial')}
+            </button>
+          </div>
 
           {/* Title */}
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">
@@ -273,6 +288,18 @@ export default function CourseView({ course, progress }: CourseViewProps) {
         courseName={generatedCourse?.title || course.title || ''}
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
+      />
+
+      {/* Add Material Modal */}
+      <UploadModal
+        isOpen={isAddMaterialOpen}
+        onClose={() => setIsAddMaterialOpen(false)}
+        mode="addToCourse"
+        courseId={course.id}
+        courseTitle={generatedCourse?.title || course.title || ''}
+        onMaterialAdded={() => {
+          window.location.reload()
+        }}
       />
     </div>
   )

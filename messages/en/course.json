@@ -19,6 +19,7 @@
   "stepRemaining": "{count} step remaining",
   "generatingLessons": "Generating more lessons...",
   "generatingProgress": "{ready} of {total} lessons ready",
+  "addMaterial": "Add Material",
   "generating": "Generating...",
   "mistakes": {
     "whereYouWentWrong": "Where you went wrong",

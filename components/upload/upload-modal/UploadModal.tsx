@@ -42,7 +42,8 @@ import { validateFile, getErrorMessage, generateFileId } from './helpers'
 /**
  * Modal for uploading files or text to create a course
  */
-export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
+export default function UploadModal({ isOpen, onClose, mode = 'create', courseId, courseTitle, onMaterialAdded }: UploadModalProps) {
+  const isAddMode = mode === 'addToCourse'
   const router = useRouter()
   const t = useTranslations('upload')
   const { error: showError } = useToast()
@@ -56,6 +57,8 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
   const [inputMode, setInputMode] = useState<InputMode>('files')
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([])
   const [textContent, setTextContent] = useState('')
+  const [supplementaryText, setSupplementaryText] = useState('')
+  const [showStudyNotes, setShowStudyNotes] = useState(false)
   const [title, setTitle] = useState('')
   const [intensityMode, setIntensityMode] = useState<LessonIntensityMode>('standard')
   const [error, setError] = useState<UploadError | null>(null)
@@ -98,6 +101,8 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
       setInputMode('files')
       setSelectedFiles([])
       setTextContent('')
+      setSupplementaryText('')
+      setShowStudyNotes(false)
       setTitle('')
       setIntensityMode('standard')
       setError(null)
@@ -232,6 +237,38 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
     }
   }, [onClose, isUploading])
 
+  // Submit to PATCH endpoint for adding material to existing course
+  const submitAddMaterial = async (requestBody: Record<string, unknown>) => {
+    if (!courseId) return
+
+    setIsUploading(true)
+    setError(null)
+    setUploadProgress({ current: 0, total: 1, status: 'processing' })
+
+    try {
+      const response = await fetch(`/api/courses/${courseId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to add material')
+      }
+
+      const result = await response.json()
+      setUploadProgress({ current: 1, total: 1, status: 'complete' })
+      onMaterialAdded?.(result)
+      onClose()
+    } catch (err) {
+      const errorInfo = getErrorMessage(err)
+      setError(errorInfo)
+      setIsUploading(false)
+      setUploadProgress(null)
+    }
+  }
+
   const handleSubmit = async () => {
     // Handle text mode submission
     if (inputMode === 'text') {
@@ -239,6 +276,15 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         setError({
           message: 'Please enter at least 20 characters of content to generate a course.',
           isRetryable: false,
+        })
+        return
+      }
+
+      // Add-to-course mode: submit via PATCH
+      if (isAddMode) {
+        await submitAddMaterial({
+          textContent: textContent.trim(),
+          title: title.trim() || undefined,
         })
         return
       }
@@ -384,12 +430,24 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         }
 
         setUploadProgress({ current: 1, total: 1, status: 'complete' })
+
+        const contentToStore = uploadData.extractedContent || uploadData.content
+
+        // Add-to-course mode: submit via PATCH with document content
+        if (isAddMode) {
+          await submitAddMaterial({
+            documentContent: contentToStore,
+            title: title.trim() || undefined,
+            supplementaryText: supplementaryText.trim() || undefined,
+          })
+          return
+        }
+
         trackStep('processing', 4, { sourceType: 'document' })
         onClose()
 
         // Store content in sessionStorage
         const docId = `doc_${Date.now()}`
-        const contentToStore = uploadData.extractedContent || uploadData.content
         try {
           sessionStorage.setItem(docId, JSON.stringify(contentToStore))
         } catch {
@@ -410,6 +468,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         params.set('documentUrl', uploadData.storagePath || storagePath)
         params.set('sourceType', uploadData.documentType || fileType)
         if (title.trim()) params.set('title', title.trim())
+        if (supplementaryText.trim()) params.set('supplementaryText', supplementaryText.trim())
         params.set('intensityMode', intensityMode)
 
         router.push(`/processing?${params.toString()}`)
@@ -435,14 +494,14 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         return
       }
 
-      const courseId = generateCourseId()
+      const newCourseId = generateCourseId()
 
       let uploadResults
       try {
         uploadResults = await uploadImagesToStorage(
           imageFiles.map(sf => sf.file),
           userId,
-          courseId,
+          newCourseId,
           (current, total) => setUploadProgress({ current, total, status: 'uploading' })
         )
       } catch (err) {
@@ -469,7 +528,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         const signRes = await fetch('/api/sign-image-urls', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ storagePaths: uploadResults.map(r => r.storagePath), courseId }),
+          body: JSON.stringify({ storagePaths: uploadResults.map(r => r.storagePath), courseId: newCourseId }),
         })
 
         if (!signRes.ok) {
@@ -495,13 +554,24 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         .sort((a: { index: number }, b: { index: number }) => a.index - b.index)
         .map((img: { url: string }) => img.url)
 
+      // Add-to-course mode: submit via PATCH
+      if (isAddMode) {
+        await submitAddMaterial({
+          imageUrls,
+          title: title.trim() || undefined,
+          supplementaryText: supplementaryText.trim() || undefined,
+        })
+        return
+      }
+
       trackStep('processing', 4, { sourceType: 'images', imageCount: imageUrls.length })
       onClose()
 
       const params = new URLSearchParams()
       params.set('imageUrls', JSON.stringify(imageUrls))
-      params.set('courseId', courseId)
+      params.set('courseId', newCourseId)
       if (title.trim()) params.set('title', title.trim())
+      if (supplementaryText.trim()) params.set('supplementaryText', supplementaryText.trim())
       params.set('intensityMode', intensityMode)
 
       router.push(`/processing?${params.toString()}`)
@@ -538,8 +608,8 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <h2 id="modal-title" className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
-            {t('createCourse')}
+          <h2 id="modal-title" className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate">
+            {isAddMode ? t('addMaterialTo', { title: courseTitle || '' }) : t('createCourse')}
           </h2>
           <button
             onClick={onClose}
@@ -617,12 +687,14 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
             className="hidden"
           />
 
-          {/* Intensity Mode Selector */}
-          <IntensityModeSelector
-            value={intensityMode}
-            onChange={setIntensityMode}
-            disabled={isUploading}
-          />
+          {/* Intensity Mode Selector - hidden in addToCourse mode (uses existing course's mode) */}
+          {!isAddMode && (
+            <IntensityModeSelector
+              value={intensityMode}
+              onChange={setIntensityMode}
+              disabled={isUploading}
+            />
+          )}
 
           {/* Content based on input mode */}
           {inputMode === 'text' ? (
@@ -655,6 +727,41 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
               />
+
+              {/* Supplementary Study Notes (collapsible) */}
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowStudyNotes(!showStudyNotes)}
+                  disabled={isUploading}
+                  className="flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors disabled:opacity-50"
+                >
+                  <svg
+                    className={`w-4 h-4 transition-transform ${showStudyNotes ? 'rotate-90' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  {t('addStudyNotes')}
+                  <span className="text-xs text-gray-400 dark:text-gray-500 font-normal">
+                    ({t('studyNotesOptional')})
+                  </span>
+                </button>
+                {showStudyNotes && (
+                  <div className="mt-2">
+                    <textarea
+                      value={supplementaryText}
+                      onChange={(e) => setSupplementaryText(e.target.value)}
+                      placeholder={t('studyNotesPlaceholder')}
+                      disabled={isUploading}
+                      rows={3}
+                      className="w-full px-4 py-3 sm:py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl sm:rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition disabled:opacity-50 text-base resize-none"
+                    />
+                  </div>
+                )}
+              </div>
 
               {/* Title Input for file mode */}
               <div className="mt-4">
@@ -710,7 +817,10 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
             }
             className="w-full sm:w-auto min-h-[48px] sm:min-h-[44px]"
           >
-            {inputMode === 'text' ? t('generateFromText') : t('generateCourse')}
+            {isAddMode
+              ? t('addMaterial')
+              : inputMode === 'text' ? t('generateFromText') : t('generateCourse')
+            }
           </Button>
         </div>
       </div>

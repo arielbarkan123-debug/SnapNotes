@@ -44,6 +44,10 @@
     "readOnly": "Read-only",
     "unsavedChanges": "You have unsaved changes"
   },
+  "language": {
+    "switch": "Switch language",
+    "current": "English"
+  },
   "time": {
     "memberSince": "Member since {date}"
   }

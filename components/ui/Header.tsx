@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 
 interface HeaderProps {
@@ -16,6 +16,7 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
   const router = useRouter()
   const pathname = usePathname()
   const t = useTranslations('common')
+  const currentLocale = useLocale()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -56,6 +57,12 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
     } catch {
       setIsLoggingOut(false)
     }
+  }
+
+  const toggleLanguage = () => {
+    const newLocale = currentLocale === 'en' ? 'he' : 'en'
+    document.cookie = `NEXT_LOCALE=${newLocale};path=/;max-age=31536000;samesite=lax`
+    window.location.reload()
   }
 
   const isActive = (path: string) => pathname === path
@@ -100,6 +107,15 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
                   </NavLink>
                 )}
               </nav>
+              <div className="h-6 w-px bg-gray-200 dark:bg-gray-700" />
+              <button
+                onClick={toggleLanguage}
+                className="px-2 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                aria-label={t('language.switch')}
+                title={currentLocale === 'en' ? 'עברית' : 'English'}
+              >
+                {currentLocale === 'en' ? '🇮🇱 עברית' : '🇺🇸 English'}
+              </button>
               <div className="h-6 w-px bg-gray-200 dark:bg-gray-700" />
               <Link
                 href="/profile"
@@ -210,6 +226,21 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
                 {t('nav.adminDashboard')}
               </MobileNavLink>
             )}
+
+            {/* Language Toggle */}
+            <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={toggleLanguage}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 w-full"
+              >
+                <span className="w-5 h-5 flex items-center justify-center text-base">
+                  {currentLocale === 'en' ? '🇮🇱' : '🇺🇸'}
+                </span>
+                <span className="flex-1 text-start">
+                  {currentLocale === 'en' ? 'עברית' : 'English'}
+                </span>
+              </button>
+            </div>
           </nav>
 
           {/* Logout */}

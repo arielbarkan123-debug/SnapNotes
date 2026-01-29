@@ -220,6 +220,9 @@ function ProcessingContent() {
   // Text params
   const textContent = searchParams.get('textContent')
 
+  // Supplementary text (optional context added alongside files)
+  const supplementaryText = searchParams.get('supplementaryText')
+
   // Intensity mode param
   const intensityMode = searchParams.get('intensityMode') || 'standard'
 
@@ -465,6 +468,11 @@ function ProcessingContent() {
 
       if (title) {
         requestBody.title = title
+      }
+
+      // Pass supplementary text context alongside files
+      if (supplementaryText) {
+        requestBody.supplementaryText = supplementaryText
       }
 
       // Pass intensity mode for lesson generation
@@ -843,7 +851,7 @@ function ProcessingContent() {
         if (wasRetried) return
       }
     }
-  }, [hasValidInput, textContent, documentContent, documentUrl, imageUrls, imageUrl, title, sourceType, processingKey, showXP, showLevelUp, trackFunnelStep, intensityMode, handleError, pollForRecentCourse])
+  }, [hasValidInput, textContent, supplementaryText, documentContent, documentUrl, imageUrls, imageUrl, title, sourceType, processingKey, showXP, showLevelUp, trackFunnelStep, intensityMode, handleError, pollForRecentCourse])
 
   // Start generation on mount (ref prevents duplicate calls in StrictMode)
   // Wait for document content to load if we have a documentId

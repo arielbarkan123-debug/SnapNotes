@@ -19,6 +19,7 @@
   "stepRemaining": "צעד {count} נותר",
   "generatingLessons": "מייצר שיעורים נוספים...",
   "generatingProgress": "{ready} מתוך {total} שיעורים מוכנים",
+  "addMaterial": "הוסף חומר",
   "generating": "מייצר...",
   "mistakes": {
     "whereYouWentWrong": "איפה טעית",
