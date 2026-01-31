@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import ReviewCard from '@/components/srs/ReviewCard'
 import RatingButtons from '@/components/srs/RatingButtons'
+import DifficultyFeedback from '@/components/shared/DifficultyFeedback'
 import { useEventTracking } from '@/lib/analytics'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
 import type { Rating, ReviewSession } from '@/types'
@@ -46,6 +47,7 @@ export default function ReviewPage() {
   const [isAnswerShown, setIsAnswerShown] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [interactiveResult, setInteractiveResult] = useState<boolean | null>(null) // Track if interactive card was answered correctly
+  const [difficultyFeedbackGiven, setDifficultyFeedbackGiven] = useState(false)
 
   // Stats tracking
   const [stats, setStats] = useState<SessionStats>({
@@ -99,6 +101,7 @@ export default function ReviewPage() {
     setSessionState('reviewing')
     setCurrentIndex(0)
     setIsAnswerShown(false)
+    setDifficultyFeedbackGiven(false)
     setInteractiveResult(null)
     setStats({
       cardsReviewed: 0,
@@ -123,6 +126,31 @@ export default function ReviewPage() {
 
   const handleInteractiveAnswer = (wasCorrect: boolean) => {
     setInteractiveResult(wasCorrect)
+  }
+
+  // ==========================================================================
+  // Handle difficulty feedback
+  // ==========================================================================
+
+  const handleDifficultyFeedback = async (feedback: 'too_easy' | 'too_hard') => {
+    if (!session || difficultyFeedbackGiven) return
+    setDifficultyFeedbackGiven(true)
+
+    const currentCard = session.cards[currentIndex]
+    if (!currentCard) return
+
+    try {
+      await fetch('/api/srs/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          card_id: currentCard.id,
+          difficulty_feedback: feedback,
+        }),
+      })
+    } catch {
+      // Non-critical - don't block the session
+    }
   }
 
   // ==========================================================================
@@ -167,6 +195,7 @@ export default function ReviewPage() {
       if (currentIndex < session.cards.length - 1) {
         setCurrentIndex((prev) => prev + 1)
         setIsAnswerShown(false)
+        setDifficultyFeedbackGiven(false)
         setInteractiveResult(null)
         cardStartTimeRef.current = Date.now()
       } else {
@@ -183,6 +212,7 @@ export default function ReviewPage() {
       if (currentIndex < session.cards.length - 1) {
         setCurrentIndex((prev) => prev + 1)
         setIsAnswerShown(false)
+        setDifficultyFeedbackGiven(false)
         setInteractiveResult(null)
         cardStartTimeRef.current = Date.now()
       } else {
@@ -284,6 +314,7 @@ export default function ReviewPage() {
       {/* Card */}
       <div className="flex-1 flex items-center justify-center py-4 px-4">
         <ReviewCard
+          key={currentCard.id}
           card={currentCard}
           onShowAnswer={showAnswer}
           isAnswerShown={isAnswerShown}
@@ -293,13 +324,16 @@ export default function ReviewPage() {
 
       {/* Rating buttons (only show when answer is shown) */}
       {isAnswerShown && (
-        <div className="mt-4 pb-4 max-w-2xl mx-auto w-full px-4">
+        <div className="mt-4 pb-20 max-w-2xl mx-auto w-full px-4">
           <RatingButtons
             card={currentCard}
             onRate={submitRating}
             isLoading={isSubmitting}
             interactiveResult={interactiveResult}
           />
+          {currentIndex >= 2 && (
+            <DifficultyFeedback onFeedback={handleDifficultyFeedback} namespace="review" />
+          )}
         </div>
       )}
     </div>

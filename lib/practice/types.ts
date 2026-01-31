@@ -16,6 +16,7 @@ export type PracticeQuestionType =
   | 'matching'
   | 'sequence'
   | 'image_label'
+  | 'multi_select'
 
 export type QuestionSource = 'generated' | 'manual' | 'imported' | 'srs'
 
@@ -229,6 +230,7 @@ export interface GenerateQuestionsRequest {
   questionTypes?: PracticeQuestionType[]
   /** Education level for age-appropriate question generation */
   educationLevel?: 'elementary' | 'middle_school' | 'high_school' | 'university' | 'graduate' | 'professional'
+  depth?: 'surface' | 'standard' | 'deep' | 'exhaustive'
 }
 
 export interface GeneratedQuestion {
@@ -464,6 +466,7 @@ export const PRACTICE_CONFIG = {
     matching: 1,
     sequence: 1,
     image_label: 2,
+    multi_select: 1,
   } as Record<PracticeQuestionType, number>,
 
   // Minimum questions for each session type

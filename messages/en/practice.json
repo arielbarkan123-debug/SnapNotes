@@ -116,5 +116,14 @@
   "correctGreatPerseverance": "Correct! Great perseverance!",
   "gotItOnAttempt": "You got it on attempt #{attempt}. Practice makes perfect!",
   "notQuiteTryAgain": "Not quite - want to try again?",
-  "takeAnotherLook": "Take another look at the options. You've got this!"
+  "takeAnotherLook": "Take another look at the options. You've got this!",
+  "tooEasy": "Too Easy",
+  "tooHard": "Too Hard",
+  "feedbackThanks": "Thanks, we'll adjust!",
+  "selectAllThatApply": "Select all that apply",
+  "multiSelectHint": "There may be more than one correct answer",
+  "selectedCount": "{count} selected",
+  "missedCorrect": "You missed {count} correct answer(s)",
+  "missed": "Missed",
+  "theCorrectAnswers": "The correct answers:"
 }

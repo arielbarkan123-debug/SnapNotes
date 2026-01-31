@@ -13,6 +13,7 @@ interface SubmitReviewRequest {
   card_id: string
   rating: Rating
   duration_ms?: number
+  difficulty_feedback?: 'too_easy' | 'too_hard'
 }
 
 // =============================================================================
@@ -52,14 +53,69 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const { card_id, rating, duration_ms } = body
+    const difficulty_feedback = body.difficulty_feedback
 
     // Validate required fields
     if (!card_id) {
       return createErrorResponse(ErrorCodes.MISSING_FIELD, 'card_id is required')
     }
 
-    if (!rating || ![1, 2, 3, 4].includes(rating)) {
+    if (rating && ![1, 2, 3, 4].includes(rating)) {
       return createErrorResponse(ErrorCodes.INVALID_INPUT, 'rating must be 1, 2, 3, or 4')
+    }
+
+    // Must have either rating or difficulty_feedback
+    if (!rating && !difficulty_feedback) {
+      return createErrorResponse(ErrorCodes.MISSING_FIELD, 'rating or difficulty_feedback is required')
+    }
+
+    // Handle feedback-only requests (no rating)
+    if (!rating) {
+      // Log the feedback
+      const { error: reviewLogError } = await supabase
+        .from('review_logs')
+        .insert({
+          card_id: card_id,
+          user_id: user.id,
+          rating: null,
+          difficulty_feedback: difficulty_feedback ?? null,
+          review_duration_ms: duration_ms ?? null,
+          reviewed_at: new Date().toISOString(),
+        })
+
+      if (reviewLogError) {
+        console.error('SRS:review:log', reviewLogError)
+      }
+
+      // Adjust difficulty based on user feedback
+      if (difficulty_feedback) {
+        const adjustment = difficulty_feedback === 'too_easy' ? 0.5 : -0.5
+        const floorAdjustment = difficulty_feedback === 'too_easy' ? 0.25 : -0.25
+
+        // Get current performance state
+        const { data: perfState } = await supabase
+          .from('user_performance_state')
+          .select('target_difficulty, difficulty_floor')
+          .eq('user_id', user.id)
+          .maybeSingle()
+
+        if (perfState) {
+          const currentFloor = perfState.difficulty_floor || 1.0
+          const newTarget = Math.max(currentFloor, Math.min(5, perfState.target_difficulty + adjustment))
+          const newFloor = Math.max(1.0, Math.min(3.0, currentFloor + floorAdjustment))
+
+          await supabase
+            .from('user_performance_state')
+            .update({
+              target_difficulty: newTarget,
+              difficulty_floor: newFloor,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('user_id', user.id)
+        }
+      }
+
+      return NextResponse.json({ success: true, feedback_recorded: true })
     }
 
     // Get the card and verify ownership
@@ -130,6 +186,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         card_id: card_id,
         user_id: user.id,
         rating: rating,
+        difficulty_feedback: difficulty_feedback ?? null,
         review_duration_ms: duration_ms ?? null,
         reviewed_at: now.toISOString(),
       })
@@ -137,6 +194,34 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (reviewLogError) {
       // Log but don't fail - the card update was successful
       console.error('SRS:review:log', reviewLogError)
+    }
+
+    // Adjust difficulty based on user feedback
+    if (difficulty_feedback) {
+      const adjustment = difficulty_feedback === 'too_easy' ? 0.5 : -0.5
+      const floorAdjustment = difficulty_feedback === 'too_easy' ? 0.25 : -0.25
+
+      // Get current performance state
+      const { data: perfState } = await supabase
+        .from('user_performance_state')
+        .select('target_difficulty, difficulty_floor')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (perfState) {
+        const currentFloor = perfState.difficulty_floor || 1.0
+        const newTarget = Math.max(currentFloor, Math.min(5, perfState.target_difficulty + adjustment))
+        const newFloor = Math.max(1.0, Math.min(3.0, currentFloor + floorAdjustment))
+
+        await supabase
+          .from('user_performance_state')
+          .update({
+            target_difficulty: newTarget,
+            difficulty_floor: newFloor,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id)
+      }
     }
 
     // Update concept mastery if card has linked concepts

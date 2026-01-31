@@ -32,13 +32,24 @@ const CONFIG = {
   abilityLearningRate: 0.3,
 
   // Difficulty adjustment amounts
-  adjustmentStep: 0.3,
-  streakBonus: 0.2,
+  adjustmentStep: 0.4,
+  streakBonus: 0.25,
 
   // Thresholds
-  streakThreshold: 3,
-  accuracyHighThreshold: 0.85,
+  streakThreshold: 2,
+  accuracyHighThreshold: 0.80,
   accuracyLowThreshold: 0.65,
+
+  // Fast learner multiplier
+  fastLearnerMultiplier: 1.5,
+  fastLearnerAbilityThreshold: 3.5,
+  fastLearnerAccuracyThreshold: 0.9,
+
+  // Difficulty floor
+  floorRaiseThreshold: 0.90,
+  floorRaiseStep: 0.5,
+  floorMaximum: 3.0,
+  floorMinQuestions: 10,
 
   // Bounds
   minDifficulty: 1.0,
@@ -163,9 +174,15 @@ function calculateStateUpdates(
   // 4. Calculate new target difficulty
   let newTargetDifficulty = state.target_difficulty
 
+  // Determine adjustment step (fast learner gets bigger steps)
+  let effectiveStep = CONFIG.adjustmentStep
+  if (newAbility > CONFIG.fastLearnerAbilityThreshold && newAccuracy > CONFIG.fastLearnerAccuracyThreshold) {
+    effectiveStep *= CONFIG.fastLearnerMultiplier
+  }
+
   // Adjust based on accuracy thresholds
   if (newAccuracy > CONFIG.accuracyHighThreshold) {
-    newTargetDifficulty += CONFIG.adjustmentStep
+    newTargetDifficulty += effectiveStep
   } else if (newAccuracy < CONFIG.accuracyLowThreshold) {
     newTargetDifficulty -= CONFIG.adjustmentStep
   }
@@ -176,6 +193,22 @@ function calculateStateUpdates(
   } else if (newWrongStreak >= CONFIG.streakThreshold && !isCorrect) {
     newTargetDifficulty -= CONFIG.streakBonus
   }
+
+  // Emergency bail-out: if 5+ consecutive wrong answers, target minimum difficulty
+  if (newWrongStreak >= 5) {
+    newTargetDifficulty = CONFIG.minDifficulty
+  }
+
+  // 4b. Update difficulty floor
+  const currentFloor = state.difficulty_floor || 1.0
+  let newFloor = currentFloor
+  const questionsAfterUpdate = state.questions_answered + 1
+  if (newAccuracy > CONFIG.floorRaiseThreshold && questionsAfterUpdate >= CONFIG.floorMinQuestions) {
+    newFloor = Math.min(CONFIG.floorMaximum, currentFloor + CONFIG.floorRaiseStep)
+  }
+
+  // Apply floor to target difficulty
+  newTargetDifficulty = Math.max(newFloor, newTargetDifficulty)
 
   // Clamp target difficulty
   newTargetDifficulty = Math.max(CONFIG.minDifficulty, Math.min(CONFIG.maxDifficulty, newTargetDifficulty))
@@ -207,6 +240,7 @@ function calculateStateUpdates(
     session_difficulty_level: newSessionDifficulty,
     rolling_response_time_ms: newAvgResponseTime,
     questions_answered: state.questions_answered + 1,
+    difficulty_floor: newFloor,
     updated_at: new Date().toISOString(),
   }
 }
@@ -384,15 +418,54 @@ export async function resetSessionState(
 ): Promise<void> {
   const supabase = await createClient()
 
+  // First, get the current state to check updated_at for time-decay
+  let stateQuery = supabase
+    .from('user_performance_state')
+    .select('*')
+    .eq('user_id', userId)
+
+  if (courseId) {
+    stateQuery = stateQuery.eq('course_id', courseId)
+  } else {
+    stateQuery = stateQuery.is('course_id', null)
+  }
+
+  const { data: currentState } = await stateQuery.single()
+
+  // Calculate time-based decay for returning users
+  const updateObj: Record<string, unknown> = {
+    session_difficulty_level: 2.5,
+    correct_streak: 0,
+    wrong_streak: 0,
+    session_start: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+
+  if (currentState?.updated_at) {
+    const now = Date.now()
+    const updatedAt = new Date(currentState.updated_at).getTime()
+    const daysSinceUpdate = (now - updatedAt) / (1000 * 60 * 60 * 24)
+
+    if (daysSinceUpdate > 7) {
+      const decayPeriods = Math.floor(daysSinceUpdate / 7)
+
+      // Decay difficulty_floor by 0.1 per week, minimum 1.0
+      const currentFloor = currentState.difficulty_floor || 1.0
+      updateObj.difficulty_floor = Math.max(1.0, currentFloor - 0.1 * decayPeriods)
+
+      // Decay rolling_accuracy toward 0.5
+      const currentAccuracy = currentState.rolling_accuracy ?? 0.5
+      updateObj.rolling_accuracy = 0.5 + (currentAccuracy - 0.5) * Math.pow(0.9, decayPeriods)
+
+      // Decay estimated_ability toward 2.5
+      const currentAbility = currentState.estimated_ability ?? 2.5
+      updateObj.estimated_ability = 2.5 + (currentAbility - 2.5) * Math.pow(0.9, decayPeriods)
+    }
+  }
+
   let query = supabase
     .from('user_performance_state')
-    .update({
-      session_difficulty_level: 2.5,
-      correct_streak: 0,
-      wrong_streak: 0,
-      session_start: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateObj)
     .eq('user_id', userId)
 
   if (courseId) {

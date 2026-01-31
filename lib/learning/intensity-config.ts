@@ -23,6 +23,7 @@ export const INTENSITY_CONFIGS: Record<LessonIntensityMode, IntensityConfig> = {
     practiceProblemsTarget: 2,
     masteryThreshold: 0.5, // 50% accuracy to pass
     allowRetryUntilMastery: false,
+    defaultDepth: 'surface' as const,
   },
   standard: {
     id: 'standard',
@@ -33,6 +34,7 @@ export const INTENSITY_CONFIGS: Record<LessonIntensityMode, IntensityConfig> = {
     practiceProblemsTarget: 4,
     masteryThreshold: 0.7, // 70% accuracy to pass
     allowRetryUntilMastery: false,
+    defaultDepth: 'standard' as const,
   },
   deep_practice: {
     id: 'deep_practice',
@@ -43,6 +45,7 @@ export const INTENSITY_CONFIGS: Record<LessonIntensityMode, IntensityConfig> = {
     practiceProblemsTarget: 15,
     masteryThreshold: 0.85, // 85% accuracy to pass
     allowRetryUntilMastery: true,
+    defaultDepth: 'deep' as const,
   },
 }
 

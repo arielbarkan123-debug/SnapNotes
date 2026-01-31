@@ -9,6 +9,7 @@ import type { ReviewCard as ReviewCardType } from '@/types/srs'
 import { useCourses } from '@/hooks'
 import { useEventTracking } from '@/lib/analytics'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
+import DifficultyFeedback from '@/components/shared/DifficultyFeedback'
 
 // Custom slider styles
 const sliderStyles = `
@@ -37,7 +38,7 @@ const sliderStyles = `
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   }
 `
-import { parseCardBack, isMultipleChoice, isTrueFalse, isFillBlank, isMatching, isSequence } from '@/types/srs'
+import { parseCardBack, isMultipleChoice, isTrueFalse, isFillBlank, isMatching, isSequence, isMultiSelect } from '@/types/srs'
 
 // Lazy load practice components - only loaded when practice session starts
 const MultipleChoice = dynamic(() => import('@/components/practice/MultipleChoice'))
@@ -46,6 +47,7 @@ const FillBlank = dynamic(() => import('@/components/practice/FillBlank'))
 const ShortAnswer = dynamic(() => import('@/components/practice/ShortAnswer'))
 const Matching = dynamic(() => import('@/components/practice/Matching'))
 const Sequence = dynamic(() => import('@/components/practice/Sequence'))
+const MultiSelect = dynamic(() => import('@/components/practice/MultiSelect'))
 
 // Lazy load HelpModal - only loaded when user requests help
 const HelpModal = dynamic(() => import('@/components/help/HelpModal'), { ssr: false })
@@ -144,6 +146,7 @@ export default function PracticePage() {
   const [, setAnswers] = useState<Answer[]>([])
   const [interactiveResult, setInteractiveResult] = useState<boolean | null>(null) // Track if interactive card was answered correctly
   const [showHelp, setShowHelp] = useState(false)
+  const [difficultyFeedbackGiven, setDifficultyFeedbackGiven] = useState(false)
 
   // Stats
   const [stats, setStats] = useState<PracticeStats>({
@@ -361,6 +364,7 @@ export default function PracticePage() {
         setCurrentIndex(prev => prev + 1)
         setIsAnswerShown(false)
         setInteractiveResult(null)
+        setDifficultyFeedbackGiven(false)
         cardStartTimeRef.current = Date.now()
       } else {
         // End study session when practice completes
@@ -385,6 +389,28 @@ export default function PracticePage() {
   }
 
   // ==========================================================================
+  // Difficulty feedback
+  // ==========================================================================
+
+  const handleDifficultyFeedback = async (feedback: 'too_easy' | 'too_hard') => {
+    if (difficultyFeedbackGiven || !cards[currentIndex]) return
+    setDifficultyFeedbackGiven(true)
+
+    try {
+      await fetch('/api/adaptive/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          feedback,
+          session_id: sessionIdRef.current,
+        }),
+      })
+    } catch {
+      // Non-critical
+    }
+  }
+
+  // ==========================================================================
   // Computed values
   // ==========================================================================
 
@@ -403,7 +429,7 @@ export default function PracticePage() {
 
   // Check if card is an interactive type (handled by its own component)
   const isInteractiveCard = (card: PracticeCard): boolean => {
-    return ['multiple_choice', 'true_false', 'fill_blank', 'matching', 'sequence', 'short_answer'].includes(card.card_type)
+    return ['multiple_choice', 'true_false', 'fill_blank', 'matching', 'sequence', 'short_answer', 'multi_select'].includes(card.card_type)
   }
 
   const courseStatsArray = useMemo(() => {
@@ -876,7 +902,7 @@ export default function PracticePage() {
 
       {/* Card */}
       <div className="flex-1 flex items-center justify-center py-4">
-        <div className="w-full max-w-2xl px-4">
+        <div className="w-full max-w-2xl px-4" key={currentCard.id}>
           {/* Render appropriate card type */}
           {(() => {
             const cardData = parseCardBack(currentCard)
@@ -947,6 +973,21 @@ export default function PracticePage() {
                     instruction={currentCard.front}
                     items={cardData.items}
                     correctOrder={cardData.correctOrder}
+                    onAnswer={handleInteractiveAnswer}
+                  />
+                )
+              }
+            }
+
+            // Multi-Select (select all that apply)
+            if (cardType === 'multi_select') {
+              if (isMultiSelect(cardData)) {
+                return (
+                  <MultiSelect
+                    question={currentCard.front}
+                    options={cardData.options}
+                    correctIndices={cardData.correctIndices}
+                    explanation={cardData.explanation}
                     onAnswer={handleInteractiveAnswer}
                   />
                 )
@@ -1092,6 +1133,9 @@ export default function PracticePage() {
           // Interactive card not yet answered - no buttons (component handles it)
           return null
         })()}
+        {currentIndex >= 2 && (isAnswerShown || interactiveResult !== null) && (
+          <DifficultyFeedback onFeedback={handleDifficultyFeedback} namespace="practice" />
+        )}
         </div>
       </div>
 

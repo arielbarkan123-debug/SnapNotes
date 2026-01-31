@@ -26,14 +26,24 @@ import type {
 // Re-export config for use in this module
 const CONFIG = {
   targetSuccessRate: 0.75,
-  adjustmentStep: 0.3,
-  streakBonus: 0.1,
+  adjustmentStep: 0.4,
+  streakBonus: 0.25,
   minDifficulty: 1,
   maxDifficulty: 5,
-  streakThreshold: 3,
-  successRateHigh: 0.85,
+  streakThreshold: 2,
+  successRateHigh: 0.80,
   successRateLow: 0.65,
 } as const
+
+// Bloom's Taxonomy bonus for question scoring (biases toward higher cognitive levels)
+const BLOOM_BONUS: Record<string, number> = {
+  remember: 0,
+  understand: 3,
+  apply: 6,
+  analyze: 10,
+  evaluate: 13,
+  create: 15,
+}
 
 // =============================================================================
 // Core Selection Functions
@@ -69,6 +79,9 @@ export function calculateTargetDifficulty(state: UserPerformanceState): Difficul
     }
   }
 
+  // Apply difficulty floor
+  targetDifficulty = Math.max(targetDifficulty, state.difficulty_floor || 1)
+
   // Clamp to valid range
   targetDifficulty = Math.max(CONFIG.minDifficulty, Math.min(CONFIG.maxDifficulty, targetDifficulty))
 
@@ -88,7 +101,8 @@ export function scoreQuestion(
   question: QuestionWithDifficulty,
   targetDifficulty: number,
   weakConceptIds: string[] = [],
-  lastCognitiveLevel?: string
+  lastCognitiveLevel?: string,
+  weakConcepts?: { id: string; mastery: number }[]
 ): number {
   let score = 0
 
@@ -98,10 +112,18 @@ export function scoreQuestion(
   const difficultyGap = Math.abs(difficulty - targetDifficulty)
   score += (1 - difficultyGap / 4) * 50
 
-  // 2. Concept priority (0-30 points)
-  // Questions testing weak concepts get bonus
-  if (question.conceptId && weakConceptIds.includes(question.conceptId)) {
-    score += 30
+  // 2. Concept priority (0-50 points) — weak concepts get strong bonus
+  if (question.conceptId) {
+    // Check for detailed weakness data first
+    const weakConcept = weakConcepts?.find(wc => wc.id === question.conceptId)
+    if (weakConcept) {
+      // Base bonus + severity bonus based on how low mastery is
+      score += 50
+      score += 20 * (1 - weakConcept.mastery) // 0-20 points: lower mastery = higher score
+    } else if (weakConceptIds.includes(question.conceptId)) {
+      // Fallback to simple weak concept bonus
+      score += 50
+    }
   }
 
   // 3. Variety bonus (0-10 points)
@@ -126,6 +148,11 @@ export function scoreQuestion(
     score += Math.max(0, 5 - question.timesShown)
   }
 
+  // 6. Bloom's taxonomy bonus (0-15 points) — biases toward higher cognitive levels
+  if (question.cognitiveLevel) {
+    score += BLOOM_BONUS[question.cognitiveLevel] || 0
+  }
+
   return score
 }
 
@@ -138,14 +165,15 @@ export function selectQuestions(
   targetDifficulty: number,
   weakConceptIds: string[] = [],
   lastCognitiveLevel?: string,
-  count: number = 1
+  count: number = 1,
+  weakConcepts?: { id: string; mastery: number }[]
 ): ScoredQuestion[] {
   // Score all questions
   const scored = questions.map(q => ({
     questionId: q.id,
-    score: scoreQuestion(q, targetDifficulty, weakConceptIds, lastCognitiveLevel),
+    score: scoreQuestion(q, targetDifficulty, weakConceptIds, lastCognitiveLevel, weakConcepts),
     difficultyMatch: (1 - Math.abs((q.empiricalDifficulty ?? q.difficulty) - targetDifficulty) / 4) * 50,
-    conceptPriority: (q.conceptId && weakConceptIds.includes(q.conceptId)) ? 30 : 0,
+    conceptPriority: (q.conceptId && weakConceptIds.includes(q.conceptId)) ? 50 : 0,
     varietyBonus: (q.cognitiveLevel && q.cognitiveLevel !== lastCognitiveLevel) ? 10 : 0,
   }))
 
@@ -233,6 +261,7 @@ export async function getOrCreatePerformanceState(
       last_cognitive_level: null,
       questions_answered: 0,
       session_start: null,
+      difficulty_floor: 1.0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
@@ -247,7 +276,7 @@ export async function getOrCreatePerformanceState(
 export async function selectAdaptiveQuestions(
   options: QuestionSelectionOptions
 ): Promise<ScoredQuestion[]> {
-  const { userId, courseId, availableQuestionIds, weakConceptIds, excludeQuestionIds, count = 1 } = options
+  const { userId, courseId, availableQuestionIds, weakConceptIds, weakConcepts, excludeQuestionIds, count = 1 } = options
 
   const supabase = await createClient()
 
@@ -283,31 +312,35 @@ export async function selectAdaptiveQuestions(
     }
   })
 
+  // Resolve weak concept IDs (backward compat: convert weakConceptIds to weakConcepts if needed)
+  const resolvedWeakConceptIds = weakConceptIds || weakConcepts?.map(wc => wc.id) || []
+
   // Select questions
   return selectQuestions(
     questions,
     targetDifficulty,
-    weakConceptIds || [],
+    resolvedWeakConceptIds,
     state.last_cognitive_level || undefined,
-    count
+    count,
+    weakConcepts
   )
 }
 
 /**
- * Get weak concept IDs for a user in a course
+ * Get weak concepts with mastery levels for a user
  */
-export async function getWeakConceptIds(
+export async function getWeakConcepts(
   userId: string,
   _courseId?: string
-): Promise<string[]> {
+): Promise<{ id: string; mastery: number }[]> {
   const supabase = await createClient()
 
-  // Get concepts with low mastery or active gaps
+  // Get concepts with low mastery (threshold 0.6 to catch borderline concepts)
   const { data: weakMastery } = await supabase
     .from('user_concept_mastery')
-    .select('concept_id')
+    .select('concept_id, mastery_level')
     .eq('user_id', userId)
-    .lt('mastery_level', 0.5)
+    .lt('mastery_level', 0.6)
 
   const { data: activeGaps } = await supabase
     .from('user_knowledge_gaps')
@@ -315,12 +348,28 @@ export async function getWeakConceptIds(
     .eq('user_id', userId)
     .eq('resolved', false)
 
-  const weakConceptIds = new Set<string>()
+  const conceptMap = new Map<string, number>()
 
-  weakMastery?.forEach(m => weakConceptIds.add(m.concept_id))
-  activeGaps?.forEach(g => weakConceptIds.add(g.concept_id))
+  weakMastery?.forEach(m => conceptMap.set(m.concept_id, m.mastery_level))
+  // Active gaps that aren't already in mastery data get low mastery
+  activeGaps?.forEach(g => {
+    if (!conceptMap.has(g.concept_id)) {
+      conceptMap.set(g.concept_id, 0.1)
+    }
+  })
 
-  return Array.from(weakConceptIds)
+  return Array.from(conceptMap.entries()).map(([id, mastery]) => ({ id, mastery }))
+}
+
+/**
+ * Get weak concept IDs for a user (backward-compatible wrapper)
+ */
+export async function getWeakConceptIds(
+  userId: string,
+  courseId?: string
+): Promise<string[]> {
+  const weakConcepts = await getWeakConcepts(userId, courseId)
+  return weakConcepts.map(wc => wc.id)
 }
 
 // =============================================================================
@@ -333,6 +382,7 @@ const questionSelector = {
   selectQuestions,
   getOrCreatePerformanceState,
   selectAdaptiveQuestions,
+  getWeakConcepts,
   getWeakConceptIds,
 }
 

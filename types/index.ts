@@ -33,6 +33,7 @@ export interface IntensityConfig {
   practiceProblemsTarget: number
   masteryThreshold: number // 0-1, accuracy needed to complete (e.g., 0.85 = 85%)
   allowRetryUntilMastery: boolean
+  defaultDepth?: 'surface' | 'standard' | 'deep' | 'exhaustive'
 }
 
 /**

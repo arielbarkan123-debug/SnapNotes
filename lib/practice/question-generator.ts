@@ -31,6 +31,7 @@ const QUESTION_TYPE_DESCRIPTIONS: Record<PracticeQuestionType, string> = {
   matching: 'Match items from two columns',
   sequence: 'Put items in correct order',
   image_label: 'Label parts of a diagram or image (requires image_label_data with labels and positions)',
+  multi_select: '4-6 options where multiple answers may be correct. Student must select ALL correct answers.',
 }
 
 const COGNITIVE_LEVEL_DESCRIPTIONS: Record<CognitiveLevel, string> = {
@@ -138,6 +139,40 @@ function selectAgeAppropriateQuestionTypes(
   return ['multiple_choice', 'true_false', 'fill_blank']
 }
 
+/**
+ * Get Bloom's taxonomy weight distribution for question generation prompts
+ */
+function getBloomWeights(educationLevel?: string): string {
+  if (!educationLevel) return ''
+
+  const config = getAgeGroupConfig(educationLevel)
+  const weights: Record<string, string> = {
+    elementary: 'remember 30%, understand 30%, apply 25%, analyze 15%',
+    middle_school: 'remember 15%, understand 20%, apply 25%, analyze 25%, evaluate 15%',
+    high_school: 'remember 10%, understand 15%, apply 20%, analyze 25%, evaluate 20%, create 10%',
+    university: 'remember 10%, understand 15%, apply 20%, analyze 25%, evaluate 20%, create 10%',
+    professional: 'remember 10%, understand 15%, apply 20%, analyze 25%, evaluate 20%, create 10%',
+  }
+
+  return weights[config.id] || ''
+}
+
+export type ContentDepth = 'surface' | 'standard' | 'deep' | 'exhaustive'
+
+function buildDepthInstructions(depth: ContentDepth): string {
+  switch (depth) {
+    case 'surface':
+      return '\n## Content Depth: Surface\nCover only essentials, skip edge cases.\n'
+    case 'deep':
+      return '\n## Content Depth: Deep\nInclude edge cases, pitfalls, misconceptions, non-obvious examples.\n'
+    case 'exhaustive':
+      return '\n## Content Depth: Exhaustive\nALL edge cases, exceptions, trick scenarios, counter-examples, historical context, derivations.\n'
+    case 'standard':
+    default:
+      return ''
+  }
+}
+
 function buildGenerationPrompt(
   courseContent: string,
   concepts: { name: string; description: string }[],
@@ -170,6 +205,7 @@ function buildGenerationPrompt(
 
   // Add age-specific instructions
   const ageInstructions = buildAgeSpecificQuestionInstructions(request.educationLevel)
+  const bloomWeights = getBloomWeights(request.educationLevel)
 
   return `You are an expert educational content creator. Generate ${request.count} practice questions based on the following course content.${ageInstructions}
 
@@ -181,7 +217,7 @@ ${conceptList}
 
 ## Difficulty:
 ${difficultyGuidance}
-
+${request.depth ? buildDepthInstructions(request.depth) : ''}
 ## Cognitive Levels (Bloom's Taxonomy):
 ${Object.entries(COGNITIVE_LEVEL_DESCRIPTIONS)
   .map(([level, desc]) => `- ${level}: ${desc}`)
@@ -195,7 +231,7 @@ ${courseContent}
 2. Multiple choice options should include plausible distractors
 3. Explanations should help students understand WHY the answer is correct
 4. Tag each question with relevant topics
-5. Distribute questions across different cognitive levels
+5. ${bloomWeights ? `Distribute questions across cognitive levels with these weights: ${bloomWeights}` : 'Distribute questions across different cognitive levels'}
 6. For fill_blank: use underscores for the blank (e.g., "The process of _____ converts...")
 7. For matching/sequence: provide clear items that can be matched/ordered
 
@@ -241,6 +277,25 @@ Return a JSON array of questions:
     "cognitive_level": "remember",
     "concept_name": "Glycolysis",
     "tags": ["biology", "cellular-respiration", "metabolism"]
+  },
+  {
+    "question_type": "multi_select",
+    "question_text": "Which of the following are organelles found in animal cells? (Select all that apply)",
+    "options": {
+      "choices": [
+        {"label": "A", "value": "Mitochondria"},
+        {"label": "B", "value": "Cell wall"},
+        {"label": "C", "value": "Endoplasmic reticulum"},
+        {"label": "D", "value": "Chloroplast"},
+        {"label": "E", "value": "Golgi apparatus"}
+      ]
+    },
+    "correct_answer": "A,C,E",
+    "explanation": "Animal cells contain mitochondria, endoplasmic reticulum, and Golgi apparatus. Cell walls and chloroplasts are found in plant cells.",
+    "difficulty_level": 3,
+    "cognitive_level": "remember",
+    "concept_name": "Cell Biology",
+    "tags": ["biology", "cell-organelles"]
   }
 ]
 

@@ -15,5 +15,8 @@
   "new": "חדשים",
   "review": "לחזרה",
   "estimatedTime": "זמן משוער: {minutes} דקות",
-  "startReview": "התחל חזרה"
+  "startReview": "התחל חזרה",
+  "tooEasy": "קל מדי",
+  "tooHard": "קשה מדי",
+  "feedbackThanks": "תודה, נתאים!"
 }

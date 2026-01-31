@@ -116,5 +116,14 @@
   "correctGreatPerseverance": "נכון! התמדה נהדרת!",
   "gotItOnAttempt": "הצלחת בניסיון #{attempt}. תרגול עושה מושלם!",
   "notQuiteTryAgain": "לא בדיוק - רוצה לנסות שוב?",
-  "takeAnotherLook": "תסתכל שוב על האפשרויות. אתה יכול!"
+  "takeAnotherLook": "תסתכל שוב על האפשרויות. אתה יכול!",
+  "tooEasy": "קל מדי",
+  "tooHard": "קשה מדי",
+  "feedbackThanks": "תודה, נתאים!",
+  "selectAllThatApply": "בחר את כל התשובות הנכונות",
+  "multiSelectHint": "ייתכן שיש יותר מתשובה נכונה אחת",
+  "selectedCount": "{count} נבחרו",
+  "missedCorrect": "פספסת {count} תשובות נכונות",
+  "missed": "פספסת",
+  "theCorrectAnswers": "התשובות הנכונות:"
 }

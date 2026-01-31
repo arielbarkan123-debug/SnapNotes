@@ -15,5 +15,8 @@
   "new": "New",
   "review": "Review",
   "estimatedTime": "Estimated time: {minutes} min",
-  "startReview": "Start Review"
+  "startReview": "Start Review",
+  "tooEasy": "Too Easy",
+  "tooHard": "Too Hard",
+  "feedbackThanks": "Thanks, we'll adjust!"
 }

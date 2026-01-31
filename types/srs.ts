@@ -17,6 +17,7 @@ export type CardType =
   | 'short_answer'
   | 'matching'
   | 'sequence'
+  | 'multi_select'
   // Legacy types (for backwards compatibility)
   | 'key_point'
   | 'formula'
@@ -81,6 +82,15 @@ export interface SequenceData {
 }
 
 /**
+ * Data for multi-select questions (select all that apply)
+ */
+export interface MultiSelectData {
+  options: string[]
+  correctIndices: number[]
+  explanation?: string
+}
+
+/**
  * Union type for all question data types
  */
 export type QuestionData =
@@ -89,6 +99,7 @@ export type QuestionData =
   | FillBlankData
   | MatchingData
   | SequenceData
+  | MultiSelectData
   | string // For simple flashcard/explanation types
 
 // -----------------------------------------------------------------------------
@@ -352,6 +363,27 @@ export function isSequence(data: QuestionData): data is SequenceData {
     'correctOrder' in data &&
     Array.isArray((data as SequenceData).items)
   )
+}
+
+/**
+ * Type guard to check if parsed data is MultiSelectData
+ */
+export function isMultiSelect(data: QuestionData): data is MultiSelectData {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'options' in data &&
+    'correctIndices' in data &&
+    Array.isArray((data as MultiSelectData).options) &&
+    Array.isArray((data as MultiSelectData).correctIndices)
+  )
+}
+
+/**
+ * Create JSON string for multi-select back field
+ */
+export function createMultiSelectBack(data: MultiSelectData): string {
+  return JSON.stringify(data)
 }
 
 /**

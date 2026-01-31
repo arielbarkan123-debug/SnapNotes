@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useToast } from '@/contexts/ToastContext'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
+import DifficultyFeedback from '@/components/shared/DifficultyFeedback'
 import type {
   PracticeSession,
   PracticeQuestion,
@@ -214,9 +215,11 @@ interface ResultCardProps {
   isCorrect: boolean
   userAnswer: string
   onNext: () => void
+  onDifficultyFeedback?: (feedback: 'too_easy' | 'too_hard') => void
+  questionIndex?: number
 }
 
-function ResultCard({ question, isCorrect, userAnswer, onNext }: ResultCardProps) {
+function ResultCard({ question, isCorrect, userAnswer, onNext, onDifficultyFeedback, questionIndex = 0 }: ResultCardProps) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
       {/* Result Badge */}
@@ -260,6 +263,11 @@ function ResultCard({ question, isCorrect, userAnswer, onNext }: ResultCardProps
           </h3>
           <p className="text-gray-600 dark:text-gray-400">{question.explanation}</p>
         </div>
+      )}
+
+      {/* Difficulty Feedback - only show after first 2 questions */}
+      {onDifficultyFeedback && questionIndex >= 2 && (
+        <DifficultyFeedback onFeedback={onDifficultyFeedback} namespace="practice" />
       )}
 
       {/* Next Button */}
@@ -388,6 +396,22 @@ export default function PracticeSessionContent({
       setView('complete')
     }
   }, [session.status, currentIndex, questions.length])
+
+  const handleDifficultyFeedback = useCallback(async (feedback: 'too_easy' | 'too_hard') => {
+    try {
+      await fetch('/api/adaptive/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          feedback,
+          session_id: session.id,
+          question_id: currentQuestion?.id,
+        }),
+      })
+    } catch {
+      // Non-critical
+    }
+  }, [session.id, currentQuestion?.id])
 
   // Handle answer submission
   const handleAnswer = useCallback(
@@ -575,6 +599,8 @@ export default function PracticeSessionContent({
               answers.find((a) => a.question_index === currentIndex)?.user_answer || ''
             }
             onNext={handleNext}
+            onDifficultyFeedback={handleDifficultyFeedback}
+            questionIndex={currentIndex}
           />
         )}
       </div>

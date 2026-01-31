@@ -9,6 +9,7 @@ import {
   isFillBlank,
   isMatching,
   isSequence,
+  isMultiSelect,
 } from '@/types/srs'
 import MultipleChoice from '@/components/practice/MultipleChoice'
 import TrueFalse from '@/components/practice/TrueFalse'
@@ -16,6 +17,7 @@ import FillBlank from '@/components/practice/FillBlank'
 import ShortAnswer from '@/components/practice/ShortAnswer'
 import Matching from '@/components/practice/Matching'
 import Sequence from '@/components/practice/Sequence'
+import MultiSelect from '@/components/practice/MultiSelect'
 
 // =============================================================================
 // Types
@@ -41,6 +43,7 @@ const cardTypeConfig: Partial<Record<CardType, { label: string; color: string }>
   short_answer: { label: 'Short Answer', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
   matching: { label: 'Matching', color: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400' },
   sequence: { label: 'Sequence', color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' },
+  multi_select: { label: 'Multi-Select', color: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400' },
   // Legacy types
   key_point: { label: 'Key Point', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
   formula: { label: 'Formula', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
@@ -133,6 +136,21 @@ export default function ReviewCard({ card, onShowAnswer, isAnswerShown, onAnswer
           instruction={card.front}
           items={parsedBack.items}
           correctOrder={parsedBack.correctOrder}
+          onAnswer={handleInteractiveAnswer}
+        />
+      </div>
+    )
+  }
+
+  // Render multi-select card
+  if (card.card_type === 'multi_select' && isMultiSelect(parsedBack)) {
+    return (
+      <div className="w-full max-w-2xl mx-auto">
+        <MultiSelect
+          question={card.front}
+          options={parsedBack.options}
+          correctIndices={parsedBack.correctIndices}
+          explanation={parsedBack.explanation}
           onAnswer={handleInteractiveAnswer}
         />
       </div>

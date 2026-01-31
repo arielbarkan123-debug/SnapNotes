@@ -40,8 +40,8 @@ export const ADAPTIVE_CONFIG = {
   targetSuccessRate: 0.75,
 
   // How much to adjust difficulty after streaks
-  adjustmentStep: 0.3,
-  streakBonus: 0.1,
+  adjustmentStep: 0.4,
+  streakBonus: 0.15,
 
   // Difficulty bounds
   minDifficulty: 1,
@@ -57,8 +57,16 @@ export const ADAPTIVE_CONFIG = {
   streakThreshold: 3,
 
   // Success rate thresholds
-  successRateHigh: 0.85,  // Increase difficulty above this
+  successRateHigh: 0.80,  // Increase difficulty above this
   successRateLow: 0.65,   // Decrease difficulty below this
+
+  // Fast learner multiplier: when ability > 3.5 AND accuracy > 0.9
+  fastLearnerMultiplier: 1.5,
+
+  // Difficulty floor settings (prevents trivially easy questions)
+  floorRaiseThreshold: 0.90,  // Accuracy threshold to raise floor
+  floorRaiseStep: 0.5,        // How much to raise floor
+  floorMaximum: 3.0,          // Maximum floor value
 } as const
 
 // =============================================================================
@@ -100,6 +108,7 @@ export interface UserPerformanceState {
   last_cognitive_level: CognitiveLevel | null
   questions_answered: number
   session_start: string | null
+  difficulty_floor: number
   created_at: string
   updated_at: string
 }
@@ -155,6 +164,7 @@ export interface QuestionSelectionOptions {
   courseId?: string
   availableQuestionIds: string[]
   weakConceptIds?: string[]
+  weakConcepts?: { id: string; mastery: number }[]
   excludeQuestionIds?: string[]
   count?: number
 }
