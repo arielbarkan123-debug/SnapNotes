@@ -648,6 +648,7 @@ export default function LessonView({
                 key={currentStep}
                 step={currentStepData}
                 lessonTitle={lesson.title}
+                onRequestHelp={() => setShowHelp(true)}
               />
             )}
           </div>

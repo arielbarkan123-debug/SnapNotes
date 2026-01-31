@@ -119,6 +119,21 @@ const PracticeWidget = dynamic(
     </div>
   )}
 )
+// Lazy load StudyPlanWidget component
+const StudyPlanWidget = dynamic(
+  () => import('@/components/dashboard/StudyPlanWidget'),
+  { ssr: false }
+)
+// Lazy load QuickActions component
+const QuickActions = dynamic(
+  () => import('@/components/dashboard/QuickActions'),
+  { ssr: false }
+)
+// Lazy load OnboardingInsights component
+const OnboardingInsights = dynamic(
+  () => import('@/components/dashboard/OnboardingInsights'),
+  { ssr: false }
+)
 import { type Course } from '@/types'
 import { useCourses } from '@/hooks'
 import { useToast } from '@/contexts/ToastContext'
@@ -338,6 +353,11 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
           </LazySection>
         </SilentErrorBoundary>
 
+        {/* Study Plan Widget - shows today's study tasks or create CTA */}
+        <SilentErrorBoundary componentName="StudyPlanWidget">
+          <StudyPlanWidget />
+        </SilentErrorBoundary>
+
         {/* Knowledge Gaps Alert - shows identified knowledge gaps */}
         <SilentErrorBoundary componentName="GapAlert">
           <GapAlert className="mb-6" />
@@ -356,6 +376,16 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
             </div>
           </SilentErrorBoundary>
         )}
+
+        {/* Quick Actions */}
+        <SilentErrorBoundary componentName="QuickActions">
+          <QuickActions />
+        </SilentErrorBoundary>
+
+        {/* Onboarding Insights */}
+        <SilentErrorBoundary componentName="OnboardingInsights">
+          <OnboardingInsights />
+        </SilentErrorBoundary>
 
         {/* Search and Sort Bar - only show if there are courses */}
         {totalCount > 0 && (

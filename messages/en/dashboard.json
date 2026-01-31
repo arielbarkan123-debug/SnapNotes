@@ -75,6 +75,23 @@
     "deleteSuccess": "Course deleted successfully",
     "deleteFailed": "Failed to delete course"
   },
+  "quickActions": {
+    "continueLearning": "Continue Learning",
+    "continueLesson": "Lesson {index}: {title}",
+    "noCourseYet": "Create your first course",
+    "quickPractice": "Quick Practice",
+    "quickPracticeDesc": "10 questions, all courses",
+    "reviewCards": "Review Cards",
+    "cardsDue": "{count} cards due",
+    "allCaughtUp": "All caught up!"
+  },
+  "insights": {
+    "createFirstCourse": "Upload your first notebook to start learning!",
+    "cardsDueReminder": "You have {count} cards due — a quick review helps memory!",
+    "keepStreak": "Keep your {count}-day streak going!",
+    "checkStudyPlan": "Check your study plan for today's tasks",
+    "dismiss": "Dismiss"
+  },
   "curriculumSetup": {
     "completeProfile": "Complete your learning profile",
     "selectToPersonalize": "Select your {missing} to get personalized study materials tailored to your curriculum.",

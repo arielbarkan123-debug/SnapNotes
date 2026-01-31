@@ -18,5 +18,31 @@
   "startReview": "Start Review",
   "tooEasy": "Too Easy",
   "tooHard": "Too Hard",
-  "feedbackThanks": "Thanks, we'll adjust!"
+  "feedbackThanks": "Thanks, we'll adjust!",
+  "reviewMistakes": "Review Your Mistakes",
+  "mistakeCount": "{count} mistakes",
+  "yourAnswerLabel": "Your answer",
+  "correctAnswerLabel": "Correct answer",
+  "goToLesson": "Go to lesson",
+  "practiceWeakAreas": "Practice Weak Areas",
+  "noMistakes": "Perfect session! No mistakes to review.",
+  "explanationLabel": "Explanation",
+  "memoryStrength": {
+    "weak": "Weak",
+    "learning": "Learning",
+    "good": "Good",
+    "strong": "Strong Memory"
+  },
+  "nextReview": "Next review: {timeframe}",
+  "nextReviewDays": "in {count} days",
+  "nextReviewToday": "later today",
+  "nextReviewTomorrow": "tomorrow",
+  "forecast": {
+    "title": "Upcoming Reviews",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "thisWeek": "This week"
+  },
+  "howItWorks": "How spaced repetition works",
+  "srsExplainer": "Cards you find easy appear less often. Cards you struggle with appear more frequently. This is the most efficient way to memorize."
 }

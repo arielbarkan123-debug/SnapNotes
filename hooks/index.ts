@@ -88,3 +88,10 @@ export {
   PAST_EXAMS_CACHE_KEY,
   type UsePastExamTemplatesReturn,
 } from './usePastExamTemplates'
+
+// Study Plan
+export {
+  useStudyPlan,
+  STUDY_PLAN_CACHE_KEY,
+  type UseStudyPlanReturn,
+} from './useStudyPlan'

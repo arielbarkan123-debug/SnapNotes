@@ -16,9 +16,11 @@ const DiagramRenderer = dynamic(
 interface StepContentProps {
   step: Step
   lessonTitle: string
+  /** Callback to open contextual help for this step */
+  onRequestHelp?: () => void
 }
 
-export default function StepContent({ step, lessonTitle }: StepContentProps) {
+export default function StepContent({ step, lessonTitle, onRequestHelp }: StepContentProps) {
   const t = useTranslations('lesson')
   const imageProps = {
     imageUrl: step.imageUrl,
@@ -28,25 +30,45 @@ export default function StepContent({ step, lessonTitle }: StepContentProps) {
     imageCreditUrl: step.imageCreditUrl,
   }
 
+  // Help button for non-question content steps
+  const helpButton = onRequestHelp ? (
+    <HelpButton onClick={onRequestHelp} t={t} />
+  ) : null
+
   switch (step.type) {
     case 'explanation':
-      return <ExplanationStep content={step.content} t={t} {...imageProps} />
+      return <ExplanationStep content={step.content} t={t} {...imageProps} helpButton={helpButton} />
     case 'key_point':
-      return <KeyPointStep content={step.content} t={t} />
+      return <KeyPointStep content={step.content} t={t} helpButton={helpButton} />
     case 'formula':
-      return <FormulaStep content={step.content} explanation={step.explanation} t={t} />
+      return <FormulaStep content={step.content} explanation={step.explanation} t={t} helpButton={helpButton} />
     case 'diagram':
       return <DiagramStep content={step.content} t={t} diagramData={step.diagramData} {...imageProps} />
     case 'example':
-      return <ExampleStep content={step.content} t={t} {...imageProps} />
+      return <ExampleStep content={step.content} t={t} {...imageProps} helpButton={helpButton} />
     case 'summary':
       return <SummaryStep content={step.content} lessonTitle={lessonTitle} t={t} />
     case 'question':
       // Questions are handled separately in the parent component
       return null
     default:
-      return <ExplanationStep content={step.content} t={t} {...imageProps} />
+      return <ExplanationStep content={step.content} t={t} {...imageProps} helpButton={helpButton} />
   }
+}
+
+function HelpButton({ onClick, t }: { onClick: () => void; t: ReturnType<typeof useTranslations<'lesson'>> }) {
+  return (
+    <button
+      onClick={onClick}
+      className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors z-10"
+      aria-label={t('getHelp')}
+      type="button"
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </button>
+  )
 }
 
 interface StepImageProps {
@@ -127,11 +149,13 @@ interface ImageStepProps {
   imageCredit?: string
   imageCreditUrl?: string
   t: ReturnType<typeof useTranslations<'lesson'>>
+  helpButton?: React.ReactNode
 }
 
-function ExplanationStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl, t }: ImageStepProps) {
+function ExplanationStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl, t, helpButton }: ImageStepProps) {
   return (
-    <div className="animate-fadeIn">
+    <div className="animate-fadeIn relative">
+      {helpButton}
       <p className="text-lg sm:text-xl text-gray-800 dark:text-gray-200 leading-relaxed">
         {content}
       </p>
@@ -143,11 +167,13 @@ function ExplanationStep({ content, imageUrl, imageAlt, imageCaption, imageCredi
 interface KeyPointStepProps {
   content: string
   t: ReturnType<typeof useTranslations<'lesson'>>
+  helpButton?: React.ReactNode
 }
 
-function KeyPointStep({ content, t }: KeyPointStepProps) {
+function KeyPointStep({ content, t, helpButton }: KeyPointStepProps) {
   return (
-    <div className="animate-fadeIn">
+    <div className="animate-fadeIn relative">
+      {helpButton}
       <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6">
         <div className="flex items-start gap-4">
           {/* Lightbulb icon */}
@@ -174,11 +200,13 @@ interface FormulaStepProps {
   content: string
   explanation?: string
   t: ReturnType<typeof useTranslations<'lesson'>>
+  helpButton?: React.ReactNode
 }
 
-function FormulaStep({ content, explanation, t }: FormulaStepProps) {
+function FormulaStep({ content, explanation, t, helpButton }: FormulaStepProps) {
   return (
-    <div className="animate-fadeIn space-y-4">
+    <div className="animate-fadeIn space-y-4 relative">
+      {helpButton}
       {/* Formula box */}
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-3">
@@ -318,9 +346,10 @@ function DiagramStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, i
   )
 }
 
-function ExampleStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl, t }: ImageStepProps) {
+function ExampleStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl, t, helpButton }: ImageStepProps) {
   return (
-    <div className="animate-fadeIn">
+    <div className="animate-fadeIn relative">
+      {helpButton}
       <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-3">
           <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

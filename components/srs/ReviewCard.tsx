@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import type { ReviewCard as ReviewCardType, CardType } from '@/types'
+import dynamic from 'next/dynamic'
+import type { ReviewCard as ReviewCardType, CardType, HelpContext } from '@/types'
+
+const HelpModal = dynamic(() => import('@/components/help/HelpModal'), { ssr: false })
 import {
   parseCardBack,
   isMultipleChoice,
@@ -57,8 +60,20 @@ const cardTypeConfig: Partial<Record<CardType, { label: string; color: string }>
 
 export default function ReviewCard({ card, onShowAnswer, isAnswerShown, onAnswer }: ReviewCardProps) {
   const [hasAnswered, setHasAnswered] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
 
   const typeConfig = cardTypeConfig[card.card_type] || cardTypeConfig.flashcard
+
+  // Build help context from available card data
+  const helpContext: HelpContext = {
+    courseId: card.course_id || '',
+    courseTitle: '',
+    lessonIndex: card.lesson_index ?? 0,
+    lessonTitle: `Lesson ${(card.lesson_index ?? 0) + 1}`,
+    stepIndex: card.step_index ?? 0,
+    stepContent: card.front || '',
+    stepType: card.card_type || 'flashcard',
+  }
 
   // Parse the card back for interactive types
   const parsedBack = parseCardBack(card)
@@ -181,9 +196,21 @@ export default function ReviewCard({ card, onShowAnswer, isAnswerShown, onAnswer
           <span className={`px-3 py-1 rounded-full text-xs font-medium ${typeConfig?.color || ''}`}>
             {typeConfig?.label || 'Card'}
           </span>
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            Lesson {card.lesson_index + 1}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              Lesson {card.lesson_index + 1}
+            </span>
+            <button
+              onClick={() => setShowHelp(true)}
+              className="p-1.5 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              aria-label="Get help"
+              type="button"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Card Content */}
@@ -229,6 +256,13 @@ export default function ReviewCard({ card, onShowAnswer, isAnswerShown, onAnswer
           </div>
         )}
       </div>
+
+      {/* Help Modal */}
+      <HelpModal
+        isOpen={showHelp}
+        onClose={() => setShowHelp(false)}
+        context={helpContext}
+      />
     </div>
   )
 }

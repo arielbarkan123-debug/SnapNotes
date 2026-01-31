@@ -17,6 +17,9 @@ import chat from './chat.json'
 import course from './course.json'
 import pastExams from './pastExams.json'
 import deepPractice from './deepPractice.json'
+import search from './search.json'
+import exportMessages from './export.json'
+import studyPlan from './studyPlan.json'
 
 const messages = {
   common,
@@ -38,6 +41,9 @@ const messages = {
   course,
   pastExams,
   deepPractice,
+  search,
+  export: exportMessages,
+  studyPlan,
 }
 
 export default messages

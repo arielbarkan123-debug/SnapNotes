@@ -1,0 +1,19 @@
+{
+  "placeholder": "Search across all your content...",
+  "noResults": "No results found for \"{query}\"",
+  "resultTypes": {
+    "course": "Course",
+    "review_card": "Review Card",
+    "homework": "Homework",
+    "practice": "Practice",
+    "exam": "Exam"
+  },
+  "recentSearches": "Recent Searches",
+  "searchingAI": "Searching with AI...",
+  "inLesson": "in {lessonTitle}",
+  "shortcut": "\u2318K",
+  "clearRecent": "Clear",
+  "close": "Close search",
+  "results": "{count} results",
+  "lesson": "Lesson {index}"
+}

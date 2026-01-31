@@ -18,5 +18,31 @@
   "startReview": "התחל חזרה",
   "tooEasy": "קל מדי",
   "tooHard": "קשה מדי",
-  "feedbackThanks": "תודה, נתאים!"
+  "feedbackThanks": "תודה, נתאים!",
+  "reviewMistakes": "סקור את הטעויות שלך",
+  "mistakeCount": "{count} טעויות",
+  "yourAnswerLabel": "התשובה שלך",
+  "correctAnswerLabel": "התשובה הנכונה",
+  "goToLesson": "עבור לשיעור",
+  "practiceWeakAreas": "תרגל נקודות חולשה",
+  "noMistakes": "מושלם! אין טעויות לסקירה.",
+  "explanationLabel": "הסבר",
+  "memoryStrength": {
+    "weak": "חלש",
+    "learning": "בלמידה",
+    "good": "טוב",
+    "strong": "זיכרון חזק"
+  },
+  "nextReview": "חזרה הבאה: {timeframe}",
+  "nextReviewDays": "בעוד {count} ימים",
+  "nextReviewToday": "מאוחר יותר היום",
+  "nextReviewTomorrow": "מחר",
+  "forecast": {
+    "title": "חזרות קרובות",
+    "today": "היום",
+    "tomorrow": "מחר",
+    "thisWeek": "השבוע"
+  },
+  "howItWorks": "איך חזרה מרווחת עובדת",
+  "srsExplainer": "כרטיסים שקלים לך מופיעים פחות. כרטיסים שקשים לך מופיעים בתדירות גבוהה יותר. זו הדרך היעילה ביותר לשינון."
 }

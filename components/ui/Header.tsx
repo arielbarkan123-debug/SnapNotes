@@ -2,9 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { useRouter, usePathname } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
+import { Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+
+const GlobalSearch = dynamic(() => import('@/components/search/GlobalSearch'), { ssr: false })
 
 interface HeaderProps {
   userEmail?: string
@@ -19,6 +23,7 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
   const currentLocale = useLocale()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
 
   const displayName = userName || userEmail?.split('@')[0] || 'User'
 
@@ -46,6 +51,18 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
       document.body.style.overflow = ''
     }
   }, [isMobileMenuOpen])
+
+  // Cmd+K / Ctrl+K keyboard shortcut for search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setIsSearchOpen(prev => !prev)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -98,6 +115,9 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
                 <NavLink href="/exams" active={isActive('/exams')}>
                   {t('nav.exams')}
                 </NavLink>
+                <NavLink href="/study-plan" active={isActive('/study-plan')}>
+                  {t('nav.studyPlan')}
+                </NavLink>
                 <NavLink href="/progress" active={isActive('/progress')}>
                   {t('nav.progress')}
                 </NavLink>
@@ -107,6 +127,14 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
                   </NavLink>
                 )}
               </nav>
+              <button
+                onClick={() => setIsSearchOpen(true)}
+                className="p-2 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                aria-label={t('nav.search')}
+                title={t('nav.search')}
+              >
+                <Search className="w-4 h-4" />
+              </button>
               <div className="h-6 w-px bg-gray-200 dark:bg-gray-700" />
               <button
                 onClick={toggleLanguage}
@@ -139,8 +167,15 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
               </button>
             </div>
 
-            {/* Mobile: Profile & Menu Button */}
+            {/* Mobile: Search, Profile & Menu Button */}
             <div className="flex md:hidden items-center gap-2">
+              <button
+                onClick={() => setIsSearchOpen(true)}
+                className="p-2 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400"
+                aria-label={t('nav.search')}
+              >
+                <Search className="w-5 h-5" />
+              </button>
               <Link
                 href="/profile"
                 className="p-2 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400"
@@ -215,6 +250,9 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
             <MobileNavLink href="/exams" icon={ExamIcon} active={isActive('/exams')}>
               {t('nav.exams')}
             </MobileNavLink>
+            <MobileNavLink href="/study-plan" icon={StudyPlanIcon} active={isActive('/study-plan')}>
+              {t('nav.studyPlan')}
+            </MobileNavLink>
             <MobileNavLink href="/progress" icon={ProgressIcon} active={isActive('/progress')}>
               {t('nav.progress')}
             </MobileNavLink>
@@ -266,12 +304,16 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
           <BottomNavLink href="/review" icon={ReviewIcon} label={t('nav.review')} active={isActive('/review')} />
           <BottomNavLink href="/practice" icon={PracticeIcon} label={t('nav.practice')} active={isActive('/practice')} />
           <BottomNavLink href="/exams" icon={ExamIcon} label={t('nav.exams')} active={isActive('/exams')} />
+          <BottomNavLink href="/study-plan" icon={StudyPlanIcon} label={t('nav.studyPlan')} active={isActive('/study-plan')} />
           <BottomNavLink href="/progress" icon={ProgressIcon} label={t('nav.progress')} active={isActive('/progress')} />
         </div>
       </nav>
 
       {/* Spacer for bottom nav on mobile - accounts for safe area */}
       <div className="h-14 xs:h-16 md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
+
+      {/* Global Search Overlay */}
+      <GlobalSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </>
   )
 }
@@ -389,6 +431,14 @@ function AdminIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    </svg>
+  )
+}
+
+function StudyPlanIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
     </svg>
   )
 }

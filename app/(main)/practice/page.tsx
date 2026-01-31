@@ -5,6 +5,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { useTranslations, useLocale } from 'next-intl'
 import type { HelpContext } from '@/types'
+import type { MistakeItem } from '@/components/practice/MistakeReview'
 import type { ReviewCard as ReviewCardType } from '@/types/srs'
 import { useCourses } from '@/hooks'
 import { useEventTracking } from '@/lib/analytics'
@@ -51,6 +52,9 @@ const MultiSelect = dynamic(() => import('@/components/practice/MultiSelect'))
 
 // Lazy load HelpModal - only loaded when user requests help
 const HelpModal = dynamic(() => import('@/components/help/HelpModal'), { ssr: false })
+
+// Lazy load MistakeReview - only loaded on session complete
+const MistakeReview = dynamic(() => import('@/components/practice/MistakeReview'), { ssr: false })
 
 // =============================================================================
 // Types
@@ -147,6 +151,7 @@ export default function PracticePage() {
   const [interactiveResult, setInteractiveResult] = useState<boolean | null>(null) // Track if interactive card was answered correctly
   const [showHelp, setShowHelp] = useState(false)
   const [difficultyFeedbackGiven, setDifficultyFeedbackGiven] = useState(false)
+  const [mistakes, setMistakes] = useState<MistakeItem[]>([])
 
   // Stats
   const [stats, setStats] = useState<PracticeStats>({
@@ -256,6 +261,7 @@ export default function PracticePage() {
       setCurrentIndex(0)
       setIsAnswerShown(false)
       setAnswers([])
+      setMistakes([])
       setInteractiveResult(null)
       setSessionState('practicing')
       cardStartTimeRef.current = Date.now()
@@ -327,6 +333,19 @@ export default function PracticePage() {
         wasCorrect,
       }
       setAnswers(prev => [...prev, answer])
+
+      // Track mistakes for review at end of session
+      if (!wasCorrect) {
+        setMistakes(prev => [...prev, {
+          question: currentCard.front,
+          userAnswer: '', // User's specific answer not tracked in flashcard mode
+          correctAnswer: currentCard.back,
+          courseId: currentCard.course_id,
+          lessonIndex: currentCard.lesson_index,
+          lessonTitle: currentCard.lessonTitle,
+          cardType: currentCard.card_type,
+        }])
+      }
 
       // Update stats
       setStats(prev => {
@@ -595,6 +614,13 @@ export default function PracticePage() {
               })}
             </div>
           </div>
+
+          {/* Mistake Review */}
+          {mistakes.length > 0 && (
+            <div className="mb-6">
+              <MistakeReview mistakes={mistakes} namespace="practice" />
+            </div>
+          )}
 
           {/* Actions */}
           <div className="space-y-3">

@@ -11,9 +11,13 @@ import DifficultyFeedback from '@/components/shared/DifficultyFeedback'
 import { useEventTracking } from '@/lib/analytics'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
 import type { Rating, ReviewSession } from '@/types'
+import type { MistakeItem } from '@/components/practice/MistakeReview'
 
 // Dynamic import - only loaded when review session completes
 const ReviewComplete = dynamic(() => import('@/components/srs/ReviewComplete'))
+const ReviewForecast = dynamic(() => import('@/components/srs/ReviewForecast'), { ssr: false })
+const SRSExplainer = dynamic(() => import('@/components/srs/SRSExplainer'), { ssr: false })
+const MemoryStrength = dynamic(() => import('@/components/srs/MemoryStrength'), { ssr: false })
 
 // =============================================================================
 // Types
@@ -48,6 +52,7 @@ export default function ReviewPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [interactiveResult, setInteractiveResult] = useState<boolean | null>(null) // Track if interactive card was answered correctly
   const [difficultyFeedbackGiven, setDifficultyFeedbackGiven] = useState(false)
+  const [mistakes, setMistakes] = useState<MistakeItem[]>([])
 
   // Stats tracking
   const [stats, setStats] = useState<SessionStats>({
@@ -103,6 +108,7 @@ export default function ReviewPage() {
     setIsAnswerShown(false)
     setDifficultyFeedbackGiven(false)
     setInteractiveResult(null)
+    setMistakes([])
     setStats({
       cardsReviewed: 0,
       correctCount: 0,
@@ -191,6 +197,18 @@ export default function ReviewPage() {
         againCount: rating === 1 ? prev.againCount + 1 : prev.againCount,
       }))
 
+      // Track mistakes for "Again" rated cards
+      if (rating === 1) {
+        setMistakes(prev => [...prev, {
+          question: currentCard.front,
+          userAnswer: '',
+          correctAnswer: currentCard.back,
+          courseId: currentCard.course_id,
+          lessonIndex: currentCard.lesson_index,
+          cardType: currentCard.card_type,
+        }])
+      }
+
       // Move to next card or complete
       if (currentIndex < session.cards.length - 1) {
         setCurrentIndex((prev) => prev + 1)
@@ -247,6 +265,7 @@ export default function ReviewPage() {
         timeSpentMs={Date.now() - stats.startTime}
         correctCount={stats.correctCount}
         againCount={stats.againCount}
+        mistakes={mistakes}
       />
     )
   }
@@ -299,7 +318,9 @@ export default function ReviewPage() {
           <span className="text-sm text-gray-600 dark:text-gray-400">
             {t('cardProgress', { current: currentIndex + 1, total: session?.cards.length || 0 })}
           </span>
-          <div className="w-10" /> {/* Spacer for alignment */}
+          <div className="w-10 flex justify-end">
+            {currentCard && <MemoryStrength stability={currentCard.stability} />}
+          </div>
         </div>
 
         {/* Progress bar */}
@@ -441,9 +462,12 @@ function StartScreen({ session, error, onStart, onRefresh, t }: StartScreenProps
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             {t('dailyReview')}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {t('subtitle')}
-          </p>
+          <div className="flex items-center justify-center gap-1 mt-1">
+            <p className="text-gray-600 dark:text-gray-400">
+              {t('subtitle')}
+            </p>
+            <SRSExplainer />
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -483,6 +507,13 @@ function StartScreen({ session, error, onStart, onRefresh, t }: StartScreenProps
             {t('estimatedTime', { minutes: estimatedMinutes })}
           </span>
         </div>
+
+        {/* Review Forecast */}
+        {session && session.cards.length > 0 && (
+          <div className="mb-8">
+            <ReviewForecast cards={session.cards} />
+          </div>
+        )}
 
         {/* Start Button */}
         <button

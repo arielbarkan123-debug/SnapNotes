@@ -26,5 +26,22 @@
     "yourApproach": "הגישה שלך",
     "correctApproach": "הגישה הנכונה",
     "commonMistake": "טעות נפוצה"
+  },
+  "annotations": {
+    "addNote": "הערה",
+    "notePlaceholder": "הוסף הערה על שלב זה...",
+    "confusing": "מבלבל",
+    "important": "חשוב",
+    "save": "שמור",
+    "saved": "נשמר",
+    "cancel": "ביטול"
+  },
+  "lessonNotes": {
+    "title": "ההערות שלי",
+    "noNotes": "אין הערות לשיעור זה עדיין.",
+    "addNote": "הוסף הערה לשיעור...",
+    "stepRef": "שלב {index}",
+    "lessonLevel": "הערת שיעור",
+    "add": "הוסף"
   }
 }

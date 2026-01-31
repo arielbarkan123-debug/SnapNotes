@@ -45,7 +45,10 @@ export function LongDivisionDiagram({
   language = 'en',
   showStepCounter = true,
 }: LongDivisionDiagramProps) {
-  const { dividend, divisor, quotient, remainder, steps, title } = data
+  const { dividend, divisor, quotient, remainder, steps: rawSteps, title } = data
+
+  // Guard against undefined steps array
+  const steps = rawSteps ?? []
 
   const dividendStr = dividend.toString()
   const divisorStr = divisor.toString()
@@ -67,9 +70,59 @@ export function LongDivisionDiagram({
   }, [steps, currentStep])
 
   // Check if current step is a bring-down step (to show arrow only during that step)
-  const currentStepData = steps[currentStep]
-  const isBringDownStep = currentStepData?.type === 'bring_down'
-  const bringDownPosition = isBringDownStep ? currentStepData.position : -1
+  // Check multiple sources since data can come from different places
+  // BUG FIX: Use steps.find() instead of steps[currentStep] because step.step !== array index
+  const currentStepData = steps.find(s => s.step === currentStep)
+
+  // Gather all possible label sources
+  const stepLabel = stepConfig?.[currentStep]?.stepLabel || ''
+  const stepExplanation = currentStepData?.explanation || ''
+  const allLabels = `${stepLabel} ${stepExplanation}`.toLowerCase()
+
+  // Check type OR any label containing "bring down"
+  const isBringDownStep = currentStepData?.type === 'bring_down' ||
+    allLabels.includes('bring down')
+
+  // For position detection, use whichever label has content
+  const currentStepLabel = stepLabel || stepExplanation
+
+  // Get position from step data, or infer from visible state
+  const getBringDownPosition = (): number => {
+    // First try to get from step data directly
+    if (currentStepData?.type === 'bring_down' && currentStepData.position !== undefined) {
+      return currentStepData.position
+    }
+
+    if (!isBringDownStep) return -1
+
+    // Try to parse from label (e.g., "Bring down 3 to get 13")
+    const match = currentStepLabel.match(/bring down (\d)/i)
+    if (match) {
+      const digit = match[1]
+      // Find position of this digit in dividend (from position 1 onwards)
+      for (let i = 1; i < dividendStr.length; i++) {
+        if (dividendStr[i] === digit) {
+          return i
+        }
+      }
+    }
+
+    // Fallback: find the latest bring-down row in visibleSteps
+    for (let i = visibleSteps.length - 1; i >= 0; i--) {
+      const step = visibleSteps[i]
+      if (step.type === 'bring_down' && step.position !== undefined) {
+        return step.position
+      }
+    }
+
+    // Last resort: check current position from any visible step
+    if (currentStepData?.position !== undefined) {
+      return currentStepData.position
+    }
+
+    return dividendStr.length - 1 // Default to last digit
+  }
+  const bringDownPosition = getBringDownPosition()
 
   // Build quotient digits progressively
   const quotientDigits = useMemo(() => {
@@ -404,7 +457,12 @@ export function LongDivisionDiagram({
 
             {/* Work rows - use same flex+spacer pattern as dividend for exact alignment */}
             <div className="relative">
-              {workRows.map((row, rowIndex) => (
+              {workRows.map((row, rowIndex) => {
+                // Check if next row has bring_down - if so, skip showing difference (it's incorporated into workingNumber)
+                const nextRow = workRows[rowIndex + 1]
+                const skipDifference = nextRow?.showBringDown && nextRow?.workingNumber !== undefined
+
+                return (
                 <div key={rowIndex}>
                   {/* Product line (subtraction) */}
                   {row.showProduct && row.product !== undefined && (
@@ -470,8 +528,8 @@ export function LongDivisionDiagram({
                     </div>
                   )}
 
-                  {/* Difference (result after subtraction) */}
-                  {row.showDifference && row.difference !== undefined && (
+                  {/* Difference (result after subtraction) - skip if next row has bring_down */}
+                  {row.showDifference && row.difference !== undefined && !skipDifference && (
                     <div
                       className="flex transition-all duration-300"
                       style={{
@@ -547,7 +605,8 @@ export function LongDivisionDiagram({
                     </div>
                   )}
                 </div>
-              ))}
+                )
+              })}
 
               {/* Final remainder with line */}
               {isComplete && (

@@ -75,6 +75,23 @@
     "deleteSuccess": "הקורס נמחק בהצלחה",
     "deleteFailed": "מחיקת הקורס נכשלה"
   },
+  "quickActions": {
+    "continueLearning": "המשך ללמוד",
+    "continueLesson": "שיעור {index}: {title}",
+    "noCourseYet": "צור את הקורס הראשון שלך",
+    "quickPractice": "תרגול מהיר",
+    "quickPracticeDesc": "10 שאלות, כל הקורסים",
+    "reviewCards": "כרטיסי חזרה",
+    "cardsDue": "{count} כרטיסים לחזרה",
+    "allCaughtUp": "הכל מעודכן!"
+  },
+  "insights": {
+    "createFirstCourse": "העלה את המחברת הראשונה שלך כדי להתחיל ללמוד!",
+    "cardsDueReminder": "יש לך {count} כרטיסים לחזרה — חזרה מהירה עוזרת לזיכרון!",
+    "keepStreak": "שמור על הרצף של {count} ימים!",
+    "checkStudyPlan": "בדוק את תוכנית הלימודים שלך למשימות היום",
+    "dismiss": "סגור"
+  },
   "curriculumSetup": {
     "completeProfile": "השלם את פרופיל הלמידה שלך",
     "selectToPersonalize": "בחר את {missing} שלך כדי לקבל חומרי לימוד מותאמים אישית לתוכנית הלימודים שלך.",

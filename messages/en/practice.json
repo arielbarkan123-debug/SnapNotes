@@ -125,5 +125,13 @@
   "selectedCount": "{count} selected",
   "missedCorrect": "You missed {count} correct answer(s)",
   "missed": "Missed",
-  "theCorrectAnswers": "The correct answers:"
+  "theCorrectAnswers": "The correct answers:",
+  "reviewMistakes": "Review Your Mistakes",
+  "mistakeCount": "{count} mistakes",
+  "yourAnswerLabel": "Your answer",
+  "correctAnswerLabel": "Correct answer",
+  "goToLesson": "Go to lesson",
+  "practiceWeakAreas": "Practice Weak Areas",
+  "noMistakes": "Perfect session! No mistakes to review.",
+  "explanationLabel": "Explanation"
 }

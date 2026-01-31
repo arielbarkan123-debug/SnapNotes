@@ -1,0 +1,7 @@
+{
+  "exportPDF": "Export as PDF",
+  "shareResults": "Share Results",
+  "generating": "Generating...",
+  "copied": "Results copied to clipboard!",
+  "shareText": "I scored {accuracy}% on NoteSnap practice!"
+}

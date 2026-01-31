@@ -1,0 +1,19 @@
+{
+  "placeholder": "חפש בכל התוכן שלך...",
+  "noResults": "לא נמצאו תוצאות עבור \"{query}\"",
+  "resultTypes": {
+    "course": "קורס",
+    "review_card": "כרטיס חזרה",
+    "homework": "שיעורי בית",
+    "practice": "תרגול",
+    "exam": "מבחן"
+  },
+  "recentSearches": "חיפושים אחרונים",
+  "searchingAI": "מחפש עם בינה מלאכותית...",
+  "inLesson": "ב{lessonTitle}",
+  "shortcut": "\u2318K",
+  "clearRecent": "נקה",
+  "close": "סגור חיפוש",
+  "results": "{count} תוצאות",
+  "lesson": "שיעור {index}"
+}

@@ -125,5 +125,13 @@
   "selectedCount": "{count} נבחרו",
   "missedCorrect": "פספסת {count} תשובות נכונות",
   "missed": "פספסת",
-  "theCorrectAnswers": "התשובות הנכונות:"
+  "theCorrectAnswers": "התשובות הנכונות:",
+  "reviewMistakes": "סקור את הטעויות שלך",
+  "mistakeCount": "{count} טעויות",
+  "yourAnswerLabel": "התשובה שלך",
+  "correctAnswerLabel": "התשובה הנכונה",
+  "goToLesson": "עבור לשיעור",
+  "practiceWeakAreas": "תרגל נקודות חולשה",
+  "noMistakes": "מושלם! אין טעויות לסקירה.",
+  "explanationLabel": "הסבר"
 }

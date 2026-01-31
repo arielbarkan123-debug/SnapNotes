@@ -300,6 +300,13 @@ export default function LongDivisionWorkspace({
                 )
               }
               if (step.type === 'subtract') {
+                // Skip showing difference if next step is a completed bring_down (value already includes it)
+                const nextStep = steps[index + 1]
+                if (nextStep?.type === 'bring_down' && (nextStep.status === 'correct' || nextStep.status === 'incorrect')) {
+                  // Don't render - the bring_down value already includes this difference
+                  return null
+                }
+
                 return (
                   <div key={index} className="border-t border-gray-400 pt-1">
                     <span className={step.status === 'correct' ? 'text-green-600' : 'text-red-500'}>
@@ -310,7 +317,7 @@ export default function LongDivisionWorkspace({
               }
               if (step.type === 'bring_down') {
                 return (
-                  <div key={index} className="text-blue-600 dark:text-blue-400">
+                  <div key={index} className="border-t border-gray-400 pt-1 text-blue-600 dark:text-blue-400">
                     {step.value}
                   </div>
                 )

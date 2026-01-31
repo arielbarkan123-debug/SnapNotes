@@ -26,5 +26,22 @@
     "yourApproach": "Your approach",
     "correctApproach": "Correct approach",
     "commonMistake": "Common Mistake"
+  },
+  "annotations": {
+    "addNote": "Note",
+    "notePlaceholder": "Add a note about this step...",
+    "confusing": "Confusing",
+    "important": "Important",
+    "save": "Save",
+    "saved": "Saved",
+    "cancel": "Cancel"
+  },
+  "lessonNotes": {
+    "title": "My Notes",
+    "noNotes": "No notes for this lesson yet.",
+    "addNote": "Add a note for this lesson...",
+    "stepRef": "Step {index}",
+    "lessonLevel": "Lesson note",
+    "add": "Add"
   }
 }

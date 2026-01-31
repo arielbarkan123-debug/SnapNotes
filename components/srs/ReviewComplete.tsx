@@ -2,8 +2,12 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { useXP } from '@/contexts/XPContext'
 import { SessionReflection } from '@/components/reflection'
+import type { MistakeItem } from '@/components/practice/MistakeReview'
+
+const MistakeReview = dynamic(() => import('@/components/practice/MistakeReview'), { ssr: false })
 
 // =============================================================================
 // Types
@@ -16,6 +20,8 @@ interface ReviewCompleteProps {
   againCount: number
   /** Rating counts: [again, hard, good, easy] */
   ratingCounts?: [number, number, number, number]
+  /** Mistakes from the session for review */
+  mistakes?: MistakeItem[]
 }
 
 // =============================================================================
@@ -28,6 +34,7 @@ export default function ReviewComplete({
   correctCount,
   againCount,
   ratingCounts = [0, 0, 0, 0],
+  mistakes = [],
 }: ReviewCompleteProps) {
   const [totalXpEarned, setTotalXpEarned] = useState(0)
   const [streakInfo, setStreakInfo] = useState<{ current: number; maintained: boolean } | null>(null)
@@ -231,6 +238,13 @@ export default function ReviewComplete({
             <p className="text-orange-600/80 dark:text-orange-400/80 text-sm mt-1">
               {streakInfo.maintained ? 'Keep it going!' : 'Streak maintained!'}
             </p>
+          </div>
+        )}
+
+        {/* Mistake Review */}
+        {mistakes.length > 0 && (
+          <div className="mb-4">
+            <MistakeReview mistakes={mistakes} namespace="review" />
           </div>
         )}
 
