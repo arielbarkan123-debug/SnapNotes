@@ -20,7 +20,7 @@
   "todaysTasks": "המשימות של היום",
   "noTasksToday": "אין משימות מתוכננות להיום",
   "upcomingTasks": "משימות קרובות",
-  "calendar": "לוח שנה",
+  "calendarTitle": "לוח שנה",
   "insights": "תובנות",
   "recalculate": "חשב מחדש",
   "recalculating": "מחשב מחדש...",
@@ -69,7 +69,9 @@
     "planCreated": "תוכנית הלימודים נוצרה בהצלחה!",
     "back": "חזרה",
     "next": "הבא",
-    "lessonsCount": "{count} שיעורים"
+    "lessonsCount": "{count} שיעורים",
+    "daysLeft": "{count} ימים נותרו",
+    "dayLeft": "יום אחד נותר"
   },
   "widget": {
     "title": "תוכנית לימודים",

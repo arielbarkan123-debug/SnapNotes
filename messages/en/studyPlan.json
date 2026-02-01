@@ -20,7 +20,7 @@
   "todaysTasks": "Today's Tasks",
   "noTasksToday": "No tasks scheduled for today",
   "upcomingTasks": "Upcoming Tasks",
-  "calendar": "Calendar",
+  "calendarTitle": "Calendar",
   "insights": "Insights",
   "recalculate": "Recalculate Plan",
   "recalculating": "Recalculating...",
@@ -69,7 +69,9 @@
     "planCreated": "Study plan created successfully!",
     "back": "Back",
     "next": "Next",
-    "lessonsCount": "{count} lessons"
+    "lessonsCount": "{count} lessons",
+    "daysLeft": "{count} days left",
+    "dayLeft": "1 day left"
   },
   "widget": {
     "title": "Study Plan",
