@@ -24,7 +24,7 @@ export default async function AdminLayout({
     .from('admin_users')
     .select('id, role')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   console.log('[Admin] Admin check result:', { adminUser, error })
 

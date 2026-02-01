@@ -36,7 +36,7 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
           .from('admin_users')
           .select('id')
           .eq('user_id', userId)
-          .single()
+          .maybeSingle()
 
         const adminStatus = !!adminUser
         setIsAdmin(adminStatus)

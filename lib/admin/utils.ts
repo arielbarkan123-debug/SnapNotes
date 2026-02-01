@@ -28,7 +28,7 @@ export async function checkAdminAccess(): Promise<{
     .from('admin_users')
     .select('id, role')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (adminError || !adminUser) {
     return {
