@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import useSWR from 'swr'
 import { useTranslations } from 'next-intl'
+import { SWRErrorState } from '@/components/ui/SWRErrorState'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -49,7 +50,7 @@ export function PracticeWidget() {
   const router = useRouter()
   const t = useTranslations('dashboard')
 
-  const { data, isLoading, error } = useSWR<PracticeWidgetData>(
+  const { data, isLoading, error, mutate } = useSWR<PracticeWidgetData>(
     '/api/practice/widget',
     fetcher,
     {
@@ -74,8 +75,17 @@ export function PracticeWidget() {
     )
   }
 
-  // Error or no data
-  if (error || !data) {
+  // Error state
+  if (error) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6">
+        <SWRErrorState onRetry={() => mutate()} />
+      </div>
+    )
+  }
+
+  // No data
+  if (!data) {
     return null
   }
 

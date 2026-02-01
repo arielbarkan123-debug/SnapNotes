@@ -80,7 +80,7 @@ export default function ReviewPage() {
       }
 
       setSession(data)
-      setSessionState(data.cards_due > 0 ? 'start' : 'start')
+      setSessionState('start')
     } catch (err) {
       setError(sanitizeError(err, 'Failed to load review session'))
       setSessionState('start')

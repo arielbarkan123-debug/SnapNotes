@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 
 // =============================================================================
@@ -10,6 +10,20 @@ import { useTranslations } from 'next-intl'
 export default function SRSExplainer() {
   const t = useTranslations('review')
   const [isOpen, setIsOpen] = useState(false)
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen])
 
   return (
     <div className="relative inline-block">

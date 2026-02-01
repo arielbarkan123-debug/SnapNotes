@@ -8,6 +8,7 @@ import { SessionReflection } from '@/components/reflection'
 import type { MistakeItem } from '@/components/practice/MistakeReview'
 
 const MistakeReview = dynamic(() => import('@/components/practice/MistakeReview'), { ssr: false })
+const ShareResultCard = dynamic(() => import('@/components/export/ShareResultCard'), { ssr: false })
 
 // =============================================================================
 // Types
@@ -247,6 +248,15 @@ export default function ReviewComplete({
             <MistakeReview mistakes={mistakes} namespace="review" />
           </div>
         )}
+
+        {/* Share Results */}
+        <div className="mb-4">
+          <ShareResultCard
+            accuracy={accuracy}
+            questionsAnswered={cardsReviewed}
+            timeTaken={Math.floor(timeSpentMs / 1000)}
+          />
+        </div>
 
         {/* Encouragement Message */}
         <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4 mb-8">

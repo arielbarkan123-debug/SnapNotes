@@ -46,7 +46,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       .from('courses')
       .select('id, title, generated_course')
       .eq('user_id', user.id)
-      .or(`title.ilike.%${query}%`)
+      .ilike('title', `%${query}%`)
       .limit(limit)
 
     // Also search courses by generated_course content (JSONB)
@@ -161,7 +161,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       .from('review_cards')
       .select('id, course_id, lesson_index, step_index, card_type, front, back')
       .eq('user_id', user.id)
-      .or(`front.ilike.%${query}%,back.ilike.%${query}%`)
+      .or(`front.ilike.%${query.replace(/[%_\\]/g, '\\$&')}%,back.ilike.%${query.replace(/[%_\\]/g, '\\$&')}%`)
       .limit(limit)
 
     cards?.forEach(card => {

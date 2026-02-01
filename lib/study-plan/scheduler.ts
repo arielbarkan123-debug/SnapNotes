@@ -76,12 +76,72 @@ export function generateStudyPlan(input: GeneratePlanInput): Omit<StudyPlanTask,
   }
 
   if (availableDays.length === 0) {
-    return []
+    throw new Error('No available days for study plan scheduling')
   }
 
   const totalDays = availableDays.length
-  const maxNewPerDay = Math.max(1, Math.floor(dailyTimeMinutes / 15))
   const tasks: Omit<StudyPlanTask, 'id' | 'plan_id'>[] = []
+
+  // Edge case: no days at all (shouldn't reach here but guard anyway)
+  if (totalDays <= 0) {
+    return []
+  }
+
+  // Edge case: only 1 day — cram plan, assign all lessons as light_review
+  if (totalDays === 1) {
+    for (const lesson of activeLessons) {
+      tasks.push({
+        scheduled_date: availableDays[0],
+        task_type: 'light_review',
+        course_id: lesson.courseId,
+        lesson_index: lesson.lessonIndex,
+        lesson_title: lesson.lessonTitle,
+        description: `Quick review: ${lesson.lessonTitle} (${lesson.courseTitle})`,
+        estimated_minutes: Math.min(10, dailyTimeMinutes),
+        status: 'pending',
+        sort_order: tasks.length,
+        metadata: { phase: 'cram' },
+      })
+    }
+    return tasks
+  }
+
+  // Edge case: only 2 days — simplified 2-phase: learn day 1, review day 2
+  if (totalDays === 2) {
+    let sortOrder = 0
+    for (const lesson of activeLessons) {
+      tasks.push({
+        scheduled_date: availableDays[0],
+        task_type: 'learn_lesson',
+        course_id: lesson.courseId,
+        lesson_index: lesson.lessonIndex,
+        lesson_title: lesson.lessonTitle,
+        description: `Learn: ${lesson.lessonTitle} (${lesson.courseTitle})`,
+        estimated_minutes: 15,
+        status: 'pending',
+        sort_order: sortOrder++,
+        metadata: { courseTitle: lesson.courseTitle },
+      })
+    }
+    sortOrder = 0
+    for (const lesson of activeLessons) {
+      tasks.push({
+        scheduled_date: availableDays[1],
+        task_type: 'review_lesson',
+        course_id: lesson.courseId,
+        lesson_index: lesson.lessonIndex,
+        lesson_title: lesson.lessonTitle,
+        description: `Review: ${lesson.lessonTitle} (${lesson.courseTitle})`,
+        estimated_minutes: 10,
+        status: 'pending',
+        sort_order: sortOrder++,
+        metadata: { courseTitle: lesson.courseTitle },
+      })
+    }
+    return tasks
+  }
+
+  const maxNewPerDay = Math.max(1, Math.floor(dailyTimeMinutes / 15))
 
   // Phase boundaries
   const phase1End = Math.floor(totalDays * 0.4)
@@ -218,8 +278,12 @@ export function generateStudyPlan(input: GeneratePlanInput): Omit<StudyPlanTask,
 
     // Schedule reviews in phase 2
     const reviewCount = isWeak ? 3 : 1
+    const lessonIdx = learnedLessons.indexOf(lesson)
     for (let r = 0; r < reviewCount; r++) {
-      const dayIdx = phase1End + Math.floor(Math.random() * (phase2End - phase1End))
+      const phase2Span = phase2End - phase1End
+      const dayIdx = phase2Span > 0
+        ? phase1End + ((lessonIdx * reviewCount + r) % phase2Span)
+        : phase1End
       if (dayIdx < totalDays) {
         tasks.push({
           scheduled_date: availableDays[dayIdx],

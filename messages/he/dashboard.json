@@ -90,7 +90,9 @@
     "cardsDueReminder": "יש לך {count} כרטיסים לחזרה — חזרה מהירה עוזרת לזיכרון!",
     "keepStreak": "שמור על הרצף של {count} ימים!",
     "checkStudyPlan": "בדוק את תוכנית הלימודים שלך למשימות היום",
-    "dismiss": "סגור"
+    "dismiss": "סגור",
+    "createFirstCourseAction": "התחל",
+    "cardsDueAction": "חזור עכשיו"
   },
   "curriculumSetup": {
     "completeProfile": "השלם את פרופיל הלמידה שלך",

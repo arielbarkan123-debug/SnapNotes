@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import dynamic from 'next/dynamic'
 import type { DiagramState } from '@/components/homework/diagram/types'
+import type { Annotation } from '@/hooks/useAnnotations'
 
 // Dynamic import of DiagramRenderer to avoid SSR issues with SVG
 const DiagramRenderer = dynamic(
@@ -13,14 +14,35 @@ const DiagramRenderer = dynamic(
   { ssr: false, loading: () => <div className="h-48 flex items-center justify-center"><div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /></div> }
 )
 
+const AnnotationButton = dynamic(() => import('@/components/course/AnnotationButton'))
+
 interface StepContentProps {
   step: Step
   lessonTitle: string
   /** Callback to open contextual help for this step */
   onRequestHelp?: () => void
+  /** Annotation data for this step */
+  annotation?: Annotation
+  /** Callback to save annotation */
+  onSaveAnnotation?: (params: { noteText?: string; flagType?: 'confusing' | 'important' | null }) => Promise<Annotation | null>
+  /** Callback to delete annotation */
+  onDeleteAnnotation?: (id: string) => Promise<boolean>
+  /** Whether to show annotation input (controlled by F4) */
+  showAnnotationInput?: boolean
+  /** Callback to toggle annotation input */
+  onAnnotationInputToggle?: () => void
 }
 
-export default function StepContent({ step, lessonTitle, onRequestHelp }: StepContentProps) {
+export default function StepContent({
+  step,
+  lessonTitle,
+  onRequestHelp,
+  annotation,
+  onSaveAnnotation,
+  onDeleteAnnotation,
+  showAnnotationInput: _showAnnotationInput,
+  onAnnotationInputToggle: _onAnnotationInputToggle,
+}: StepContentProps) {
   const t = useTranslations('lesson')
   const imageProps = {
     imageUrl: step.imageUrl,
@@ -35,24 +57,70 @@ export default function StepContent({ step, lessonTitle, onRequestHelp }: StepCo
     <HelpButton onClick={onRequestHelp} t={t} />
   ) : null
 
+  // Annotation button for step-level annotations
+  const annotationButton = onSaveAnnotation && onDeleteAnnotation ? (
+    <div className="mt-3 flex justify-end">
+      <AnnotationButton
+        annotation={annotation}
+        onSave={onSaveAnnotation}
+        onDelete={onDeleteAnnotation}
+      />
+    </div>
+  ) : null
+
   switch (step.type) {
     case 'explanation':
-      return <ExplanationStep content={step.content} t={t} {...imageProps} helpButton={helpButton} />
+      return (
+        <>
+          <ExplanationStep content={step.content} t={t} {...imageProps} helpButton={helpButton} />
+          {annotationButton}
+        </>
+      )
     case 'key_point':
-      return <KeyPointStep content={step.content} t={t} helpButton={helpButton} />
+      return (
+        <>
+          <KeyPointStep content={step.content} t={t} helpButton={helpButton} />
+          {annotationButton}
+        </>
+      )
     case 'formula':
-      return <FormulaStep content={step.content} explanation={step.explanation} t={t} helpButton={helpButton} />
+      return (
+        <>
+          <FormulaStep content={step.content} explanation={step.explanation} t={t} helpButton={helpButton} />
+          {annotationButton}
+        </>
+      )
     case 'diagram':
-      return <DiagramStep content={step.content} t={t} diagramData={step.diagramData} {...imageProps} />
+      return (
+        <>
+          <DiagramStep content={step.content} t={t} diagramData={step.diagramData} {...imageProps} />
+          {annotationButton}
+        </>
+      )
     case 'example':
-      return <ExampleStep content={step.content} t={t} {...imageProps} helpButton={helpButton} />
+      return (
+        <>
+          <ExampleStep content={step.content} t={t} {...imageProps} helpButton={helpButton} />
+          {annotationButton}
+        </>
+      )
     case 'summary':
-      return <SummaryStep content={step.content} lessonTitle={lessonTitle} t={t} />
+      return (
+        <>
+          <SummaryStep content={step.content} lessonTitle={lessonTitle} t={t} />
+          {annotationButton}
+        </>
+      )
     case 'question':
       // Questions are handled separately in the parent component
       return null
     default:
-      return <ExplanationStep content={step.content} t={t} {...imageProps} helpButton={helpButton} />
+      return (
+        <>
+          <ExplanationStep content={step.content} t={t} {...imageProps} helpButton={helpButton} />
+          {annotationButton}
+        </>
+      )
   }
 }
 

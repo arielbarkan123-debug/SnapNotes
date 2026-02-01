@@ -10,6 +10,7 @@ import { useCourseMastery } from '@/hooks'
 import { useGenerationStatus } from '@/hooks/useGenerationStatus'
 
 const UploadModal = dynamic(() => import('@/components/upload/upload-modal/UploadModal'), { ssr: false })
+const ExportCourseButton = dynamic(() => import('@/components/export/ExportCourseButton'), { ssr: false })
 
 interface CourseViewProps {
   course: Course
@@ -94,15 +95,18 @@ export default function CourseView({ course, progress }: CourseViewProps) {
               </svg>
               {tc('backToDashboard')}
             </Link>
-            <button
-              onClick={() => setIsAddMaterialOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              {tc('addMaterial')}
-            </button>
+            <div className="flex items-center gap-2">
+              <ExportCourseButton courseTitle={generatedCourse?.title || course.title || ''} />
+              <button
+                onClick={() => setIsAddMaterialOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                {tc('addMaterial')}
+              </button>
+            </div>
           </div>
 
           {/* Title */}

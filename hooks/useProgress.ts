@@ -129,7 +129,12 @@ export function useProgress(): UseProgressReturn {
     isLoading,
     isValidating,
     mutate,
-  } = useSWR<ProgressData>(PROGRESS_CACHE_KEY)
+  } = useSWR<ProgressData>(PROGRESS_CACHE_KEY, {
+    onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+      if (retryCount >= 3) return
+      setTimeout(() => revalidate({ retryCount }), 5000)
+    },
+  })
 
   // Refetch function for manual refresh
   const refetch = useCallback(async () => {

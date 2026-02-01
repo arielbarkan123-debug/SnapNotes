@@ -10,6 +10,7 @@ interface SearchResultsProps {
   isAISearching: boolean
   query: string
   onResultClick: (result: SearchResult) => void
+  selectedIndex?: number
 }
 
 const typeIcons: Record<SearchResult['type'], React.FC<{ className?: string }>> = {
@@ -41,7 +42,7 @@ function SkeletonRow() {
   )
 }
 
-export default function SearchResults({ results, isLoading, isAISearching, query, onResultClick }: SearchResultsProps) {
+export default function SearchResults({ results, isLoading, isAISearching, query, onResultClick, selectedIndex = -1 }: SearchResultsProps) {
   const t = useTranslations('search')
 
   if (isLoading) {
@@ -57,12 +58,15 @@ export default function SearchResults({ results, isLoading, isAISearching, query
   if (results.length === 0 && query.length >= 2) {
     return (
       <div className="px-4 py-8 text-center">
-        <p className="text-gray-500 dark:text-gray-400">
+        <p className="text-gray-500 dark:text-gray-300">
           {t('noResults', { query })}
         </p>
       </div>
     )
   }
+
+  // Build a flat index across all grouped results for selectedIndex matching
+  let flatIndex = 0
 
   // Group results by type
   const grouped = results.reduce<Record<string, SearchResult[]>>((acc, result) => {
@@ -72,7 +76,7 @@ export default function SearchResults({ results, isLoading, isAISearching, query
   }, {})
 
   return (
-    <div className="py-2">
+    <div className="py-2" role="listbox" id="search-results-listbox">
       {isAISearching && (
         <div className="px-4 py-2 text-sm text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
           <div className="w-4 h-4 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin" />
@@ -86,31 +90,40 @@ export default function SearchResults({ results, isLoading, isAISearching, query
 
         return (
           <div key={type}>
-            <div className="px-4 py-1.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+            <div className="px-4 py-1.5 text-xs font-semibold text-gray-400 dark:text-gray-400 uppercase tracking-wider">
               {t(`resultTypes.${type}` as Parameters<typeof t>[0])}
             </div>
-            {items.map((result, index) => (
-              <button
-                key={`${result.courseId || result.cardId}-${index}`}
-                onClick={() => onResultClick(result)}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-start"
-              >
-                <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
-                  <Icon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                    {result.title}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {result.snippet}
-                  </p>
-                </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${badgeColor}`}>
-                  {t(`resultTypes.${type}` as Parameters<typeof t>[0])}
-                </span>
-              </button>
-            ))}
+            {items.map((result, index) => {
+              const currentFlatIndex = flatIndex
+              flatIndex++
+              const isSelected = currentFlatIndex === selectedIndex
+
+              return (
+                <button
+                  key={`${result.courseId || result.cardId}-${index}`}
+                  id={`search-result-${currentFlatIndex}`}
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => onResultClick(result)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-start ${isSelected ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
+                    <Icon className="w-4 h-4 text-gray-500 dark:text-gray-300" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      {result.title}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-300 truncate">
+                      {result.snippet}
+                    </p>
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${badgeColor}`}>
+                    {t(`resultTypes.${type}` as Parameters<typeof t>[0])}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         )
       })}

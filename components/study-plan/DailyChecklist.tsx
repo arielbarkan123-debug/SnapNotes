@@ -11,6 +11,7 @@ import {
   FileText,
   Check,
   Clock,
+  Loader2,
 } from 'lucide-react'
 import type { StudyPlanTask } from '@/lib/study-plan/types'
 
@@ -93,17 +94,18 @@ export default function DailyChecklist({ tasks, onComplete }: DailyChecklistProp
             >
               {/* Checkbox */}
               <button
-                onClick={() => !isCompleted && handleComplete(task.id)}
+                onClick={() => !isCompleted && !isCompleting && handleComplete(task.id)}
                 disabled={isCompleted || isCompleting}
                 className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition ${
                   isCompleted
                     ? 'bg-green-500 border-green-500'
                     : isCompleting
-                      ? 'border-indigo-400 animate-pulse'
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
                       : 'border-gray-300 dark:border-gray-600 hover:border-indigo-500'
                 }`}
               >
                 {isCompleted && <Check className="w-4 h-4 text-white" />}
+                {isCompleting && <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />}
               </button>
 
               {/* Task type icon */}

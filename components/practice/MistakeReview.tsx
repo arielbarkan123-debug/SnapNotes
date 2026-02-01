@@ -95,7 +95,7 @@ export default function MistakeReview({ mistakes, onPracticeWeak, namespace = 'p
             [...courseGroups.entries()].map(([courseId, courseMistakes]) => (
               <div key={courseId}>
                 {courseMistakes[0]?.courseId && (
-                  <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 mt-2">
+                  <h3 className="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wide mb-2 mt-2">
                     {/* Use lesson title's course context or courseId as fallback */}
                     {courseMistakes[0].lessonTitle ? courseMistakes[0].lessonTitle.split(' — ')[0] : courseId}
                   </h3>

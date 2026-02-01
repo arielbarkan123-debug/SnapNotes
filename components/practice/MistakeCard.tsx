@@ -28,7 +28,7 @@ export default function MistakeCard({ mistake, namespace = 'practice' }: Mistake
           {mistake.question}
         </p>
         {mistake.cardType && (
-          <span className="mt-1 inline-block text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+          <span className="mt-1 inline-block text-xs text-gray-400 dark:text-gray-400 uppercase tracking-wide">
             {mistake.cardType.replace('_', ' ')}
           </span>
         )}
@@ -36,20 +36,22 @@ export default function MistakeCard({ mistake, namespace = 'practice' }: Mistake
 
       {/* Answers */}
       <div className="px-4 py-3 space-y-2">
-        {/* User's wrong answer */}
-        <div className="flex items-start gap-2">
-          <span className="shrink-0 mt-0.5 w-5 h-5 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-            <svg className="w-3 h-3 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </span>
-          <div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">{t('yourAnswerLabel')}</span>
-            <p className="text-sm text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 rounded px-2 py-1 mt-0.5">
-              {mistake.userAnswer}
-            </p>
+        {/* User's wrong answer - only show if userAnswer is not empty */}
+        {mistake.userAnswer && (
+          <div className="flex items-start gap-2">
+            <span className="shrink-0 mt-0.5 w-5 h-5 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <svg className="w-3 h-3 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </span>
+            <div>
+              <span className="text-xs text-gray-500 dark:text-gray-300">{t('yourAnswerLabel')}</span>
+              <p className="text-sm text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 rounded px-2 py-1 mt-0.5">
+                {mistake.userAnswer}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Correct answer */}
         <div className="flex items-start gap-2">
@@ -59,7 +61,7 @@ export default function MistakeCard({ mistake, namespace = 'practice' }: Mistake
             </svg>
           </span>
           <div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">{t('correctAnswerLabel')}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-300">{t('correctAnswerLabel')}</span>
             <p className="text-sm text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 rounded px-2 py-1 mt-0.5">
               {mistake.correctAnswer}
             </p>
@@ -72,8 +74,8 @@ export default function MistakeCard({ mistake, namespace = 'practice' }: Mistake
         <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
           {mistake.explanation && (
             <div className="mb-2">
-              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('explanationLabel')}</span>
-              <p className="text-sm text-gray-700 dark:text-gray-300 mt-0.5">
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-300">{t('explanationLabel')}</span>
+              <p className="text-sm text-gray-700 dark:text-gray-200 mt-0.5">
                 {mistake.explanation}
               </p>
             </div>
@@ -85,7 +87,7 @@ export default function MistakeCard({ mistake, namespace = 'practice' }: Mistake
             >
               {t('goToLesson')}
               {mistake.lessonTitle && (
-                <span className="text-gray-400 dark:text-gray-500">
+                <span className="text-gray-400 dark:text-gray-400">
                   — {mistake.lessonTitle}
                 </span>
               )}

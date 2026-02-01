@@ -41,7 +41,11 @@ export function useStudyPlan(): UseStudyPlanReturn {
     isLoading,
     mutate,
   } = useSWR<StudyPlanApiResponse>(STUDY_PLAN_CACHE_KEY, fetcher, {
-    revalidateOnFocus: false,
+    revalidateOnFocus: true,
+    onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+      if (retryCount >= 3) return
+      setTimeout(() => revalidate({ retryCount }), 5000)
+    },
   })
 
   // Get the active plan (first one returned)

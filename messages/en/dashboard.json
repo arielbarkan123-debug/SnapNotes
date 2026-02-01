@@ -90,7 +90,9 @@
     "cardsDueReminder": "You have {count} cards due — a quick review helps memory!",
     "keepStreak": "Keep your {count}-day streak going!",
     "checkStudyPlan": "Check your study plan for today's tasks",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "createFirstCourseAction": "Get Started",
+    "cardsDueAction": "Review Now"
   },
   "curriculumSetup": {
     "completeProfile": "Complete your learning profile",

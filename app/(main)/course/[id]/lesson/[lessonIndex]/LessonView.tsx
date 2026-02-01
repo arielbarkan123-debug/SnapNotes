@@ -10,6 +10,7 @@ import ProgressBar from '@/components/lesson/ProgressBar'
 import StepContent from '@/components/lesson/StepContent'
 import QuestionStep from '@/components/lesson/QuestionStep'
 import { useFunnelTracking } from '@/lib/analytics'
+import { useAnnotations } from '@/hooks/useAnnotations'
 
 // Dynamic imports for components not needed immediately
 const LessonComplete = dynamic(() => import('@/components/lesson/LessonComplete'), {
@@ -18,6 +19,7 @@ const LessonComplete = dynamic(() => import('@/components/lesson/LessonComplete'
 const HelpModal = dynamic(() => import('@/components/help/HelpModal'))
 const ChatTutor = dynamic(() => import('@/components/chat/ChatTutor').then(mod => ({ default: mod.ChatTutor })))
 const ReviewBeforeRetry = dynamic(() => import('@/components/lesson/ReviewBeforeRetry'))
+const LessonNotes = dynamic(() => import('@/components/course/LessonNotes'))
 
 interface QuestionAnswer {
   stepIndex: number
@@ -82,6 +84,14 @@ export default function LessonView({
   const [showHelp, setShowHelp] = useState(false)
   const [isChatOpen, setIsChatOpen] = useState(false)
 
+  // Annotations hook
+  const {
+    annotations,
+    saveAnnotation,
+    deleteAnnotation,
+    getAnnotationForStep,
+  } = useAnnotations(course.id, lessonIndex)
+
   // Question tracking state
   const [answers, setAnswers] = useState<QuestionAnswer[]>([])
   const questionsAnswered = answers.length
@@ -121,14 +131,23 @@ export default function LessonView({
     }
   }, [course.id, course.generated_course?.title, course.title, lessonIndex, lesson.title, currentStep, steps])
 
-  // Keyboard shortcut for help (H or ?)
+  // Keyboard shortcuts: F9 for help, F4 for annotations
+  const [showAnnotationInput, setShowAnnotationInput] = useState(false)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
-      if (e.key === 'h' || e.key === 'H' || e.key === '?') {
+
+      // F9 for help
+      if (e.key === 'F9') {
         e.preventDefault()
         setShowHelp(true)
+      }
+
+      // F4 for annotations (toggle annotation input for current step)
+      if (e.key === 'F4') {
+        e.preventDefault()
+        setShowAnnotationInput(prev => !prev)
       }
     }
     window.addEventListener('keydown', handleKeyDown)
@@ -649,9 +668,25 @@ export default function LessonView({
                 step={currentStepData}
                 lessonTitle={lesson.title}
                 onRequestHelp={() => setShowHelp(true)}
+                annotation={getAnnotationForStep(currentStep)}
+                onSaveAnnotation={(params) => saveAnnotation({ stepIndex: currentStep, ...params })}
+                onDeleteAnnotation={deleteAnnotation}
+                showAnnotationInput={showAnnotationInput}
+                onAnnotationInputToggle={() => setShowAnnotationInput(prev => !prev)}
               />
             )}
           </div>
+        </div>
+
+        {/* Lesson Notes Section */}
+        <div className="w-full max-w-xl mx-auto mt-8">
+          <LessonNotes
+            courseId={course.id}
+            lessonIndex={lessonIndex}
+            annotations={annotations.filter(a => a.step_index === null)}
+            saveAnnotation={saveAnnotation}
+            deleteAnnotation={deleteAnnotation}
+          />
         </div>
       </main>
 
@@ -709,7 +744,7 @@ export default function LessonView({
           className="fixed bottom-28 xs:bottom-24 right-3 xs:right-4 md:bottom-8 md:right-8 w-11 h-11 xs:w-12 xs:h-12 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-200 dark:hover:bg-indigo-900 transition-all hover:scale-110 z-40"
           style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
           aria-label={t('getHelp')}
-          title={t('needHelpPressH')}
+          title={t('needHelpPressF9')}
           type="button"
         >
           <span className="text-lg xs:text-xl">❓</span>

@@ -31,7 +31,10 @@
     "correctBtn": "Correct",
     "needHelpUnderstanding": "Need help understanding this?",
     "from": "From",
-    "showAnswer": "Show Answer"
+    "showAnswer": "Show Answer",
+    "resumeSession": "Resume Previous Session",
+    "resumePrompt": "You have an unfinished practice session. Would you like to continue?",
+    "startFresh": "Start Fresh"
   },
   "encouragement": {
     "1": "Almost there! Let's see why this wasn't quite right.",

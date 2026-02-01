@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import useSWR from 'swr'
 
 // ============================================================================
@@ -53,6 +53,7 @@ export function useAnnotations(courseId: string, lessonIndex: number): UseAnnota
   } = useSWR<AnnotationsResponse>(cacheKey)
 
   const annotations = data?.annotations || []
+  const [mutationError, setMutationError] = useState<string | null>(null)
 
   const saveAnnotation = useCallback(async (params: {
     stepIndex?: number
@@ -60,6 +61,7 @@ export function useAnnotations(courseId: string, lessonIndex: number): UseAnnota
     flagType?: 'confusing' | 'important' | null
   }): Promise<Annotation | null> => {
     try {
+      setMutationError(null)
       const res = await fetch('/api/annotations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -76,22 +78,29 @@ export function useAnnotations(courseId: string, lessonIndex: number): UseAnnota
         await mutate()
         return data.annotation
       }
+      setMutationError('Failed to save annotation')
       return null
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to save annotation'
+      setMutationError(msg)
       return null
     }
   }, [courseId, lessonIndex, mutate])
 
   const deleteAnnotation = useCallback(async (id: string): Promise<boolean> => {
     try {
+      setMutationError(null)
       const res = await fetch(`/api/annotations?id=${id}`, { method: 'DELETE' })
       const data = await res.json()
       if (data.success) {
         await mutate()
         return true
       }
+      setMutationError('Failed to delete annotation')
       return false
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete annotation'
+      setMutationError(msg)
       return false
     }
   }, [mutate])
@@ -104,7 +113,7 @@ export function useAnnotations(courseId: string, lessonIndex: number): UseAnnota
     await mutate()
   }, [mutate])
 
-  const error = swrError ? (swrError.message || 'Failed to load annotations') : null
+  const error = swrError ? (swrError.message || 'Failed to load annotations') : mutationError
 
   return {
     annotations,

@@ -78,8 +78,29 @@
     "viewPlan": "View Full Plan",
     "createPlan": "Create a Study Plan",
     "createDescription": "Organize your exam prep with a smart schedule",
-    "daysUntilExam": "{count} days until exam"
+    "daysUntilExam": "{count} days until exam",
+    "start": "Start",
+    "moreItems": "+{count} more"
   },
+  "calendar": {
+    "dayNames": {
+      "sun": "S",
+      "mon": "M",
+      "tue": "T",
+      "wed": "W",
+      "thu": "T",
+      "fri": "F",
+      "sat": "S"
+    },
+    "legend": {
+      "done": "Done",
+      "today": "Today",
+      "upcoming": "Upcoming",
+      "overdue": "Overdue"
+    }
+  },
+  "showCalendar": "View Calendar",
+  "hideCalendar": "Hide Calendar",
   "insightMessages": {
     "greatProgress": "Great progress! You are ahead of schedule.",
     "onTrack": "You are on track. Keep up the good work!",

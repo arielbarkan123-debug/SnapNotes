@@ -92,7 +92,12 @@ export function useStats(): UseStatsReturn {
     isLoading,
     isValidating,
     mutate,
-  } = useSWR<GamificationStats>(STATS_CACHE_KEY)
+  } = useSWR<GamificationStats>(STATS_CACHE_KEY, {
+    onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+      if (retryCount >= 3) return
+      setTimeout(() => revalidate({ retryCount }), 5000)
+    },
+  })
 
   // Refetch function for manual refresh
   const refetch = useCallback(async () => {

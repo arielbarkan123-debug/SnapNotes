@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Search, X, Clock } from 'lucide-react'
 import { useGlobalSearch } from '@/hooks/useGlobalSearch'
 import type { SearchResult } from '@/hooks/useGlobalSearch'
+import { trapFocus } from '@/lib/utils/focus-trap'
 import SearchResults from './SearchResults'
 
 interface GlobalSearchProps {
@@ -38,6 +39,8 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
   const router = useRouter()
   const t = useTranslations('search')
   const inputRef = useRef<HTMLInputElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
+  const [selectedIndex, setSelectedIndex] = useState(-1)
   const {
     query,
     setQuery,
@@ -49,6 +52,11 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
     clearRecentSearches,
   } = useGlobalSearch()
 
+  // Reset selectedIndex when results change
+  useEffect(() => {
+    setSelectedIndex(-1)
+  }, [results])
+
   // Auto-focus input when opened
   useEffect(() => {
     if (isOpen) {
@@ -59,8 +67,23 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
       return () => clearTimeout(timer)
     } else {
       setQuery('')
+      setSelectedIndex(-1)
     }
   }, [isOpen, setQuery])
+
+  // Focus trap when overlay is open
+  useEffect(() => {
+    if (!isOpen || !overlayRef.current) return
+    const cleanup = trapFocus(overlayRef.current)
+    // Re-focus the input after focus trap sets focus
+    const timer = setTimeout(() => {
+      inputRef.current?.focus()
+    }, 50)
+    return () => {
+      cleanup()
+      clearTimeout(timer)
+    }
+  }, [isOpen])
 
   // Close on Escape
   useEffect(() => {
@@ -98,6 +121,21 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
     setQuery(search)
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (results.length === 0) return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelectedIndex((prev) => (prev + 1) % results.length)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedIndex((prev) => (prev <= 0 ? results.length - 1 : prev - 1))
+    } else if (e.key === 'Enter' && selectedIndex >= 0 && selectedIndex < results.length) {
+      e.preventDefault()
+      handleResultClick(results[selectedIndex])
+    }
+  }
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -121,19 +159,25 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
             className="fixed inset-0 z-[70] flex items-start justify-center pt-[10vh] md:pt-[15vh] px-4"
           >
             <div
+              ref={overlayRef}
               className="w-full max-w-xl bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden max-h-[70vh] md:max-h-[60vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
+              onKeyDown={handleKeyDown}
             >
               {/* Search Input */}
               <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                <Search className="w-5 h-5 text-gray-400 dark:text-gray-500 shrink-0" />
+                <Search className="w-5 h-5 text-gray-400 dark:text-gray-400 shrink-0" />
                 <input
                   ref={inputRef}
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder={t('placeholder')}
-                  className="flex-1 bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none text-sm"
+                  className="flex-1 bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400 outline-none text-sm"
+                  aria-label={t('placeholder')}
+                  aria-autocomplete="list"
+                  aria-controls="search-results-listbox"
+                  aria-activedescendant={selectedIndex >= 0 ? `search-result-${selectedIndex}` : undefined}
                 />
                 {query && (
                   <button
@@ -145,7 +189,7 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
                 )}
                 <button
                   onClick={onClose}
-                  className="hidden md:flex text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded font-mono"
+                  className="hidden md:flex text-xs text-gray-400 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded font-mono"
                 >
                   ESC
                 </button>
@@ -160,16 +204,17 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
                     isAISearching={isAISearching}
                     query={query}
                     onResultClick={handleResultClick}
+                    selectedIndex={selectedIndex}
                   />
                 ) : recentSearches.length > 0 ? (
                   <div className="py-2">
                     <div className="flex items-center justify-between px-4 py-1.5">
-                      <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                      <span className="text-xs font-semibold text-gray-400 dark:text-gray-400 uppercase tracking-wider">
                         {t('recentSearches')}
                       </span>
                       <button
                         onClick={clearRecentSearches}
-                        className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                        className="text-xs text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                       >
                         {t('clearRecent')}
                       </button>
@@ -180,7 +225,7 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
                         onClick={() => handleRecentClick(search)}
                         className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-start"
                       >
-                        <Clock className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
+                        <Clock className="w-4 h-4 text-gray-400 dark:text-gray-400 shrink-0" />
                         <span className="text-sm text-gray-700 dark:text-gray-300">{search}</span>
                       </button>
                     ))}
@@ -189,7 +234,7 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
               </div>
 
               {/* Footer */}
-              <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
+              <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-xs text-gray-400 dark:text-gray-400">
                 <span>{t('shortcut')}</span>
                 {results.length > 0 && (
                   <span>{t('results', { count: results.length })}</span>

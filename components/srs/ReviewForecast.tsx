@@ -63,7 +63,7 @@ export default function ReviewForecast({ cards }: ReviewForecastProps) {
       <div className="divide-y divide-gray-100 dark:divide-gray-700">
         <ForecastRow label={t('today')} count={counts.today} color="text-indigo-600 dark:text-indigo-400" />
         <ForecastRow label={t('tomorrow')} count={counts.tomorrow} color="text-blue-600 dark:text-blue-400" />
-        <ForecastRow label={t('thisWeek')} count={counts.thisWeek} color="text-gray-600 dark:text-gray-400" />
+        <ForecastRow label={t('thisWeek')} count={counts.thisWeek} color="text-gray-600 dark:text-gray-300" />
       </div>
     </div>
   )
@@ -76,7 +76,7 @@ export default function ReviewForecast({ cards }: ReviewForecastProps) {
 function ForecastRow({ label, count, color }: { label: string; count: number; color: string }) {
   return (
     <div className="px-4 py-2.5 flex items-center justify-between">
-      <span className="text-sm text-gray-600 dark:text-gray-400">{label}</span>
+      <span className="text-sm text-gray-600 dark:text-gray-300">{label}</span>
       <span className={`text-sm font-semibold ${color}`}>
         {count}
       </span>

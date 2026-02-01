@@ -31,7 +31,10 @@
     "correctBtn": "נכון",
     "needHelpUnderstanding": "צריך עזרה להבין את זה?",
     "from": "מתוך",
-    "showAnswer": "הצג תשובה"
+    "showAnswer": "הצג תשובה",
+    "resumeSession": "חזור לתרגול קודם",
+    "resumePrompt": "יש לך תרגול שלא הושלם. האם תרצה להמשיך?",
+    "startFresh": "התחל מחדש"
   },
   "encouragement": {
     "1": "כמעט! בוא נראה למה זה לא היה בדיוק נכון.",

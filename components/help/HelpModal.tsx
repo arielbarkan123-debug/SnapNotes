@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import ReactMarkdown from 'react-markdown'
 import { type HelpContext, type HelpRequestType, type HelpAPIResponse } from '@/types'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
+import { trapFocus } from '@/lib/utils/focus-trap'
 
 interface HelpModalProps {
   isOpen: boolean
@@ -14,6 +15,7 @@ interface HelpModalProps {
 
 export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) {
   const t = useTranslations('lesson')
+  const modalRef = useRef<HTMLDivElement>(null)
   const [view, setView] = useState<'buttons' | 'loading' | 'response' | 'custom'>('buttons')
   const [response, setResponse] = useState('')
   const [sourceReference, setSourceReference] = useState<string | null>(null)
@@ -47,6 +49,13 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
   useEffect(() => {
     if (isOpen) resetState()
   }, [isOpen, resetState])
+
+  // Focus trap when modal is open
+  useEffect(() => {
+    if (!isOpen || !modalRef.current) return
+    const cleanup = trapFocus(modalRef.current)
+    return () => cleanup()
+  }, [isOpen, view])
 
   const handleRequest = useCallback(async (type: HelpRequestType, question?: string) => {
     setView('loading')
@@ -101,7 +110,7 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-xl">
+      <div ref={modalRef} className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-xl">
         <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {view === 'custom' ? 'Ask a Question' : view === 'response' ? 'Here\'s Help' : view === 'loading' ? 'Thinking...' : 'Need Help?'}

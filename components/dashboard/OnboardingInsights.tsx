@@ -88,13 +88,13 @@ export default function OnboardingInsights() {
     message = t('createFirstCourse')
     icon = <BookOpen className="w-5 h-5 text-indigo-500" />
     action = () => router.push('/dashboard')
-    actionLabel = ''
+    actionLabel = t('createFirstCourseAction')
   } else if (cardsDue > 0 && !isDismissed('cardsDueReminder') && dismissed !== 'cardsDueReminder') {
     insightType = 'cardsDueReminder'
     message = t('cardsDueReminder', { count: cardsDue })
     icon = <RotateCcw className="w-5 h-5 text-emerald-500" />
     action = () => router.push('/review')
-    actionLabel = ''
+    actionLabel = t('cardsDueAction')
   }
 
   // No insight to show
@@ -110,7 +110,7 @@ export default function OnboardingInsights() {
   return (
     <div className="mb-6 flex items-center gap-3 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
       <div className="flex-shrink-0">{icon}</div>
-      <p className="flex-1 text-sm text-gray-700 dark:text-gray-300">{message}</p>
+      <p className="flex-1 text-sm text-gray-700 dark:text-gray-200">{message}</p>
       {actionLabel && (
         <button
           onClick={action}

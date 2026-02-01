@@ -52,5 +52,10 @@
   },
   "time": {
     "memberSince": "חבר מאז {date}"
+  },
+  "error": {
+    "failedToLoad": "טעינת הנתונים נכשלה",
+    "retry": "נסה שוב",
+    "somethingWentWrong": "משהו השתבש"
   }
 }

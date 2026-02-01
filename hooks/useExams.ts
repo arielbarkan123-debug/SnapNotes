@@ -88,7 +88,12 @@ export function useExams(options: UseExamsOptions = {}): UseExamsReturn {
     isLoading,
     isValidating,
     mutate,
-  } = useSWR<ExamsApiResponse>(cacheKey)
+  } = useSWR<ExamsApiResponse>(cacheKey, {
+    onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+      if (retryCount >= 3) return
+      setTimeout(() => revalidate({ retryCount }), 5000)
+    },
+  })
 
   // Extract exams from response
   const exams = data?.exams || []

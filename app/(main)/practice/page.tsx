@@ -12,6 +12,9 @@ import { useEventTracking } from '@/lib/analytics'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
 import DifficultyFeedback from '@/components/shared/DifficultyFeedback'
 
+// Lazy load ShareResultCard - only loaded on session complete
+const ShareResultCard = dynamic(() => import('@/components/export/ShareResultCard'), { ssr: false })
+
 // Custom slider styles
 const sliderStyles = `
   input[type="range"]::-webkit-slider-thumb {
@@ -121,6 +124,13 @@ interface Answer {
 }
 
 // =============================================================================
+// Auto-save constants
+// =============================================================================
+
+const PRACTICE_SESSION_KEY = 'notesnap_practice_session'
+const SESSION_EXPIRY_MS = 2 * 60 * 60 * 1000 // 2 hours
+
+// =============================================================================
 // Main Component
 // =============================================================================
 
@@ -152,6 +162,21 @@ export default function PracticePage() {
   const [showHelp, setShowHelp] = useState(false)
   const [difficultyFeedbackGiven, setDifficultyFeedbackGiven] = useState(false)
   const [mistakes, setMistakes] = useState<MistakeItem[]>([])
+  const answersRef = useRef<Answer[]>([])
+  const mistakesRef = useRef<MistakeItem[]>([])
+
+  // Auto-save resume state
+  const [hasSavedSession, setHasSavedSession] = useState(false)
+  const savedSessionRef = useRef<{
+    cards: PracticeCard[]
+    currentIndex: number
+    answers: Answer[]
+    mistakes: MistakeItem[]
+    stats: PracticeStats
+    selectedCourseIds: string[]
+    questionCount: number
+    savedAt: number
+  } | null>(null)
 
   // Stats
   const [stats, setStats] = useState<PracticeStats>({
@@ -183,6 +208,24 @@ export default function PracticePage() {
       if (coursesError) {
         setError(coursesError)
       }
+
+      // Check for saved session in localStorage
+      try {
+        const savedData = localStorage.getItem(PRACTICE_SESSION_KEY)
+        if (savedData) {
+          const parsed = JSON.parse(savedData)
+          if (parsed.savedAt && Date.now() - parsed.savedAt < SESSION_EXPIRY_MS) {
+            savedSessionRef.current = parsed
+            setHasSavedSession(true)
+          } else {
+            // Expired session — remove it
+            localStorage.removeItem(PRACTICE_SESSION_KEY)
+          }
+        }
+      } catch {
+        // localStorage not available or parse error — ignore
+      }
+
       setSessionState('setup')
     }
   }, [coursesLoading, coursesError, sessionState])
@@ -262,6 +305,8 @@ export default function PracticePage() {
       setIsAnswerShown(false)
       setAnswers([])
       setMistakes([])
+      answersRef.current = []
+      mistakesRef.current = []
       setInteractiveResult(null)
       setSessionState('practicing')
       cardStartTimeRef.current = Date.now()
@@ -295,6 +340,42 @@ export default function PracticePage() {
   const selectAllCourses = () => {
     setSelectedCourseIds([])
   }
+
+  // ==========================================================================
+  // Resume / Start Fresh from saved session
+  // ==========================================================================
+
+  const resumeSession = useCallback(() => {
+    const saved = savedSessionRef.current
+    if (!saved) return
+
+    setCards(saved.cards)
+    setCurrentIndex(saved.currentIndex)
+    setAnswers(saved.answers)
+    setMistakes(saved.mistakes)
+    answersRef.current = saved.answers
+    mistakesRef.current = saved.mistakes
+    setStats(saved.stats)
+    setSelectedCourseIds(saved.selectedCourseIds)
+    setQuestionCount(saved.questionCount)
+    setIsAnswerShown(false)
+    setInteractiveResult(null)
+    setSessionState('practicing')
+    cardStartTimeRef.current = Date.now()
+
+    setHasSavedSession(false)
+    savedSessionRef.current = null
+  }, [])
+
+  const startFresh = useCallback(() => {
+    try {
+      localStorage.removeItem(PRACTICE_SESSION_KEY)
+    } catch {
+      // ignore
+    }
+    setHasSavedSession(false)
+    savedSessionRef.current = null
+  }, [])
 
   // ==========================================================================
   // Show answer (for flashcard types)
@@ -332,11 +413,15 @@ export default function PracticePage() {
         courseId: currentCard.course_id,
         wasCorrect,
       }
-      setAnswers(prev => [...prev, answer])
+      setAnswers(prev => {
+        const updated = [...prev, answer]
+        answersRef.current = updated
+        return updated
+      })
 
       // Track mistakes for review at end of session
       if (!wasCorrect) {
-        setMistakes(prev => [...prev, {
+        const newMistake = {
           question: currentCard.front,
           userAnswer: '', // User's specific answer not tracked in flashcard mode
           correctAnswer: currentCard.back,
@@ -344,7 +429,12 @@ export default function PracticePage() {
           lessonIndex: currentCard.lesson_index,
           lessonTitle: currentCard.lessonTitle,
           cardType: currentCard.card_type,
-        }])
+        }
+        setMistakes(prev => {
+          const updated = [...prev, newMistake]
+          mistakesRef.current = updated
+          return updated
+        })
       }
 
       // Update stats
@@ -378,6 +468,29 @@ export default function PracticePage() {
         }),
       }).catch(() => { /* SRS update failed - continue anyway */ })
 
+      // Auto-save session state to localStorage
+      if (currentIndex < cards.length - 1) {
+        try {
+          const updatedStats = {
+            ...stats,
+            cardsCompleted: stats.cardsCompleted + 1,
+            correctCount: wasCorrect ? stats.correctCount + 1 : stats.correctCount,
+          }
+          localStorage.setItem(PRACTICE_SESSION_KEY, JSON.stringify({
+            cards,
+            currentIndex: currentIndex + 1,
+            answers: answersRef.current,
+            mistakes: mistakesRef.current,
+            stats: updatedStats,
+            selectedCourseIds,
+            questionCount,
+            savedAt: Date.now(),
+          }))
+        } catch {
+          // localStorage not available — ignore
+        }
+      }
+
       // Move to next card or complete
       if (currentIndex < cards.length - 1) {
         setCurrentIndex(prev => prev + 1)
@@ -399,6 +512,13 @@ export default function PracticePage() {
           correctCount: finalCorrect,
           accuracy: stats.totalCards > 0 ? Math.round((finalCorrect / stats.totalCards) * 100) : 0,
         })
+
+        // Clear saved session on completion
+        try {
+          localStorage.removeItem(PRACTICE_SESSION_KEY)
+        } catch {
+          // ignore
+        }
 
         setSessionState('complete')
       }
@@ -622,12 +742,24 @@ export default function PracticePage() {
             </div>
           )}
 
+          {/* Share Results */}
+          <div className="mb-6">
+            <ShareResultCard
+              accuracy={accuracy}
+              questionsAnswered={stats.totalCards}
+              courseName={courseStatsArray.length === 1 ? courseStatsArray[0].courseName : undefined}
+              timeTaken={Math.floor(timeSpentMs / 1000)}
+            />
+          </div>
+
           {/* Actions */}
           <div className="space-y-3">
             <button
               onClick={() => {
                 setSessionState('setup')
                 setAnswers([])
+                answersRef.current = []
+                mistakesRef.current = []
               }}
               className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors"
             >
@@ -671,6 +803,29 @@ export default function PracticePage() {
               {t('mixedPracticeSubtitle')}
             </p>
           </div>
+
+          {/* Resume session banner */}
+          {hasSavedSession && (
+            <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-3">
+                {t('resumePrompt')}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={resumeSession}
+                  className="flex-1 py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors text-sm"
+                >
+                  {t('resumeSession')}
+                </button>
+                <button
+                  onClick={startFresh}
+                  className="flex-1 py-2 px-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium rounded-lg transition-colors text-sm"
+                >
+                  {t('startFresh')}
+                </button>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-300 text-sm">
@@ -1160,7 +1315,7 @@ export default function PracticePage() {
           return null
         })()}
         {currentIndex >= 2 && (isAnswerShown || interactiveResult !== null) && (
-          <DifficultyFeedback onFeedback={handleDifficultyFeedback} namespace="practice" />
+          <DifficultyFeedback key={currentCard.id} onFeedback={handleDifficultyFeedback} namespace="practice" />
         )}
         </div>
       </div>

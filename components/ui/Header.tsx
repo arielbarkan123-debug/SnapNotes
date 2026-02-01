@@ -79,7 +79,8 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
   const toggleLanguage = () => {
     const newLocale = currentLocale === 'en' ? 'he' : 'en'
     document.cookie = `NEXT_LOCALE=${newLocale};path=/;max-age=31536000;samesite=lax`
-    window.location.reload()
+    // Use router navigation instead of hard reload for better UX
+    router.refresh()
   }
 
   const isActive = (path: string) => pathname === path

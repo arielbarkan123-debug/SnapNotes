@@ -90,5 +90,5 @@
   "stepsRemaining": "{count} steps remaining",
   "stepRemaining": "{count} step remaining",
   "getHelp": "Get help",
-  "needHelpPressH": "Need help? Press H"
+  "needHelpPressF9": "Need help? Press F9"
 }

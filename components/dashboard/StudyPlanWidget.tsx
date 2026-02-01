@@ -17,6 +17,7 @@ import {
   Clock,
 } from 'lucide-react'
 import type { StudyPlanTask } from '@/lib/study-plan/types'
+import { SWRErrorState } from '@/components/ui/SWRErrorState'
 
 // ============================================================================
 // Helpers
@@ -39,7 +40,7 @@ export default function StudyPlanWidget() {
   const t = useTranslations('studyPlan.widget')
   const tTask = useTranslations('studyPlan.taskTypes')
   const tMin = useTranslations('studyPlan')
-  const { plan, todayTasks, isLoading } = useStudyPlan()
+  const { plan, todayTasks, isLoading, error, mutate } = useStudyPlan()
 
   const daysUntilExam = useMemo(() => {
     if (!plan) return 0
@@ -50,6 +51,15 @@ export default function StudyPlanWidget() {
 
   // Don't render while loading
   if (isLoading) return null
+
+  // Error state
+  if (error) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6">
+        <SWRErrorState onRetry={() => mutate()} />
+      </div>
+    )
+  }
 
   // No plan - show CTA
   if (!plan) {
@@ -71,7 +81,7 @@ export default function StudyPlanWidget() {
             href="/study-plan/create"
             className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors shrink-0"
           >
-            Start
+            {t('start')}
           </Link>
         </div>
       </div>
@@ -129,7 +139,7 @@ export default function StudyPlanWidget() {
           })}
           {todayTasks.length > 3 && (
             <div className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 text-center">
-              +{todayTasks.length - 3} more
+              {t('moreItems', { count: todayTasks.length - 3 })}
             </div>
           )}
         </div>

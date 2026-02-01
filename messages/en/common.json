@@ -52,5 +52,10 @@
   },
   "time": {
     "memberSince": "Member since {date}"
+  },
+  "error": {
+    "failedToLoad": "Failed to load data",
+    "retry": "Try Again",
+    "somethingWentWrong": "Something went wrong"
   }
 }
