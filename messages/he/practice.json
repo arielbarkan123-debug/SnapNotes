@@ -34,7 +34,8 @@
     "showAnswer": "הצג תשובה",
     "resumeSession": "חזור לתרגול קודם",
     "resumePrompt": "יש לך תרגול שלא הושלם. האם תרצה להמשיך?",
-    "startFresh": "התחל מחדש"
+    "startFresh": "התחל מחדש",
+    "endSession": "סיום תרגול"
   },
   "encouragement": {
     "1": "כמעט! בוא נראה למה זה לא היה בדיוק נכון.",

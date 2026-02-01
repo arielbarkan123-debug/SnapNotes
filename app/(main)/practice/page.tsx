@@ -1037,7 +1037,7 @@ export default function PracticePage() {
             onClick={() => setSessionState('complete')}
             className="mt-4 px-4 py-2 text-indigo-600 hover:text-indigo-700"
           >
-            {t('endSession', { ns: 'practice' })}
+            {t('endSession')}
           </button>
         </div>
       </div>
@@ -1276,7 +1276,7 @@ export default function PracticePage() {
                   onClick={showAnswer}
                   className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold rounded-xl transition-colors text-lg"
                 >
-                  {t('showAnswer', { ns: 'practice' })}
+                  {t('showAnswer')}
                 </button>
               )
             } else {

@@ -20,7 +20,7 @@ export default async function MainLayout({
       .from('admin_users')
       .select('id')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
     isAdmin = !!adminUser
   }
 

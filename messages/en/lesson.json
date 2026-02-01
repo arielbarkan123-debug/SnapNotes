@@ -90,5 +90,29 @@
   "stepsRemaining": "{count} steps remaining",
   "stepRemaining": "{count} step remaining",
   "getHelp": "Get help",
-  "needHelpPressF9": "Need help? Press F9"
+  "needHelpPressF9": "Need help? Press F9",
+  "help": {
+    "needHelp": "Need Help?",
+    "askQuestion": "Ask a Question",
+    "heresHelp": "Here's Help",
+    "thinking": "Thinking...",
+    "explainTitle": "Explain This",
+    "explainDesc": "Get a simpler explanation",
+    "exampleTitle": "Show Example",
+    "exampleDesc": "See a real-world example",
+    "hintTitle": "Give Me a Hint",
+    "hintDesc": "Get a clue without the answer",
+    "customTitle": "Ask My Own Question",
+    "customDesc": "Type what you want to know",
+    "gettingHelp": "Getting help...",
+    "source": "From",
+    "gotIt": "Got it!",
+    "stillConfused": "Still confused?",
+    "about": "About",
+    "placeholder": "What would you like to know?",
+    "quick1": "Why does this happen?",
+    "quick2": "Can you simplify this?",
+    "quick3": "How is this used?",
+    "back": "← Back"
+  }
 }

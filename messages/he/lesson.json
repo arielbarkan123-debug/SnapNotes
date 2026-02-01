@@ -90,5 +90,29 @@
   "stepsRemaining": "{count} צעדים נותרו",
   "stepRemaining": "צעד {count} נותר",
   "getHelp": "קבל עזרה",
-  "needHelpPressF9": "צריך עזרה? לחץ F9"
+  "needHelpPressF9": "צריך עזרה? לחץ F9",
+  "help": {
+    "needHelp": "צריך עזרה?",
+    "askQuestion": "שאל שאלה",
+    "heresHelp": "הנה עזרה",
+    "thinking": "חושב...",
+    "explainTitle": "הסבר לי",
+    "explainDesc": "קבל הסבר פשוט יותר",
+    "exampleTitle": "הצג דוגמה",
+    "exampleDesc": "ראה דוגמה מהעולם האמיתי",
+    "hintTitle": "תן לי רמז",
+    "hintDesc": "קבל רמז בלי התשובה",
+    "customTitle": "שאל שאלה משלי",
+    "customDesc": "כתוב מה אתה רוצה לדעת",
+    "gettingHelp": "מקבל עזרה...",
+    "source": "מתוך",
+    "gotIt": "הבנתי!",
+    "stillConfused": "עדיין לא ברור?",
+    "about": "על",
+    "placeholder": "מה תרצה לדעת?",
+    "quick1": "למה זה קורה?",
+    "quick2": "אפשר לפשט?",
+    "quick3": "איך זה משמש?",
+    "back": "← חזרה"
+  }
 }

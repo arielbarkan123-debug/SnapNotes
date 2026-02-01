@@ -44,5 +44,29 @@
     "thisWeek": "This week"
   },
   "howItWorks": "How spaced repetition works",
-  "srsExplainer": "Cards you find easy appear less often. Cards you struggle with appear more frequently. This is the most efficient way to memorize."
+  "srsExplainer": "Cards you find easy appear less often. Cards you struggle with appear more frequently. This is the most efficient way to memorize.",
+  "complete": {
+    "title": "Review Complete!",
+    "subtitle": "Great job on your study session",
+    "cardsReviewed": "Cards Reviewed",
+    "timeSpent": "Time Spent",
+    "lessThanOneMin": "< 1 min",
+    "minutes": "{count} min",
+    "accuracy": "Accuracy",
+    "needReview": "Need Review",
+    "streakBonus": "Includes streak bonus!",
+    "dayStreak": "{count} Day Streak",
+    "keepItGoing": "Keep it going!",
+    "streakMaintained": "Streak maintained!",
+    "done": "Done",
+    "reviewMore": "Review More Cards",
+    "encouragement": {
+      "noCards": "No cards to review right now. Check back later!",
+      "outstanding": "Outstanding! Your memory is on fire! Keep up the excellent work!",
+      "great": "Great job! You're building strong memories. Consistency is key!",
+      "good": "Good progress! Those tricky cards will get easier with practice.",
+      "keepItUp": "Keep it up! Regular review sessions will help these stick better.",
+      "default": "Every review strengthens your memory. The cards you found hard will be shown again soon!"
+    }
+  }
 }

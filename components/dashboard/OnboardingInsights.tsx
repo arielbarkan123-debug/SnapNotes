@@ -40,9 +40,17 @@ function getDismissKey(type: InsightType): string {
   return `notesnap-dismissed-insight-${type}`
 }
 
+const DISMISS_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
+
 function isDismissed(type: InsightType): boolean {
   if (typeof window === 'undefined') return false
-  return localStorage.getItem(getDismissKey(type)) === 'true'
+  const val = localStorage.getItem(getDismissKey(type))
+  if (!val) return false
+  // Support legacy 'true' values — treat as dismissed but will expire on next check
+  if (val === 'true') return true
+  const dismissedAt = parseInt(val, 10)
+  if (isNaN(dismissedAt)) return false
+  return Date.now() - dismissedAt < DISMISS_EXPIRY_MS
 }
 
 // =============================================================================
@@ -102,7 +110,7 @@ export default function OnboardingInsights() {
 
   const handleDismiss = () => {
     if (insightType) {
-      localStorage.setItem(getDismissKey(insightType), 'true')
+      localStorage.setItem(getDismissKey(insightType), Date.now().toString())
       setDismissed(insightType)
     }
   }

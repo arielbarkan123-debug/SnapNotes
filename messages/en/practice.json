@@ -34,7 +34,8 @@
     "showAnswer": "Show Answer",
     "resumeSession": "Resume Previous Session",
     "resumePrompt": "You have an unfinished practice session. Would you like to continue?",
-    "startFresh": "Start Fresh"
+    "startFresh": "Start Fresh",
+    "endSession": "End Session"
   },
   "encouragement": {
     "1": "Almost there! Let's see why this wasn't quite right.",

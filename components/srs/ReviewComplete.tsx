@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
+import { useTranslations } from 'next-intl'
 import { useXP } from '@/contexts/XPContext'
 import { SessionReflection } from '@/components/reflection'
 import type { MistakeItem } from '@/components/practice/MistakeReview'
@@ -44,6 +45,7 @@ export default function ReviewComplete({
   const hasAwardedXP = useRef(false)
   const hasTriggeredReflection = useRef(false)
   const { showXP, showLevelUp } = useXP()
+  const t = useTranslations('review')
 
   const timeSpentMinutes = Math.round(timeSpentMs / 60000)
   const accuracy = cardsReviewed > 0 ? Math.round((correctCount / cardsReviewed) * 100) : 0
@@ -51,6 +53,25 @@ export default function ReviewComplete({
   // Calculate XP: 1 base + bonus for ratings
   // Again=0, Hard=0, Good=1, Easy=2 bonus
   const estimatedXP = cardsReviewed + ratingCounts[2] + (ratingCounts[3] * 2)
+
+  const getEncouragementMessage = useCallback((acc: number, count: number): string => {
+    if (count === 0) {
+      return t('complete.encouragement.noCards')
+    }
+    if (acc >= 90) {
+      return t('complete.encouragement.outstanding')
+    }
+    if (acc >= 80) {
+      return t('complete.encouragement.great')
+    }
+    if (acc >= 70) {
+      return t('complete.encouragement.good')
+    }
+    if (acc >= 60) {
+      return t('complete.encouragement.keepItUp')
+    }
+    return t('complete.encouragement.default')
+  }, [t])
 
   // Award XP on mount
   useEffect(() => {
@@ -111,9 +132,6 @@ export default function ReviewComplete({
         if (totalXP > 0) {
           setTimeout(() => {
             showXP(totalXP)
-            if (levelUp) {
-              setTimeout(() => showLevelUp(levelUp.level, levelUp.title), 1500)
-            }
           }, 500)
         }
 
@@ -134,7 +152,14 @@ export default function ReviewComplete({
     }
 
     awardXP()
-  }, [cardsReviewed, estimatedXP, accuracy, showXP, showLevelUp, levelUp])
+  }, [cardsReviewed, estimatedXP, accuracy, showXP])
+
+  // Show level up popup when levelUp state is set (separate effect to avoid stale closure)
+  useEffect(() => {
+    if (levelUp && totalXpEarned > 0) {
+      setTimeout(() => showLevelUp(levelUp.level, levelUp.title), 1500)
+    }
+  }, [levelUp, totalXpEarned, showLevelUp])
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
@@ -160,10 +185,10 @@ export default function ReviewComplete({
 
         {/* Title */}
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Review Complete!
+          {t('complete.title')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mb-8">
-          Great job on your study session
+          {t('complete.subtitle')}
         </p>
 
         {/* Stats Grid */}
@@ -174,7 +199,7 @@ export default function ReviewComplete({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             }
-            label="Cards Reviewed"
+            label={t('complete.cardsReviewed')}
             value={cardsReviewed.toString()}
             color="text-indigo-600 dark:text-indigo-400"
           />
@@ -184,8 +209,8 @@ export default function ReviewComplete({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             }
-            label="Time Spent"
-            value={timeSpentMinutes < 1 ? '< 1 min' : `${timeSpentMinutes} min`}
+            label={t('complete.timeSpent')}
+            value={timeSpentMinutes < 1 ? t('complete.lessThanOneMin') : t('complete.minutes', { count: timeSpentMinutes })}
             color="text-blue-600 dark:text-blue-400"
           />
           <StatCard
@@ -194,7 +219,7 @@ export default function ReviewComplete({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             }
-            label="Accuracy"
+            label={t('complete.accuracy')}
             value={`${accuracy}%`}
             color={accuracy >= 80 ? 'text-green-600 dark:text-green-400' : accuracy >= 60 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}
           />
@@ -204,7 +229,7 @@ export default function ReviewComplete({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             }
-            label="Need Review"
+            label={t('complete.needReview')}
             value={againCount.toString()}
             color="text-orange-600 dark:text-orange-400"
           />
@@ -221,7 +246,7 @@ export default function ReviewComplete({
             </div>
             {streakInfo?.maintained && (
               <p className="text-amber-600/80 dark:text-amber-400/80 text-sm mt-1">
-                Includes streak bonus!
+                {t('complete.streakBonus')}
               </p>
             )}
           </div>
@@ -233,11 +258,11 @@ export default function ReviewComplete({
             <div className="flex items-center justify-center gap-2">
               <span className="text-2xl">🔥</span>
               <span className="text-lg font-bold text-orange-600 dark:text-orange-400">
-                {streakInfo.current} Day Streak
+                {t('complete.dayStreak', { count: streakInfo.current })}
               </span>
             </div>
             <p className="text-orange-600/80 dark:text-orange-400/80 text-sm mt-1">
-              {streakInfo.maintained ? 'Keep it going!' : 'Streak maintained!'}
+              {streakInfo.maintained ? t('complete.keepItGoing') : t('complete.streakMaintained')}
             </p>
           </div>
         )}
@@ -271,13 +296,13 @@ export default function ReviewComplete({
             href="/dashboard"
             className="block w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold rounded-xl transition-colors text-center"
           >
-            Done
+            {t('complete.done')}
           </Link>
           <Link
             href="/review"
             className="block w-full py-3 px-6 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium rounded-xl transition-colors text-center"
           >
-            Review More Cards
+            {t('complete.reviewMore')}
           </Link>
         </div>
       </div>
@@ -316,32 +341,4 @@ function StatCard({ icon, label, value, color }: StatCardProps) {
       <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{label}</div>
     </div>
   )
-}
-
-// =============================================================================
-// Helpers
-// =============================================================================
-
-function getEncouragementMessage(accuracy: number, count: number): string {
-  if (count === 0) {
-    return "No cards to review right now. Check back later!"
-  }
-
-  if (accuracy >= 90) {
-    return "Outstanding! Your memory is on fire! Keep up the excellent work!"
-  }
-
-  if (accuracy >= 80) {
-    return "Great job! You're building strong memories. Consistency is key!"
-  }
-
-  if (accuracy >= 70) {
-    return "Good progress! Those tricky cards will get easier with practice."
-  }
-
-  if (accuracy >= 60) {
-    return "Keep it up! Regular review sessions will help these stick better."
-  }
-
-  return "Every review strengthens your memory. The cards you found hard will be shown again soon!"
 }

@@ -42,6 +42,7 @@ export function useStudyPlan(): UseStudyPlanReturn {
     mutate,
   } = useSWR<StudyPlanApiResponse>(STUDY_PLAN_CACHE_KEY, fetcher, {
     revalidateOnFocus: true,
+    dedupingInterval: 60000,
     onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
       if (retryCount >= 3) return
       setTimeout(() => revalidate({ retryCount }), 5000)

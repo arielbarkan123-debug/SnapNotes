@@ -64,8 +64,6 @@ export function generateStudyPlan(input: GeneratePlanInput): Omit<StudyPlanTask,
 
   const availableDays: string[] = []
   const current = new Date(today)
-  // Start from tomorrow
-  current.setDate(current.getDate() + 1)
 
   while (current < exam) {
     const dateStr = current.toISOString().split('T')[0]

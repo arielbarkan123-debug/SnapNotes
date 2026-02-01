@@ -113,7 +113,7 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
       <div ref={modalRef} className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-xl">
         <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {view === 'custom' ? 'Ask a Question' : view === 'response' ? 'Here\'s Help' : view === 'loading' ? 'Thinking...' : 'Need Help?'}
+            {view === 'custom' ? t('help.askQuestion') : view === 'response' ? t('help.heresHelp') : view === 'loading' ? t('help.thinking') : t('help.needHelp')}
           </h2>
           {view !== 'loading' && (
             <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1" aria-label="Close help">✕</button>
@@ -129,8 +129,8 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">📖</span>
                   <div>
-                    <div className="font-medium text-gray-900 dark:text-white">Explain This</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Get a simpler explanation</div>
+                    <div className="font-medium text-gray-900 dark:text-white">{t('help.explainTitle')}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{t('help.explainDesc')}</div>
                   </div>
                 </div>
               </button>
@@ -138,8 +138,8 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">💡</span>
                   <div>
-                    <div className="font-medium text-gray-900 dark:text-white">Show Example</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">See a real-world example</div>
+                    <div className="font-medium text-gray-900 dark:text-white">{t('help.exampleTitle')}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{t('help.exampleDesc')}</div>
                   </div>
                 </div>
               </button>
@@ -147,8 +147,8 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">🔍</span>
                   <div>
-                    <div className="font-medium text-gray-900 dark:text-white">Give Me a Hint</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Get a clue without the answer</div>
+                    <div className="font-medium text-gray-900 dark:text-white">{t('help.hintTitle')}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{t('help.hintDesc')}</div>
                   </div>
                 </div>
               </button>
@@ -157,8 +157,8 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">✏️</span>
                     <div>
-                      <div className="font-medium text-gray-900 dark:text-white">Ask My Own Question</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">Type what you want to know</div>
+                      <div className="font-medium text-gray-900 dark:text-white">{t('help.customTitle')}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">{t('help.customDesc')}</div>
                     </div>
                   </div>
                 </button>
@@ -169,7 +169,7 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
           {view === 'loading' && (
             <div className="py-12 text-center">
               <div className="inline-block w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">Getting help...</p>
+              <p className="text-gray-500 dark:text-gray-400">{t('help.gettingHelp')}</p>
             </div>
           )}
 
@@ -198,33 +198,33 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
                   {response}
                 </ReactMarkdown>
               </div>
-              {sourceReference && <p className="text-sm text-gray-500 dark:text-gray-400">📍 From: {sourceReference}</p>}
+              {sourceReference && <p className="text-sm text-gray-500 dark:text-gray-400">📍 {t('help.source')}: {sourceReference}</p>}
               <div className="flex gap-3">
-                <button onClick={handleClose} className="flex-1 py-2.5 px-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition">Got it!</button>
-                <button onClick={() => setView('custom')} className="flex-1 py-2.5 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition">Still confused?</button>
+                <button onClick={handleClose} className="flex-1 py-2.5 px-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition">{t('help.gotIt')}</button>
+                <button onClick={() => setView('custom')} className="flex-1 py-2.5 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition">{t('help.stillConfused')}</button>
               </div>
             </div>
           )}
 
           {view === 'custom' && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-500 dark:text-gray-400">About: {context.lessonTitle}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('help.about')}: {context.lessonTitle}</p>
               <textarea
                 value={customQuestion}
                 onChange={(e) => setCustomQuestion(e.target.value)}
-                placeholder="What would you like to know?"
+                placeholder={t('help.placeholder')}
                 className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 rows={3}
                 autoFocus
                 maxLength={500}
               />
               <div className="flex flex-wrap gap-2">
-                {['Why does this happen?', 'Can you simplify this?', 'How is this used?'].map((q) => (
+                {[t('help.quick1'), t('help.quick2'), t('help.quick3')].map((q) => (
                   <button key={q} onClick={() => setCustomQuestion(q)} type="button" className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition">{q}</button>
                 ))}
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setView('buttons')} type="button" className="py-2.5 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition">← Back</button>
+                <button onClick={() => setView('buttons')} type="button" className="py-2.5 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition">{t('help.back')}</button>
                 <button onClick={handleCustomSubmit} disabled={!customQuestion.trim()} type="button" className="flex-1 py-2.5 px-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">{t('askAI')}</button>
               </div>
             </div>
