@@ -1132,7 +1132,7 @@ export function FreeBodyDiagram({
   const getForceOrigin = (force: Force): { x: number; y: number } => {
     const objSize = 50
     const halfSize = objSize / 2
-    const angleRad = (force.angle * Math.PI) / 180
+    const angleRad = ((force.angle ?? 0) * Math.PI) / 180
 
     if (force.origin) {
       return {
@@ -1202,9 +1202,9 @@ export function FreeBodyDiagram({
     let netY = 0
 
     visibleForces.forEach((force) => {
-      const angleRad = (force.angle * Math.PI) / 180
-      netX += force.magnitude * Math.cos(angleRad)
-      netY += force.magnitude * Math.sin(angleRad)
+      const angleRad = ((force.angle ?? 0) * Math.PI) / 180
+      netX += (force.magnitude ?? 0) * Math.cos(angleRad)
+      netY += (force.magnitude ?? 0) * Math.sin(angleRad)
     })
 
     const netMagnitude = Math.sqrt(netX * netX + netY * netY)
@@ -1366,13 +1366,14 @@ export function FreeBodyDiagram({
 
       {/* Angle labels for tension vectors */}
       {showAngleLabels && visibleForces.filter(f => f.type === 'tension').map((force, i) => {
-        const angleRad = (force.angle * Math.PI) / 180
+        const safeAngle = force.angle ?? 0
+        const angleRad = (safeAngle * Math.PI) / 180
         const labelDist = 60
         const labelX = centerX + Math.cos(angleRad) * labelDist
         const labelY = centerY - Math.sin(angleRad) * labelDist
         const arcRadius = 35
         const startAngle = 0
-        const endAngle = force.angle
+        const endAngle = safeAngle
         const startX = centerX + arcRadius * Math.cos(startAngle * Math.PI / 180)
         const startY = centerY - arcRadius * Math.sin(startAngle * Math.PI / 180)
         const endX = centerX + arcRadius * Math.cos(endAngle * Math.PI / 180)
@@ -1399,7 +1400,7 @@ export function FreeBodyDiagram({
               fontFamily="'Inter', sans-serif"
               fill="#374151"
             >
-              {Math.abs(force.angle).toFixed(1)}°
+              {Math.abs(force.angle ?? 0).toFixed(1)}°
             </text>
           </g>
         )

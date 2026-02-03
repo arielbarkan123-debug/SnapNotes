@@ -351,7 +351,7 @@ export function InclinedPlane({
       if (force.type === 'weight' && force.components) {
         // Weight parallel component (along slope)
         const parallelAngle = -90 + angle // Down the slope
-        const parallelMag = force.magnitude * Math.sin(angleRad)
+        const parallelMag = (force.magnitude ?? 0) * Math.sin(angleRad)
 
         components.push(
           <ForceVector
@@ -375,7 +375,7 @@ export function InclinedPlane({
 
         // Weight perpendicular component (into slope)
         const perpAngle = -angle // Into the slope
-        const perpMag = force.magnitude * Math.cos(angleRad)
+        const perpMag = (force.magnitude ?? 0) * Math.cos(angleRad)
 
         components.push(
           <ForceVector

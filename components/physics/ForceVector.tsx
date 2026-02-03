@@ -106,9 +106,13 @@ export function ForceVector({
   const gradientId = `force-gradient-${force.name.replace(/\s+/g, '-')}-${origin.x}-${origin.y}`
   const glowId = `force-glow-${force.name.replace(/\s+/g, '-')}-${origin.x}-${origin.y}`
 
+  // Defensive defaults for null/undefined values
+  const safeAngle = force.angle ?? 0
+  const safeMagnitude = force.magnitude ?? 0
+
   // Calculate end point based on magnitude and angle
-  const angleRad = (force.angle * Math.PI) / 180
-  const length = Math.max(force.magnitude * scale, 20) // Minimum length for visibility
+  const angleRad = (safeAngle * Math.PI) / 180
+  const length = Math.max(safeMagnitude * scale, 20) // Minimum length for visibility
 
   const endX = origin.x + length * Math.cos(angleRad)
   const endY = origin.y - length * Math.sin(angleRad) // SVG Y is inverted
@@ -448,7 +452,7 @@ export function ForceVector({
             fontFamily="'JetBrains Mono', monospace"
             fill="#4b5563"
           >
-            {force.magnitude.toFixed(1)} N
+            {(force.magnitude ?? 0).toFixed(1)} N
           </text>
         </motion.g>
       )}
