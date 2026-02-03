@@ -1,6 +1,7 @@
 {
   "appName": "NoteSnap",
   "nav": {
+    "dashboard": "לוח בקרה",
     "courses": "קורסים",
     "review": "חזרה",
     "reviewCards": "כרטיסי חזרה",
@@ -17,6 +18,10 @@
     "search": "חיפוש",
     "studyPlan": "תוכנית לימודים",
     "toggleMenu": "פתח/סגור תפריט"
+  },
+  "sidebar": {
+    "lightMode": "מצב בהיר",
+    "darkMode": "מצב כהה"
   },
   "auth": {
     "logOut": "התנתק",
@@ -57,5 +62,9 @@
     "failedToLoad": "טעינת הנתונים נכשלה",
     "retry": "נסה שוב",
     "somethingWentWrong": "משהו השתבש"
+  },
+  "confirmModal": {
+    "confirm": "אשר",
+    "cancel": "ביטול"
   }
 }

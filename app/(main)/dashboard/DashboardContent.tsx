@@ -1,16 +1,20 @@
 'use client'
 
-import { useState, useEffect, useRef, Component, type ReactNode, type ErrorInfo } from 'react'
+import { useState, useEffect, useRef, Component, type ReactNode, type ErrorInfo, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import Button from '@/components/ui/Button'
-import CourseCard from '@/components/course/CourseCard'
-import { DashboardWidget } from '@/components/srs'
-import { LazySection, SRSWidgetSkeleton } from '@/components/ui/LazySection'
+import { type Course } from '@/types'
+import { useCourses } from '@/hooks'
+import { useToast } from '@/contexts/ToastContext'
+import { useStudyPlan } from '@/hooks/useStudyPlan'
+import { ChevronRight, Check, ArrowRight } from 'lucide-react'
+import type { StudyPlanTask } from '@/lib/study-plan/types'
 
 // ============================================================================
-// Component-Level Error Boundary (silently catches errors, shows nothing)
+// Component-Level Error Boundary
 // ============================================================================
 
 interface SilentErrorBoundaryProps {
@@ -33,157 +37,120 @@ class SilentErrorBoundary extends Component<SilentErrorBoundaryProps, SilentErro
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error(`[Dashboard] Error in ${this.props.componentName || 'unknown component'}:`, error.message)
+    console.error(`[Dashboard] Error in ${this.props.componentName || 'unknown'}:`, error.message)
     console.error('Component stack:', errorInfo.componentStack)
   }
 
   render() {
-    if (this.state.hasError) {
-      // Render nothing when error occurs - don't crash the whole dashboard
-      return null
-    }
+    if (this.state.hasError) return null
     return this.props.children
   }
 }
 
-// Safe wrapper for CourseCard that handles any errors in individual cards
-function SafeCourseCard({ course }: { course: Course }) {
-  try {
-    // Validate course data before rendering
-    if (!course || typeof course !== 'object') {
-      console.warn('[Dashboard] Invalid course data:', course)
-      return null
-    }
-    if (!course.id || !course.title) {
-      console.warn('[Dashboard] Course missing required fields:', course)
-      return null
-    }
-    return (
-      <SilentErrorBoundary componentName={`CourseCard-${course.id}`}>
-        <CourseCard course={course} />
-      </SilentErrorBoundary>
-    )
-  } catch (error) {
-    console.error('[Dashboard] Error rendering CourseCard:', error)
-    return null
-  }
-}
-
-// Lazy load UploadModal - only loaded when user opens it
+// Lazy load UploadModal
 const UploadModal = dynamic(
   () => import('@/components/upload/UploadModal'),
   { ssr: false }
 )
-// Lazy load WeakAreas component
-const WeakAreas = dynamic(
-  () => import('@/components/dashboard/WeakAreas'),
-  { ssr: false, loading: () => (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm mb-6">
-      <div className="animate-pulse">
-        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
-        <div className="space-y-3">
-          <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
-          <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
-        </div>
-      </div>
-    </div>
-  )}
-)
-// Lazy load GapAlert component
-const GapAlert = dynamic(
-  () => import('@/components/gaps/GapAlert').then(mod => ({ default: mod.GapAlert })),
-  { ssr: false, loading: () => (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm mb-6">
-      <div className="animate-pulse">
-        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-4"></div>
-        <div className="space-y-2">
-          <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
-          <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
-        </div>
-      </div>
-    </div>
-  )}
-)
-// Lazy load PracticeWidget component
-const PracticeWidget = dynamic(
-  () => import('@/components/dashboard/PracticeWidget'),
-  { ssr: false, loading: () => (
-    <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl p-6 border border-indigo-200 dark:border-indigo-800/50 shadow-sm mb-6">
-      <div className="animate-pulse">
-        <div className="h-6 bg-indigo-200 dark:bg-indigo-700 rounded w-1/3 mb-4"></div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="h-24 bg-indigo-200 dark:bg-indigo-700 rounded-lg"></div>
-          <div className="h-24 bg-indigo-200 dark:bg-indigo-700 rounded-lg"></div>
-        </div>
-      </div>
-    </div>
-  )}
-)
-// Lazy load StudyPlanWidget component
-const StudyPlanWidget = dynamic(
-  () => import('@/components/dashboard/StudyPlanWidget'),
+
+// Lazy load GamificationBar
+const GamificationBar = dynamic(
+  () => import('@/components/gamification/GamificationBar'),
   { ssr: false }
 )
-// Lazy load QuickActions component
-const QuickActions = dynamic(
-  () => import('@/components/dashboard/QuickActions'),
+
+// Lazy load WelcomeModal
+const WelcomeModal = dynamic(
+  () => import('@/components/dashboard/WelcomeModal'),
   { ssr: false }
 )
-// Lazy load OnboardingInsights component
-const OnboardingInsights = dynamic(
-  () => import('@/components/dashboard/OnboardingInsights'),
-  { ssr: false }
-)
-import { type Course } from '@/types'
-import { useCourses } from '@/hooks'
-import { useToast } from '@/contexts/ToastContext'
-import { useCurriculumStatus } from '@/hooks/useCurriculumStatus'
-import { CurriculumSetupPrompt } from '@/components/curriculum'
 
 interface DashboardContentProps {
   initialCourses: Course[]
+  userName?: string
 }
 
-export default function DashboardContent({ initialCourses }: DashboardContentProps) {
+export default function DashboardContent({ initialCourses, userName }: DashboardContentProps) {
   const router = useRouter()
   const t = useTranslations('dashboard')
+  const tTask = useTranslations('studyPlan.taskTypes')
   const { error: showError, success: showSuccess } = useToast()
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [isGeneratingCovers, setIsGeneratingCovers] = useState(false)
-  const { status: curriculumStatus } = useCurriculumStatus()
 
-  // Check if any courses are missing covers (safely handle null/undefined)
+  // Get courses data
+  const {
+    filteredCourses,
+    totalCount,
+    error,
+  } = useCourses({
+    initialCourses,
+    debounceDelay: 300,
+  })
+
+  // Get study plan data
+  const { plan, todayTasks } = useStudyPlan()
+
+  // Calculate greeting based on time of day
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours()
+    if (hour < 12) return t('greeting.morning')
+    if (hour < 18) return t('greeting.afternoon')
+    return t('greeting.evening')
+  }, [t])
+
+  // Calculate today's progress
+  const todayProgress = useMemo(() => {
+    if (!todayTasks || todayTasks.length === 0) return { completed: 0, total: 0, percent: 0 }
+    const completed = todayTasks.filter((task: StudyPlanTask) => task.status === 'completed').length
+    const total = todayTasks.length
+    return {
+      completed,
+      total,
+      percent: total > 0 ? Math.round((completed / total) * 100) : 0
+    }
+  }, [todayTasks])
+
+  // Display name
+  const displayName = userName || 'Student'
+  const initials = displayName.charAt(0).toUpperCase()
+
+  // Find current course/lesson to continue
+  const currentCourse = useMemo(() => {
+    if (!filteredCourses || filteredCourses.length === 0) return null
+    // Find course with lessons to continue
+    for (const course of filteredCourses) {
+      const lessons = course.generated_course?.lessons
+      if (lessons && lessons.length > 0) {
+        // For now, just return first course with lessons - lesson completion is tracked separately
+        return { course, lessonIndex: 0 }
+      }
+    }
+    return { course: filteredCourses[0], lessonIndex: 0 }
+  }, [filteredCourses])
+
+  // Check for courses without covers
   const coursesWithoutCovers = (initialCourses || []).filter(c => !c.cover_image_url).length
-
-  // Track if auto-generation has been attempted this session
   const autoGenerationAttempted = useRef(false)
 
-  // Auto-generate covers on mount if there are courses without covers
+  // Auto-generate covers
   useEffect(() => {
-    // Only attempt once per session, and only if there are courses without covers
     if (autoGenerationAttempted.current || coursesWithoutCovers === 0) return
     autoGenerationAttempted.current = true
-
-    // Silent background generation - no loading indicator, no toast on success
     const generateCoversInBackground = async () => {
       try {
         const response = await fetch('/api/generate-all-covers', { method: 'POST' })
         const data = await response.json()
         if (data.success && data.updated > 0) {
-          // Silently refresh to show new covers
           router.refresh()
         }
-      } catch {
-        // Silent failure - user can use the button if needed
-      }
+      } catch { /* silent */ }
     }
-
-    // Small delay to not block initial render
     const timer = setTimeout(generateCoversInBackground, 2000)
     return () => clearTimeout(timer)
   }, [coursesWithoutCovers, router])
 
-  // Generate covers for all courses without them
+  // Generate covers manually
   const handleGenerateCovers = async () => {
     setIsGeneratingCovers(true)
     try {
@@ -202,108 +169,198 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
     }
   }
 
-  const {
-    filteredCourses,
-    totalCount,
-    filteredCount,
-    searchQuery,
-    setSearchQuery,
-    debouncedSearchQuery,
-    clearSearch,
-    sortOrder,
-    toggleSortOrder,
-    isLoading,
-    error,
-    refetch,
-  } = useCourses({
-    initialCourses,
-    debounceDelay: 300,
-  })
-
-  const handleOpenUploadModal = () => {
-    setIsUploadModalOpen(true)
-  }
-
-  const handleCloseUploadModal = () => {
-    setIsUploadModalOpen(false)
-  }
-
-  const handleRefresh = async () => {
-    router.refresh()
-    try {
-      await refetch()
-    } catch {
-      showError(t('refreshError'))
-    }
-  }
-
-  // Show toast when error occurs
+  // Show toast on error
   useEffect(() => {
-    if (error) {
-      showError(error)
-    }
+    if (error) showError(error)
   }, [error, showError])
 
-  const isSearching = searchQuery.trim().length > 0
-  const hasNoResults = isSearching && filteredCount === 0
   const hasNoCourses = totalCount === 0
 
   return (
     <>
-      <div className="container mx-auto px-4 py-6 sm:py-8 pb-24 sm:pb-8">
-        {/* Page Header */}
-        <div className="flex flex-col gap-4 mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                {t('title')}
-              </h1>
-              {totalCount > 0 && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  {isSearching
-                    ? t('coursesFiltered', { filtered: filteredCount, total: totalCount })
-                    : totalCount !== 1
-                      ? t('coursesCount', { count: totalCount })
-                      : t('coursesCountSingular', { count: totalCount })
-                  }
-                </p>
-              )}
+      <div className="px-4 md:px-10 py-6 md:py-10 pb-24 md:pb-10 max-w-[1100px] mx-auto">
+        {/* Greeting Header */}
+        <div className="flex items-center justify-between mb-8 animate-fadeSlideIn">
+          <div>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">{greeting}</p>
+            <h1 className="text-2xl md:text-3xl font-extrabold gradient-text">
+              {displayName}
+            </h1>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+              {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+            </p>
+          </div>
+          <div className="relative">
+            <div className="w-13 h-13 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-violet-500 to-rose-500 flex items-center justify-center avatar-glow">
+              <span className="text-white font-bold text-xl md:text-2xl">{initials}</span>
             </div>
-            {/* Desktop upload button */}
-            <Button
-              size="lg"
-              onClick={handleOpenUploadModal}
-              className="hidden sm:inline-flex"
-            >
-              <svg
-                className="w-5 h-5 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                />
-              </svg>
-              {t('uploadNotebook')}
-            </Button>
           </div>
         </div>
 
-        {/* Curriculum Setup Prompt - show if setup incomplete */}
-        {curriculumStatus && !curriculumStatus.isComplete && (
-          <CurriculumSetupPrompt
-            status={curriculumStatus}
-            className="mb-6"
-          />
+        {/* Gamification Bar */}
+        <SilentErrorBoundary componentName="GamificationBar">
+          <div className="animate-fadeSlideIn stagger-2">
+            <GamificationBar />
+          </div>
+        </SilentErrorBoundary>
+
+        {/* Quick Actions Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-fadeSlideIn stagger-3">
+          {/* Continue Learning - Featured */}
+          <Link
+            href={currentCourse ? `/course/${currentCourse.course.id}/lesson/${currentCourse.lessonIndex}` : '/dashboard'}
+            className="bg-gradient-to-br from-violet-500 to-purple-600 rounded-[22px] p-5 text-white shadow-card card-hover-lift relative overflow-hidden group"
+          >
+            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <h3 className="font-bold text-lg mb-1">{t('continueLearningTitle')}</h3>
+            {currentCourse ? (
+              <>
+                <p className="text-white/80 text-sm mb-4 line-clamp-1">{currentCourse.course.title}</p>
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <span>Continue</span>
+                  <ArrowRight className="w-4 h-4" />
+                </div>
+              </>
+            ) : (
+              <p className="text-white/80 text-sm">{t('quickActions.noCourseYet')}</p>
+            )}
+          </Link>
+
+          {/* Check Homework */}
+          <Link
+            href="/homework"
+            className="bg-white dark:bg-gray-800 rounded-[22px] p-5 border border-gray-200 dark:border-gray-700 shadow-card card-hover-lift group"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center mb-3">
+              <span className="text-3xl">📝</span>
+            </div>
+            <h3 className="font-bold text-gray-900 dark:text-white mb-1">{t('checkHomeworkTitle')}</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">{t('checkHomeworkDesc')}</p>
+          </Link>
+
+          {/* Quick Practice */}
+          <Link
+            href="/practice"
+            className="bg-white dark:bg-gray-800 rounded-[22px] p-5 border border-gray-200 dark:border-gray-700 shadow-card card-hover-lift group relative"
+          >
+            <span className="absolute top-4 end-4 text-xs font-semibold px-2 py-0.5 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-full">
+              {t('newBadge')}
+            </span>
+            <div className="w-14 h-14 rounded-2xl bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center mb-3">
+              <span className="text-3xl">🎯</span>
+            </div>
+            <h3 className="font-bold text-gray-900 dark:text-white mb-1">{t('quickPracticeTitle')}</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">{t('quickPracticeDesc')}</p>
+          </Link>
+        </div>
+
+        {/* Today's Plan Section */}
+        {plan && (
+          <div className="bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card mb-8 animate-fadeSlideIn stagger-4">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="font-bold text-gray-900 dark:text-white text-lg">{t('todaysPlan')}</h2>
+              <Link href="/study-plan" className="text-sm font-medium text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1">
+                {t('viewFullPlan')}
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className="p-5">
+              <div className="flex gap-6">
+                {/* Task List */}
+                <div className="flex-1 space-y-3">
+                  {todayTasks && todayTasks.length > 0 ? (
+                    todayTasks.slice(0, 4).map((task: StudyPlanTask) => {
+                      const isCompleted = task.status === 'completed'
+                      return (
+                        <div key={task.id} className={`flex items-center gap-3 ${isCompleted ? 'opacity-50' : ''}`}>
+                          {isCompleted ? (
+                            <div className="w-6 h-6 rounded-full bg-violet-500 flex items-center justify-center flex-shrink-0">
+                              <Check className="w-3.5 h-3.5 text-white" />
+                            </div>
+                          ) : (
+                            <div className="w-6 h-6 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex-shrink-0" />
+                          )}
+                          <span className={`text-sm flex-1 ${isCompleted ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'}`}>
+                            {tTask(task.task_type)}: {task.lesson_title || task.description}
+                          </span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400">
+                            {task.estimated_minutes}m
+                          </span>
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No tasks for today</p>
+                  )}
+                </div>
+
+                {/* Progress Ring */}
+                <div className="flex flex-col items-center justify-center flex-shrink-0">
+                  <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 80 80">
+                    <circle
+                      cx="40"
+                      cy="40"
+                      r="34"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="8"
+                      className="text-gray-200 dark:text-gray-700"
+                    />
+                    <circle
+                      cx="40"
+                      cy="40"
+                      r="34"
+                      fill="none"
+                      stroke="url(#progressGradient)"
+                      strokeWidth="8"
+                      strokeLinecap="round"
+                      strokeDasharray={`${todayProgress.percent * 2.136} 213.6`}
+                    />
+                    <defs>
+                      <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#8B5CF6" />
+                        <stop offset="100%" stopColor="#EC4899" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <span className="absolute text-lg font-bold text-gray-900 dark:text-white">
+                    {todayProgress.percent}%
+                  </span>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    {t('ofTasks', { completed: todayProgress.completed, total: todayProgress.total })}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
-        {/* Generate Covers Banner - show if courses are missing covers */}
+        {/* My Courses Section */}
+        <div className="animate-fadeSlideIn stagger-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-bold text-gray-900 dark:text-white text-lg">{t('myCourses')}</h2>
+            {totalCount > 3 && (
+              <Link href="/courses" className="text-sm font-medium text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1">
+                {t('viewAll')}
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            )}
+          </div>
+
+          {hasNoCourses ? (
+            <EmptyState onUploadClick={() => setIsUploadModalOpen(true)} />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredCourses.slice(0, 6).map((course) => (
+                <CompactCourseCard key={course.id} course={course} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Generate Covers Banner */}
         {coursesWithoutCovers > 0 && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl border border-purple-200 dark:border-purple-800/50">
+          <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-xl border border-purple-200 dark:border-purple-800/50">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <p className="font-medium text-purple-900 dark:text-purple-100">
@@ -330,240 +387,128 @@ export default function DashboardContent({ initialCourses }: DashboardContentPro
                     {t('coversGenerating')}
                   </>
                 ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    {t('coversGenerateButton')}
-                  </>
+                  t('coversGenerateButton')
                 )}
               </button>
             </div>
           </div>
         )}
 
-        {/* SRS Review Widget - Lazy loaded with error boundary */}
-        <SilentErrorBoundary componentName="DashboardWidget">
-          <LazySection
-            skeleton={<SRSWidgetSkeleton />}
-            minHeight={150}
-            rootMargin="150px"
-          >
-            <DashboardWidget />
-          </LazySection>
-        </SilentErrorBoundary>
-
-        {/* Study Plan Widget - shows today's study tasks or create CTA */}
-        <SilentErrorBoundary componentName="StudyPlanWidget">
-          <StudyPlanWidget />
-        </SilentErrorBoundary>
-
-        {/* Knowledge Gaps Alert - shows identified knowledge gaps */}
-        <SilentErrorBoundary componentName="GapAlert">
-          <GapAlert className="mb-6" />
-        </SilentErrorBoundary>
-
-        {/* Practice Widget - quick practice actions */}
-        <SilentErrorBoundary componentName="PracticeWidget">
-          <PracticeWidget />
-        </SilentErrorBoundary>
-
-        {/* Weak Areas Widget - shows lessons needing review */}
-        {totalCount > 0 && (
-          <SilentErrorBoundary componentName="WeakAreas">
-            <div className="mb-6">
-              <WeakAreas />
-            </div>
-          </SilentErrorBoundary>
-        )}
-
-        {/* Quick Actions */}
-        <SilentErrorBoundary componentName="QuickActions">
-          <QuickActions />
-        </SilentErrorBoundary>
-
-        {/* Onboarding Insights */}
-        <SilentErrorBoundary componentName="OnboardingInsights">
-          <OnboardingInsights />
-        </SilentErrorBoundary>
-
-        {/* Search and Sort Bar - only show if there are courses */}
-        {totalCount > 0 && (
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
-            {/* Search Input - full width on mobile */}
-            <div className="relative flex-1 sm:max-w-md">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg
-                  className="h-5 w-5 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-              </div>
-              <input
-                type="search"
-                inputMode="search"
-                placeholder={t('searchCourses')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-10 pr-10 py-3 sm:py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl sm:rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition text-base"
-              />
-              {searchQuery && (
-                <button
-                  onClick={clearSearch}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 active:text-gray-700 min-w-[44px] justify-center"
-                  aria-label="Clear search"
-                >
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              )}
-            </div>
-
-            {/* Sort and Refresh Controls */}
-            <div className="flex items-center gap-2">
-              {/* Sort Toggle */}
-              <button
-                onClick={toggleSortOrder}
-                className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl sm:rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 active:bg-gray-100 dark:active:bg-gray-500 transition-colors text-sm font-medium min-h-[44px]"
-                title={`Currently showing ${sortOrder === 'newest' ? 'newest first' : 'oldest first'}`}
-              >
-                <svg
-                  className={`w-5 h-5 sm:w-4 sm:h-4 transition-transform ${sortOrder === 'oldest' ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
-                  />
-                </svg>
-                <span className="hidden sm:inline">
-                  {sortOrder === 'newest' ? t('sortNewest') : t('sortOldest')}
-                </span>
-              </button>
-
-              {/* Refresh Button */}
-              <button
-                onClick={handleRefresh}
-                disabled={isLoading}
-                className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl sm:rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 active:bg-gray-100 dark:active:bg-gray-500 transition-colors disabled:opacity-50 min-h-[44px] min-w-[44px]"
-                aria-label="Refresh courses"
-              >
-                <svg
-                  className={`w-5 h-5 sm:w-4 sm:h-4 ${isLoading ? 'animate-spin' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Debounce Indicator */}
-        {searchQuery && searchQuery !== debouncedSearchQuery && (
-          <div className="mb-4 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-            <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            {t('searching')}
-          </div>
-        )}
-
-        {/* Courses Grid or Empty State */}
-        {isLoading && filteredCourses.length === 0 ? (
-          /* Skeleton loading state for courses */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <div
-                key={i}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden"
-              >
-                <div className="relative aspect-square w-full bg-gray-200 dark:bg-gray-700">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-300/50 dark:via-gray-600/50 to-transparent skeleton-shimmer" />
-                </div>
-                <div className="p-4">
-                  <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item w-4/5 mb-2" />
-                  <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : hasNoCourses ? (
-          <EmptyState onUploadClick={handleOpenUploadModal} />
-        ) : hasNoResults ? (
-          <NoSearchResults query={debouncedSearchQuery} onClear={clearSearch} />
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {filteredCourses.map((course) => (
-              <SafeCourseCard key={course.id} course={course} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Mobile Floating Action Button - positioned above bottom nav */}
-      <button
-        onClick={handleOpenUploadModal}
-        className="sm:hidden fixed bottom-20 right-4 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-full shadow-lg flex items-center justify-center z-40 transition-colors"
-        style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
-        aria-label="Upload notebook page"
-      >
-        <svg
-          className="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+        {/* Mobile FAB */}
+        <button
+          onClick={() => setIsUploadModalOpen(true)}
+          className="sm:hidden fixed bottom-20 end-4 w-14 h-14 bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white rounded-full shadow-lg flex items-center justify-center z-40 transition-colors"
+          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+          aria-label={t('uploadNotebook')}
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 4v16m8-8H4"
-          />
-        </svg>
-      </button>
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+
+        {/* Desktop Upload Button - Top Right */}
+        <button
+          onClick={() => setIsUploadModalOpen(true)}
+          className="hidden sm:flex fixed top-6 end-6 md:end-10 items-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl shadow-lg font-medium transition-colors z-40"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          {t('uploadNotebook')}
+        </button>
+      </div>
 
       {/* Upload Modal */}
       <UploadModal
         isOpen={isUploadModalOpen}
-        onClose={handleCloseUploadModal}
+        onClose={() => setIsUploadModalOpen(false)}
       />
+
+      {/* Welcome Modal */}
+      <SilentErrorBoundary componentName="WelcomeModal">
+        <WelcomeModal onUploadClick={() => setIsUploadModalOpen(true)} />
+      </SilentErrorBoundary>
     </>
   )
 }
 
 // ============================================================================
-// Empty States
+// Compact Course Card
+// ============================================================================
+
+function CompactCourseCard({ course }: { course: Course }) {
+  const t = useTranslations('dashboard')
+  const lessons = course.generated_course?.lessons
+  const lessonsCount = lessons?.length || 0
+  // Progress would come from user_progress table - for now show 0%
+  const progress = 0
+
+  // Generate gradient based on course title
+  const getGradient = (title: string) => {
+    const hash = title.split('').reduce((a, b) => a + b.charCodeAt(0), 0)
+    const gradients = [
+      'from-violet-500 to-purple-500',
+      'from-rose-500 to-pink-500',
+      'from-sky-500 to-cyan-500',
+      'from-amber-500 to-orange-500',
+      'from-emerald-500 to-teal-500',
+    ]
+    return gradients[hash % gradients.length]
+  }
+
+  const emoji = course.title.match(/^[\p{Emoji}]/u)?.[0] || '📚'
+
+  return (
+    <Link
+      href={`/course/${course.id}`}
+      className="bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card card-hover-lift overflow-hidden group"
+    >
+      {/* Top colored strip */}
+      <div className={`h-1 bg-gradient-to-r ${getGradient(course.title)}`} />
+
+      <div className="p-4 flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xl">{emoji}</span>
+            <h3 className="font-semibold text-gray-900 dark:text-white truncate text-sm">
+              {course.title.replace(/^[\p{Emoji}]\s*/u, '')}
+            </h3>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {t('lessons', { count: lessonsCount })}
+          </p>
+        </div>
+
+        {/* Mini progress ring */}
+        <svg className="w-10 h-10 transform -rotate-90 flex-shrink-0" viewBox="0 0 40 40">
+          <circle
+            cx="20"
+            cy="20"
+            r="16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="4"
+            className="text-gray-200 dark:text-gray-700"
+          />
+          <circle
+            cx="20"
+            cy="20"
+            r="16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray={`${progress * 1.005} 100.5`}
+            className="text-violet-500"
+          />
+        </svg>
+      </div>
+    </Link>
+  )
+}
+
+// ============================================================================
+// Empty State
 // ============================================================================
 
 interface EmptyStateProps {
@@ -573,85 +518,22 @@ interface EmptyStateProps {
 function EmptyState({ onUploadClick }: EmptyStateProps) {
   const t = useTranslations('dashboard')
   return (
-    <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4">
-      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-4 sm:mb-6">
-        <svg
-          className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-600 dark:text-indigo-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-          />
-        </svg>
+    <div className="flex flex-col items-center justify-center py-12 px-4 bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card">
+      <div className="w-16 h-16 bg-violet-100 dark:bg-violet-900/30 rounded-full flex items-center justify-center mb-4">
+        <span className="text-3xl">📚</span>
       </div>
-      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mb-2 text-center">
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 text-center">
         {t('noCourses')}
       </h2>
-      <p className="text-gray-600 dark:text-gray-400 text-center mb-6 max-w-sm sm:max-w-md text-sm sm:text-base">
+      <p className="text-gray-600 dark:text-gray-400 text-center mb-6 max-w-sm text-sm">
         {t('noCoursesDescription')}
       </p>
-      <Button size="lg" onClick={onUploadClick} className="w-full sm:w-auto">
-        <svg
-          className="w-5 h-5 me-2"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-          />
+      <Button size="lg" onClick={onUploadClick}>
+        <svg className="w-5 h-5 me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
         </svg>
         {t('uploadFirstNotebook')}
       </Button>
     </div>
   )
 }
-
-interface NoSearchResultsProps {
-  query: string
-  onClear: () => void
-}
-
-function NoSearchResults({ query, onClear }: NoSearchResultsProps) {
-  const t = useTranslations('dashboard')
-  return (
-    <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4">
-      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4 sm:mb-6">
-        <svg
-          className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
-      </div>
-      <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2 text-center">
-        {t('noResults')}
-      </h2>
-      <p className="text-gray-600 dark:text-gray-400 text-center mb-2 text-sm sm:text-base">
-        {t('noResultsMatch')}
-      </p>
-      <p className="text-gray-500 dark:text-gray-500 text-sm mb-6 font-medium text-center break-all max-w-xs">
-        &ldquo;{query}&rdquo;
-      </p>
-      <Button variant="secondary" onClick={onClear} className="w-full sm:w-auto min-h-[44px]">
-        {t('clearSearch')}
-      </Button>
-    </div>
-  )
-}
-

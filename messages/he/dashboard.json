@@ -1,5 +1,22 @@
 {
   "title": "הקורסים שלך",
+  "greeting": {
+    "morning": "בוקר טוב",
+    "afternoon": "צהריים טובים",
+    "evening": "ערב טוב"
+  },
+  "todaysPlan": "התוכנית להיום",
+  "viewFullPlan": "צפה בתוכנית המלאה",
+  "myCourses": "הקורסים שלי",
+  "continueLearningTitle": "המשך ללמוד",
+  "checkHomeworkTitle": "בדוק שיעורי בית",
+  "checkHomeworkDesc": "קבל עזרה מבינה מלאכותית עם המטלות שלך",
+  "quickPracticeTitle": "תרגול מהיר",
+  "quickPracticeDesc": "חדד את הכישורים שלך עם שאלות ממוקדות",
+  "newBadge": "חדש",
+  "complete": "הושלם",
+  "ofTasks": "{completed} מתוך {total} משימות",
+  "lessons": "{count} שיעורים",
   "coursesCount": "{count} קורסים",
   "coursesCountSingular": "קורס {count}",
   "coursesFiltered": "{filtered} מתוך {total} קורסים",
@@ -93,6 +110,20 @@
     "dismiss": "סגור",
     "createFirstCourseAction": "התחל",
     "cardsDueAction": "חזור עכשיו"
+  },
+  "welcome": {
+    "title": "!ברוכים הבאים ל-NoteSnap",
+    "subtitle": "מה תרצה לעשות קודם?",
+    "checkHomework": "בדוק שיעורי בית",
+    "uploadCourse": "העלה חומרי לימוד",
+    "startPractice": "התחל תרגול"
+  },
+  "gamificationBar": {
+    "level": "רמה {level}"
+  },
+  "achievementProgress": {
+    "title": "הישגים הבאים",
+    "viewAll": "צפה בהכל"
   },
   "curriculumSetup": {
     "completeProfile": "השלם את פרופיל הלמידה שלך",

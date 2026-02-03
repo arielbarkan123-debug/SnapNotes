@@ -1,6 +1,7 @@
 {
   "appName": "NoteSnap",
   "nav": {
+    "dashboard": "Dashboard",
     "courses": "Courses",
     "review": "Review",
     "reviewCards": "Review Cards",
@@ -17,6 +18,10 @@
     "search": "Search",
     "studyPlan": "Study Plan",
     "toggleMenu": "Toggle menu"
+  },
+  "sidebar": {
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode"
   },
   "auth": {
     "logOut": "Log out",
@@ -57,5 +62,9 @@
     "failedToLoad": "Failed to load data",
     "retry": "Try Again",
     "somethingWentWrong": "Something went wrong"
+  },
+  "confirmModal": {
+    "confirm": "Confirm",
+    "cancel": "Cancel"
   }
 }

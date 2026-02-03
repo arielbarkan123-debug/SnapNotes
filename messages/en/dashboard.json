@@ -1,5 +1,22 @@
 {
   "title": "Your Study Courses",
+  "greeting": {
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening"
+  },
+  "todaysPlan": "Today's Plan",
+  "viewFullPlan": "View Full Plan",
+  "myCourses": "My Courses",
+  "continueLearningTitle": "Continue Learning",
+  "checkHomeworkTitle": "Check Homework",
+  "checkHomeworkDesc": "Get AI-powered help with your assignments",
+  "quickPracticeTitle": "Quick Practice",
+  "quickPracticeDesc": "Sharpen your skills with targeted questions",
+  "newBadge": "NEW",
+  "complete": "complete",
+  "ofTasks": "{completed} of {total} tasks",
+  "lessons": "{count} lessons",
   "coursesCount": "{count} courses",
   "coursesCountSingular": "{count} course",
   "coursesFiltered": "{filtered} of {total} courses",
@@ -93,6 +110,20 @@
     "dismiss": "Dismiss",
     "createFirstCourseAction": "Get Started",
     "cardsDueAction": "Review Now"
+  },
+  "welcome": {
+    "title": "Welcome to NoteSnap!",
+    "subtitle": "What would you like to do first?",
+    "checkHomework": "Check Homework",
+    "uploadCourse": "Upload Course Material",
+    "startPractice": "Start Practice"
+  },
+  "gamificationBar": {
+    "level": "Level {level}"
+  },
+  "achievementProgress": {
+    "title": "Next Achievements",
+    "viewAll": "View all"
   },
   "curriculumSetup": {
     "completeProfile": "Complete your learning profile",

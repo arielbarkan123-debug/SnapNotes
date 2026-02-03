@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import Header from '@/components/ui/Header'
+import Sidebar from '@/components/ui/Sidebar'
 import NavigationProgress from '@/components/ui/NavigationProgress'
 import OfflineIndicator from '@/components/ui/OfflineIndicator'
 
@@ -25,16 +25,16 @@ export default async function MainLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="min-h-screen aurora-bg">
       <Suspense fallback={null}>
         <NavigationProgress />
       </Suspense>
-      <Header
+      <Sidebar
         userEmail={user?.email}
         userName={user?.user_metadata?.name}
         isAdmin={isAdmin}
       />
-      <main className="flex-1">
+      <main className="md:ms-[250px] min-h-screen">
         {children}
       </main>
       <OfflineIndicator />

@@ -12,6 +12,9 @@ export default async function DashboardPage() {
     return <DashboardContent initialCourses={[]} />
   }
 
+  // Get user name from metadata
+  const userName = user.user_metadata?.name || user.email?.split('@')[0]
+
   // Select fields needed for dashboard list view including cover image and course structure for difficulty
   // IMPORTANT: Filter by user_id to only show the current user's courses
   const { data: courses, error } = await supabase
@@ -23,8 +26,8 @@ export default async function DashboardPage() {
 
   // Silently handle errors - courses will just be empty
   if (error) {
-    return <DashboardContent initialCourses={[]} />
+    return <DashboardContent initialCourses={[]} userName={userName} />
   }
 
-  return <DashboardContent initialCourses={(courses as Course[]) || []} />
+  return <DashboardContent initialCourses={(courses as Course[]) || []} userName={userName} />
 }

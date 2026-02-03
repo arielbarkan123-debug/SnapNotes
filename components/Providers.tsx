@@ -1,6 +1,7 @@
 'use client'
 
 import { type ReactNode } from 'react'
+import { ThemeProvider } from 'next-themes'
 import { ErrorBoundary } from './ErrorBoundary'
 import { ToastProvider } from '@/contexts/ToastContext'
 import { XPProvider } from '@/contexts/XPContext'
@@ -16,19 +17,21 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   return (
     <ErrorBoundary>
-      <MonitoringProvider>
-        <SWRProvider>
-          <AnalyticsProvider>
-            <PWAProvider>
-              <ToastProvider>
-                <XPProvider>
-                  {children}
-                </XPProvider>
-              </ToastProvider>
-            </PWAProvider>
-          </AnalyticsProvider>
-        </SWRProvider>
-      </MonitoringProvider>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <MonitoringProvider>
+          <SWRProvider>
+            <AnalyticsProvider>
+              <PWAProvider>
+                <ToastProvider>
+                  <XPProvider>
+                    {children}
+                  </XPProvider>
+                </ToastProvider>
+              </PWAProvider>
+            </AnalyticsProvider>
+          </SWRProvider>
+        </MonitoringProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   )
 }
