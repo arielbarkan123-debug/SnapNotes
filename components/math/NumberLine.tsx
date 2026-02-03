@@ -1,10 +1,12 @@
 'use client'
 
+import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import type { NumberLineData, NumberLineErrorHighlight } from '@/types'
 import { useVisualComplexity, useComplexityAnimations } from '@/hooks/useVisualComplexity'
 import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import { CONCRETE_ICONS } from '@/lib/visual-complexity'
+import { detectCollisions, type BoundingBox, type LayoutElement } from '@/lib/visual-learning'
 
 interface NumberLineDataWithErrors extends NumberLineData {
   errorHighlight?: NumberLineErrorHighlight
@@ -131,6 +133,51 @@ export function NumberLine({
       </g>
     )
   }
+
+  // Calculate non-overlapping label positions using layout engine
+  const labelPositions = useMemo(() => {
+    const positions = new Map<number, { y: number; stagger: boolean }>()
+    const labelHeight = isElementary ? 20 : 16
+    const labelWidth = 30 // Approximate width of a label
+    const baseY = lineY - (isElementary ? 16 : 12)
+
+    // Create layout elements for collision detection
+    const elements: LayoutElement[] = points
+      .filter(p => p.label)
+      .map((point, i) => {
+        const x = valueToX(point.value)
+        const bounds: BoundingBox = {
+          x: x - labelWidth / 2,
+          y: baseY - labelHeight,
+          width: labelWidth,
+          height: labelHeight,
+        }
+        return {
+          id: `label-${i}`,
+          type: 'label' as const,
+          position: { x, y: baseY },
+          bounds,
+          priority: 1,
+        }
+      })
+
+    // Check for collisions and stagger if needed
+    const collisions = detectCollisions(elements)
+
+    points.forEach((point, i) => {
+      const hasCollision = collisions.some(
+        c => c.element1 === `label-${i}` || c.element2 === `label-${i}`
+      )
+      // Stagger labels that collide by moving alternate ones higher
+      const shouldStagger = hasCollision && i % 2 === 1
+      positions.set(point.value, {
+        y: shouldStagger ? baseY - labelHeight - 4 : baseY,
+        stagger: shouldStagger,
+      })
+    })
+
+    return positions
+  }, [points, lineY, isElementary, valueToX])
 
   return (
     <motion.svg
@@ -275,17 +322,32 @@ export function NumberLine({
               strokeWidth={isElementary ? 3 : 2}
               whileHover={animationsEnabled ? { scale: 1.2 } : undefined}
             />
-            {/* Point label */}
+            {/* Point label with smart positioning */}
             {point.label && (
-              <text
-                x={x}
-                y={lineY - (isElementary ? 16 : 12)}
-                textAnchor="middle"
-                className="fill-red-600 dark:fill-red-400 font-medium"
-                style={{ fontSize: fontSize.small }}
-              >
-                {point.label}
-              </text>
+              <>
+                {/* Connector line for staggered labels */}
+                {labelPositions.get(point.value)?.stagger && (
+                  <line
+                    x1={x}
+                    y1={lineY - (isElementary ? 10 : 8)}
+                    x2={x}
+                    y2={labelPositions.get(point.value)?.y ?? lineY - 12}
+                    stroke="currentColor"
+                    strokeWidth={1}
+                    strokeDasharray="2,2"
+                    opacity={0.5}
+                  />
+                )}
+                <text
+                  x={x}
+                  y={labelPositions.get(point.value)?.y ?? lineY - (isElementary ? 16 : 12)}
+                  textAnchor="middle"
+                  className="fill-red-600 dark:fill-red-400 font-medium"
+                  style={{ fontSize: fontSize.small }}
+                >
+                  {point.label}
+                </text>
+              </>
             )}
             {/* Concrete example for elementary level */}
             {renderConcreteExample(point.value, x, lineY)}
