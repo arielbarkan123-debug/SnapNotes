@@ -126,10 +126,19 @@ export function DiagramStepControls({
     <div
       className={`diagram-step-controls ${className}`}
       dir={isRTL ? 'rtl' : 'ltr'}
+      role="region"
+      aria-label={language === 'he' ? 'בקרות תרשים' : 'Diagram controls'}
     >
       {/* Progress bar */}
       {showProgressBar && (
-        <div className="relative h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-3">
+        <div
+          className="relative h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-3"
+          role="progressbar"
+          aria-valuenow={currentStep + 1}
+          aria-valuemin={1}
+          aria-valuemax={totalSteps}
+          aria-label={language === 'he' ? `שלב ${currentStep + 1} מתוך ${totalSteps}` : `Step ${currentStep + 1} of ${totalSteps}`}
+        >
           <motion.div
             className="absolute inset-y-0 left-0 rounded-full"
             initial={{ width: 0 }}

@@ -293,7 +293,16 @@ export function EquationGrapher({
 
       {/* Graph */}
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+        <svg
+          width={width}
+          height={height}
+          viewBox={`0 0 ${width} ${height}`}
+          role="img"
+          aria-label={language === 'he'
+            ? `גרף עם ${equations.filter(e => e.visible).length} פונקציות`
+            : `Graph with ${equations.filter(e => e.visible).length} functions`
+          }
+        >
           {/* Background */}
           <rect x={padding.left} y={padding.top} width={plotWidth} height={plotHeight} fill="#fafafa" className="dark:fill-gray-800" />
 

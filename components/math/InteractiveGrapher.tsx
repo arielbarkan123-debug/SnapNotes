@@ -101,6 +101,10 @@ export function InteractiveGrapher({
   const [tracePoint, setTracePoint] = useState<Point | null>(null)
   const [tracedEquation, setTracedEquation] = useState<Equation | null>(null)
 
+  // Touch state for pinch-to-zoom
+  const [lastPinchDistance, setLastPinchDistance] = useState<number | null>(null)
+  const [pinchCenter, setPinchCenter] = useState<Point | null>(null)
+
   // Padding and dimensions
   const padding = { left: 50, right: 30, top: 30, bottom: 50 }
   const plotWidth = width - padding.left - padding.right
@@ -152,7 +156,9 @@ export function InteractiveGrapher({
     try {
       const compiled = parse(expression).compile()
       const points: string[] = []
-      const step = (xRange[1] - xRange[0]) / 300
+      // Use fewer points during panning for better performance
+      const numPoints = isPanning ? 150 : 300
+      const step = (xRange[1] - xRange[0]) / numPoints
 
       let isFirstPoint = true
       let wasOutOfRange = false
@@ -186,7 +192,18 @@ export function InteractiveGrapher({
     } catch {
       return null
     }
-  }, [xRange, yRange, xToSvg, yToSvg])
+  }, [xRange, yRange, xToSvg, yToSvg, isPanning])
+
+  // Memoize equation paths for performance
+  const equationPaths = useMemo(() => {
+    const paths: Map<string, string | null> = new Map()
+    for (const eq of equations) {
+      if (eq.visible && !eq.error) {
+        paths.set(eq.id, generatePath(eq.expression))
+      }
+    }
+    return paths
+  }, [equations, generatePath])
 
   // Handle mouse move for trace
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
@@ -292,6 +309,99 @@ export function InteractiveGrapher({
     })
   }, [enableZoom, svgToX, svgToY])
 
+  // Calculate distance between two touch points
+  const getTouchDistance = useCallback((touches: React.TouchList): number => {
+    if (touches.length < 2) return 0
+    const dx = touches[0].clientX - touches[1].clientX
+    const dy = touches[0].clientY - touches[1].clientY
+    return Math.sqrt(dx * dx + dy * dy)
+  }, [])
+
+  // Get center point between two touches
+  const getTouchCenter = useCallback((touches: React.TouchList): Point | null => {
+    if (!svgRef.current || touches.length < 2) return null
+    const rect = svgRef.current.getBoundingClientRect()
+    return {
+      x: ((touches[0].clientX + touches[1].clientX) / 2) - rect.left,
+      y: ((touches[0].clientY + touches[1].clientY) / 2) - rect.top,
+    }
+  }, [])
+
+  // Handle touch start
+  const handleTouchStart = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
+    if (e.touches.length === 1 && enablePan) {
+      // Single touch - start pan
+      if (!svgRef.current) return
+      const rect = svgRef.current.getBoundingClientRect()
+      const touch = e.touches[0]
+      setPanStart({ x: touch.clientX - rect.left, y: touch.clientY - rect.top })
+      setIsPanning(true)
+    } else if (e.touches.length === 2 && enableZoom) {
+      // Two touches - start pinch zoom
+      e.preventDefault()
+      setLastPinchDistance(getTouchDistance(e.touches))
+      setPinchCenter(getTouchCenter(e.touches))
+      setIsPanning(false)
+    }
+  }, [enablePan, enableZoom, getTouchDistance, getTouchCenter])
+
+  // Handle touch move
+  const handleTouchMove = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
+    if (e.touches.length === 1 && isPanning && panStart && enablePan) {
+      // Single touch - pan
+      if (!svgRef.current) return
+      const rect = svgRef.current.getBoundingClientRect()
+      const touch = e.touches[0]
+      const svgX = touch.clientX - rect.left
+      const svgY = touch.clientY - rect.top
+
+      const dx = svgToX(svgX) - svgToX(panStart.x)
+      const dy = svgToY(svgY) - svgToY(panStart.y)
+
+      setXRange(prev => [prev[0] - dx, prev[1] - dx])
+      setYRange(prev => [prev[0] + dy, prev[1] + dy])
+      setPanStart({ x: svgX, y: svgY })
+    } else if (e.touches.length === 2 && enableZoom && lastPinchDistance !== null) {
+      // Two touches - pinch zoom
+      e.preventDefault()
+      const newDistance = getTouchDistance(e.touches)
+      const center = getTouchCenter(e.touches) || pinchCenter
+
+      if (center && newDistance > 0) {
+        const zoomFactor = lastPinchDistance / newDistance
+        const x = svgToX(center.x)
+        const y = svgToY(center.y)
+
+        setXRange(prev => {
+          const newWidth = (prev[1] - prev[0]) * zoomFactor
+          const ratio = (x - prev[0]) / (prev[1] - prev[0])
+          const newMin = x - ratio * newWidth
+          return [newMin, newMin + newWidth]
+        })
+
+        setYRange(prev => {
+          const newHeight = (prev[1] - prev[0]) * zoomFactor
+          const ratio = (y - prev[0]) / (prev[1] - prev[0])
+          const newMin = y - ratio * newHeight
+          return [newMin, newMin + newHeight]
+        })
+
+        setLastPinchDistance(newDistance)
+        setPinchCenter(center)
+      }
+    }
+  }, [isPanning, panStart, enablePan, enableZoom, lastPinchDistance, pinchCenter, svgToX, svgToY, getTouchDistance, getTouchCenter])
+
+  // Handle touch end
+  const handleTouchEnd = useCallback(() => {
+    setIsPanning(false)
+    setPanStart(null)
+    setLastPinchDistance(null)
+    setPinchCenter(null)
+    setTracePoint(null)
+    setTracedEquation(null)
+  }, [])
+
   // Reset view
   const handleResetView = useCallback(() => {
     setXRange(initialXRange)
@@ -373,6 +483,7 @@ export function InteractiveGrapher({
     resetView: language === 'he' ? 'איפוס תצוגה' : 'Reset View',
     zoomTip: language === 'he' ? 'גלגל לזום' : 'Scroll to zoom',
     panTip: language === 'he' ? 'גרור להזזה' : 'Drag to pan',
+    pinchTip: language === 'he' ? 'צביטה לזום' : 'Pinch to zoom',
   }
 
   return (
@@ -434,7 +545,16 @@ export function InteractiveGrapher({
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
           onWheel={handleWheel}
-          className={`${isPanning ? 'cursor-grabbing' : enablePan ? 'cursor-grab' : 'cursor-crosshair'}`}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          className={`${isPanning ? 'cursor-grabbing' : enablePan ? 'cursor-grab' : 'cursor-crosshair'} touch-none`}
+          role="img"
+          aria-label={language === 'he'
+            ? `גרף אינטראקטיבי עם ${equations.filter(e => e.visible).length} פונקציות. טווח X: ${xRange[0].toFixed(1)} עד ${xRange[1].toFixed(1)}, טווח Y: ${yRange[0].toFixed(1)} עד ${yRange[1].toFixed(1)}`
+            : `Interactive graph with ${equations.filter(e => e.visible).length} functions. X range: ${xRange[0].toFixed(1)} to ${xRange[1].toFixed(1)}, Y range: ${yRange[0].toFixed(1)} to ${yRange[1].toFixed(1)}`
+          }
+          tabIndex={0}
         >
           {/* Background */}
           <rect x={padding.left} y={padding.top} width={plotWidth} height={plotHeight} fill="#fafafa" className="dark:fill-gray-800" />
@@ -465,11 +585,11 @@ export function InteractiveGrapher({
             ))}
           </g>
 
-          {/* Equations */}
+          {/* Equations - using memoized paths for performance */}
           <g clipPath="url(#clip-area)">
             {equations.map(eq => {
               if (!eq.visible || eq.error) return null
-              const path = generatePath(eq.expression)
+              const path = equationPaths.get(eq.id)
               if (!path) return null
               return (
                 <path key={eq.id} d={path} fill="none" stroke={eq.color} strokeWidth={2.5} strokeLinecap="round" />
