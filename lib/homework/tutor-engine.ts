@@ -14,6 +14,7 @@ import type {
   TutorDiagramState,
 } from './types'
 import { ensureDiagramInResponse, generateDiagramFromTutorMessage } from './diagram-generator'
+import { validateSchema, autoCorrectDiagram, type DiagramType as VisualDiagramType, type StructuredDiagram, SCHEMA_VERSION } from '@/lib/visual-learning'
 
 // ============================================================================
 // Configuration
@@ -921,9 +922,61 @@ function parseDiagramResponse(diagram: unknown): TutorResponse['diagram'] {
   // Type is one of the valid diagram types
   type DiagramType = NonNullable<TutorResponse['diagram']>['type']
 
+  // Map tutor diagram types to visual-learning types for validation
+  const visualTypeMap: Record<string, VisualDiagramType | null> = {
+    'fbd': 'free_body_diagram',
+    'inclined_plane': 'inclined_plane',
+    'projectile': 'projectile_motion',
+    'circular_motion': 'circular_motion',
+    'collision': 'collision',
+    'energy': null, // No direct mapping yet
+    'pendulum': 'pendulum',
+    'coordinate_plane': 'coordinate_plane',
+    'number_line': 'number_line',
+    'long_division': 'long_division',
+    'triangle': 'triangle',
+    'circle': 'circle',
+    'atom': 'atom',
+    'molecule': 'molecule',
+  }
+
+  const diagramType = String(d.type) as DiagramType
+  const visualType = visualTypeMap[diagramType]
+
+  // Validate and auto-correct if we have a mapping
+  let validatedData = d.data as Record<string, unknown>
+  if (visualType) {
+    try {
+      // Create a StructuredDiagram for validation
+      const structuredDiagram: StructuredDiagram = {
+        type: visualType,
+        data: d.data as never, // Type cast since data structure varies
+        steps: [],
+        source: 'ai',
+        confidence: 0.8,
+        schemaVersion: SCHEMA_VERSION,
+      }
+
+      const result = validateSchema(structuredDiagram)
+
+      // If validation found issues, try auto-correction
+      if (!result.valid || result.warnings.length > 0) {
+        const corrected = autoCorrectDiagram(structuredDiagram)
+        validatedData = corrected.data as unknown as Record<string, unknown>
+      }
+
+      // Log warnings for debugging (in development)
+      if (process.env.NODE_ENV === 'development' && result.warnings.length > 0) {
+        console.log(`[Diagram Validation] ${visualType}:`, result.warnings.map(w => w.message))
+      }
+    } catch {
+      // If validation fails, use original data
+    }
+  }
+
   return {
-    type: String(d.type) as DiagramType,
-    data: d.data as Record<string, unknown>,
+    type: diagramType,
+    data: validatedData,
     visibleStep: typeof d.visibleStep === 'number' ? d.visibleStep : 0,
     totalSteps: typeof d.totalSteps === 'number' ? d.totalSteps : undefined,
     stepConfig: Array.isArray(d.stepConfig) ? d.stepConfig : undefined,

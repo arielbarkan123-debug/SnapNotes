@@ -17,6 +17,10 @@ import {
   createForceAnimationSequence,
   prefersReducedMotion,
 } from '@/lib/diagram-animations'
+import {
+  calculateForceOrigin,
+  type PhysicsObject as LayoutPhysicsObject,
+} from '@/lib/visual-learning'
 
 interface FreeBodyDiagramProps {
   data: FreeBodyDiagramData
@@ -1128,12 +1132,11 @@ export function FreeBodyDiagram({
     )
   }
 
-  // Calculate force origin points (from object surface)
+  // Calculate force origin points using smart layout engine
   const getForceOrigin = (force: Force): { x: number; y: number } => {
-    const objSize = 50
-    const halfSize = objSize / 2
-    const angleRad = ((force.angle ?? 0) * Math.PI) / 180
+    const objSize = object.width || object.height || 50
 
+    // If force has explicit origin, use it
     if (force.origin) {
       return {
         x: centerX + force.origin.x,
@@ -1141,20 +1144,32 @@ export function FreeBodyDiagram({
       }
     }
 
-    const cos = Math.cos(angleRad)
-    const sin = Math.sin(angleRad)
-
-    if (Math.abs(cos) > Math.abs(sin)) {
-      return {
-        x: centerX + (cos > 0 ? halfSize : -halfSize),
-        y: centerY,
-      }
-    } else {
-      return {
-        x: centerX,
-        y: centerY + (sin > 0 ? -halfSize : halfSize),
-      }
+    // Create layout-compatible object
+    // Map physics types to layout types: sphere -> ball, particle -> point, others -> block
+    const layoutType = object.type === 'sphere' ? 'ball'
+      : object.type === 'particle' ? 'point'
+      : 'block'
+    const layoutObject: LayoutPhysicsObject = {
+      id: 'main-object',
+      type: layoutType,
+      position: { x: centerX, y: centerY },
+      size: objSize,
     }
+
+    // Get surface angle from referenceAngle (used for inclined coordinate systems)
+    const surfaceAngle = referenceAngle || 0
+
+    // Create minimal force info for layout engine (only needed fields)
+    const forceInput = {
+      type: force.type,
+      angle: force.angle ?? 0,
+      origin: force.origin,
+    }
+
+    // Use layout engine for smart positioning
+    const origin = calculateForceOrigin(forceInput, layoutObject, surfaceAngle)
+
+    return origin
   }
 
   // Render forces with choreographed draw animations
