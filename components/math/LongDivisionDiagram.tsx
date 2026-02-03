@@ -1,12 +1,61 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   type LongDivisionData,
   type LongDivisionStep,
   type MathDiagramStepConfig,
   MATH_COLORS,
 } from '@/types/math'
+
+// Animation variants for step elements (available for SVG element animations)
+const _stepVariants = {
+  hidden: { opacity: 0, y: -10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.3, ease: 'easeOut' }
+  },
+  highlight: {
+    opacity: 1,
+    y: 0,
+    scale: 1.05,
+    transition: { duration: 0.2 }
+  }
+}
+
+const _digitVariants = {
+  hidden: { opacity: 0, scale: 0.8 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: { type: 'spring', stiffness: 300, damping: 25 }
+  }
+}
+
+const _lineVariants = {
+  hidden: { pathLength: 0, opacity: 0 },
+  visible: {
+    pathLength: 1,
+    opacity: 1,
+    transition: { duration: 0.4, ease: 'easeInOut' }
+  }
+}
+
+const _arrowVariants = {
+  hidden: { opacity: 0, y: -20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: 'spring',
+      stiffness: 200,
+      damping: 20,
+      delay: 0.1
+    }
+  }
+}
 
 interface LongDivisionDiagramProps {
   data: LongDivisionData
@@ -249,6 +298,28 @@ export function LongDivisionDiagram({
     return { xCenter, yStart, yEnd }
   }, [isBringDownStep, bringDownPosition, workRows, divisorStr.length, digitWidth, digitHeight])
 
+  // Animation state - track which step is currently animating
+  const [animatingStep, setAnimatingStep] = useState<number>(-1)
+  const [hasAnimated, setHasAnimated] = useState<Set<number>>(new Set())
+
+  // Trigger animation when step changes
+  useEffect(() => {
+    if (currentStep > 0 && !hasAnimated.has(currentStep)) {
+      setAnimatingStep(currentStep)
+      const timer = setTimeout(() => {
+        setAnimatingStep(-1)
+        setHasAnimated(prev => new Set([...prev, currentStep]))
+      }, animationDuration)
+      return () => clearTimeout(timer)
+    }
+  }, [currentStep, hasAnimated, animationDuration])
+
+  // Check if an element should animate (show entrance animation)
+  // Available for SVG element animations
+  const _shouldAnimate = (stepNum: number) => {
+    return animatingStep === stepNum || !hasAnimated.has(stepNum)
+  }
+
   return (
     <div className={`long-division-diagram ${className}`} style={{ width, minHeight: height }}>
 
@@ -259,16 +330,18 @@ export function LongDivisionDiagram({
         </h3>
       )}
 
-      {/* Progress bar */}
+      {/* Progress bar with smooth animation */}
       <div className="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-4">
-        <div
-          className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
-          style={{
+        <motion.div
+          className="absolute inset-y-0 left-0 rounded-full"
+          initial={{ width: 0 }}
+          animate={{
             width: `${progressPercent}%`,
             background: isComplete
               ? 'linear-gradient(90deg, #22c55e, #16a34a)'
               : 'linear-gradient(90deg, #f59e0b, #d97706)',
           }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
         />
       </div>
 
@@ -663,63 +736,100 @@ export function LongDivisionDiagram({
         </div>
       </div>
 
-      {/* Step explanation */}
-      {currentStepInfo && (
-        <div
-          className="mt-4 p-4 rounded-xl border-l-4 transition-all duration-300"
-          style={{
-            backgroundColor: isComplete ? 'rgba(34, 197, 94, 0.08)' : 'rgba(245, 158, 11, 0.08)',
-            borderLeftColor: isComplete ? MATH_COLORS.success : lineColor,
-          }}
-        >
-          <p className="text-sm text-gray-700 dark:text-gray-300">
-            {language === 'he'
-              ? (currentStepInfo as LongDivisionStep).explanationHe ||
-                (currentStepInfo as LongDivisionStep).explanation ||
-                (stepConfig?.[currentStep] as MathDiagramStepConfig)?.stepLabelHe ||
-                (stepConfig?.[currentStep] as MathDiagramStepConfig)?.stepLabel
-              : (currentStepInfo as LongDivisionStep).explanation ||
-                (stepConfig?.[currentStep] as MathDiagramStepConfig)?.stepLabel}
-          </p>
-
-          {((currentStepInfo as LongDivisionStep).calculation ||
-            (stepConfig?.[currentStep] as MathDiagramStepConfig)?.showCalculation) && (
-            <div
-              className="mt-2 inline-block px-3 py-1.5 rounded-lg font-mono text-sm font-semibold"
-              style={{
-                backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                color: '#b45309',
-              }}
+      {/* Step explanation with animation */}
+      <AnimatePresence mode="wait">
+        {currentStepInfo && (
+          <motion.div
+            key={`step-${currentStep}`}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="mt-4 p-4 rounded-xl border-l-4"
+            style={{
+              backgroundColor: isComplete ? 'rgba(34, 197, 94, 0.08)' : 'rgba(245, 158, 11, 0.08)',
+              borderLeftColor: isComplete ? MATH_COLORS.success : lineColor,
+            }}
+          >
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="text-sm text-gray-700 dark:text-gray-300"
             >
-              {(currentStepInfo as LongDivisionStep).calculation ||
-                (stepConfig?.[currentStep] as MathDiagramStepConfig)?.showCalculation}
-            </div>
-          )}
-        </div>
-      )}
+              {language === 'he'
+                ? (currentStepInfo as LongDivisionStep).explanationHe ||
+                  (currentStepInfo as LongDivisionStep).explanation ||
+                  (stepConfig?.[currentStep] as MathDiagramStepConfig)?.stepLabelHe ||
+                  (stepConfig?.[currentStep] as MathDiagramStepConfig)?.stepLabel
+                : (currentStepInfo as LongDivisionStep).explanation ||
+                  (stepConfig?.[currentStep] as MathDiagramStepConfig)?.stepLabel}
+            </motion.p>
 
-      {/* Final answer */}
-      {isComplete && (
-        <div
-          className="mt-4 p-4 rounded-xl text-center"
-          style={{
-            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.1))',
-            border: '2px solid rgba(34, 197, 94, 0.3)',
-          }}
-        >
-          <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-            {dividend} ÷ {divisor} ={' '}
-            <span className="font-bold" style={{ color: MATH_COLORS.quotient }}>
-              {quotientStr}
-            </span>
-            {remainder > 0 && (
-              <span className="text-gray-500 ml-2">
-                {language === 'he' ? `שארית ${remainder}` : `R ${remainder}`}
-              </span>
+            {((currentStepInfo as LongDivisionStep).calculation ||
+              (stepConfig?.[currentStep] as MathDiagramStepConfig)?.showCalculation) && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
+                className="mt-2 inline-block px-3 py-1.5 rounded-lg font-mono text-sm font-semibold"
+                style={{
+                  backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                  color: '#b45309',
+                }}
+              >
+                {(currentStepInfo as LongDivisionStep).calculation ||
+                  (stepConfig?.[currentStep] as MathDiagramStepConfig)?.showCalculation}
+              </motion.div>
             )}
-          </p>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Final answer with celebration animation */}
+      <AnimatePresence>
+        {isComplete && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+            className="mt-4 p-4 rounded-xl text-center"
+            style={{
+              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.1))',
+              border: '2px solid rgba(34, 197, 94, 0.3)',
+            }}
+          >
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="text-lg font-semibold text-gray-800 dark:text-gray-200"
+            >
+              {dividend} ÷ {divisor} ={' '}
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.3, type: 'spring', stiffness: 300 }}
+                className="font-bold inline-block"
+                style={{ color: MATH_COLORS.quotient }}
+              >
+                {quotientStr}
+              </motion.span>
+              {remainder > 0 && (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-gray-500 ml-2"
+                >
+                  {language === 'he' ? `שארית ${remainder}` : `R ${remainder}`}
+                </motion.span>
+              )}
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Step counter */}
       {showStepCounter && (
