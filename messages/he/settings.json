@@ -126,11 +126,11 @@
     "title": "חשבון",
     "description": "נהל את החשבון שלך",
     "dangerZone": "אזור סכנה",
-    "dangerZoneDesc": "ברגע שתמחק את החשבון שלך, אין דרך חזרה.",
+    "dangerZoneDesc": "למחיקת החשבון וכל המידע המשויך, תופנה לשלוח אימייל לתמיכה.",
     "deleteAccount": "מחק חשבון",
     "typeDeleteToConfirm": "הקלד DELETE לאישור:",
     "cancel": "ביטול",
-    "deleteForever": "מחק לצמיתות"
+    "deleteForever": "בקש מחיקה"
   },
   "toast": {
     "loadError": "טעינת ההגדרות נכשלה",
@@ -140,7 +140,7 @@
     "signOutError": "ההתנתקות נכשלה",
     "onboardingReset": "ההדרכה אופסה! מעביר...",
     "onboardingResetError": "איפוס ההדרכה נכשל",
-    "deleteRequest": "בקשת מחיקת החשבון הוגשה. פנה לתמיכה להשלמה.",
+    "deleteContactSupport": "אימייל לתמיכה נפתח. אנא שלח אותו להשלמת בקשת המחיקה.",
     "deleteError": "עיבוד בקשת המחיקה נכשל"
   }
 }

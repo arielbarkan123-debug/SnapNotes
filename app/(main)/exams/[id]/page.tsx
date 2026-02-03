@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import { useParams, useRouter } from 'next/navigation'
 import { type ExamWithQuestions, type ExamQuestion, type ExamAnswer } from '@/types'
 import QuestionRenderer from '@/components/exam/QuestionRenderer'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import { useEventTracking } from '@/lib/analytics'
 
 // localStorage keys for exam answer backup
@@ -121,6 +123,7 @@ export default function TakeExamPage() {
   const router = useRouter()
   const examId = params.id as string
   const { trackFeature } = useEventTracking()
+  const te = useTranslations('exam')
 
   const [exam, setExam] = useState<ExamWithQuestions | null>(null)
   const [loading, setLoading] = useState(true)
@@ -132,6 +135,8 @@ export default function TakeExamPage() {
   const [submitting, setSubmitting] = useState(false)
   const [showNav, setShowNav] = useState(false)
   const [retaking, setRetaking] = useState(false)
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
+  const [submitConfirmMessage, setSubmitConfirmMessage] = useState('')
 
   const submitRef = useRef<(auto: boolean) => Promise<void>>()
 
@@ -204,8 +209,9 @@ export default function TakeExamPage() {
       ).length
 
       if (unanswered > 0) {
-        const confirm = window.confirm(`You have ${unanswered} unanswered questions. Submit anyway?`)
-        if (!confirm) return
+        setSubmitConfirmMessage(te('unansweredWarning', { count: unanswered }))
+        setShowSubmitConfirm(true)
+        return
       }
     }
 
@@ -244,7 +250,16 @@ export default function TakeExamPage() {
     } finally {
       setSubmitting(false)
     }
-  }, [examId, answers, exam, submitting, fetchExam, trackFeature])
+  }, [examId, answers, exam, submitting, fetchExam, trackFeature, te])
+
+  // Force submit bypasses the unanswered check (used after user confirms via modal)
+  const forceSubmit = useCallback(() => {
+    setShowSubmitConfirm(false)
+    if (submitting || !exam) return
+
+    // Directly call submit logic - skip unanswered check by passing autoSubmit=true
+    handleSubmit(true)
+  }, [handleSubmit, submitting, exam])
 
   submitRef.current = handleSubmit
 
@@ -349,7 +364,7 @@ export default function TakeExamPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
       </div>
     )
   }
@@ -358,7 +373,7 @@ export default function TakeExamPage() {
     return (
       <div className="max-w-2xl mx-auto p-4 text-center">
         <p className="text-red-500 mb-4">{error}</p>
-        <button onClick={() => router.push('/exams')} className="text-indigo-600">← Back to Exams</button>
+        <button onClick={() => router.push('/exams')} className="text-violet-600">← Back to Exams</button>
       </div>
     )
   }
@@ -367,7 +382,7 @@ export default function TakeExamPage() {
     return (
       <div className="max-w-2xl mx-auto p-4 text-center">
         <p className="text-gray-500">Exam not found</p>
-        <button onClick={() => router.push('/exams')} className="mt-4 text-indigo-600">← Back to Exams</button>
+        <button onClick={() => router.push('/exams')} className="mt-4 text-violet-600">← Back to Exams</button>
       </div>
     )
   }
@@ -399,7 +414,7 @@ export default function TakeExamPage() {
 
           <button
             onClick={handleStart}
-            className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"
+            className="w-full py-3 bg-violet-600 text-white rounded-xl font-medium hover:bg-violet-700 transition"
           >
             Start Exam
           </button>
@@ -466,7 +481,7 @@ export default function TakeExamPage() {
             <button
               onClick={handleRetake}
               disabled={retaking}
-              className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-3 bg-violet-600 text-white rounded-xl font-medium hover:bg-violet-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {retaking ? 'Creating...' : 'Retake Exam'}
             </button>
@@ -527,13 +542,13 @@ export default function TakeExamPage() {
     return (
       <div className="max-w-2xl mx-auto p-4 text-center">
         <p className="text-red-500">No questions found</p>
-        <button onClick={() => router.push('/exams')} className="mt-4 text-indigo-600">← Back to Exams</button>
+        <button onClick={() => router.push('/exams')} className="mt-4 text-violet-600">← Back to Exams</button>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-transparent">
       {/* Header with timer */}
       <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-10">
         <div className="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
@@ -546,7 +561,7 @@ export default function TakeExamPage() {
           <button
             onClick={() => handleSubmit(false)}
             disabled={submitting}
-            className="px-4 py-1 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
+            className="px-4 py-1 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700 transition disabled:opacity-50"
           >
             {submitting ? 'Submitting...' : 'Submit'}
           </button>
@@ -573,7 +588,7 @@ export default function TakeExamPage() {
                     key={q.id}
                     onClick={() => { setCurrentQuestion(i); setShowNav(false) }}
                     className={`w-10 h-10 rounded-lg text-sm font-medium transition
-                      ${isCurrent ? 'ring-2 ring-indigo-600' : ''}
+                      ${isCurrent ? 'ring-2 ring-violet-600' : ''}
                       ${isMarked ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
                         qAnswered ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
                         'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}
@@ -648,13 +663,24 @@ export default function TakeExamPage() {
           ) : (
             <button
               onClick={() => setCurrentQuestion(Math.min(questions.length - 1, currentQuestion + 1))}
-              className="px-6 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"
+              className="px-6 py-2 bg-violet-600 text-white rounded-xl font-medium hover:bg-violet-700 transition"
             >
               Next →
             </button>
           )}
         </div>
       </div>
+
+      {/* Submit Confirm Modal */}
+      <ConfirmModal
+        isOpen={showSubmitConfirm}
+        onClose={() => setShowSubmitConfirm(false)}
+        onConfirm={forceSubmit}
+        title={te('submitExam')}
+        message={submitConfirmMessage}
+        confirmLabel={te('submitExam')}
+        variant="warning"
+      />
     </div>
   )
 }

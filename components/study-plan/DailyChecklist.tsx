@@ -14,6 +14,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import type { StudyPlanTask } from '@/lib/study-plan/types'
+import { useXP } from '@/contexts/XPContext'
 
 // ============================================================================
 // Props
@@ -21,7 +22,7 @@ import type { StudyPlanTask } from '@/lib/study-plan/types'
 
 interface DailyChecklistProps {
   tasks: StudyPlanTask[]
-  onComplete: (taskId: string) => Promise<void>
+  onComplete: (taskId: string) => Promise<{ xpAwarded?: number; dailyComplete?: boolean }>
 }
 
 // ============================================================================
@@ -53,10 +54,11 @@ const taskTypeColors: Record<string, string> = {
 export default function DailyChecklist({ tasks, onComplete }: DailyChecklistProps) {
   const t = useTranslations('studyPlan')
   const [completingId, setCompletingId] = useState<string | null>(null)
+  const { showXP } = useXP()
 
   if (tasks.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 text-center">
+      <div className="bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card p-6 text-center">
         <p className="text-gray-500 dark:text-gray-400">
           {t('noTasksToday')}
         </p>
@@ -70,14 +72,17 @@ export default function DailyChecklist({ tasks, onComplete }: DailyChecklistProp
   const handleComplete = async (taskId: string) => {
     setCompletingId(taskId)
     try {
-      await onComplete(taskId)
+      const result = await onComplete(taskId)
+      if (result?.xpAwarded && result.xpAwarded > 0) {
+        showXP(result.xpAwarded)
+      }
     } finally {
       setCompletingId(null)
     }
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card overflow-hidden">
       <div className="divide-y divide-gray-100 dark:divide-gray-700">
         {tasks.map(task => {
           const Icon = taskTypeIcons[task.task_type] || BookOpen
@@ -100,12 +105,12 @@ export default function DailyChecklist({ tasks, onComplete }: DailyChecklistProp
                   isCompleted
                     ? 'bg-green-500 border-green-500'
                     : isCompleting
-                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
-                      : 'border-gray-300 dark:border-gray-600 hover:border-indigo-500'
+                      ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30'
+                      : 'border-gray-300 dark:border-gray-600 hover:border-violet-500'
                 }`}
               >
                 {isCompleted && <Check className="w-4 h-4 text-white" />}
-                {isCompleting && <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />}
+                {isCompleting && <Loader2 className="w-4 h-4 text-violet-500 animate-spin" />}
               </button>
 
               {/* Task type icon */}

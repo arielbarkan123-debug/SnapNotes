@@ -70,7 +70,7 @@ class DiagramErrorBoundary extends Component<DiagramErrorBoundaryProps, DiagramE
           {process.env.NODE_ENV === 'development' && this.state.errorInfo && (
             <details className="mt-3 text-xs text-red-500 dark:text-red-400 max-w-full overflow-auto">
               <summary className="cursor-pointer hover:underline">Technical details</summary>
-              <pre className="mt-2 p-2 bg-red-100 dark:bg-red-900/40 rounded text-left overflow-x-auto max-h-32">
+              <pre className="mt-2 p-2 bg-red-100 dark:bg-red-900/40 rounded text-start overflow-x-auto max-h-32">
                 {this.state.errorInfo}
               </pre>
             </details>

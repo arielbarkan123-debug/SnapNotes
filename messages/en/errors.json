@@ -13,5 +13,6 @@
   "connectionError": "Connection error. Please try again.",
   "networkError": "Network error. Please check your connection.",
   "loadFailed": "Failed to load",
-  "saveFailed": "Failed to save"
+  "saveFailed": "Failed to save",
+  "errorCode": "Error code:"
 }

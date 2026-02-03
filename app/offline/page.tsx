@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 export default function OfflinePage() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen aurora-bg flex items-center justify-center p-4">
       <div className="max-w-md w-full text-center">
         {/* Offline icon */}
         <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -38,25 +38,25 @@ export default function OfflinePage() {
         <div className="space-y-4">
           <button
             onClick={() => window.location.reload()}
-            className="w-full py-3 px-6 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
+            className="w-full py-3 px-6 bg-gradient-to-r from-violet-500 to-violet-600 text-white rounded-full font-semibold hover:from-violet-600 hover:to-violet-700 transition-colors"
           >
             Try Again
           </button>
 
           <Link
             href="/dashboard"
-            className="block w-full py-3 px-6 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className="block w-full py-3 px-6 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-full font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           >
             View Cached Courses
           </Link>
         </div>
 
         {/* Offline tips */}
-        <div className="mt-10 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl">
-          <h3 className="font-semibold text-indigo-900 dark:text-indigo-200 mb-2">
+        <div className="mt-10 p-4 bg-violet-50 dark:bg-violet-900/20 rounded-xl">
+          <h3 className="font-semibold text-violet-900 dark:text-violet-200 mb-2">
             Offline Mode Tips
           </h3>
-          <ul className="text-sm text-indigo-700 dark:text-indigo-300 text-left space-y-1">
+          <ul className="text-sm text-violet-700 dark:text-violet-300 text-left space-y-1">
             <li>• Courses you&apos;ve opened before are available offline</li>
             <li>• Your progress is saved locally and syncs when online</li>
             <li>• New courses require an internet connection</li>

@@ -693,7 +693,7 @@ export function getAchievementGradient(category: AchievementCategory): string {
     case 'streak':
       return 'from-orange-400 to-red-500'
     case 'learning':
-      return 'from-blue-400 to-indigo-500'
+      return 'from-blue-400 to-violet-500'
     case 'mastery':
       return 'from-purple-400 to-pink-500'
     default:

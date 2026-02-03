@@ -45,7 +45,7 @@ const cardTypeConfig: Partial<Record<CardType, { label: string; color: string }>
   fill_blank: { label: 'Fill in Blank', color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400' },
   short_answer: { label: 'Short Answer', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
   matching: { label: 'Matching', color: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400' },
-  sequence: { label: 'Sequence', color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' },
+  sequence: { label: 'Sequence', color: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400' },
   multi_select: { label: 'Multi-Select', color: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400' },
   // Legacy types
   key_point: { label: 'Key Point', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
@@ -202,7 +202,7 @@ export default function ReviewCard({ card, onShowAnswer, isAnswerShown, onAnswer
             </span>
             <button
               onClick={() => setShowHelp(true)}
-              className="p-1.5 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="p-1.5 text-gray-400 hover:text-violet-500 dark:hover:text-violet-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               aria-label="Get help"
               type="button"
             >
@@ -249,7 +249,7 @@ export default function ReviewCard({ card, onShowAnswer, isAnswerShown, onAnswer
           <div className="px-6 pb-6">
             <button
               onClick={onShowAnswer}
-              className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold rounded-xl transition-colors text-lg"
+              className="w-full py-4 bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white font-semibold rounded-xl transition-colors text-lg"
             >
               Show Answer
             </button>
@@ -276,7 +276,7 @@ function formatAnswer(back: string, cardType: CardType): React.ReactNode {
   if (cardType === 'formula' && back.includes('**Formula:**')) {
     const parts = back.split('\n\n')
     return (
-      <div className="space-y-4 text-left">
+      <div className="space-y-4 text-start">
         {parts.map((part, i) => {
           if (part.startsWith('**Formula:**')) {
             const formula = part.replace('**Formula:**', '').trim()

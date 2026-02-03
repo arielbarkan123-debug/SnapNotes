@@ -13,5 +13,6 @@
   "connectionError": "שגיאת חיבור. נסה שוב.",
   "networkError": "שגיאת רשת. אנא בדוק את החיבור שלך.",
   "loadFailed": "הטעינה נכשלה",
-  "saveFailed": "השמירה נכשלה"
+  "saveFailed": "השמירה נכשלה",
+  "errorCode": "קוד שגיאה:"
 }

@@ -21,7 +21,7 @@ export interface UseStudyPlanReturn {
   isLoading: boolean
   error: string | null
   mutate: () => Promise<void>
-  completeTask: (taskId: string) => Promise<void>
+  completeTask: (taskId: string) => Promise<{ xpAwarded?: number; dailyComplete?: boolean }>
 }
 
 // ============================================================================
@@ -69,8 +69,10 @@ export function useStudyPlan(): UseStudyPlanReturn {
   }, [tasks])
 
   // Complete a task
-  const completeTask = useCallback(async (taskId: string) => {
-    if (!plan) return
+  const completeTask = useCallback(async (taskId: string): Promise<{ xpAwarded?: number; dailyComplete?: boolean }> => {
+    if (!plan) return {}
+
+    let xpResult: { xpAwarded?: number; dailyComplete?: boolean } = {}
 
     // Optimistic update
     await mutate(
@@ -84,6 +86,9 @@ export function useStudyPlan(): UseStudyPlanReturn {
         if (!res.ok) {
           throw new Error('Failed to complete task')
         }
+
+        const data = await res.json()
+        xpResult = { xpAwarded: data.xpAwarded, dailyComplete: data.dailyComplete }
 
         // Update the local data
         if (!current) return current
@@ -104,6 +109,8 @@ export function useStudyPlan(): UseStudyPlanReturn {
       },
       { revalidate: false }
     )
+
+    return xpResult
   }, [plan, mutate])
 
   const handleMutate = useCallback(async () => {

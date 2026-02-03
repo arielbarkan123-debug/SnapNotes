@@ -264,13 +264,13 @@ export default function Matching({
       }
     } else if (isSelected) {
       baseClass +=
-        'border-indigo-500 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-300 dark:ring-indigo-700'
+        'border-violet-500 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 ring-2 ring-violet-300 dark:ring-violet-700'
     } else if (isMatched) {
       baseClass +=
-        'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+        'border-violet-400 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400'
     } else {
       baseClass +=
-        'border-gray-200 dark:border-gray-700 hover:border-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 text-gray-700 dark:text-gray-300'
+        'border-gray-200 dark:border-gray-700 hover:border-violet-400 hover:bg-violet-50/50 dark:hover:bg-violet-900/20 text-gray-700 dark:text-gray-300'
     }
 
     return baseClass
@@ -296,7 +296,7 @@ export default function Matching({
       }
     } else if (isMatched) {
       baseClass +=
-        'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+        'border-violet-400 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400'
     } else if (canSelect) {
       baseClass +=
         'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 hover:border-amber-500 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-gray-700 dark:text-gray-300 cursor-pointer'
@@ -459,7 +459,7 @@ export default function Matching({
           className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
             !allMatched
               ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-              : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-lg hover:shadow-xl'
+              : 'bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white shadow-lg hover:shadow-xl'
           }`}
         >
           {allMatched ? t('checkAnswers') : t('matchAllPairs', { matched: matches.length, total: terms.length })}

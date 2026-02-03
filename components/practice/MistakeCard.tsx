@@ -83,7 +83,7 @@ export default function MistakeCard({ mistake, namespace = 'practice' }: Mistake
           {mistake.courseId && mistake.lessonIndex !== undefined && (
             <Link
               href={`/course/${mistake.courseId}/lesson/${mistake.lessonIndex}`}
-              className="inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+              className="inline-flex items-center gap-1 text-sm text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
             >
               {t('goToLesson')}
               {mistake.lessonTitle && (

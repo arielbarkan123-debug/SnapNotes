@@ -30,9 +30,9 @@ export default function DiagramPanel({
       {/* Diagram Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
+          <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/50 flex items-center justify-center">
             <svg
-              className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400"
+              className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -67,8 +67,8 @@ export default function DiagramPanel({
       </div>
 
       {/* Diagram Instructions */}
-      <div className="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border-t border-gray-200 dark:border-gray-700">
-        <p className="text-xs text-indigo-700 dark:text-indigo-300">
+      <div className="px-4 py-3 bg-violet-50 dark:bg-violet-900/20 border-t border-gray-200 dark:border-gray-700">
+        <p className="text-xs text-violet-700 dark:text-violet-300">
           {isAutoAdvance ? autoAdvanceText : manualControlsText}
         </p>
       </div>

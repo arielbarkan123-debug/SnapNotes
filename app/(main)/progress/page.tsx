@@ -84,7 +84,7 @@ export default function ProgressPage() {
           value={data.overview.cardsReviewed.count.toString()}
           trend={data.overview.cardsReviewed.trend}
           subtext={t('last7Days')}
-          color="indigo"
+          color="violet"
         />
         <OverviewCard
           icon="🎯"
@@ -116,7 +116,7 @@ export default function ProgressPage() {
       >
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Accuracy Chart */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               {t('accuracyOverTime')}
             </h2>
@@ -124,7 +124,7 @@ export default function ProgressPage() {
           </div>
 
           {/* Time Chart */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               {t('studyTimeLast7Days')}
             </h2>
@@ -139,7 +139,7 @@ export default function ProgressPage() {
         minHeight={300}
         className="mb-8"
       >
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             {t('masteryMap')}
           </h2>
@@ -177,7 +177,7 @@ export default function ProgressPage() {
       >
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Weak Areas */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-xl">💪</span>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -204,7 +204,7 @@ export default function ProgressPage() {
           </div>
 
           {/* Strong Areas */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-xl">🏆</span>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -238,7 +238,7 @@ export default function ProgressPage() {
           skeleton={<InsightsSkeleton />}
           minHeight={200}
         >
-          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800/50 p-4 sm:p-6">
+          <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-[22px] border border-violet-200 dark:border-violet-800/50 shadow-card p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-xl">🧠</span>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -267,19 +267,19 @@ interface OverviewCardProps {
   value: string
   subtext: string
   trend?: number
-  color: 'blue' | 'indigo' | 'green' | 'amber'
+  color: 'blue' | 'violet' | 'green' | 'amber'
 }
 
 function OverviewCard({ icon, label, value, subtext, trend, color }: OverviewCardProps) {
   const colorClasses = {
     blue: 'from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-200 dark:border-blue-800/50',
-    indigo: 'from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-indigo-200 dark:border-indigo-800/50',
+    violet: 'from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 border-violet-200 dark:border-violet-800/50',
     green: 'from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800/50',
     amber: 'from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border-amber-200 dark:border-amber-800/50',
   }
 
   return (
-    <div className={`rounded-xl border bg-gradient-to-br p-4 ${colorClasses[color]}`}>
+    <div className={`rounded-[22px] border bg-gradient-to-br p-4 shadow-card ${colorClasses[color]}`}>
       <div className="flex items-start justify-between mb-2">
         <span className="text-2xl">{icon}</span>
         {trend !== undefined && trend !== 0 && (
@@ -408,7 +408,7 @@ function TimeChart({ data }: TimeChartProps) {
     <div>
       {/* Goal indicator */}
       <div className="mb-4 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-        <div className="w-3 h-3 border-2 border-dashed border-indigo-400 rounded-sm" />
+        <div className="w-3 h-3 border-2 border-dashed border-violet-400 rounded-sm" />
         <span>{t('dailyGoal', { minutes: goalMinutes })}</span>
       </div>
 
@@ -416,7 +416,7 @@ function TimeChart({ data }: TimeChartProps) {
       <div className="h-40 flex items-end gap-2 sm:gap-4 relative">
         {/* Goal line */}
         <div
-          className="absolute left-0 right-0 border-t-2 border-dashed border-indigo-300 dark:border-indigo-600"
+          className="absolute left-0 right-0 border-t-2 border-dashed border-violet-300 dark:border-violet-600"
           style={{ bottom: `${(goalMinutes / maxMinutes) * 100}%` }}
         />
 
@@ -438,17 +438,17 @@ function TimeChart({ data }: TimeChartProps) {
                 <div
                   className={`w-full max-w-[32px] rounded-t transition-all ${
                     metGoal
-                      ? 'bg-indigo-500 dark:bg-indigo-400'
+                      ? 'bg-violet-500 dark:bg-violet-400'
                       : point.minutes > 0
-                      ? 'bg-indigo-300 dark:bg-indigo-600'
+                      ? 'bg-violet-300 dark:bg-violet-600'
                       : 'bg-gray-200 dark:bg-gray-700'
-                  } ${isToday ? 'ring-2 ring-indigo-400 ring-offset-2 dark:ring-offset-gray-800' : ''}`}
+                  } ${isToday ? 'ring-2 ring-violet-400 ring-offset-2 dark:ring-offset-gray-800' : ''}`}
                   style={{ height: `${Math.max(height, 2)}%` }}
                 />
               </div>
               <span className={`text-xs ${
                 isToday
-                  ? 'font-semibold text-indigo-600 dark:text-indigo-400'
+                  ? 'font-semibold text-violet-600 dark:text-violet-400'
                   : 'text-gray-500 dark:text-gray-400'
               }`}>
                 {point.dayLabel}
@@ -491,7 +491,7 @@ function MasteryMapCourse({ course, isExpanded, onToggle }: MasteryMapCourseProp
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full p-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-left"
+        className="w-full p-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-start"
       >
         {/* Mastery indicator */}
         <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold ${
@@ -587,7 +587,7 @@ function WeakAreaItem({ area }: AreaItemProps) {
   return (
     <Link
       href={`/course/${area.courseId}?lesson=${area.lessonId}`}
-      className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+      className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-violet-300 dark:hover:border-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
     >
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold ${
         getMasteryColor(area.mastery)
@@ -602,7 +602,7 @@ function WeakAreaItem({ area }: AreaItemProps) {
           {area.courseTitle}
         </div>
       </div>
-      <span className="text-indigo-600 dark:text-indigo-400 text-sm font-medium">
+      <span className="text-violet-600 dark:text-violet-400 text-sm font-medium">
         {t('practice')}
       </span>
     </Link>
@@ -674,7 +674,7 @@ function LoadingSkeleton() {
         {[1, 2, 3, 4].map(i => (
           <div
             key={i}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700"
+            className="bg-white dark:bg-gray-800 rounded-[22px] p-4 shadow-card border border-gray-100 dark:border-gray-700"
           >
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700 skeleton-shimmer-item" />
@@ -691,7 +691,7 @@ function LoadingSkeleton() {
         {[1, 2].map(i => (
           <div
             key={i}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700"
+            className="bg-white dark:bg-gray-800 rounded-[22px] p-4 shadow-card border border-gray-100 dark:border-gray-700"
           >
             <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item mb-4" />
             <div className="h-48 bg-gray-100 dark:bg-gray-700/50 rounded-lg skeleton-shimmer-item" />
@@ -700,7 +700,7 @@ function LoadingSkeleton() {
       </div>
 
       {/* Mastery section */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 rounded-[22px] p-4 shadow-card border border-gray-100 dark:border-gray-700">
         <div className="h-5 w-40 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item mb-4" />
         <div className="space-y-3">
           {[1, 2, 3].map(i => (
@@ -731,7 +731,7 @@ function ErrorState() {
       </p>
       <Link
         href="/dashboard"
-        className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+        className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
       >
         {t('backToDashboard')}
       </Link>

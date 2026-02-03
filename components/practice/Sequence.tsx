@@ -220,7 +220,7 @@ export default function Sequence({
     const isSelectedForMove = selectedForMove === index
 
     let baseClass =
-      'w-full p-4 rounded-xl border-2 transition-all duration-200 font-medium flex items-center gap-3 outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 '
+      'w-full p-4 rounded-xl border-2 transition-all duration-200 font-medium flex items-center gap-3 outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 '
 
     if (hasChecked) {
       if (results[index]) {
@@ -235,10 +235,10 @@ export default function Sequence({
         'border-purple-500 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 ring-2 ring-purple-300 dark:ring-purple-700'
     } else if (isDragging || isTouchDragging) {
       baseClass +=
-        'border-indigo-500 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 opacity-50 scale-95'
+        'border-violet-500 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 opacity-50 scale-95'
     } else if (isDragOver) {
       baseClass +=
-        'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-gray-700 dark:text-gray-300 scale-[1.02]'
+        'border-violet-400 bg-violet-50 dark:bg-violet-900/20 text-gray-700 dark:text-gray-300 scale-[1.02]'
     } else {
       baseClass +=
         'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
@@ -342,7 +342,7 @@ export default function Sequence({
                   className={`p-1 rounded transition-colors ${
                     position === 0
                       ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                      : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
+                      : 'text-gray-500 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/30'
                   }`}
                   aria-label={t('moveUp')}
                 >
@@ -361,7 +361,7 @@ export default function Sequence({
                   className={`p-1 rounded transition-colors ${
                     position === currentOrder.length - 1
                       ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                      : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
+                      : 'text-gray-500 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/30'
                   }`}
                   aria-label={t('moveDown')}
                 >
@@ -433,7 +433,7 @@ export default function Sequence({
       {!hasChecked ? (
         <button
           onClick={handleCheck}
-          className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all"
+          className="w-full py-4 bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all"
         >
           {t('checkOrder')}
         </button>

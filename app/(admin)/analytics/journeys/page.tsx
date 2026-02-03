@@ -87,7 +87,7 @@ export default function JourneysPage() {
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
               <p className="text-sm text-gray-500 dark:text-gray-400">Avg Pages/Session</p>
-              <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
+              <p className="text-3xl font-bold text-violet-600 dark:text-violet-400">
                 {data?.stats.avgPagesPerSession || 0}
               </p>
             </div>
@@ -195,7 +195,7 @@ export default function JourneysPage() {
                       <code className="text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded truncate max-w-[200px]">
                         {shortenPath(transition.from)}
                       </code>
-                      <span className="text-indigo-500 flex-shrink-0">→</span>
+                      <span className="text-violet-500 flex-shrink-0">→</span>
                       <code className="text-sm bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded truncate max-w-[200px]">
                         {shortenPath(transition.to)}
                       </code>
@@ -203,7 +203,7 @@ export default function JourneysPage() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <div className="w-24 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-indigo-500 rounded-full"
+                          className="h-full bg-violet-500 rounded-full"
                           style={{
                             width: `${(transition.count / maxTransitionCount) * 100}%`,
                           }}

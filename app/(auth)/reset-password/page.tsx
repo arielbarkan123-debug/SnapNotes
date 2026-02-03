@@ -132,7 +132,7 @@ export default function ResetPasswordPage() {
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
             <div className="flex items-center justify-center">
               <svg
-                className="animate-spin h-8 w-8 text-indigo-600"
+                className="animate-spin h-8 w-8 text-violet-600"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -167,7 +167,7 @@ export default function ResetPasswordPage() {
             <div className="text-center">
               <Link
                 href="/"
-                className="text-2xl font-bold text-indigo-600 dark:text-indigo-400"
+                className="text-2xl font-bold text-violet-600 dark:text-violet-400"
               >
                 NoteSnap
               </Link>
@@ -180,13 +180,13 @@ export default function ResetPasswordPage() {
               <div className="mt-6 space-y-3">
                 <Link
                   href="/forgot-password"
-                  className="block w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors text-center"
+                  className="block w-full py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium transition-colors text-center"
                 >
                   {t('resetPassword.requestNewLink')}
                 </Link>
                 <Link
                   href="/login"
-                  className="block text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+                  className="block text-violet-600 dark:text-violet-400 hover:underline font-medium"
                 >
                   ← {t('resetPassword.backToLogin')}
                 </Link>
@@ -206,7 +206,7 @@ export default function ResetPasswordPage() {
           <div className="text-center mb-8">
             <Link
               href="/"
-              className="text-2xl font-bold text-indigo-600 dark:text-indigo-400"
+              className="text-2xl font-bold text-violet-600 dark:text-violet-400"
             >
               NoteSnap
             </Link>
@@ -256,7 +256,7 @@ export default function ResetPasswordPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              className="w-full py-3 bg-gradient-to-r from-violet-500 to-violet-600 text-white rounded-full hover:from-violet-600 hover:to-violet-700 active:from-violet-700 active:to-violet-800 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
               {isLoading ? (
                 <>
@@ -292,7 +292,7 @@ export default function ResetPasswordPage() {
           <p className="text-center text-gray-600 dark:text-gray-400 mt-6">
             <Link
               href="/login"
-              className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+              className="text-violet-600 dark:text-violet-400 hover:underline font-medium"
             >
               ← {t('resetPassword.backToLogin')}
             </Link>

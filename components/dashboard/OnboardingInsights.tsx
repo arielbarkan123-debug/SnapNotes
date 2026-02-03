@@ -94,7 +94,7 @@ export default function OnboardingInsights() {
   if (courseCount === 0 && !isDismissed('createFirstCourse') && dismissed !== 'createFirstCourse') {
     insightType = 'createFirstCourse'
     message = t('createFirstCourse')
-    icon = <BookOpen className="w-5 h-5 text-indigo-500" />
+    icon = <BookOpen className="w-5 h-5 text-violet-500" />
     action = () => router.push('/dashboard')
     actionLabel = t('createFirstCourseAction')
   } else if (cardsDue > 0 && !isDismissed('cardsDueReminder') && dismissed !== 'cardsDueReminder') {
@@ -116,13 +116,13 @@ export default function OnboardingInsights() {
   }
 
   return (
-    <div className="mb-6 flex items-center gap-3 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div className="mb-6 flex items-center gap-3 p-4 rounded-[22px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-card">
       <div className="flex-shrink-0">{icon}</div>
       <p className="flex-1 text-sm text-gray-700 dark:text-gray-200">{message}</p>
       {actionLabel && (
         <button
           onClick={action}
-          className="flex-shrink-0 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+          className="flex-shrink-0 text-sm font-medium text-violet-600 dark:text-violet-400 hover:underline"
         >
           {actionLabel}
         </button>

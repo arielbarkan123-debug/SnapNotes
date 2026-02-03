@@ -205,7 +205,7 @@ export function FractionOperation({
               className={`
                 p-3 rounded-lg transition-all duration-300
                 ${isCurrentStep
-                  ? 'bg-indigo-50 dark:bg-indigo-900/30 border-l-4 border-indigo-500'
+                  ? 'bg-violet-50 dark:bg-violet-900/30 border-l-4 border-violet-500'
                   : 'bg-gray-50 dark:bg-gray-800/50'
                 }
               `}
@@ -217,7 +217,7 @@ export function FractionOperation({
                   className={`
                     text-xs font-medium px-2 py-0.5 rounded-full
                     ${isCurrentStep
-                      ? 'bg-indigo-100 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-300'
+                      ? 'bg-violet-100 dark:bg-violet-800 text-violet-700 dark:text-violet-300'
                       : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                     }
                   `}
@@ -256,7 +256,7 @@ export function FractionOperation({
 
               {/* LCD display */}
               {stepInfo.lcd && (
-                <p className="text-center text-sm text-indigo-600 dark:text-indigo-400 font-medium">
+                <p className="text-center text-sm text-violet-600 dark:text-violet-400 font-medium">
                   LCD = {stepInfo.lcd}
                 </p>
               )}

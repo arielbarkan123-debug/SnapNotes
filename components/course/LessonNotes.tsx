@@ -52,7 +52,7 @@ export default function LessonNotes({
         <span className="font-medium text-sm text-gray-700 dark:text-gray-300">
           {t('title')}
           {annotations.length > 0 && (
-            <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-full">
+            <span className="ms-2 inline-flex items-center justify-center w-5 h-5 text-xs bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 rounded-full">
               {annotations.length}
             </span>
           )}
@@ -125,12 +125,12 @@ export default function LessonNotes({
               onChange={(e) => setNewNote(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t('addNote')}
-              className="flex-1 text-sm px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              className="flex-1 text-sm px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none"
             />
             <button
               onClick={handleAddNote}
               disabled={!newNote.trim() || isSaving}
-              className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="p-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Send className="w-4 h-4" />
             </button>

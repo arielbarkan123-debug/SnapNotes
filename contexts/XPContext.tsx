@@ -14,7 +14,7 @@ interface XPContextValue {
   /** Show level up celebration */
   showLevelUp: (level: number, title?: string) => void
   /** Show achievement earned */
-  showAchievement: (name: string, xpReward: number) => void
+  showAchievement: (name: string, xpReward: number, emoji?: string) => void
   /** Batch XP display (combines multiple gains) */
   batchXP: (amount: number) => void
   /** Flush batched XP display */
@@ -80,12 +80,16 @@ export function XPProvider({ children }: XPProviderProps) {
     setPopups([popup])
   }, [])
 
-  const showAchievement = useCallback((name: string, xpReward: number) => {
-    // Show XP with a slight delay to appear after achievement toast
-    setTimeout(() => {
-      showXP(xpReward)
-    }, 500)
-  }, [showXP])
+  const showAchievement = useCallback((name: string, xpReward: number, emoji?: string) => {
+    const popup: XPPopupData = {
+      id: generateId(),
+      type: 'achievement',
+      achievementName: name,
+      achievementEmoji: emoji,
+      amount: xpReward,
+    }
+    setPopups((prev) => [...prev, popup])
+  }, [])
 
   const flushBatch = useCallback(() => {
     if (batchedXP.current > 0) {

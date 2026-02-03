@@ -2,10 +2,13 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { useXP } from '@/contexts/XPContext'
 import { type LessonStep } from '@/types'
 import LessonRecap from './LessonRecap'
+
+const StreakPopup = dynamic(() => import('@/components/gamification/StreakPopup'), { ssr: false })
 
 // =============================================================================
 // Types
@@ -50,8 +53,10 @@ export default function LessonComplete({
   const [animationStage, setAnimationStage] = useState(0)
   const [xpAwarded, setXpAwarded] = useState(0)
   const [showRecap, setShowRecap] = useState(false)
+  const [showStreakPopup, setShowStreakPopup] = useState(false)
+  const [streakDays, setStreakDays] = useState(0)
   const hasAwardedXP = useRef(false)
-  const { showXP, showLevelUp } = useXP()
+  const { showXP, showLevelUp, showAchievement } = useXP()
 
   const hasNextLesson = lessonIndex < totalLessons - 1
   const hasQuestions = questionsTotal > 0
@@ -97,15 +102,44 @@ export default function LessonComplete({
           }, 1000)
         }
 
-        await fetch('/api/gamification/streak', { method: 'POST' })
-        await fetch('/api/gamification/check', { method: 'POST' })
+        // Update streak
+        try {
+          const streakResponse = await fetch('/api/gamification/streak', { method: 'POST' })
+          if (streakResponse.ok) {
+            const streakData = await streakResponse.json()
+            if (streakData.streak?.maintained) {
+              setStreakDays(streakData.streak.current)
+              setShowStreakPopup(true)
+            }
+          }
+        } catch {
+          // Streak update failed silently
+        }
+
+        // Check for new achievements
+        try {
+          const checkResponse = await fetch('/api/gamification/check', { method: 'POST' })
+          if (checkResponse.ok) {
+            const checkData = await checkResponse.json()
+            if (checkData.newAchievements && Array.isArray(checkData.newAchievements)) {
+              for (let i = 0; i < checkData.newAchievements.length; i++) {
+                const achievement = checkData.newAchievements[i]
+                setTimeout(() => {
+                  showAchievement(achievement.name, achievement.xpReward || 0, achievement.emoji)
+                }, 2000 + i * 2000)
+              }
+            }
+          }
+        } catch {
+          // Achievement check failed silently
+        }
       } catch {
         // XP award failed silently - not critical
       }
     }
 
     awardXP()
-  }, [isPerfect, courseId, lessonIndex, accuracy, showXP, showLevelUp])
+  }, [isPerfect, courseId, lessonIndex, accuracy, showXP, showLevelUp, showAchievement])
 
   // Staggered animations
   useEffect(() => {
@@ -229,7 +263,7 @@ export default function LessonComplete({
         {conceptsGained.length > 0 && (
           <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6 transition-all duration-500 ${animationStage >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4 flex items-center gap-2">
-              <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
               {t('conceptMastery')}
@@ -249,7 +283,7 @@ export default function LessonComplete({
                     </div>
                     <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000"
+                        className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full transition-all duration-1000"
                         style={{ width: `${Math.round(concept.newMastery * 100)}%` }}
                       />
                     </div>
@@ -268,7 +302,7 @@ export default function LessonComplete({
             )}
             <Link
               href="/knowledge-map"
-              className="flex items-center justify-center gap-1 text-sm text-indigo-600 dark:text-indigo-400 hover:underline mt-4"
+              className="flex items-center justify-center gap-1 text-sm text-violet-600 dark:text-violet-400 hover:underline mt-4"
             >
               {t('viewKnowledgeMap')}
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -312,7 +346,7 @@ export default function LessonComplete({
               </svg>
             </Link>
           ) : (
-            <div className="text-center py-4 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl mb-3">
+            <div className="text-center py-4 bg-gradient-to-r from-blue-500 to-violet-500 rounded-xl mb-3">
               <span className="text-2xl mb-1 block">🎓</span>
               <p className="text-white font-semibold">{t('courseComplete')}</p>
               <p className="text-blue-100 text-sm">{t('congratsFinished')}</p>
@@ -355,6 +389,14 @@ export default function LessonComplete({
           )}
         </div>
       </div>
+
+      {/* Streak Popup */}
+      {showStreakPopup && (
+        <StreakPopup
+          days={streakDays}
+          onComplete={() => setShowStreakPopup(false)}
+        />
+      )}
     </div>
   )
 }

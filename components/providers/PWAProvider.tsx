@@ -117,14 +117,14 @@ export function PWAProvider({ children }: PWAProviderProps) {
 
       {/* Update Available Banner */}
       {sw.updateAvailable && (
-        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 z-50 bg-indigo-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between gap-4">
+        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 z-50 bg-violet-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between gap-4">
           <div>
             <p className="font-semibold">Update Available</p>
-            <p className="text-sm text-indigo-200">A new version of NoteSnap is ready.</p>
+            <p className="text-sm text-violet-200">A new version of NoteSnap is ready.</p>
           </div>
           <button
             onClick={sw.applyUpdate}
-            className="px-4 py-2 bg-white text-indigo-600 rounded-lg font-medium hover:bg-indigo-50 transition-colors whitespace-nowrap"
+            className="px-4 py-2 bg-white text-violet-600 rounded-lg font-medium hover:bg-violet-50 transition-colors whitespace-nowrap"
           >
             Update Now
           </button>
@@ -135,8 +135,8 @@ export function PWAProvider({ children }: PWAProviderProps) {
       {showInstallPrompt && deferredPrompt && (
         <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 z-50 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-start gap-3">
-            <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
-              <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-violet-100 dark:bg-violet-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
             </div>
@@ -162,7 +162,7 @@ export function PWAProvider({ children }: PWAProviderProps) {
             </button>
             <button
               onClick={installApp}
-              className="flex-1 py-2 px-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+              className="flex-1 py-2 px-4 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition-colors"
             >
               Install
             </button>

@@ -614,7 +614,7 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
           <button
             onClick={onClose}
             disabled={isUploading}
-            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 active:text-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 transition-colors disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center -mr-2"
+            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 active:text-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 transition-colors disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center -me-2"
             aria-label="Close modal"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -631,7 +631,7 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
             className={`
               flex-1 py-3 text-sm font-medium border-b-2 transition-colors
               ${inputMode === 'files'
-                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                ? 'border-violet-500 text-violet-600 dark:text-violet-400'
                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
               }
               disabled:opacity-50
@@ -650,7 +650,7 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
             className={`
               flex-1 py-3 text-sm font-medium border-b-2 transition-colors
               ${inputMode === 'text'
-                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                ? 'border-violet-500 text-violet-600 dark:text-violet-400'
                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
               }
               disabled:opacity-50
@@ -734,7 +734,7 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
                   type="button"
                   onClick={() => setShowStudyNotes(!showStudyNotes)}
                   disabled={isUploading}
-                  className="flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 text-sm font-medium text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors disabled:opacity-50"
                 >
                   <svg
                     className={`w-4 h-4 transition-transform ${showStudyNotes ? 'rotate-90' : ''}`}
@@ -757,7 +757,7 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
                       placeholder={t('studyNotesPlaceholder')}
                       disabled={isUploading}
                       rows={3}
-                      className="w-full px-4 py-3 sm:py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl sm:rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition disabled:opacity-50 text-base resize-none"
+                      className="w-full px-4 py-3 sm:py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl sm:rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition disabled:opacity-50 text-base resize-none"
                     />
                   </div>
                 )}
@@ -775,7 +775,7 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={t('courseTitlePlaceholder')}
                   disabled={isUploading}
-                  className="w-full px-4 py-3 sm:py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl sm:rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition disabled:opacity-50 text-base"
+                  className="w-full px-4 py-3 sm:py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl sm:rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition disabled:opacity-50 text-base"
                 />
                 <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                   {t('courseTitleHintFiles')}

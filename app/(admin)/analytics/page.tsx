@@ -127,7 +127,7 @@ export default function AnalyticsOverviewPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics Overview</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Last updated: {formatLastUpdated(lastUpdated)}
-            {isRefreshing && <span className="ml-2 text-indigo-500">Refreshing...</span>}
+            {isRefreshing && <span className="ml-2 text-violet-500">Refreshing...</span>}
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -269,7 +269,7 @@ export default function AnalyticsOverviewPage() {
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                         <div
-                          className="bg-indigo-600 h-2 rounded-full"
+                          className="bg-violet-600 h-2 rounded-full"
                           style={{ width: `${percentage}%` }}
                         ></div>
                       </div>
@@ -385,8 +385,8 @@ function SimpleLineChart({
           >
             <div
               className={`w-full rounded-t transition-all ${
-                isWeekend ? 'bg-indigo-300 dark:bg-indigo-700' : 'bg-indigo-500'
-              } hover:bg-indigo-600`}
+                isWeekend ? 'bg-violet-300 dark:bg-violet-700' : 'bg-violet-500'
+              } hover:bg-violet-600`}
               style={{ height: `${Math.max(height, 2)}%` }}
             />
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">

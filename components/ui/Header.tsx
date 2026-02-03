@@ -87,13 +87,13 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow-sm">
+      <header className="sticky top-0 z-50 bg-white/70 dark:bg-gray-900/60 backdrop-blur-xl shadow-sm">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-14 md:h-16">
             {/* Logo */}
             <Link
               href="/dashboard"
-              className="text-xl font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+              className="text-xl font-bold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
             >
               NoteSnap
             </Link>
@@ -130,7 +130,7 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
               </nav>
               <button
                 onClick={() => setIsSearchOpen(true)}
-                className="p-2 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="p-2 text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 aria-label={t('nav.search')}
                 title={t('nav.search')}
               >
@@ -139,7 +139,7 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
               <div className="h-6 w-px bg-gray-200 dark:bg-gray-700" />
               <button
                 onClick={toggleLanguage}
-                className="px-2 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="px-2 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 aria-label={t('language.switch')}
                 title={currentLocale === 'en' ? 'עברית' : 'English'}
               >
@@ -150,8 +150,8 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
                 href="/profile"
                 className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-colors rounded-lg ${
                   isActive('/profile')
-                    ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    ? 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -172,14 +172,14 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
             <div className="flex md:hidden items-center gap-2">
               <button
                 onClick={() => setIsSearchOpen(true)}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400"
+                className="p-2 text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400"
                 aria-label={t('nav.search')}
               >
                 <Search className="w-5 h-5" />
               </button>
               <Link
                 href="/profile"
-                className="p-2 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400"
+                className="p-2 text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400"
                 aria-label={t('nav.profile')}
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -222,8 +222,8 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
           {/* User info */}
           <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
+              <div className="w-10 h-10 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                <span className="text-violet-600 dark:text-violet-400 font-semibold">
                   {displayName.charAt(0).toUpperCase()}
                 </span>
               </div>
@@ -299,7 +299,7 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
       </div>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 md:hidden pb-[env(safe-area-inset-bottom)]">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/70 dark:bg-gray-900/60 backdrop-blur-xl border-t border-gray-200 dark:border-gray-700 md:hidden pb-[env(safe-area-inset-bottom)]">
         <div className="flex items-center justify-around h-14 xs:h-16">
           <BottomNavLink href="/dashboard" icon={CoursesIcon} label={t('nav.courses')} active={isActive('/dashboard')} />
           <BottomNavLink href="/review" icon={ReviewIcon} label={t('nav.review')} active={isActive('/review')} />
@@ -326,8 +326,8 @@ function NavLink({ href, children, active, badge }: { href: string; children: Re
       href={href}
       className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg flex items-center gap-1 ${
         active
-          ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
-          : 'text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+          ? 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20'
+          : 'text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-gray-100 dark:hover:bg-gray-700'
       }`}
     >
       {children}
@@ -347,7 +347,7 @@ function MobileNavLink({ href, icon: Icon, children, active, badge }: { href: st
       href={href}
       className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
         active
-          ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
+          ? 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20'
           : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
       }`}
     >
@@ -369,7 +369,7 @@ function BottomNavLink({ href, icon: Icon, label, active }: { href: string; icon
       href={href}
       className={`flex flex-col items-center justify-center gap-0.5 px-2 xs:px-3 py-1.5 min-w-[56px] xs:min-w-[64px] min-h-[44px] transition-colors ${
         active
-          ? 'text-indigo-600 dark:text-indigo-400'
+          ? 'text-violet-600 dark:text-violet-400'
           : 'text-gray-500 dark:text-gray-400'
       }`}
     >

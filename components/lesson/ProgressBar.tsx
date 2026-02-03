@@ -18,7 +18,7 @@ export default function ProgressBar({ currentStep, totalSteps }: ProgressBarProp
         <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
           {t('stepProgress', { current: currentStep + 1, total: totalSteps })}
         </span>
-        <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+        <span className="text-xs font-semibold text-violet-600 dark:text-violet-400">
           {Math.round(progressPercentage)}%
         </span>
       </div>
@@ -26,7 +26,7 @@ export default function ProgressBar({ currentStep, totalSteps }: ProgressBarProp
       {/* Progress bar */}
       <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-300 ease-out"
+          className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full transition-all duration-300 ease-out"
           style={{ width: `${progressPercentage}%` }}
         />
       </div>
@@ -39,9 +39,9 @@ export default function ProgressBar({ currentStep, totalSteps }: ProgressBarProp
             className={`
               w-2 h-2 rounded-full transition-all duration-200
               ${index < currentStep
-                ? 'bg-indigo-500'
+                ? 'bg-violet-500'
                 : index === currentStep
-                  ? 'bg-indigo-500 scale-125'
+                  ? 'bg-violet-500 scale-125'
                   : 'bg-gray-300 dark:bg-gray-600'
               }
             `}

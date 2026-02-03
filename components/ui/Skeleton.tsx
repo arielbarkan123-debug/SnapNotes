@@ -33,7 +33,7 @@ interface SkeletonRectProps extends SkeletonProps {
 export function Skeleton({ className = '', children }: SkeletonProps) {
   return (
     <div
-      className={`bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item ${className}`}
+      className={`bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item ${className}`}
       aria-hidden="true"
     >
       {children}
@@ -58,7 +58,7 @@ export function SkeletonText({
       {Array.from({ length: lines }).map((_, index) => (
         <div
           key={index}
-          className="h-4 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item"
+          className="h-4 bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item"
           style={{
             width: index === lines - 1 ? lastLineWidth : '100%',
           }}
@@ -79,7 +79,7 @@ export function SkeletonCircle({
 
   return (
     <div
-      className={`rounded-full bg-gray-200 dark:bg-gray-700 skeleton-shimmer-item ${className}`}
+      className={`rounded-full bg-violet-100/50 dark:bg-violet-900/20 skeleton-shimmer-item ${className}`}
       style={{ width: sizeStyle, height: sizeStyle }}
       aria-hidden="true"
     />
@@ -109,7 +109,7 @@ export function SkeletonRect({
 
   return (
     <div
-      className={`bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item ${className}`}
+      className={`bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item ${className}`}
       style={{ width: widthStyle, height: heightStyle }}
       aria-hidden="true"
     />
@@ -153,17 +153,17 @@ export function SkeletonCard({ className = '' }: SkeletonProps) {
       {/* Content */}
       <div className="p-4 space-y-3">
         {/* Title */}
-        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item w-3/4" />
+        <div className="h-5 bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item w-3/4" />
 
         {/* Description lines */}
         <div className="space-y-2">
-          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item" />
-          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item w-5/6" />
+          <div className="h-3 bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item" />
+          <div className="h-3 bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item w-5/6" />
         </div>
 
         {/* Meta */}
         <div className="flex items-center gap-2 pt-2">
-          <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item" />
+          <div className="h-3 w-20 bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item" />
         </div>
       </div>
     </div>
@@ -180,11 +180,11 @@ export function SkeletonStatCard({ className = '' }: SkeletonProps) {
       aria-hidden="true"
     >
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700 skeleton-shimmer-item" />
-        <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item" />
+        <div className="w-10 h-10 rounded-lg bg-violet-100/50 dark:bg-violet-900/20 skeleton-shimmer-item" />
+        <div className="h-4 w-20 bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item" />
       </div>
-      <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item mb-2" />
-      <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item" />
+      <div className="h-8 w-16 bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item mb-2" />
+      <div className="h-3 w-24 bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item" />
     </div>
   )
 }
@@ -198,7 +198,7 @@ export function SkeletonChart({ height = 256, className = '' }: { height?: numbe
       className={`bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 ${className}`}
       aria-hidden="true"
     >
-      <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item mb-4" />
+      <div className="h-5 w-32 bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item mb-4" />
       <div
         className="bg-gray-100 dark:bg-gray-700/50 rounded-lg skeleton-shimmer-item"
         style={{ height: `${height}px` }}
@@ -218,8 +218,8 @@ export function SkeletonExamCard({ className = '' }: SkeletonProps) {
     >
       <div className="flex justify-between items-start">
         <div className="flex-1">
-          <div className="h-5 w-3/4 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item mb-2" />
-          <div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item" />
+          <div className="h-5 w-3/4 bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item mb-2" />
+          <div className="h-4 w-40 bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item" />
         </div>
         <div className="text-right">
           <div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full skeleton-shimmer-item" />
@@ -248,9 +248,9 @@ export function SkeletonFlashcard({ className = '' }: SkeletonProps) {
 
       {/* Question area */}
       <div className="min-h-[200px] flex flex-col items-center justify-center space-y-4">
-        <div className="h-6 w-4/5 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item" />
-        <div className="h-6 w-3/5 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item" />
-        <div className="h-6 w-2/5 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item" />
+        <div className="h-6 w-4/5 bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item" />
+        <div className="h-6 w-3/5 bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item" />
+        <div className="h-6 w-2/5 bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item" />
       </div>
 
       {/* Answer options */}
@@ -282,8 +282,8 @@ export function SkeletonCourseCard({ className = '' }: SkeletonProps) {
 
       {/* Content */}
       <div className="p-4">
-        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item w-4/5 mb-2" />
-        <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded skeleton-shimmer-item" />
+        <div className="h-5 bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item w-4/5 mb-2" />
+        <div className="h-4 w-24 bg-violet-100/50 dark:bg-violet-900/20 rounded skeleton-shimmer-item" />
       </div>
     </div>
   )
@@ -358,7 +358,7 @@ export function LoadingOverlay({ message }: LoadingOverlayProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
       <div className="text-center">
-        <Spinner size="lg" className="mx-auto mb-4 text-indigo-600 dark:text-indigo-400" />
+        <Spinner size="lg" className="mx-auto mb-4 text-violet-600 dark:text-violet-400" />
         <p className="text-gray-600 dark:text-gray-400">{displayMessage}</p>
       </div>
     </div>

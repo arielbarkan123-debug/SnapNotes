@@ -126,11 +126,11 @@
     "title": "Account",
     "description": "Manage your account",
     "dangerZone": "Danger Zone",
-    "dangerZoneDesc": "Once you delete your account, there is no going back.",
+    "dangerZoneDesc": "To delete your account and all associated data, you will be directed to email support.",
     "deleteAccount": "Delete Account",
     "typeDeleteToConfirm": "Type DELETE to confirm:",
     "cancel": "Cancel",
-    "deleteForever": "Delete Forever"
+    "deleteForever": "Request Deletion"
   },
   "toast": {
     "loadError": "Failed to load settings",
@@ -140,7 +140,7 @@
     "signOutError": "Failed to sign out",
     "onboardingReset": "Onboarding reset! Redirecting...",
     "onboardingResetError": "Failed to reset onboarding",
-    "deleteRequest": "Account deletion request submitted. Contact support to complete.",
+    "deleteContactSupport": "An email to support has been opened. Please send it to complete your deletion request.",
     "deleteError": "Failed to process deletion request"
   }
 }

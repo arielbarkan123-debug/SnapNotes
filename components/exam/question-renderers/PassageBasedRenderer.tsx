@@ -39,7 +39,7 @@ function SubQuestionMultipleChoice({
     const isSelected = isSelectedOption(option)
     const optionIsCorrect = isCorrectOption(option)
 
-    let baseClass = 'w-full p-3 text-left rounded-lg border-2 transition-all text-sm '
+    let baseClass = 'w-full p-3 text-start rounded-lg border-2 transition-all text-sm '
 
     if (showResults) {
       if (optionIsCorrect) {
@@ -51,10 +51,10 @@ function SubQuestionMultipleChoice({
         baseClass += 'border-gray-200 dark:border-gray-700 text-gray-400'
       }
     } else if (isSelected) {
-      baseClass += 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700'
+      baseClass += 'border-violet-500 bg-violet-50 dark:bg-violet-900/30 text-violet-700'
     } else {
       baseClass +=
-        'border-gray-200 dark:border-gray-700 hover:border-indigo-400 text-gray-700 dark:text-gray-300'
+        'border-gray-200 dark:border-gray-700 hover:border-violet-400 text-gray-700 dark:text-gray-300'
     }
 
     return baseClass
@@ -115,10 +115,10 @@ function SubQuestionTrueFalse({
         baseClass += 'border-gray-200 dark:border-gray-700 text-gray-400'
       }
     } else if (isSelected) {
-      baseClass += 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700'
+      baseClass += 'border-violet-500 bg-violet-50 dark:bg-violet-900/30 text-violet-700'
     } else {
       baseClass +=
-        'border-gray-200 dark:border-gray-700 hover:border-indigo-400 text-gray-700 dark:text-gray-300'
+        'border-gray-200 dark:border-gray-700 hover:border-violet-400 text-gray-700 dark:text-gray-300'
     }
 
     return baseClass
@@ -180,7 +180,7 @@ function SubQuestionFillBlank({
             ? isCorrect
               ? 'border-green-500 bg-green-50 dark:bg-green-900/20 text-green-700'
               : 'border-red-500 bg-red-50 dark:bg-red-900/20 text-red-700'
-            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-indigo-500'
+            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-violet-500'
         }`}
       />
       {showResults && !isCorrect && subQuestion.correct_answer && (

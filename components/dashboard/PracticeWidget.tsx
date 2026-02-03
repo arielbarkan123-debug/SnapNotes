@@ -63,7 +63,7 @@ export function PracticeWidget() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-[22px] p-6 border border-gray-200 dark:border-gray-700 shadow-card mb-6">
         <div className="animate-pulse">
           <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4" />
           <div className="grid grid-cols-2 gap-3">
@@ -78,7 +78,7 @@ export function PracticeWidget() {
   // Error state
   if (error) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card mb-6">
         <SWRErrorState onRetry={() => mutate()} />
       </div>
     )
@@ -100,7 +100,7 @@ export function PracticeWidget() {
   const activeSession = activeSessions?.[0]
 
   return (
-    <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl p-6 border border-indigo-200 dark:border-indigo-800/50 shadow-sm mb-6">
+    <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-[22px] p-6 border border-violet-200 dark:border-violet-800/50 shadow-card mb-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
@@ -109,7 +109,7 @@ export function PracticeWidget() {
         </h2>
         <Link
           href="/practice"
-          className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+          className="text-sm text-violet-600 dark:text-violet-400 hover:underline"
         >
           {t('viewAll')}
         </Link>
@@ -119,7 +119,7 @@ export function PracticeWidget() {
       {activeSession && (
         <button
           onClick={() => router.push(`/practice/${activeSession.id}`)}
-          className="w-full mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-indigo-200 dark:border-indigo-700 hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors text-start"
+          className="w-full mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-violet-200 dark:border-violet-700 hover:border-violet-400 dark:hover:border-violet-500 transition-colors text-start"
         >
           <div className="flex items-center justify-between">
             <div>
@@ -133,13 +133,13 @@ export function PracticeWidget() {
             <div className="flex items-center gap-2">
               <div className="w-16 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-indigo-600 transition-all"
+                  className="h-full bg-violet-600 transition-all"
                   style={{
                     width: `${(activeSession.questions_answered / activeSession.question_count) * 100}%`,
                   }}
                 />
               </div>
-              <span className="text-indigo-600 dark:text-indigo-400">→</span>
+              <span className="text-violet-600 dark:text-violet-400">→</span>
             </div>
           </div>
         </button>
@@ -171,7 +171,7 @@ export function PracticeWidget() {
         {/* Quick Practice */}
         <button
           onClick={() => router.push('/practice?type=quick')}
-          className="p-4 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 text-start transition-all"
+          className="p-4 rounded-lg bg-violet-100 dark:bg-violet-900/30 hover:bg-violet-200 dark:hover:bg-violet-900/50 border border-violet-200 dark:border-violet-800 text-start transition-all"
         >
           <div className="text-2xl mb-2">⚡</div>
           <p className="font-medium text-gray-900 dark:text-white text-sm">
@@ -185,7 +185,7 @@ export function PracticeWidget() {
 
       {/* Stats (if available) */}
       {stats && stats.totalSessions > 0 && (
-        <div className="mt-4 pt-4 border-t border-indigo-200 dark:border-indigo-800/50">
+        <div className="mt-4 pt-4 border-t border-violet-200 dark:border-violet-800/50">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600 dark:text-gray-400">
               {t('questionsPracticed', { count: stats.totalQuestions })}

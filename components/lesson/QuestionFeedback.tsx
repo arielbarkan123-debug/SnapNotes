@@ -189,7 +189,7 @@ function CorrectFeedback({
             {/* Use age-adaptive message with emoji if present */}
             {adaptiveFeedback.message}
             {adaptiveFeedback.emoji && (
-              <span className="ml-2">{adaptiveFeedback.emoji.slice(0, 2)}</span>
+              <span className="ms-2">{adaptiveFeedback.emoji.slice(0, 2)}</span>
             )}
           </h3>
           {adaptiveFeedback.tone === 'enthusiastic' && (
@@ -288,7 +288,7 @@ function IncorrectFeedback({
           <h3 className="text-xl font-bold text-orange-700 dark:text-orange-400">
             {adaptiveFeedback.message}
             {adaptiveFeedback.emoji && (
-              <span className="ml-2">{adaptiveFeedback.emoji.slice(0, 2)}</span>
+              <span className="ms-2">{adaptiveFeedback.emoji.slice(0, 2)}</span>
             )}
           </h3>
           {adaptiveFeedback.encouragement && (

@@ -190,7 +190,7 @@ export default function MonitoringDashboard() {
   if (isAdmin === null || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div>
       </div>
     )
   }
@@ -200,7 +200,7 @@ export default function MonitoringDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+    <div className="min-h-screen bg-transparent p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -248,7 +248,7 @@ export default function MonitoringDashboard() {
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
               <div className="text-sm text-gray-500 dark:text-gray-400">Error Types</div>
-              <div className="text-2xl font-bold text-indigo-600">{Object.keys(stats.byType).length}</div>
+              <div className="text-2xl font-bold text-violet-600">{Object.keys(stats.byType).length}</div>
             </div>
           </div>
         )}
@@ -336,7 +336,7 @@ export default function MonitoringDashboard() {
                       <td className="px-4 py-3 whitespace-nowrap">
                         <button
                           onClick={() => setSelectedError(error)}
-                          className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm font-medium"
+                          className="text-violet-600 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-300 text-sm font-medium"
                         >
                           Details
                         </button>

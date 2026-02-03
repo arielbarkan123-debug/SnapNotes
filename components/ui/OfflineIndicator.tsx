@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { WifiOff, Wifi } from 'lucide-react'
 
@@ -8,6 +9,7 @@ import { WifiOff, Wifi } from 'lucide-react'
  * Shows a banner when user goes offline or comes back online
  */
 export function OfflineIndicator() {
+  const t = useTranslations('errors')
   const { isOnline, wasOffline, clearReconnectionFlag } = useOnlineStatus()
   const [showReconnected, setShowReconnected] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -40,7 +42,7 @@ export function OfflineIndicator() {
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-amber-500 text-white px-4 py-2 flex items-center justify-center gap-2 shadow-lg">
         <WifiOff className="w-4 h-4" />
         <span className="text-sm font-medium">
-          You&apos;re offline. Some features may not work.
+          {t('offline')} {t('offlineDescription')}
         </span>
       </div>
     )
@@ -52,7 +54,7 @@ export function OfflineIndicator() {
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-green-500 text-white px-4 py-2 flex items-center justify-center gap-2 shadow-lg animate-fade-in">
         <Wifi className="w-4 h-4" />
         <span className="text-sm font-medium">
-          Back online!
+          {t('backOnline')}
         </span>
       </div>
     )

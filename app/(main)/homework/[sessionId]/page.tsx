@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import Button from '@/components/ui/Button'
 import { AnnotatedImageViewer, TutoringChat } from '@/components/homework'
 import { useToast } from '@/contexts/ToastContext'
+import { useXP } from '@/contexts/XPContext'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import type { HomeworkCheck, HomeworkFeedback, GradeLevel, AnnotatedFeedbackPoint, HomeworkSession } from '@/lib/homework/types'
 
@@ -14,7 +16,7 @@ import type { HomeworkCheck, HomeworkFeedback, GradeLevel, AnnotatedFeedbackPoin
 // Helper Functions
 // ============================================================================
 
-function getGradeLevelStyles(level: GradeLevel) {
+function getGradeLevelStyles(level: GradeLevel, t: (key: string) => string) {
   switch (level) {
     case 'excellent':
       return {
@@ -22,7 +24,7 @@ function getGradeLevelStyles(level: GradeLevel) {
         border: 'border-green-200 dark:border-green-800',
         text: 'text-green-700 dark:text-green-400',
         emoji: '🌟',
-        label: 'Excellent',
+        label: t('results.gradeExcellent'),
       }
     case 'good':
       return {
@@ -30,7 +32,7 @@ function getGradeLevelStyles(level: GradeLevel) {
         border: 'border-blue-200 dark:border-blue-800',
         text: 'text-blue-700 dark:text-blue-400',
         emoji: '👍',
-        label: 'Good',
+        label: t('results.gradeGood'),
       }
     case 'needs_improvement':
       return {
@@ -38,7 +40,7 @@ function getGradeLevelStyles(level: GradeLevel) {
         border: 'border-amber-200 dark:border-amber-800',
         text: 'text-amber-700 dark:text-amber-400',
         emoji: '📝',
-        label: 'Needs Improvement',
+        label: t('results.gradeNeedsImprovement'),
       }
     case 'incomplete':
       return {
@@ -46,7 +48,7 @@ function getGradeLevelStyles(level: GradeLevel) {
         border: 'border-red-200 dark:border-red-800',
         text: 'text-red-700 dark:text-red-400',
         emoji: '⚠️',
-        label: 'Incomplete',
+        label: t('results.gradeIncomplete'),
       }
     default:
       return {
@@ -54,7 +56,7 @@ function getGradeLevelStyles(level: GradeLevel) {
         border: 'border-gray-200 dark:border-gray-700',
         text: 'text-gray-700 dark:text-gray-400',
         emoji: '❓',
-        label: 'Unknown',
+        label: t('results.gradeUnknown'),
       }
   }
 }
@@ -80,10 +82,13 @@ export default function HomeworkResultsPage() {
   const router = useRouter()
   const params = useParams()
   const searchParams = useSearchParams()
+  const t = useTranslations('homework')
   const sessionId = params.sessionId as string
   const sessionType = searchParams.get('type') // 'help' or null (check)
   const isHelpSession = sessionType === 'help'
   const toast = useToast()
+  const { showXP } = useXP()
+  const xpAwardedRef = useRef(false)
 
   // Analytics
   const { trackFeature } = useEventTracking()
@@ -153,6 +158,37 @@ export default function HomeworkResultsPage() {
 
     fetchData()
   }, [sessionId, isHelpSession, router, toast, trackStep, trackFeature])
+
+  // Award XP when check results are loaded
+  useEffect(() => {
+    if (!check || !check.feedback || xpAwardedRef.current) return
+    xpAwardedRef.current = true
+
+    async function awardXP() {
+      try {
+        const [xpRes] = await Promise.all([
+          fetch('/api/gamification/xp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event: 'practice_complete' }),
+          }),
+          fetch('/api/gamification/streak', { method: 'POST' }),
+          fetch('/api/gamification/check', { method: 'POST' }),
+        ])
+
+        if (xpRes.ok) {
+          const data = await xpRes.json()
+          if (data.xpAwarded) {
+            showXP(data.xpAwarded)
+          }
+        }
+      } catch {
+        // Silently fail - XP is non-critical
+      }
+    }
+
+    awardXP()
+  }, [check, showXP])
 
   // Send message to Socratic tutor
   const handleSendMessage = useCallback(async (message: string) => {
@@ -280,10 +316,10 @@ export default function HomeworkResultsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading results...</p>
+          <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('results.loadingResults')}</p>
         </div>
       </div>
     )
@@ -293,14 +329,14 @@ export default function HomeworkResultsPage() {
   if (isHelpSession) {
     if (!helpSession) {
       return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="min-h-screen bg-transparent flex items-center justify-center">
           <div className="text-center">
-            <p className="text-gray-600 dark:text-gray-400 mb-4">Session not found</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">{t('results.sessionNotFound')}</p>
             <Link
               href="/homework"
-              className="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              className="inline-flex items-center justify-center px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
             >
-              Back to Homework Hub
+              {t('check.backToHub')}
             </Link>
           </div>
         </div>
@@ -315,7 +351,7 @@ export default function HomeworkResultsPage() {
             <div className="flex items-center gap-3">
               <Link
                 href="/homework"
-                className="p-2 -ml-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="p-2 -ms-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -323,10 +359,10 @@ export default function HomeworkResultsPage() {
               </Link>
               <div className="flex-1">
                 <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Homework Helper
+                  {t('homeworkHelper')}
                 </h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Socratic tutoring session
+                  {t('results.socraticSession')}
                 </p>
               </div>
               {helpSession.question_image_url && (
@@ -346,7 +382,7 @@ export default function HomeworkResultsPage() {
 
         {/* Question Summary Card */}
         {helpSession.question_text && (
-          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-b border-purple-200 dark:border-purple-800/50">
+          <div className="bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 border-b border-purple-200 dark:border-purple-800/50">
             <div className="container mx-auto px-4 py-3 max-w-2xl">
               <div className="flex items-start gap-3">
                 {/* Question thumbnail - only show for image mode */}
@@ -378,7 +414,7 @@ export default function HomeworkResultsPage() {
                       </span>
                     )}
                     {helpSession.detected_topic && (
-                      <span className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-800/30 text-indigo-700 dark:text-indigo-300 text-xs font-medium rounded-full">
+                      <span className="px-2 py-0.5 bg-violet-100 dark:bg-violet-800/30 text-violet-700 dark:text-violet-300 text-xs font-medium rounded-full">
                         {helpSession.detected_topic}
                       </span>
                     )}
@@ -398,12 +434,12 @@ export default function HomeworkResultsPage() {
               {(helpSession.current_step ?? 0) > 0 && helpSession.total_estimated_steps && (
                 <div className="mt-3">
                   <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    <span>Progress</span>
-                    <span>Step {helpSession.current_step} of {helpSession.total_estimated_steps}</span>
+                    <span>{t('results.progress')}</span>
+                    <span>{t('results.stepOf', { current: helpSession.current_step, total: helpSession.total_estimated_steps })}</span>
                   </div>
                   <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-500"
+                      className="h-full bg-gradient-to-r from-purple-500 to-violet-500 rounded-full transition-all duration-500"
                       style={{
                         width: `${Math.min(100, ((helpSession.current_step ?? 0) / helpSession.total_estimated_steps) * 100)}%`,
                       }}
@@ -437,7 +473,7 @@ export default function HomeworkResultsPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="font-semibold text-gray-900 dark:text-white">Your Question</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white">{t('results.yourQuestion')}</h3>
                 <button
                   onClick={() => setShowTask(false)}
                   className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -467,14 +503,14 @@ export default function HomeworkResultsPage() {
   // Render check results (feedback interface)
   if (!check || !check.feedback) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600 dark:text-gray-400 mb-4">Results not found</p>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">{t('results.resultsNotFound')}</p>
           <Link
             href="/homework"
-            className="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            className="inline-flex items-center justify-center px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
           >
-            Check new homework
+            {t('results.checkNewHomework')}
           </Link>
         </div>
       </div>
@@ -482,10 +518,10 @@ export default function HomeworkResultsPage() {
   }
 
   const feedback = check.feedback as HomeworkFeedback
-  const gradeStyles = getGradeLevelStyles(feedback.gradeLevel)
+  const gradeStyles = getGradeLevelStyles(feedback.gradeLevel, t)
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-transparent">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="container mx-auto px-4 py-4 max-w-2xl">
@@ -493,7 +529,7 @@ export default function HomeworkResultsPage() {
             <div className="flex items-center gap-3">
               <Link
                 href="/homework"
-                className="p-2 -ml-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="p-2 -ms-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -501,7 +537,7 @@ export default function HomeworkResultsPage() {
               </Link>
               <div>
                 <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Homework Results
+                  {t('results.homeworkResults')}
                 </h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   {check.subject} • {check.topic}
@@ -536,7 +572,7 @@ export default function HomeworkResultsPage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6 max-w-2xl space-y-6">
         {/* Grade Card */}
-        <div className={`${gradeStyles.bg} ${gradeStyles.border} border rounded-xl p-6 text-center`}>
+        <div className={`${gradeStyles.bg} ${gradeStyles.border} border rounded-[22px] shadow-card p-6 text-center`}>
           <div className="text-5xl mb-2">{gradeStyles.emoji}</div>
           <div className={`text-3xl font-bold ${gradeStyles.text} mb-1`}>
             {feedback.gradeEstimate}
@@ -547,17 +583,17 @@ export default function HomeworkResultsPage() {
         </div>
 
         {/* Summary */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
-          <h2 className="font-semibold text-gray-900 dark:text-white mb-2">Summary</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-[22px] p-5 border border-gray-200 dark:border-gray-700 shadow-card">
+          <h2 className="font-semibold text-gray-900 dark:text-white mb-2">{t('results.summary')}</h2>
           <p className="text-gray-600 dark:text-gray-300 text-sm">{feedback.summary}</p>
         </div>
 
         {/* What You Did Well */}
         {feedback.correctPoints.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-[22px] p-5 border border-gray-200 dark:border-gray-700 shadow-card">
             <h2 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white mb-4">
               <span className="text-green-500">✓</span>
-              What You Did Well
+              {t('results.whatYouDidWell')}
             </h2>
             <div className="space-y-3">
               {feedback.correctPoints.map((point, idx) => {
@@ -606,10 +642,10 @@ export default function HomeworkResultsPage() {
 
         {/* Areas for Improvement */}
         {feedback.improvementPoints.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-[22px] p-5 border border-gray-200 dark:border-gray-700 shadow-card">
             <h2 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white mb-4">
               <span className="text-amber-500">!</span>
-              Areas for Improvement
+              {t('results.areasForImprovement')}
             </h2>
             <div className="space-y-3">
               {feedback.improvementPoints.map((point, idx) => {
@@ -665,15 +701,15 @@ export default function HomeworkResultsPage() {
 
         {/* Suggestions */}
         {feedback.suggestions.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-[22px] p-5 border border-gray-200 dark:border-gray-700 shadow-card">
             <h2 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white mb-4">
-              <span className="text-indigo-500">💡</span>
-              Suggestions
+              <span className="text-violet-500">💡</span>
+              {t('results.suggestions')}
             </h2>
             <ul className="space-y-2">
               {feedback.suggestions.map((suggestion, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-2 flex-shrink-0" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-500 mt-2 flex-shrink-0" />
                   {suggestion}
                 </li>
               ))}
@@ -683,10 +719,10 @@ export default function HomeworkResultsPage() {
 
         {/* Teacher Style Notes */}
         {(feedback.teacherStyleNotes || feedback.expectationComparison) && (
-          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl p-5 border border-purple-200 dark:border-purple-800/50">
+          <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-[22px] shadow-card p-5 border border-purple-200 dark:border-purple-800/50">
             <h2 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white mb-3">
               <span>👩‍🏫</span>
-              Teacher Expectations
+              {t('results.teacherExpectations')}
             </h2>
             {feedback.expectationComparison && (
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
@@ -702,8 +738,8 @@ export default function HomeworkResultsPage() {
         )}
 
         {/* Encouragement */}
-        <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-5 border border-indigo-200 dark:border-indigo-800/50 text-center">
-          <p className="text-indigo-700 dark:text-indigo-300 font-medium">
+        <div className="bg-violet-50 dark:bg-violet-900/20 rounded-[22px] shadow-card p-5 border border-violet-200 dark:border-violet-800/50 text-center">
+          <p className="text-violet-700 dark:text-violet-300 font-medium">
             {feedback.encouragement}
           </p>
         </div>
@@ -716,7 +752,7 @@ export default function HomeworkResultsPage() {
             size="lg"
             className="w-full"
           >
-            Check Another Homework
+            {t('results.checkAnother')}
           </Button>
           <Button
             onClick={() => router.push('/dashboard')}
@@ -724,8 +760,25 @@ export default function HomeworkResultsPage() {
             size="lg"
             className="w-full"
           >
-            Back to Dashboard
+            {t('backToDashboard')}
           </Button>
+        </div>
+
+        {/* Practice CTA */}
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-[22px] p-6 text-white shadow-card">
+          <div className="flex items-start gap-4">
+            <span className="text-3xl">🎯</span>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold mb-1">{t('results.practiceMore')}</h3>
+              <p className="text-sm text-white/80 mb-4">{t('results.practiceMoreDesc')}</p>
+              <Link
+                href="/practice"
+                className="inline-flex items-center justify-center px-5 py-2.5 bg-white text-purple-700 font-medium rounded-lg hover:bg-white/90 transition-colors"
+              >
+                {t('results.startPractice')}
+              </Link>
+            </div>
+          </div>
         </div>
       </main>
 
@@ -740,7 +793,7 @@ export default function HomeworkResultsPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Homework Task</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white">{t('results.homeworkTask')}</h3>
               <button
                 onClick={() => setShowTask(false)}
                 className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -784,17 +837,17 @@ export default function HomeworkResultsPage() {
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-3">
-                <h3 className="font-semibold text-gray-900 dark:text-white">Your Answer</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white">{t('results.yourAnswerModal')}</h3>
                 {feedback.annotations?.hasAnnotations && (
                   <button
                     onClick={() => setShowAnnotations(!showAnnotations)}
                     className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
                       showAnnotations
-                        ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                        ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                     }`}
                   >
-                    {showAnnotations ? 'Hide Marks' : 'Show Marks'}
+                    {showAnnotations ? t('results.hideMarks') : t('results.showMarks')}
                   </button>
                 )}
               </div>

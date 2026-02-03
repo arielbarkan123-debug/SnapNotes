@@ -32,18 +32,18 @@ export default function DropZone({
       className={`
         relative border-2 border-dashed rounded-xl p-6 sm:p-8 text-center cursor-pointer transition-all min-h-[200px] sm:min-h-[240px] flex items-center justify-center
         ${isDragging
-          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-          : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400 active:border-indigo-500 hover:bg-gray-50 active:bg-indigo-50 dark:hover:bg-gray-700/50 dark:active:bg-indigo-900/20'
+          ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20'
+          : 'border-gray-300 dark:border-gray-600 hover:border-violet-400 active:border-violet-500 hover:bg-gray-50 active:bg-violet-50 dark:hover:bg-gray-700/50 dark:active:bg-violet-900/20'
         }
       `}
     >
       <div className="flex flex-col items-center">
         <div className={`
           w-14 h-14 sm:w-16 sm:h-16 mb-3 sm:mb-4 rounded-full flex items-center justify-center transition-colors
-          ${isDragging ? 'bg-indigo-100 dark:bg-indigo-900/40' : 'bg-gray-100 dark:bg-gray-700'}
+          ${isDragging ? 'bg-violet-100 dark:bg-violet-900/40' : 'bg-gray-100 dark:bg-gray-700'}
         `}>
           <svg
-            className={`w-7 h-7 sm:w-8 sm:h-8 ${isDragging ? 'text-indigo-600' : 'text-gray-400'}`}
+            className={`w-7 h-7 sm:w-8 sm:h-8 ${isDragging ? 'text-violet-600' : 'text-gray-400'}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

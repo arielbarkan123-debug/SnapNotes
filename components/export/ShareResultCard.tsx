@@ -44,11 +44,11 @@ export default function ShareResultCard({
   }
 
   return (
-    <div className="p-5 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-200 dark:border-indigo-800/50">
+    <div className="p-5 rounded-xl bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 border border-violet-200 dark:border-violet-800/50">
       {/* Stats */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
+          <p className="text-3xl font-bold text-violet-600 dark:text-violet-400">
             {accuracy}%
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -71,7 +71,7 @@ export default function ShareResultCard({
       {/* Share button */}
       <button
         onClick={handleShare}
-        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
+        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition-colors"
       >
         {copied ? (
           <>

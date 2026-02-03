@@ -131,7 +131,7 @@ export default function ProfileContent({
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
       {/* Header Section */}
-      <div className="mb-8 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-6 text-white shadow-xl">
+      <div className="mb-8 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-pink-500 p-6 text-white shadow-xl">
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           {/* User Info */}
           <div className="flex items-center gap-4">
@@ -264,7 +264,7 @@ export default function ProfileContent({
                   className={`
                     rounded-full px-3 py-1 text-sm font-medium transition-all
                     ${selectedCategory === cat
-                      ? 'bg-indigo-500 text-white'
+                      ? 'bg-violet-500 text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
                     }
                   `}
@@ -459,7 +459,7 @@ function ActivityCalendar({ activityByDate, t }: ActivityCalendarProps) {
                   className={`
                     h-3 w-3 rounded-sm transition-all
                     ${getColorClass(day.level)}
-                    ${day.date ? 'cursor-pointer hover:ring-2 hover:ring-indigo-500 hover:ring-offset-1' : ''}
+                    ${day.date ? 'cursor-pointer hover:ring-2 hover:ring-violet-500 hover:ring-offset-1' : ''}
                   `}
                   onMouseEnter={() => day.date && setHoveredDate(day.date)}
                   onMouseLeave={() => setHoveredDate(null)}
@@ -549,7 +549,7 @@ function AchievementsGrid({
                   ? 'bg-gradient-to-br from-amber-50 to-yellow-100 dark:from-amber-900/30 dark:to-yellow-900/30'
                   : 'bg-gray-100 dark:bg-gray-800'
                 }
-                ${isSelected ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-gray-900' : ''}
+                ${isSelected ? 'ring-2 ring-violet-500 ring-offset-2 dark:ring-offset-gray-900' : ''}
                 hover:scale-105
               `}
             >

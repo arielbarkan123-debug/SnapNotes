@@ -14,7 +14,7 @@ import { useAnnotations } from '@/hooks/useAnnotations'
 
 // Dynamic imports for components not needed immediately
 const LessonComplete = dynamic(() => import('@/components/lesson/LessonComplete'), {
-  loading: () => <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 flex items-center justify-center"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>
+  loading: () => <div className="fixed inset-0 bg-transparent flex items-center justify-center"><div className="w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" /></div>
 })
 const HelpModal = dynamic(() => import('@/components/help/HelpModal'))
 const ChatTutor = dynamic(() => import('@/components/chat/ChatTutor').then(mod => ({ default: mod.ChatTutor })))
@@ -550,7 +550,7 @@ export default function LessonView({
     const attemptNumber = retryAttempts[failedStepIndex] || 1
 
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+      <div className="min-h-screen bg-transparent flex flex-col">
         {/* Retry Header */}
         <header className="sticky top-0 z-30 bg-amber-500 text-white shadow-sm">
           <div className="container mx-auto px-3 xs:px-4 py-2 xs:py-3 max-w-4xl">
@@ -608,7 +608,7 @@ export default function LessonView({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="min-h-screen bg-transparent flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="container mx-auto px-4 py-3 max-w-4xl">
@@ -705,7 +705,7 @@ export default function LessonView({
                 ${!isSaving
                   ? isLastStep
                     ? 'bg-green-600 hover:bg-green-700 active:bg-green-800 text-white'
-                    : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white'
+                    : 'bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white'
                   : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                 }
               `}
@@ -741,7 +741,7 @@ export default function LessonView({
       {!isQuestion && (
         <button
           onClick={() => setShowHelp(true)}
-          className="fixed bottom-28 xs:bottom-24 right-3 xs:right-4 md:bottom-8 md:right-8 w-11 h-11 xs:w-12 xs:h-12 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-200 dark:hover:bg-indigo-900 transition-all hover:scale-110 z-40"
+          className="fixed bottom-28 xs:bottom-24 right-3 xs:right-4 md:bottom-8 md:right-8 w-11 h-11 xs:w-12 xs:h-12 bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-300 rounded-full shadow-lg flex items-center justify-center hover:bg-violet-200 dark:hover:bg-violet-900 transition-all hover:scale-110 z-40"
           style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
           aria-label={t('getHelp')}
           title={t('needHelpPressF9')}
@@ -762,7 +762,7 @@ export default function LessonView({
       {!isQuestion && !isChatOpen && (
         <button
           onClick={() => setIsChatOpen(true)}
-          className="fixed bottom-44 xs:bottom-40 right-3 xs:right-4 md:bottom-24 md:right-8 w-11 h-11 xs:w-12 xs:h-12 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-all hover:scale-110 z-40"
+          className="fixed bottom-44 xs:bottom-40 right-3 xs:right-4 md:bottom-24 md:right-8 w-11 h-11 xs:w-12 xs:h-12 bg-violet-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-violet-700 transition-all hover:scale-110 z-40"
           style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
           aria-label={t('askAI')}
           title={t('askAI')}

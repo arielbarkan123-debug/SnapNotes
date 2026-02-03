@@ -36,7 +36,7 @@ export default function TextInputArea({
           placeholder={t('textPlaceholder')}
           disabled={disabled}
           rows={10}
-          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition disabled:opacity-50 text-sm resize-none"
+          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition disabled:opacity-50 text-sm resize-none"
         />
         <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
           {t('textDescription')}
@@ -71,7 +71,7 @@ export default function TextInputArea({
           onChange={(e) => onTitleChange(e.target.value)}
           placeholder={t('courseTitlePlaceholder')}
           disabled={disabled}
-          className="w-full px-4 py-3 sm:py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl sm:rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition disabled:opacity-50 text-base"
+          className="w-full px-4 py-3 sm:py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl sm:rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition disabled:opacity-50 text-base"
         />
         <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
           {t('courseTitleHintText')}

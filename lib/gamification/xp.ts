@@ -15,9 +15,9 @@ export const XP_REWARDS = {
   lesson_perfect: 5, // Bonus for 100% accuracy
 
   // Review cards (SRS)
-  card_reviewed: 1,
-  card_easy: 2, // Bonus for "Easy" rating
-  card_good: 1, // Standard for "Good" rating
+  card_reviewed: 5,
+  card_easy: 3, // Bonus for "Easy" rating
+  card_good: 2, // Standard for "Good" rating
   card_hard: 0, // No bonus for "Hard"
 
   // Streaks
@@ -349,7 +349,8 @@ export function awardXP(
   bonusXP: number = 0
 ): XPGain {
   const baseAmount = XP_REWARDS[type]
-  const amount = baseAmount + bonusXP
+  const cappedBonus = Math.min(bonusXP, 50)
+  const amount = baseAmount + cappedBonus
   const newTotal = currentTotalXP + amount
 
   const oldLevel = calculateLevel(currentTotalXP)
@@ -433,7 +434,7 @@ export function getLevelGradient(level: number): string {
   if (level >= 25) return 'from-amber-400 to-yellow-600'
   if (level >= 20) return 'from-purple-500 to-pink-500'
   if (level >= 15) return 'from-red-500 to-orange-500'
-  if (level >= 10) return 'from-blue-500 to-indigo-500'
+  if (level >= 10) return 'from-blue-500 to-violet-500'
   if (level >= 5) return 'from-green-500 to-emerald-500'
   return 'from-gray-400 to-gray-500'
 }

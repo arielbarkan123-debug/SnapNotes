@@ -1,0 +1,12 @@
+{
+  "title": "Knowledge Gaps",
+  "gapCount": "{count, plural, one {# gap} other {# gaps}}",
+  "criticalBlocking": "{count, plural, one {# critical gap} other {# critical gaps}} may be blocking your progress",
+  "unknownConcept": "Unknown Concept",
+  "moreGaps": "+{count} more {count, plural, one {gap} other {gaps}}",
+  "fixGaps": "Fix Gaps",
+  "viewAll": "View All",
+  "refresh": "Refresh",
+  "dismiss": "Dismiss",
+  "allCaughtUp": "All caught up! You resolved {count, plural, one {# knowledge gap} other {# knowledge gaps}} recently."
+}

@@ -63,7 +63,7 @@ export default function EngagementPage() {
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
               <p className="text-sm text-gray-500 dark:text-gray-400">Stickiness (DAU/MAU)</p>
-              <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
+              <p className="text-3xl font-bold text-violet-600 dark:text-violet-400">
                 {data?.stickiness || 0}%
               </p>
             </div>

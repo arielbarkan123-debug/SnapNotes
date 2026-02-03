@@ -8,6 +8,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 
 // -----------------------------------------------------------------------------
@@ -61,13 +62,13 @@ function getMasteryColor(level: number): string {
   return 'bg-gray-300 dark:bg-gray-600'
 }
 
-function getMasteryLabel(level: number): string {
-  if (level >= 0.8) return 'Mastered'
-  if (level >= 0.6) return 'Proficient'
-  if (level >= 0.4) return 'Learning'
-  if (level >= 0.2) return 'Beginner'
-  if (level > 0) return 'Started'
-  return 'Not Started'
+function getMasteryLabelKey(level: number): string {
+  if (level >= 0.8) return 'mastered'
+  if (level >= 0.6) return 'proficient'
+  if (level >= 0.4) return 'learning'
+  if (level >= 0.2) return 'beginner'
+  if (level > 0) return 'started'
+  return 'notStarted'
 }
 
 function getMasteryTextColor(level: number): string {
@@ -87,18 +88,19 @@ interface ConceptCardProps {
   concept: Concept
   isSelected: boolean
   onClick: () => void
+  t: ReturnType<typeof useTranslations<'knowledgeMap'>>
 }
 
-function ConceptCard({ concept, isSelected, onClick }: ConceptCardProps) {
+function ConceptCard({ concept, isSelected, onClick, t }: ConceptCardProps) {
   const masteryPercent = Math.round(concept.masteryLevel * 100)
 
   return (
     <button
       onClick={onClick}
       className={`
-        w-full p-4 rounded-lg border text-left transition-all
+        w-full p-4 rounded-lg border text-start transition-all
         ${isSelected
-          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 ring-2 ring-indigo-500'
+          ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20 ring-2 ring-violet-500'
           : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
         }
         ${concept.hasGap ? 'ring-1 ring-amber-400' : ''}
@@ -114,8 +116,8 @@ function ConceptCard({ concept, isSelected, onClick }: ConceptCardProps) {
           </p>
         </div>
         {concept.hasGap && (
-          <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded">
-            Gap
+          <span className="ms-2 px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded">
+            {t('gap')}
           </span>
         )}
       </div>
@@ -124,7 +126,7 @@ function ConceptCard({ concept, isSelected, onClick }: ConceptCardProps) {
       <div className="mt-3">
         <div className="flex items-center justify-between mb-1">
           <span className={`text-xs font-medium ${getMasteryTextColor(concept.masteryLevel)}`}>
-            {getMasteryLabel(concept.masteryLevel)}
+            {t(`mastery.${getMasteryLabelKey(concept.masteryLevel)}`)}
           </span>
           <span className="text-xs text-gray-500 dark:text-gray-400">
             {masteryPercent}%
@@ -151,6 +153,7 @@ interface ConceptDetailProps {
   dependents: Concept[]
   onClose: () => void
   onPractice: () => void
+  t: ReturnType<typeof useTranslations<'knowledgeMap'>>
 }
 
 function ConceptDetail({
@@ -159,11 +162,12 @@ function ConceptDetail({
   dependents,
   onClose,
   onPractice,
+  t,
 }: ConceptDetailProps) {
   const masteryPercent = Math.round(concept.masteryLevel * 100)
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card p-6">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
@@ -198,13 +202,13 @@ function ConceptDetail({
           <p className={`text-2xl font-bold ${getMasteryTextColor(concept.masteryLevel)}`}>
             {masteryPercent}%
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Mastery</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{t('mastery.label')}</p>
         </div>
         <div className="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
             {concept.totalExposures}
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Exposures</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{t('mastery.exposures')}</p>
         </div>
         <div className="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -212,7 +216,7 @@ function ConceptDetail({
               ? Math.round((concept.successfulRecalls / concept.totalExposures) * 100)
               : 0}%
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Recall Rate</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{t('mastery.recallRate')}</p>
         </div>
       </div>
 
@@ -223,7 +227,7 @@ function ConceptDetail({
             <span className="text-amber-600 dark:text-amber-400">⚠️</span>
             <div>
               <p className="font-medium text-amber-800 dark:text-amber-200">
-                Knowledge Gap Detected
+                {t('detail.knowledgeGapDetected')}
               </p>
               <p className="text-sm text-amber-700 dark:text-amber-300">
                 {concept.gapType?.replace('_', ' ')} ({concept.gapSeverity})
@@ -237,7 +241,7 @@ function ConceptDetail({
       {prerequisites.length > 0 && (
         <div className="mb-4">
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Prerequisites ({prerequisites.length})
+            {t('detail.prerequisites', { count: prerequisites.length })}
           </h3>
           <div className="flex flex-wrap gap-2">
             {prerequisites.map((prereq) => (
@@ -263,7 +267,7 @@ function ConceptDetail({
       {dependents.length > 0 && (
         <div className="mb-4">
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Unlocks ({dependents.length})
+            {t('detail.unlocks', { count: dependents.length })}
           </h3>
           <div className="flex flex-wrap gap-2">
             {dependents.map((dep) => (
@@ -282,9 +286,9 @@ function ConceptDetail({
       <div className="flex gap-3 mt-6">
         <button
           onClick={onPractice}
-          className="flex-1 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
+          className="flex-1 py-2 px-4 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg transition-colors"
         >
-          Practice This Concept
+          {t('detail.practiceThisConcept')}
         </button>
       </div>
     </div>
@@ -301,6 +305,7 @@ export default function KnowledgeMapContent({
   courses: _courses,
 }: KnowledgeMapContentProps) {
   const router = useRouter()
+  const t = useTranslations('knowledgeMap')
   const [selectedConceptId, setSelectedConceptId] = useState<string | null>(null)
   const [filterSubject, setFilterSubject] = useState<string>('')
   const [filterMastery, setFilterMastery] = useState<string>('')
@@ -412,47 +417,47 @@ export default function KnowledgeMapContent({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-transparent">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Knowledge Map
+              {t('title')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Visualize your concept mastery and learning progress
+              {t('subtitle')}
             </p>
           </div>
           <Link
             href="/dashboard"
-            className="text-indigo-600 dark:text-indigo-400 hover:underline"
+            className="text-violet-600 dark:text-violet-400 hover:underline"
           >
-            ← Back to Dashboard
+            {t('backToDashboard')}
           </Link>
         </div>
 
         {/* Stats Overview */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-[22px] p-4 shadow-card border border-gray-200 dark:border-gray-700">
             <p className="text-3xl font-bold text-gray-900 dark:text-white">{totalConcepts}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Total Concepts</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('stats.totalConcepts')}</p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-[22px] p-4 shadow-card border border-gray-200 dark:border-gray-700">
             <p className="text-3xl font-bold text-green-600 dark:text-green-400">{masteredCount}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Mastered</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('stats.mastered')}</p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-[22px] p-4 shadow-card border border-gray-200 dark:border-gray-700">
             <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{learningCount}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Learning</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('stats.learning')}</p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-[22px] p-4 shadow-card border border-gray-200 dark:border-gray-700">
             <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{gapsCount}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Gaps</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('stats.gaps')}</p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-            <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{overallMastery}%</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Overall Mastery</p>
+          <div className="bg-white dark:bg-gray-800 rounded-[22px] p-4 shadow-card border border-gray-200 dark:border-gray-700">
+            <p className="text-3xl font-bold text-violet-600 dark:text-violet-400">{overallMastery}%</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('stats.overallMastery')}</p>
           </div>
         </div>
 
@@ -463,7 +468,7 @@ export default function KnowledgeMapContent({
             onChange={(e) => setFilterSubject(e.target.value)}
             className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
           >
-            <option value="">All Subjects</option>
+            <option value="">{t('filters.allSubjects')}</option>
             {subjects.map((subject) => (
               <option key={subject} value={subject}>
                 {subject}
@@ -476,10 +481,10 @@ export default function KnowledgeMapContent({
             onChange={(e) => setFilterMastery(e.target.value)}
             className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
           >
-            <option value="">All Mastery Levels</option>
-            <option value="mastered">Mastered (80%+)</option>
-            <option value="learning">Learning (1-79%)</option>
-            <option value="not_started">Not Started</option>
+            <option value="">{t('filters.allMasteryLevels')}</option>
+            <option value="mastered">{t('filters.mastered')}</option>
+            <option value="learning">{t('filters.learning')}</option>
+            <option value="not_started">{t('filters.notStarted')}</option>
           </select>
 
           <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm cursor-pointer">
@@ -489,7 +494,7 @@ export default function KnowledgeMapContent({
               onChange={(e) => setShowGapsOnly(e.target.checked)}
               className="rounded border-gray-300"
             />
-            <span className="text-gray-700 dark:text-gray-300">Gaps Only</span>
+            <span className="text-gray-700 dark:text-gray-300">{t('filters.gapsOnly')}</span>
           </label>
         </div>
 
@@ -498,15 +503,15 @@ export default function KnowledgeMapContent({
           {/* Concept Grid */}
           <div className="flex-1">
             {filteredConcepts.length === 0 ? (
-              <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+              <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700">
                 <div className="text-4xl mb-4">🔍</div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  No Concepts Found
+                  {t('empty.noConceptsFound')}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400">
                   {concepts.length === 0
-                    ? 'Complete some lessons to start building your knowledge map.'
-                    : 'Try adjusting your filters.'}
+                    ? t('empty.completeLesson')
+                    : t('empty.adjustFilters')}
                 </p>
               </div>
             ) : (
@@ -525,6 +530,7 @@ export default function KnowledgeMapContent({
                           onClick={() => handleConceptSelect(
                             concept.id === selectedConceptId ? null : concept.id
                           )}
+                          t={t}
                         />
                       ))}
                     </div>
@@ -544,6 +550,7 @@ export default function KnowledgeMapContent({
                   dependents={dependents}
                   onClose={() => handleConceptSelect(null)}
                   onPractice={handlePractice}
+                  t={t}
                 />
               </div>
             </div>
@@ -561,6 +568,7 @@ export default function KnowledgeMapContent({
                   dependents={dependents}
                   onClose={() => handleConceptSelect(null)}
                   onPractice={handlePractice}
+                  t={t}
                 />
               </div>
             </div>
@@ -568,28 +576,28 @@ export default function KnowledgeMapContent({
         )}
 
         {/* Legend */}
-        <div className="mt-8 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Legend</h3>
+        <div className="mt-8 p-4 bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card">
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{t('legend')}</h3>
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-green-500" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">Mastered (80%+)</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{t('legendMastered')}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-yellow-400" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">Learning (40-79%)</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{t('legendLearning')}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-orange-400" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">Beginner (1-39%)</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{t('legendBeginner')}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-gray-300 dark:bg-gray-600" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">Not Started</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{t('legendNotStarted')}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded">Gap</span>
-              <span className="text-sm text-gray-600 dark:text-gray-400">Knowledge Gap</span>
+              <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded">{t('gap')}</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{t('legendKnowledgeGap')}</span>
             </div>
           </div>
         </div>

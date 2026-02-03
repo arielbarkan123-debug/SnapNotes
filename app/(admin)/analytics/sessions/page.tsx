@@ -64,7 +64,7 @@ export default function SessionsPage() {
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
               <p className="text-sm text-gray-500 dark:text-gray-400">Total Time in App</p>
-              <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+              <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">
                 {formatDuration(data?.stats?.totalTimeInApp || 0)}
               </p>
             </div>
@@ -100,7 +100,7 @@ export default function SessionsPage() {
                 return (
                   <div key={hour} className="flex-1 group relative">
                     <div
-                      className="w-full bg-indigo-500 rounded-t hover:bg-indigo-600 transition-colors"
+                      className="w-full bg-violet-500 rounded-t hover:bg-violet-600 transition-colors"
                       style={{ height: `${Math.max(height, 2)}%` }}
                     />
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">

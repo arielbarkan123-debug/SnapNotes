@@ -60,14 +60,14 @@ export default function LessonRecap({
 
   if (recapItems.length === 0) {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-gradient-to-br from-violet-600 via-purple-600 to-pink-500 flex items-center justify-center z-50">
         <div className="text-center px-6">
           <span className="text-6xl mb-4 block">📚</span>
           <h2 className="text-2xl font-bold text-white mb-4">{t('noContentToReview')}</h2>
-          <p className="text-indigo-200 mb-6">{t('noContentDescription')}</p>
+          <p className="text-violet-200 mb-6">{t('noContentDescription')}</p>
           <button
             onClick={onClose}
-            className="px-6 py-3 bg-white text-indigo-600 font-semibold rounded-xl"
+            className="px-6 py-3 bg-white text-violet-600 font-semibold rounded-xl"
           >
             {t('goBack')}
           </button>
@@ -187,7 +187,7 @@ function RecapCard({ item, index, t }: RecapCardProps) {
       case 'explanation':
         return { emoji: '💡', labelKey: 'conceptType' as const, bgColor: 'from-amber-500/20 to-yellow-500/20', borderColor: 'border-amber-400/40' }
       case 'key_point':
-        return { emoji: '📌', labelKey: 'keyPointType' as const, bgColor: 'from-blue-500/20 to-indigo-500/20', borderColor: 'border-blue-400/40' }
+        return { emoji: '📌', labelKey: 'keyPointType' as const, bgColor: 'from-blue-500/20 to-violet-500/20', borderColor: 'border-blue-400/40' }
       case 'formula':
         return { emoji: '🔢', labelKey: 'formulaType' as const, bgColor: 'from-purple-500/20 to-pink-500/20', borderColor: 'border-purple-400/40' }
       case 'diagram':
@@ -195,7 +195,7 @@ function RecapCard({ item, index, t }: RecapCardProps) {
       case 'example':
         return { emoji: '✨', labelKey: 'exampleLabel' as const, bgColor: 'from-green-500/20 to-emerald-500/20', borderColor: 'border-green-400/40' }
       case 'summary':
-        return { emoji: '📋', labelKey: 'summaryType' as const, bgColor: 'from-indigo-500/20 to-violet-500/20', borderColor: 'border-indigo-400/40' }
+        return { emoji: '📋', labelKey: 'summaryType' as const, bgColor: 'from-violet-500/20 to-violet-500/20', borderColor: 'border-violet-400/40' }
       default:
         return { emoji: '📝', labelKey: 'noteType' as const, bgColor: 'from-gray-500/20 to-gray-600/20', borderColor: 'border-gray-400/40' }
     }

@@ -104,7 +104,7 @@ export default function HeatmapPage() {
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
               <p className="text-sm text-gray-500 dark:text-gray-400">Pages with Clicks</p>
-              <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
+              <p className="text-3xl font-bold text-violet-600 dark:text-violet-400">
                 {data?.pages.length || 0}
               </p>
             </div>

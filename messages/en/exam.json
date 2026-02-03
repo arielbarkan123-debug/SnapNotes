@@ -26,6 +26,7 @@
   "question": "Question {current} of {total}",
   "submitExam": "Submit Exam",
   "confirmSubmit": "Are you sure you want to submit? You cannot change your answers after submission.",
+  "unansweredWarning": "You have {count} unanswered questions. Submit anyway?",
   "examComplete": "Exam Complete!",
   "yourScore": "Your score",
   "passed": "Passed",

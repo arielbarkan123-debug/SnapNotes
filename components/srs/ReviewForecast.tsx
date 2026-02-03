@@ -61,7 +61,7 @@ export default function ReviewForecast({ cards }: ReviewForecastProps) {
         </h3>
       </div>
       <div className="divide-y divide-gray-100 dark:divide-gray-700">
-        <ForecastRow label={t('today')} count={counts.today} color="text-indigo-600 dark:text-indigo-400" />
+        <ForecastRow label={t('today')} count={counts.today} color="text-violet-600 dark:text-violet-400" />
         <ForecastRow label={t('tomorrow')} count={counts.tomorrow} color="text-blue-600 dark:text-blue-400" />
         <ForecastRow label={t('thisWeek')} count={counts.thisWeek} color="text-gray-600 dark:text-gray-300" />
       </div>

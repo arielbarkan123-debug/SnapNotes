@@ -118,7 +118,7 @@ function LoginForm() {
       <div className="text-center mb-6 sm:mb-8">
         <Link
           href="/"
-          className="text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400"
+          className="text-xl sm:text-2xl font-bold text-violet-600 dark:text-violet-400"
         >
           NoteSnap
         </Link>
@@ -178,7 +178,7 @@ function LoginForm() {
         <div className="flex justify-end">
           <Link
             href="/forgot-password"
-            className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline active:text-indigo-700 py-1"
+            className="text-sm text-violet-600 dark:text-violet-400 hover:underline active:text-violet-700 py-1"
           >
             {t('login.forgotPassword')}
           </Link>
@@ -187,7 +187,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-3.5 sm:py-3 bg-indigo-600 text-white rounded-xl sm:rounded-lg hover:bg-indigo-700 active:bg-indigo-800 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-h-[48px] text-base"
+          className="w-full py-3.5 sm:py-3 bg-gradient-to-r from-violet-500 to-violet-600 text-white rounded-full hover:from-violet-600 hover:to-violet-700 active:from-violet-700 active:to-violet-800 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-h-[48px] text-base"
         >
           {isLoading ? (
             <>
@@ -224,7 +224,7 @@ function LoginForm() {
         {t('login.noAccount')}{' '}
         <Link
           href="/signup"
-          className="text-indigo-600 dark:text-indigo-400 hover:underline active:text-indigo-700 font-medium"
+          className="text-violet-600 dark:text-violet-400 hover:underline active:text-violet-700 font-medium"
         >
           {t('login.signUp')}
         </Link>
@@ -242,7 +242,7 @@ export default function LoginPage() {
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
               <div className="flex items-center justify-center">
                 <svg
-                  className="animate-spin h-8 w-8 text-indigo-600"
+                  className="animate-spin h-8 w-8 text-violet-600"
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"

@@ -125,7 +125,7 @@ export default function HomeworkHistoryPage() {
             onClick={() => setFilter('all')}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               filter === 'all'
-                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
+                ? 'bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300'
                 : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
           >
@@ -156,7 +156,7 @@ export default function HomeworkHistoryPage() {
         {/* Loading State */}
         {isLoading && (
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
-            <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full mx-auto mb-4" />
+            <div className="animate-spin w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full mx-auto mb-4" />
             <p className="text-gray-500 dark:text-gray-400">Loading history...</p>
           </div>
         )}

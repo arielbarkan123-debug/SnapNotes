@@ -125,7 +125,7 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
 
           {view === 'buttons' && (
             <div className="space-y-3">
-              <button onClick={() => handleRequest('explain')} className="w-full p-4 text-left rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+              <button onClick={() => handleRequest('explain')} className="w-full p-4 text-start rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">📖</span>
                   <div>
@@ -134,7 +134,7 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
                   </div>
                 </div>
               </button>
-              <button onClick={() => handleRequest('example')} className="w-full p-4 text-left rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+              <button onClick={() => handleRequest('example')} className="w-full p-4 text-start rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">💡</span>
                   <div>
@@ -143,7 +143,7 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
                   </div>
                 </div>
               </button>
-              <button onClick={() => handleRequest('hint')} className="w-full p-4 text-left rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+              <button onClick={() => handleRequest('hint')} className="w-full p-4 text-start rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">🔍</span>
                   <div>
@@ -153,7 +153,7 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
                 </div>
               </button>
               <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-                <button onClick={() => setView('custom')} className="w-full p-4 text-left rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                <button onClick={() => setView('custom')} className="w-full p-4 text-start rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">✏️</span>
                     <div>
@@ -168,7 +168,7 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
 
           {view === 'loading' && (
             <div className="py-12 text-center">
-              <div className="inline-block w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4" />
+              <div className="inline-block w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin mb-4" />
               <p className="text-gray-500 dark:text-gray-400">{t('help.gettingHelp')}</p>
             </div>
           )}
@@ -200,7 +200,7 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
               </div>
               {sourceReference && <p className="text-sm text-gray-500 dark:text-gray-400">📍 {t('help.source')}: {sourceReference}</p>}
               <div className="flex gap-3">
-                <button onClick={handleClose} className="flex-1 py-2.5 px-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition">{t('help.gotIt')}</button>
+                <button onClick={handleClose} className="flex-1 py-2.5 px-4 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition">{t('help.gotIt')}</button>
                 <button onClick={() => setView('custom')} className="flex-1 py-2.5 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition">{t('help.stillConfused')}</button>
               </div>
             </div>
@@ -213,7 +213,7 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
                 value={customQuestion}
                 onChange={(e) => setCustomQuestion(e.target.value)}
                 placeholder={t('help.placeholder')}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl resize-none focus:ring-2 focus:ring-violet-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 rows={3}
                 autoFocus
                 maxLength={500}
@@ -225,7 +225,7 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setView('buttons')} type="button" className="py-2.5 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition">{t('help.back')}</button>
-                <button onClick={handleCustomSubmit} disabled={!customQuestion.trim()} type="button" className="flex-1 py-2.5 px-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">{t('askAI')}</button>
+                <button onClick={handleCustomSubmit} disabled={!customQuestion.trim()} type="button" className="flex-1 py-2.5 px-4 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition disabled:opacity-50 disabled:cursor-not-allowed">{t('askAI')}</button>
               </div>
             </div>
           )}

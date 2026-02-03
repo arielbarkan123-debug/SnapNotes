@@ -60,6 +60,9 @@
     "streakMaintained": "הרצף נשמר!",
     "done": "סיום",
     "reviewMore": "חזור על עוד כרטיסים",
+    "practiceWeak": "תרגל נושאים חלשים?",
+    "practiceWeakDesc": "חזק את ההבנה שלך עם תרגול ממוקד",
+    "startPractice": "תרגול",
     "encouragement": {
       "noCards": "אין כרטיסים לחזרה כרגע. חזור מאוחר יותר!",
       "outstanding": "מעולה! הזיכרון שלך בשיא! המשך בעבודה הנהדרת!",

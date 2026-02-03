@@ -137,5 +137,6 @@
   "goToLesson": "Go to lesson",
   "practiceWeakAreas": "Practice Weak Areas",
   "noMistakes": "Perfect session! No mistakes to review.",
-  "explanationLabel": "Explanation"
+  "explanationLabel": "Explanation",
+  "quitSessionConfirm": "Are you sure you want to quit this session?"
 }

@@ -391,19 +391,15 @@ export default function SettingsPage() {
     }
   }
 
-  // Delete account
+  // Delete account - directs user to contact support (no server-side deletion endpoint yet)
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== 'DELETE') return
 
-    try {
-      // Note: Full account deletion typically requires a server-side function
-      // For now, we'll sign out and show a message
-      toast.info(t('toast.deleteRequest'))
-      await supabase.auth.signOut()
-      router.push('/')
-    } catch {
-      toast.error(t('toast.deleteError'))
-    }
+    // Open mailto link so the user can request deletion from support
+    window.location.href = 'mailto:support@notesnap.com?subject=Account%20Deletion%20Request&body=Please%20delete%20my%20account%20and%20all%20associated%20data.'
+    toast.info(t('toast.deleteContactSupport'))
+    setShowDeleteConfirm(false)
+    setDeleteConfirmText('')
   }
 
   if (isLoading) {
@@ -432,7 +428,7 @@ export default function SettingsPage() {
         <section className="mb-6">
           <SettingsCard
             icon={
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-white">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
@@ -450,7 +446,7 @@ export default function SettingsPage() {
                   type="text"
                   value={settings.displayName}
                   onChange={(e) => updateSetting('displayName', e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 transition-all focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 transition-all focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
                   placeholder={t('profile.displayNamePlaceholder')}
                 />
               </div>
@@ -504,7 +500,7 @@ export default function SettingsPage() {
                       className={`
                         flex items-center gap-2 rounded-full border-2 px-4 py-2 transition-all
                         ${settings.studySystem === system.id
-                          ? 'border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-500/10'
+                          ? 'border-violet-500 bg-violet-50 dark:border-violet-400 dark:bg-violet-500/10'
                           : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
                         }
                       `}
@@ -543,7 +539,7 @@ export default function SettingsPage() {
                       className={`
                         flex flex-col items-center gap-1 rounded-xl border-2 p-4 transition-all
                         ${settings.timeAvailability === option.id
-                          ? 'border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-500/10'
+                          ? 'border-violet-500 bg-violet-50 dark:border-violet-400 dark:bg-violet-500/10'
                           : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
                         }
                       `}
@@ -569,7 +565,7 @@ export default function SettingsPage() {
                       className={`
                         flex flex-col items-center gap-1 rounded-xl border-2 p-3 transition-all
                         ${settings.preferredTime === time.id
-                          ? 'border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-500/10'
+                          ? 'border-violet-500 bg-violet-50 dark:border-violet-400 dark:bg-violet-500/10'
                           : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
                         }
                       `}
@@ -626,7 +622,7 @@ export default function SettingsPage() {
                       className={`
                         flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all
                         ${settings.examFormat === 'match_real'
-                          ? 'border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-500/10'
+                          ? 'border-violet-500 bg-violet-50 dark:border-violet-400 dark:bg-violet-500/10'
                           : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
                         }
                       `}
@@ -642,7 +638,7 @@ export default function SettingsPage() {
                       className={`
                         flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all
                         ${settings.examFormat === 'inspired_by'
-                          ? 'border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-500/10'
+                          ? 'border-violet-500 bg-violet-50 dark:border-violet-400 dark:bg-violet-500/10'
                           : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
                         }
                       `}
@@ -679,14 +675,14 @@ export default function SettingsPage() {
                   <h4 className="font-medium text-gray-900 dark:text-white">{t('pastExams.configure')}</h4>
                   <p className="text-sm text-gray-500 dark:text-gray-400">{t('pastExams.configureDesc')}</p>
                   {pastExamCount > 0 && (
-                    <p className="mt-1 text-xs text-indigo-600 dark:text-indigo-400">
+                    <p className="mt-1 text-xs text-violet-600 dark:text-violet-400">
                       {t('pastExams.templateCount', { count: pastExamCount })}
                     </p>
                   )}
                 </div>
                 <Link
                   href="/settings/past-exams"
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-indigo-700"
+                  className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-violet-700"
                 >
                   {t('pastExams.configure')}
                 </Link>
@@ -762,7 +758,7 @@ export default function SettingsPage() {
                       className={`
                         flex items-center justify-center gap-2 rounded-xl border-2 p-4 transition-all
                         ${settings.language === locale
-                          ? 'border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-500/10'
+                          ? 'border-violet-500 bg-violet-50 dark:border-violet-400 dark:bg-violet-500/10'
                           : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
                         }
                       `}
@@ -887,7 +883,7 @@ export default function SettingsPage() {
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-xl hover:shadow-indigo-500/30 disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 px-6 py-2 text-sm font-medium text-white shadow-lg shadow-violet-500/25 transition-all hover:shadow-xl hover:shadow-violet-500/30 disabled:opacity-50"
                 >
                   {isSaving ? (
                     <>
@@ -957,7 +953,7 @@ function ThemeButton({ active, onClick, icon, label }: ThemeButtonProps) {
       className={`
         flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all
         ${active
-          ? 'border-indigo-500 bg-indigo-50 text-indigo-600 dark:border-indigo-400 dark:bg-indigo-500/10 dark:text-indigo-400'
+          ? 'border-violet-500 bg-violet-50 text-violet-600 dark:border-violet-400 dark:bg-violet-500/10 dark:text-violet-400'
           : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:border-gray-600'
         }
       `}

@@ -358,15 +358,15 @@ export function CompletingSquareSteps({
       {/* Vertex Form Result */}
       {currentStep >= 5 && (
         <motion.div
-          className="mt-4 p-4 rounded-xl bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 border border-indigo-200 dark:border-indigo-700"
+          className="mt-4 p-4 rounded-xl bg-gradient-to-r from-violet-50 to-blue-50 dark:from-violet-900/20 dark:to-blue-900/20 border border-violet-200 dark:border-violet-700"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="text-center">
-            <div className="text-xs text-indigo-600 dark:text-indigo-400 font-medium mb-1">
+            <div className="text-xs text-violet-600 dark:text-violet-400 font-medium mb-1">
               {language === 'he' ? 'צורת קודקוד:' : 'Vertex Form:'}
             </div>
-            <div className="text-xl font-mono font-bold text-indigo-700 dark:text-indigo-300">
+            <div className="text-xl font-mono font-bold text-violet-700 dark:text-violet-300">
               {vertexForm}
             </div>
           </div>

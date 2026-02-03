@@ -21,7 +21,7 @@ export function SWRErrorState({ onRetry, message }: SWRErrorStateProps) {
       </p>
       <button
         onClick={onRetry}
-        className="px-4 py-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 rounded-lg transition-colors"
+        className="px-4 py-1.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-600 rounded-lg transition-colors"
       >
         {t('error.retry')}
       </button>

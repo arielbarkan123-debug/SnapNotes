@@ -121,7 +121,7 @@ export default function MatchingRenderer({
     const correct = isMatchCorrect(termIndex)
 
     let baseClass =
-      'w-full p-3 text-left rounded-xl border-2 transition-all duration-200 font-medium text-sm '
+      'w-full p-3 text-start rounded-xl border-2 transition-all duration-200 font-medium text-sm '
 
     if (showResults) {
       if (correct === true) {
@@ -134,13 +134,13 @@ export default function MatchingRenderer({
       }
     } else if (isSelected) {
       baseClass +=
-        'border-indigo-500 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-300'
+        'border-violet-500 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 ring-2 ring-violet-300'
     } else if (isMatched) {
       baseClass +=
-        'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+        'border-violet-400 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400'
     } else {
       baseClass +=
-        'border-gray-200 dark:border-gray-700 hover:border-indigo-400 text-gray-700 dark:text-gray-300'
+        'border-gray-200 dark:border-gray-700 hover:border-violet-400 text-gray-700 dark:text-gray-300'
     }
 
     return baseClass
@@ -165,7 +165,7 @@ export default function MatchingRenderer({
         : null
 
     let baseClass =
-      'w-full p-3 text-left rounded-xl border-2 transition-all duration-200 font-medium text-sm '
+      'w-full p-3 text-start rounded-xl border-2 transition-all duration-200 font-medium text-sm '
 
     if (showResults) {
       if (correct === true) {
@@ -178,7 +178,7 @@ export default function MatchingRenderer({
       }
     } else if (isMatched) {
       baseClass +=
-        'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+        'border-violet-400 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400'
     } else if (canSelect) {
       baseClass +=
         'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 hover:border-amber-500 text-gray-700 dark:text-gray-300 cursor-pointer'

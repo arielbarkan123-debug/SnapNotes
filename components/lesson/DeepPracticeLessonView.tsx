@@ -349,7 +349,7 @@ export default function DeepPracticeLessonView({
   // ============================================================================
   if (state.phase === 'intro') {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white dark:from-gray-900 dark:to-gray-800 flex flex-col">
+      <div className="min-h-screen bg-gradient-to-b from-violet-50 to-white dark:from-gray-900 dark:to-gray-800 flex flex-col">
         <header className="sticky top-0 z-30 bg-white/80 dark:bg-gray-800/80 backdrop-blur border-b border-gray-200 dark:border-gray-700">
           <div className="container mx-auto px-4 py-3 max-w-4xl">
             <div className="flex items-center justify-between">
@@ -359,7 +359,7 @@ export default function DeepPracticeLessonView({
                 </svg>
               </button>
               <div className="text-center">
-                <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">
+                <span className="text-xs font-medium text-violet-600 dark:text-violet-400 uppercase tracking-wide">
                   {tDeep('deepPractice')}
                 </span>
                 <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{lesson.title}</h1>
@@ -370,7 +370,7 @@ export default function DeepPracticeLessonView({
         </header>
 
         <main className="flex-1 container mx-auto px-4 py-8 max-w-2xl flex flex-col items-center justify-center">
-          <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center mb-6">
+          <div className="w-20 h-20 bg-violet-100 dark:bg-violet-900/50 rounded-full flex items-center justify-center mb-6">
             <span className="text-4xl">🎯</span>
           </div>
 
@@ -382,9 +382,9 @@ export default function DeepPracticeLessonView({
             <p className="text-lg text-gray-600 dark:text-gray-300">{lessonData.introContent}</p>
           </div>
 
-          <div className="bg-indigo-50 dark:bg-indigo-900/30 rounded-xl p-6 mb-8 w-full">
-            <h3 className="font-semibold text-indigo-800 dark:text-indigo-200 mb-2">{tDeep('masteryGoal')}</h3>
-            <ul className="text-sm text-indigo-700 dark:text-indigo-300 space-y-1">
+          <div className="bg-violet-50 dark:bg-violet-900/30 rounded-xl p-6 mb-8 w-full">
+            <h3 className="font-semibold text-violet-800 dark:text-violet-200 mb-2">{tDeep('masteryGoal')}</h3>
+            <ul className="text-sm text-violet-700 dark:text-violet-300 space-y-1">
               <li>• {tDeep('masteryRequirement1')}</li>
               <li>• {tDeep('masteryRequirement2')}</li>
             </ul>
@@ -392,7 +392,7 @@ export default function DeepPracticeLessonView({
 
           <button
             onClick={() => (isMounted && lessonData.workedExample) ? goToPhase('worked_example') : goToPhase('practice')}
-            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-lg transition-all"
+            className="w-full py-4 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-semibold text-lg transition-all"
           >
             {/* Use isMounted to prevent hydration mismatch - server always shows startPractice */}
             {(isMounted && lessonData.workedExample) ? tDeep('seeWorkedExample') : tDeep('startPractice')}
@@ -470,7 +470,7 @@ export default function DeepPracticeLessonView({
               <p className="text-sm text-gray-500">{tDeep('correctAnswers')}</p>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
-              <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{Math.round(masteryLevel * 100)}%</p>
+              <p className="text-3xl font-bold text-violet-600 dark:text-violet-400">{Math.round(masteryLevel * 100)}%</p>
               <p className="text-sm text-gray-500">{tDeep('masteryLevel')}</p>
             </div>
           </div>
@@ -491,7 +491,7 @@ export default function DeepPracticeLessonView({
   // Render: Practice Phase
   // ============================================================================
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="min-h-screen bg-transparent flex flex-col">
       {/* Header with Progress */}
       <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="container mx-auto px-4 py-3 max-w-4xl">
@@ -506,11 +506,11 @@ export default function DeepPracticeLessonView({
             <div className="flex-1">
               <div className="flex justify-between text-xs mb-1">
                 <span className="text-gray-500">{tDeep('mastery')}</span>
-                <span className="font-medium text-indigo-600">{Math.round(masteryLevel * 100)}%</span>
+                <span className="font-medium text-violet-600">{Math.round(masteryLevel * 100)}%</span>
               </div>
               <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-indigo-600 transition-all duration-500"
+                  className="h-full bg-violet-600 transition-all duration-500"
                   style={{ width: `${masteryLevel * 100}%` }}
                 />
               </div>
@@ -532,11 +532,11 @@ export default function DeepPracticeLessonView({
           <div className="flex-1 flex flex-col">
             {/* Problem Number */}
             <div className="text-center mb-6">
-              <span className="inline-block px-3 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full text-sm font-medium">
+              <span className="inline-block px-3 py-1 bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-400 rounded-full text-sm font-medium">
                 {tDeep('problem')} #{state.currentProblemIndex + 1}
               </span>
               {state.correctStreak >= 2 && (
-                <span className="ml-2 inline-block px-2 py-1 bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400 rounded-full text-xs">
+                <span className="ms-2 inline-block px-2 py-1 bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400 rounded-full text-xs">
                   🔥 {state.correctStreak} {tDeep('streak')}
                 </span>
               )}
@@ -555,13 +555,13 @@ export default function DeepPracticeLessonView({
                   onClick={() => !state.showFeedback && dispatch({ type: 'SELECT_ANSWER', index: idx })}
                   disabled={state.showFeedback}
                   className={`
-                    w-full p-4 text-left rounded-xl border-2 transition-all
+                    w-full p-4 text-start rounded-xl border-2 transition-all
                     ${state.selectedAnswer === idx
                       ? state.showFeedback
                         ? state.isCorrect
                           ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
                           : 'border-red-500 bg-red-50 dark:bg-red-900/20'
-                        : 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                        : 'border-violet-500 bg-violet-50 dark:bg-violet-900/20'
                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                     }
                     ${state.showFeedback && idx === currentProblem.correctAnswer && !state.isCorrect
@@ -571,7 +571,7 @@ export default function DeepPracticeLessonView({
                     disabled:cursor-default
                   `}
                 >
-                  <span className="font-medium text-gray-500 mr-3">{String.fromCharCode(65 + idx)}.</span>
+                  <span className="font-medium text-gray-500 me-3">{String.fromCharCode(65 + idx)}.</span>
                   <span className="text-gray-900 dark:text-white">{option}</span>
                 </button>
               ))}
@@ -624,7 +624,7 @@ export default function DeepPracticeLessonView({
               className={`w-full py-4 rounded-xl font-semibold text-lg transition-all ${
                 state.isCorrect
                   ? 'bg-green-600 hover:bg-green-700 text-white'
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                  : 'bg-violet-600 hover:bg-violet-700 text-white'
               }`}
             >
               {state.isCorrect ? tDeep('nextProblem') : tDeep('tryAgain')}
@@ -644,7 +644,7 @@ export default function DeepPracticeLessonView({
                 disabled={state.selectedAnswer === null}
                 className={`flex-1 py-4 rounded-xl font-semibold text-lg transition-all ${
                   state.selectedAnswer !== null
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                    ? 'bg-violet-600 hover:bg-violet-700 text-white'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
                 }`}
               >

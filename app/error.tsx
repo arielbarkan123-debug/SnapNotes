@@ -50,7 +50,7 @@ Stack: ${error.stack || 'N/A'}
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+    <div className="min-h-screen flex items-center justify-center aurora-bg px-4">
       <div className="max-w-md w-full">
         <ErrorFallback
           error={error}
@@ -80,7 +80,7 @@ Stack: ${error.stack || 'N/A'}
               )}
               <button
                 onClick={copyErrorDetails}
-                className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                className="text-violet-600 dark:text-violet-400 hover:underline"
               >
                 Copy error details
               </button>

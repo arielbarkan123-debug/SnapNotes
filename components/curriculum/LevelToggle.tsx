@@ -65,7 +65,7 @@ export function LevelToggle({
               'font-medium transition-colors',
               compact ? 'px-1.5 py-0.5' : 'px-2 py-1',
               value === level
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-violet-600 text-white'
                 : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300',
               disabled && 'opacity-50 cursor-not-allowed'
             )}

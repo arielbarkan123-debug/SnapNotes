@@ -257,7 +257,7 @@ export default function SignupPage() {
           <div className="text-center mb-6 sm:mb-8">
             <Link
               href="/"
-              className="text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400"
+              className="text-xl sm:text-2xl font-bold text-violet-600 dark:text-violet-400"
             >
               NoteSnap
             </Link>
@@ -326,7 +326,7 @@ export default function SignupPage() {
                     type="button"
                     onClick={handleResendVerification}
                     disabled={isResending || resendCooldown > 0}
-                    className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="text-violet-600 dark:text-violet-400 hover:underline text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isResending
                       ? t('signup.resending')
@@ -402,7 +402,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3.5 sm:py-3 bg-indigo-600 text-white rounded-xl sm:rounded-lg hover:bg-indigo-700 active:bg-indigo-800 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-h-[48px] text-base"
+              className="w-full py-3.5 sm:py-3 bg-gradient-to-r from-violet-500 to-violet-600 text-white rounded-full hover:from-violet-600 hover:to-violet-700 active:from-violet-700 active:to-violet-800 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-h-[48px] text-base"
             >
               {isLoading ? (
                 <>
@@ -439,7 +439,7 @@ export default function SignupPage() {
             {t('signup.hasAccount')}{' '}
             <Link
               href="/login"
-              className="text-indigo-600 dark:text-indigo-400 hover:underline active:text-indigo-700 font-medium"
+              className="text-violet-600 dark:text-violet-400 hover:underline active:text-violet-700 font-medium"
             >
               {t('signup.signIn')}
             </Link>

@@ -145,7 +145,7 @@ export default function ShortAnswer({
           className={`w-full px-4 py-3 text-base rounded-xl border-2 transition-all outline-none resize-none ${
             hasSubmitted
               ? 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300'
-              : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800'
+              : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:focus:ring-violet-800'
           }`}
         />
         {!hasSubmitted && (
@@ -163,7 +163,7 @@ export default function ShortAnswer({
           className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all ${
             !userInput.trim()
               ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-              : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white hover:shadow-xl'
+              : 'bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white hover:shadow-xl'
           }`}
         >
           {t('checkAnswer')}
@@ -173,7 +173,7 @@ export default function ShortAnswer({
       {/* Loading State */}
       {isEvaluating && (
         <div className="flex items-center justify-center gap-3 py-8">
-          <div className="w-6 h-6 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-6 h-6 border-3 border-violet-600 border-t-transparent rounded-full animate-spin" />
           <span className="text-gray-600 dark:text-gray-400 font-medium">
             {t('aiCheckingAnswer')}
           </span>
@@ -220,9 +220,9 @@ export default function ShortAnswer({
           )}
 
           {/* Model Answer Display */}
-          <div className="mb-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border-2 border-indigo-200 dark:border-indigo-800">
-            <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400 mb-2 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-indigo-200 dark:bg-indigo-800 flex items-center justify-center text-xs">
+          <div className="mb-6 p-4 bg-violet-50 dark:bg-violet-900/20 rounded-xl border-2 border-violet-200 dark:border-violet-800">
+            <p className="text-sm font-medium text-violet-600 dark:text-violet-400 mb-2 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-violet-200 dark:bg-violet-800 flex items-center justify-center text-xs">
                 ✓
               </span>
               {t('modelAnswer')}

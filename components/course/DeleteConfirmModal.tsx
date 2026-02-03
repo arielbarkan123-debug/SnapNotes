@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import Button from '@/components/ui/Button'
 
 interface DeleteConfirmModalProps {
@@ -21,6 +22,8 @@ export default function DeleteConfirmModal({
   isDeleting,
   courseTitle
 }: DeleteConfirmModalProps) {
+  const t = useTranslations('course.deleteModal')
+  const tc = useTranslations('common.buttons')
   const dialogRef = useRef<HTMLDivElement>(null)
   const hasSetOverflow = useRef(false)
   const previousActiveElement = useRef<HTMLElement | null>(null)
@@ -121,16 +124,16 @@ export default function DeleteConfirmModal({
         {/* Content */}
         <div className="p-6 text-center">
           <h3 id="delete-dialog-title" className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            Delete Course
+            {t('title')}
           </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-2">
-            Are you sure you want to delete this course?
+            {t('confirmText')}
           </p>
           <p className="text-gray-900 dark:text-white font-medium mb-4 truncate">
             &ldquo;{courseTitle}&rdquo;
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            This action cannot be undone. The course and all associated data will be permanently removed.
+            {t('warning')}
           </p>
         </div>
 
@@ -142,17 +145,17 @@ export default function DeleteConfirmModal({
             disabled={isDeleting}
             className="flex-1 min-h-[48px] sm:min-h-[44px]"
           >
-            Cancel
+            {tc('cancel')}
           </Button>
           <Button
             variant="danger"
             onClick={onConfirm}
             disabled={isDeleting}
             isLoading={isDeleting}
-            loadingText="Deleting..."
+            loadingText={t('deleting')}
             className="flex-1 min-h-[48px] sm:min-h-[44px]"
           >
-            Delete Course
+            {t('deleteCourse')}
           </Button>
         </div>
       </div>

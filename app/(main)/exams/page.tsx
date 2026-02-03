@@ -123,7 +123,7 @@ export default function ExamsPage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('examMode')}</h1>
         <button
           onClick={() => setShowCreate(true)}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition"
+          className="px-4 py-2 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition"
         >
           {t('createExamPlus')}
         </button>
@@ -134,7 +134,7 @@ export default function ExamsPage() {
           {[1, 2, 3].map(i => (
             <div
               key={i}
-              className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700"
+              className="p-4 bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700"
             >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
@@ -153,11 +153,11 @@ export default function ExamsPage() {
           <p className="text-red-600 dark:text-red-400">{examsError}</p>
         </div>
       ) : exams.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-xl">
+        <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-[22px]">
           <p className="text-gray-500 dark:text-gray-400 mb-4">{t('noExamsYet')}</p>
           <button
             onClick={() => setShowCreate(true)}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition"
+            className="px-4 py-2 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition"
           >
             {t('createFirstExam')}
           </button>
@@ -168,7 +168,7 @@ export default function ExamsPage() {
             <div
               key={exam.id}
               onClick={() => router.push(`/exams/${exam.id}`)}
-              className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-md transition"
+              className="p-4 bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-md transition"
             >
               <div className="flex justify-between items-start">
                 <div>
@@ -266,7 +266,7 @@ export default function ExamsPage() {
               <button
                 onClick={handleCreate}
                 disabled={creating || !selectedCourse}
-                className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 bg-violet-600 text-white rounded-xl font-medium hover:bg-violet-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {creating ? t('creatingExam') : t('createExam')}
               </button>

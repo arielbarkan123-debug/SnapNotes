@@ -80,7 +80,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-transparent">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="container mx-auto px-4 py-4 max-w-4xl">
@@ -99,7 +99,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
               <ExportCourseButton courseTitle={generatedCourse?.title || course.title || ''} />
               <button
                 onClick={() => setIsAddMaterialOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/30 rounded-lg transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -118,13 +118,13 @@ export default function CourseView({ course, progress }: CourseViewProps) {
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600 dark:text-gray-400">{tc('courseProgress')}</span>
-              <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+              <span className="font-semibold text-violet-600 dark:text-violet-400">
                 {progressPercentage}%
               </span>
             </div>
             <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
+                className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${progressPercentage}%` }}
               />
             </div>
@@ -138,7 +138,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
       {/* Main content */}
       <main className="container mx-auto px-4 py-6 max-w-4xl">
         {/* Overview card */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 mb-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-[22px] p-5 mb-6 border border-gray-200 dark:border-gray-700 shadow-card">
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
             {tc('overview')}
           </h2>
@@ -153,7 +153,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
                 <div className="flex items-center gap-4">
                   {/* Average Mastery */}
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                    <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">
                       {Math.round(
                         Array.from(lessonMastery.values()).reduce(
                           (sum, m) => sum + (m.averageMastery || 0),
@@ -181,7 +181,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
                 {/* Knowledge Map Link */}
                 <Link
                   href="/knowledge-map"
-                  className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                  className="text-sm text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1"
                 >
                   {tc('viewKnowledgeMap')}
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -275,7 +275,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
       {!isChatOpen && (
         <button
           onClick={() => setIsChatOpen(true)}
-          className="fixed bottom-20 md:bottom-6 right-4 z-50 bg-indigo-600 text-white p-3 xs:p-4 rounded-full shadow-lg hover:bg-indigo-700 transition-all hover:scale-105 flex items-center gap-2 min-h-[48px] min-w-[48px]"
+          className="fixed bottom-20 md:bottom-6 right-4 z-50 bg-violet-600 text-white p-3 xs:p-4 rounded-full shadow-lg hover:bg-violet-700 transition-all hover:scale-105 flex items-center gap-2 min-h-[48px] min-w-[48px]"
           style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
           aria-label={t('askAI')}
         >
@@ -360,7 +360,7 @@ function LessonCard({
         ${status === 'completed'
           ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
           : status === 'current'
-            ? 'bg-white dark:bg-gray-800 border-indigo-300 dark:border-indigo-600 shadow-md shadow-indigo-100 dark:shadow-indigo-900/30'
+            ? 'bg-white dark:bg-gray-800 border-violet-300 dark:border-violet-600 shadow-md shadow-violet-100 dark:shadow-violet-900/30'
             : 'bg-gray-100 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 opacity-60'
         }
         ${isClickable ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]' : 'cursor-not-allowed'}
@@ -373,7 +373,7 @@ function LessonCard({
           ${status === 'completed'
             ? 'bg-green-500 text-white'
             : status === 'current'
-              ? 'bg-indigo-500 text-white animate-pulse'
+              ? 'bg-violet-500 text-white animate-pulse'
               : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400'
           }
         `}
@@ -402,7 +402,7 @@ function LessonCard({
                 : status === 'completed'
                   ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
                   : status === 'current'
-                    ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400'
+                    ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
               }
             `}
@@ -477,7 +477,7 @@ function LessonCard({
             flex-shrink-0
             ${status === 'completed'
               ? 'text-green-500'
-              : 'text-indigo-500'
+              : 'text-violet-500'
             }
           `}
         >
@@ -489,7 +489,7 @@ function LessonCard({
 
       {/* Current lesson indicator */}
       {status === 'current' && (
-        <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1 h-8 bg-indigo-500 rounded-full" />
+        <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1 h-8 bg-violet-500 rounded-full" />
       )}
     </div>
   )

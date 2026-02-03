@@ -177,7 +177,7 @@ export default function FilePreviewGrid({
         className={`
           grid grid-cols-2 xs:grid-cols-3 md:grid-cols-4 gap-2 xs:gap-3 p-2 xs:p-3 rounded-xl border-2 border-dashed transition-colors
           ${isDragging
-            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+            ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20'
             : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50'
           }
         `}
@@ -195,7 +195,7 @@ export default function FilePreviewGrid({
               relative group bg-white dark:bg-gray-700 rounded-lg overflow-hidden shadow-sm transition-all
               ${files.length > 1 ? 'cursor-grab active:cursor-grabbing' : ''}
               ${draggedIndex === index ? 'opacity-50 scale-95' : ''}
-              ${dragOverIndex === index ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-gray-800' : ''}
+              ${dragOverIndex === index ? 'ring-2 ring-violet-500 ring-offset-2 dark:ring-offset-gray-800' : ''}
             `}
           >
             {/* Page Number Badge */}
@@ -295,7 +295,7 @@ export default function FilePreviewGrid({
           <button
             onClick={onAddMoreClick}
             disabled={isUploading}
-            className="aspect-square flex flex-col items-center justify-center bg-white dark:bg-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors disabled:opacity-50"
+            className="aspect-square flex flex-col items-center justify-center bg-white dark:bg-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors disabled:opacity-50"
           >
             <svg className="w-8 h-8 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

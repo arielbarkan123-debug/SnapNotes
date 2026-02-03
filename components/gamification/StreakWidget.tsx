@@ -16,6 +16,10 @@ interface StreakWidgetProps {
   hoursRemaining: number
   /** Last 7 days activity - array of booleans, index 0 = 6 days ago, index 6 = today */
   recentActivity?: boolean[]
+  /** Number of streak freezes available */
+  streakFreezes?: number
+  /** Callback when user uses a streak freeze */
+  onUseFreeze?: () => void
   /** Compact mode for smaller displays */
   compact?: boolean
   /** Click handler */
@@ -72,6 +76,8 @@ export function StreakWidget({
   activeToday,
   hoursRemaining,
   recentActivity,
+  streakFreezes = 0,
+  onUseFreeze,
   compact = false,
   onClick,
 }: StreakWidgetProps) {
@@ -155,7 +161,7 @@ export function StreakWidget({
     <div
       onClick={onClick}
       className={`
-        relative overflow-hidden rounded-xl border p-4 transition-all
+        relative overflow-hidden rounded-[22px] border p-4 transition-all
         ${currentStreak > 0
           ? 'border-orange-200 bg-gradient-to-br from-orange-50 to-red-50 dark:border-orange-800/50 dark:from-orange-900/20 dark:to-red-900/20'
           : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50'
@@ -230,19 +236,30 @@ export function StreakWidget({
       {/* Status message */}
       <div className="mt-4">
         {isAtRisk && !activeToday ? (
-          <div className="flex items-center justify-between rounded-lg bg-orange-100 px-3 py-2 dark:bg-orange-900/30">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">⚠️</span>
-              <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
-                {t('studyToKeepStreak')}
-              </span>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between rounded-lg bg-orange-100 px-3 py-2 dark:bg-orange-900/30">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">⚠️</span>
+                <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
+                  {t('studyToKeepStreak')}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-sm font-bold text-orange-600 dark:text-orange-400">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {formatTimeRemaining(timeLeft)}
+              </div>
             </div>
-            <div className="flex items-center gap-1 text-sm font-bold text-orange-600 dark:text-orange-400">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {formatTimeRemaining(timeLeft)}
-            </div>
+            {streakFreezes > 0 && onUseFreeze && (
+              <button
+                onClick={onUseFreeze}
+                className="flex items-center justify-center gap-2 w-full rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 px-3 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+              >
+                <span>❄️</span>
+                Use Streak Freeze ({streakFreezes})
+              </button>
+            )}
           </div>
         ) : activeToday && currentStreak > 0 ? (
           <div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -360,7 +377,7 @@ export function StreakBroken({ previousStreak, onClose, onStartNew }: StreakBrok
   const t = useTranslations('profile.streak')
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 text-center dark:border-gray-700 dark:bg-gray-800">
+    <div className="rounded-[22px] border border-gray-200 bg-white p-6 text-center dark:border-gray-700 dark:bg-gray-800 shadow-card">
       <div className="text-5xl mb-3">😢</div>
       <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
         {t('streakLost')}

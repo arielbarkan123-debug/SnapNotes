@@ -56,13 +56,13 @@ function QuickPracticeCard({
 }: QuickPracticeCardProps) {
   const bgClass = {
     default: 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750',
-    primary: 'bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30',
+    primary: 'bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/30',
     warning: 'bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30',
   }[variant]
 
   const iconBgClass = {
     default: 'bg-gray-100 dark:bg-gray-700',
-    primary: 'bg-indigo-100 dark:bg-indigo-800/50',
+    primary: 'bg-violet-100 dark:bg-violet-800/50',
     warning: 'bg-amber-100 dark:bg-amber-800/50',
   }[variant]
 
@@ -71,8 +71,8 @@ function QuickPracticeCard({
       onClick={onClick}
       disabled={!available}
       className={`
-        relative p-5 rounded-xl border border-gray-200 dark:border-gray-700
-        transition-all duration-200 text-left w-full
+        relative p-5 rounded-[22px] shadow-card border border-gray-200 dark:border-gray-700
+        transition-all duration-200 text-start w-full
         ${bgClass}
         ${!available ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
       `}
@@ -89,7 +89,7 @@ function QuickPracticeCard({
             {description}
           </p>
           {count !== undefined && countLabel && (
-            <div className="mt-2 text-sm font-medium text-indigo-600 dark:text-indigo-400">
+            <div className="mt-2 text-sm font-medium text-violet-600 dark:text-violet-400">
               {count} {countLabel}
             </div>
           )}
@@ -131,7 +131,7 @@ function RecentSessionCard({ session, onClick }: RecentSessionCardProps) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors w-full text-left"
+      className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors w-full text-start"
     >
       <div className="flex items-center gap-3">
         <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[session.status]}`}>
@@ -350,7 +350,7 @@ export default function PracticeHubContent({
   const totalQuestions = Object.values(questionsPerCourse).reduce((a, b) => a + b, 0)
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-transparent">
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -365,26 +365,26 @@ export default function PracticeHubContent({
         {/* Stats Overview */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card p-4 border border-gray-200 dark:border-gray-700">
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {stats.totalSessions}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">Sessions</p>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card p-4 border border-gray-200 dark:border-gray-700">
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {stats.totalQuestions}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">Questions Practiced</p>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card p-4 border border-gray-200 dark:border-gray-700">
               <p className={`text-2xl font-bold ${stats.overallAccuracy >= 70 ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
                 {stats.overallAccuracy}%
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">Accuracy</p>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-              <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+            <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card p-4 border border-gray-200 dark:border-gray-700">
+              <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">
                 {totalQuestions}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">Available Questions</p>
@@ -467,7 +467,7 @@ export default function PracticeHubContent({
                     disabled={qCount < 10 || isCreating}
                     className={`
                       flex items-center justify-between p-4 rounded-lg border
-                      transition-colors text-left
+                      transition-colors text-start
                       ${qCount >= 10
                         ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750'
                         : 'bg-gray-100 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
@@ -483,7 +483,7 @@ export default function PracticeHubContent({
                       </p>
                     </div>
                     {qCount >= 10 && (
-                      <span className="ml-3 text-indigo-600 dark:text-indigo-400">
+                      <span className="ms-3 text-violet-600 dark:text-violet-400">
                         Start →
                       </span>
                     )}
@@ -498,7 +498,7 @@ export default function PracticeHubContent({
         <div className="mb-8">
           <button
             onClick={() => setShowCustomSetup(!showCustomSetup)}
-            className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-4 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-4 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
           >
             <span>Custom Practice</span>
             <svg
@@ -512,7 +512,7 @@ export default function PracticeHubContent({
           </button>
 
           {showCustomSetup && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card p-6 border border-gray-200 dark:border-gray-700">
               <div className="space-y-4">
                 {/* Course Selection */}
                 <div>
@@ -569,7 +569,7 @@ export default function PracticeHubContent({
                         className={`
                           px-3 py-2 rounded-lg border transition-colors
                           ${customConfig.difficulty === d
-                            ? 'bg-indigo-100 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300'
+                            ? 'bg-violet-100 dark:bg-violet-900/30 border-violet-300 dark:border-violet-700 text-violet-700 dark:text-violet-300'
                             : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
                           }
                         `}
@@ -584,7 +584,7 @@ export default function PracticeHubContent({
                 <button
                   onClick={createCustomSession}
                   disabled={isCreating || totalQuestions < 5}
-                  className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors"
+                  className="w-full py-3 px-4 bg-violet-600 hover:bg-violet-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors"
                 >
                   {isCreating ? 'Creating Session...' : 'Start Custom Practice'}
                 </button>
@@ -613,7 +613,7 @@ export default function PracticeHubContent({
 
         {/* Empty State */}
         {totalQuestions === 0 && (
-          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-200 dark:border-gray-700">
             <div className="text-4xl mb-4">📚</div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               No Practice Questions Yet
@@ -623,7 +623,7 @@ export default function PracticeHubContent({
             </p>
             <Link
               href="/dashboard"
-              className="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
+              className="inline-flex items-center px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg transition-colors"
             >
               Go to Dashboard
             </Link>
@@ -634,7 +634,7 @@ export default function PracticeHubContent({
         {isLoading && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xl">
-              <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto mb-4" />
+              <div className="animate-spin w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full mx-auto mb-4" />
               <p className="text-gray-600 dark:text-gray-400">Loading...</p>
             </div>
           </div>
@@ -644,7 +644,7 @@ export default function PracticeHubContent({
         {isCreating && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xl">
-              <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto mb-4" />
+              <div className="animate-spin w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full mx-auto mb-4" />
               <p className="text-gray-600 dark:text-gray-400">Creating practice session...</p>
             </div>
           </div>

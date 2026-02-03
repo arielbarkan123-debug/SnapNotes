@@ -138,11 +138,11 @@ export default function MultipleChoice({
       if (isSelected) {
         // Selected but not yet checked
         baseClass +=
-          'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+          'border-violet-500 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
       } else {
         // Unselected, hoverable
         baseClass +=
-          'border-gray-200 dark:border-gray-700 hover:border-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 text-gray-700 dark:text-gray-300'
+          'border-gray-200 dark:border-gray-700 hover:border-violet-400 hover:bg-violet-50/50 dark:hover:bg-violet-900/20 text-gray-700 dark:text-gray-300'
       }
     }
 
@@ -181,7 +181,7 @@ export default function MultipleChoice({
                         ? 'bg-red-500 text-white'
                         : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
                     : selectedIndex === index
-                      ? 'bg-indigo-500 text-white'
+                      ? 'bg-violet-500 text-white'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                 }`}
               >
@@ -295,7 +295,7 @@ export default function MultipleChoice({
           className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
             selectedIndex === null
               ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-              : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-lg hover:shadow-xl'
+              : 'bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white shadow-lg hover:shadow-xl'
           }`}
         >
           {t('checkAnswer')}

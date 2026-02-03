@@ -118,7 +118,7 @@ export default function MistakeReview({ mistakes, onPracticeWeak, namespace = 'p
           {onPracticeWeak && weakCourseIds.length > 0 && (
             <button
               onClick={() => onPracticeWeak(weakCourseIds)}
-              className="w-full mt-2 py-3 px-4 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium rounded-xl transition-colors text-sm border border-indigo-200 dark:border-indigo-800/50"
+              className="w-full mt-2 py-3 px-4 bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/30 text-violet-700 dark:text-violet-300 font-medium rounded-xl transition-colors text-sm border border-violet-200 dark:border-violet-800/50"
             >
               {t('practiceWeakAreas')}
             </button>

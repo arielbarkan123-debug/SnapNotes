@@ -45,10 +45,10 @@ export function GradeSelector({
             onClick={() => onChange(grade.id)}
             className={cn(
               'px-3 py-2 rounded-lg text-sm font-medium transition-all',
-              'border-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-200',
+              'border-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-200',
               value === grade.id
-                ? 'bg-indigo-600 text-white border-indigo-600'
-                : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700 hover:border-indigo-400',
+                ? 'bg-violet-600 text-white border-violet-600'
+                : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700 hover:border-violet-400',
               disabled && 'opacity-50 cursor-not-allowed'
             )}
             title={grade.description}

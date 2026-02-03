@@ -111,7 +111,7 @@ export default function MathPracticePage() {
       <button
         key={type}
         onClick={() => startPractice(type)}
-        className="p-6 bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all border-2 border-transparent hover:border-indigo-300 dark:hover:border-indigo-600 text-left"
+        className="p-6 bg-white dark:bg-gray-800 rounded-[22px] shadow-card hover:shadow-lg transition-all border-2 border-transparent hover:border-violet-300 dark:hover:border-violet-600 text-start"
       >
         <div className="text-4xl mb-3">{config.icon}</div>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
@@ -179,15 +179,15 @@ export default function MathPracticePage() {
   // Type selection screen
   if (state === 'select') {
     return (
-      <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${isRTL ? 'rtl' : 'ltr'}`}>
+      <div className={`min-h-screen bg-transparent ${isRTL ? 'rtl' : 'ltr'}`}>
         <div className="max-w-4xl mx-auto px-4 py-8">
           {/* Header */}
           <div className="mb-8">
             <Link
               href="/practice"
-              className="inline-flex items-center text-indigo-600 dark:text-indigo-400 hover:underline mb-4"
+              className="inline-flex items-center text-violet-600 dark:text-violet-400 hover:underline mb-4"
             >
-              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 me-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isRTL ? "M9 5l7 7-7 7" : "M15 19l-7-7 7-7"} />
               </svg>
               {language === 'he' ? 'חזרה לתרגול' : 'Back to Practice'}
@@ -214,8 +214,8 @@ export default function MathPracticePage() {
                   onClick={() => setDifficulty(level)}
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                     difficulty === level
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:border-indigo-300'
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:border-violet-300'
                   }`}
                 >
                   {level === 'easy' && (language === 'he' ? 'קל' : 'Easy')}
@@ -238,7 +238,7 @@ export default function MathPracticePage() {
   // Practice screen
   if (state === 'practice') {
     return (
-      <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${isRTL ? 'rtl' : 'ltr'}`}>
+      <div className={`min-h-screen bg-transparent ${isRTL ? 'rtl' : 'ltr'}`}>
         <div className="max-w-2xl mx-auto px-4 py-8">
           {/* Header with stats */}
           <div className="flex items-center justify-between mb-6">
@@ -269,7 +269,7 @@ export default function MathPracticePage() {
           <div className="mt-6 flex gap-4">
             <button
               onClick={nextProblem}
-              className="flex-1 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+              className="flex-1 py-3 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition-colors"
             >
               {language === 'he' ? 'תרגיל הבא' : 'Next Problem'}
             </button>
@@ -292,7 +292,7 @@ export default function MathPracticePage() {
       : 0
 
     return (
-      <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center ${isRTL ? 'rtl' : 'ltr'}`}>
+      <div className={`min-h-screen bg-transparent flex items-center justify-center ${isRTL ? 'rtl' : 'ltr'}`}>
         <div className="max-w-md w-full mx-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
             {/* Celebration */}
@@ -308,8 +308,8 @@ export default function MathPracticePage() {
 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4 mb-8">
-              <div className="bg-indigo-50 dark:bg-indigo-900/30 rounded-lg p-4">
-                <div className="text-3xl font-bold text-indigo-600">{sessionStats.problemsCompleted}</div>
+              <div className="bg-violet-50 dark:bg-violet-900/30 rounded-lg p-4">
+                <div className="text-3xl font-bold text-violet-600">{sessionStats.problemsCompleted}</div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">
                   {language === 'he' ? 'תרגילים' : 'Problems'}
                 </div>
@@ -333,7 +333,7 @@ export default function MathPracticePage() {
             <div className="space-y-3">
               <button
                 onClick={resetSession}
-                className="w-full py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                className="w-full py-3 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition-colors"
               >
                 {language === 'he' ? 'תרגל עוד' : 'Practice More'}
               </button>

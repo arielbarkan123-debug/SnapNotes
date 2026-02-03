@@ -325,7 +325,7 @@ export function SystemsOfEquations({
                   className={`
                     relative p-4 rounded-xl transition-all duration-300
                     ${isCurrentStep
-                      ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 border-2 border-indigo-300 dark:border-indigo-700'
+                      ? 'bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/30 dark:to-purple-900/30 border-2 border-violet-300 dark:border-violet-700'
                       : 'bg-gray-50 dark:bg-gray-800/50 opacity-70'
                     }
                   `}
@@ -347,7 +347,7 @@ export function SystemsOfEquations({
                   {/* Step type label */}
                   {isCurrentStep && (
                     <motion.div
-                      className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-2 ml-4"
+                      className="text-xs font-semibold text-violet-600 dark:text-violet-400 mb-2 ml-4"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                     >
@@ -374,7 +374,7 @@ export function SystemsOfEquations({
                           <span
                             className={`px-3 py-1 rounded-lg ${
                               isActive && isCurrentStep
-                                ? 'bg-indigo-100 dark:bg-indigo-800/50'
+                                ? 'bg-violet-100 dark:bg-violet-800/50'
                                 : ''
                             }`}
                             style={{ color }}
@@ -385,7 +385,7 @@ export function SystemsOfEquations({
                           <span
                             className={`px-3 py-1 rounded-lg ${
                               isActive && isCurrentStep
-                                ? 'bg-indigo-100 dark:bg-indigo-800/50'
+                                ? 'bg-violet-100 dark:bg-violet-800/50'
                                 : ''
                             }`}
                             style={{ color }}
@@ -455,7 +455,7 @@ export function SystemsOfEquations({
             animate={{ opacity: 1 }}
           >
             <motion.span
-              className="text-indigo-400 text-xl"
+              className="text-violet-400 text-xl"
               animate={{ y: [0, 5, 0] }}
               transition={{ repeat: Infinity, duration: 1.5 }}
             >

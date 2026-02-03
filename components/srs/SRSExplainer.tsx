@@ -30,7 +30,7 @@ export default function SRSExplainer() {
       {/* Info Icon Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-1.5 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        className="p-1.5 text-gray-400 hover:text-violet-500 dark:hover:text-violet-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         aria-label={t('howItWorks')}
         type="button"
       >

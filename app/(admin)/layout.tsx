@@ -53,7 +53,7 @@ export default async function AdminLayout({
               <span className="text-sm text-gray-500 dark:text-gray-400">
                 {user.email}
               </span>
-              <span className="px-2 py-1 text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded">
+              <span className="px-2 py-1 text-xs font-medium bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-300 rounded">
                 {adminUser.role}
               </span>
             </div>

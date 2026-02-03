@@ -20,6 +20,8 @@ import deepPractice from './deepPractice.json'
 import search from './search.json'
 import exportMessages from './export.json'
 import studyPlan from './studyPlan.json'
+import gaps from './gaps.json'
+import knowledgeMap from './knowledgeMap.json'
 
 const messages = {
   common,
@@ -44,6 +46,8 @@ const messages = {
   search,
   export: exportMessages,
   studyPlan,
+  gaps,
+  knowledgeMap,
 }
 
 export default messages

@@ -77,7 +77,7 @@ export default function NavigationProgress() {
       aria-label="Page navigation loading"
     >
       <div
-        className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 transition-all duration-200 ease-out"
+        className="h-full bg-gradient-to-r from-violet-500 via-purple-500 to-violet-500 transition-all duration-200 ease-out"
         style={{
           width: `${progress}%`,
           boxShadow: '0 0 10px rgba(99, 102, 241, 0.7), 0 0 5px rgba(99, 102, 241, 0.5)',

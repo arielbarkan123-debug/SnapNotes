@@ -1,0 +1,49 @@
+{
+  "title": "מפת ידע",
+  "subtitle": "הצג את רמת השליטה שלך בנושאים והתקדמות הלמידה",
+  "backToDashboard": "חזרה ללוח הבקרה",
+  "stats": {
+    "totalConcepts": "סה\"כ מושגים",
+    "mastered": "נשלטים",
+    "learning": "בלמידה",
+    "gaps": "פערים",
+    "overallMastery": "שליטה כללית"
+  },
+  "filters": {
+    "allSubjects": "כל הנושאים",
+    "allMasteryLevels": "כל רמות השליטה",
+    "mastered": "נשלט (80%+)",
+    "learning": "בלמידה (1-79%)",
+    "notStarted": "לא התחיל",
+    "gapsOnly": "פערים בלבד"
+  },
+  "mastery": {
+    "mastered": "נשלט",
+    "proficient": "מיומן",
+    "learning": "בלמידה",
+    "beginner": "מתחיל",
+    "started": "התחיל",
+    "notStarted": "לא התחיל",
+    "label": "שליטה",
+    "exposures": "חשיפות",
+    "recallRate": "אחוז שליפה"
+  },
+  "detail": {
+    "practiceThisConcept": "תרגל מושג זה",
+    "prerequisites": "דרישות קדם ({count})",
+    "unlocks": "פותח ({count})",
+    "knowledgeGapDetected": "זוהה פער ידע"
+  },
+  "empty": {
+    "noConceptsFound": "לא נמצאו מושגים",
+    "completeLesson": "השלם כמה שיעורים כדי להתחיל לבנות את מפת הידע שלך.",
+    "adjustFilters": "נסה לשנות את המסננים."
+  },
+  "gap": "פער",
+  "legend": "מקרא",
+  "legendMastered": "נשלט (80%+)",
+  "legendLearning": "בלמידה (40-79%)",
+  "legendBeginner": "מתחיל (1-39%)",
+  "legendNotStarted": "לא התחיל",
+  "legendKnowledgeGap": "פער ידע"
+}

@@ -36,6 +36,13 @@
     "saved": "Saved",
     "cancel": "Cancel"
   },
+  "deleteModal": {
+    "title": "Delete Course",
+    "confirmText": "Are you sure you want to delete this course?",
+    "warning": "This action cannot be undone. The course and all associated data will be permanently removed.",
+    "deleting": "Deleting...",
+    "deleteCourse": "Delete Course"
+  },
   "lessonNotes": {
     "title": "My Notes",
     "noNotes": "No notes for this lesson yet.",

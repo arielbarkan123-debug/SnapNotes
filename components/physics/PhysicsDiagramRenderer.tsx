@@ -222,7 +222,7 @@ export function PhysicsDiagramRenderer({
           <div className="progress-indicator flex items-center gap-2">
             <div className="progress-bar h-1.5 bg-gray-200 rounded-full w-32">
               <div
-                className="progress-fill h-full bg-indigo-500 rounded-full transition-all duration-300"
+                className="progress-fill h-full bg-violet-500 rounded-full transition-all duration-300"
                 style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
               />
             </div>
@@ -243,7 +243,7 @@ export function PhysicsDiagramRenderer({
             <button
               onClick={handleNextStep}
               disabled={currentStep >= totalSteps - 1}
-              className="px-3 py-1.5 text-sm bg-indigo-500 hover:bg-indigo-600 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
+              className="px-3 py-1.5 text-sm bg-violet-500 hover:bg-violet-600 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
             >
               {language === 'he' ? 'הבא →' : 'Next →'}
             </button>
@@ -253,8 +253,8 @@ export function PhysicsDiagramRenderer({
 
       {/* Current step info */}
       {diagram.stepConfig?.[currentStep]?.stepLabel && (
-        <div className="step-info mt-2 p-2 bg-indigo-50 rounded-md">
-          <p className="text-sm text-indigo-700">
+        <div className="step-info mt-2 p-2 bg-violet-50 rounded-md">
+          <p className="text-sm text-violet-700">
             {language === 'he'
               ? diagram.stepConfig[currentStep].stepLabelHe || diagram.stepConfig[currentStep].stepLabel
               : diagram.stepConfig[currentStep].stepLabel}

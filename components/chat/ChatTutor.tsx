@@ -162,7 +162,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
     return (
       <button
         onClick={() => setIsMinimized(false)}
-        className="fixed bottom-20 md:bottom-6 right-4 z-50 bg-indigo-600 text-white p-3 xs:p-4 rounded-full shadow-lg hover:bg-indigo-700 transition-all hover:scale-105 min-h-[48px] min-w-[48px]"
+        className="fixed bottom-20 md:bottom-6 right-4 z-50 bg-violet-600 text-white p-3 xs:p-4 rounded-full shadow-lg hover:bg-violet-700 transition-all hover:scale-105 min-h-[48px] min-w-[48px]"
         style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
         aria-label={t('openChat')}
       >
@@ -184,7 +184,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
       style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-indigo-600 text-white rounded-t-2xl">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-violet-600 text-white rounded-t-2xl">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -244,7 +244,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
             <div
               className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
                 message.role === 'user'
-                  ? 'bg-indigo-600 text-white rounded-br-md'
+                  ? 'bg-violet-600 text-white rounded-br-md'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-md'
               }`}
             >
@@ -276,13 +276,13 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
             onKeyDown={handleKeyDown}
             placeholder={t('askQuestion')}
             rows={1}
-            className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 xs:px-4 py-2 xs:py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white min-h-[44px]"
+            className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 xs:px-4 py-2 xs:py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-white min-h-[44px]"
             disabled={isLoading}
           />
           <button
             onClick={sendMessage}
             disabled={!input.trim() || isLoading}
-            className="px-3 xs:px-4 py-2 xs:py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+            className="px-3 xs:px-4 py-2 xs:py-2.5 bg-violet-600 text-white rounded-xl hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
             aria-label={t('sendMessage')}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

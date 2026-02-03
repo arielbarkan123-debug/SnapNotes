@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useTranslations } from 'next-intl'
 import Button from '@/components/ui/Button'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
@@ -191,6 +192,7 @@ function ImageUploader({
   required?: boolean
   icon?: string  // No longer used but kept for compatibility
 }) {
+  const t = useTranslations('homework.check')
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
 
@@ -225,7 +227,7 @@ function ImageUploader({
                   {image.file.name}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                  {image.docType?.toUpperCase()} Document
+                  {image.docType?.toUpperCase()} {t('documentLabel')}
                 </p>
               </div>
             ) : image.preview ? (
@@ -243,7 +245,7 @@ function ImageUploader({
                   {image.file.name}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                  Image ready
+                  {t('imageReady')}
                 </p>
               </div>
             )}
@@ -260,7 +262,7 @@ function ImageUploader({
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            Ready
+            {t('ready')}
           </div>
         </div>
       </div>
@@ -297,29 +299,29 @@ function ImageUploader({
         <button
           type="button"
           onClick={() => cameraInputRef.current?.click()}
-          className="flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 active:bg-indigo-100 dark:active:bg-indigo-900/30 transition-colors min-h-[120px]"
+          className="flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 active:bg-violet-100 dark:active:bg-violet-900/30 transition-colors min-h-[120px]"
         >
-          <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
-            <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-12 h-12 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center">
+            <svg className="w-6 h-6 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Take Photo</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('takePhoto')}</span>
         </button>
 
         {/* From Gallery Button */}
         <button
           type="button"
           onClick={() => galleryInputRef.current?.click()}
-          className="flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 active:bg-indigo-100 dark:active:bg-indigo-900/30 transition-colors min-h-[120px]"
+          className="flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 active:bg-violet-100 dark:active:bg-violet-900/30 transition-colors min-h-[120px]"
         >
-          <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
-            <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-12 h-12 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center">
+            <svg className="w-6 h-6 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">From Gallery</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('fromGallery')}</span>
         </button>
       </div>
     </div>
@@ -345,6 +347,7 @@ function MultiImageUploader({
   maxImages?: number
   icon?: string  // No longer used but kept for compatibility
 }) {
+  const t = useTranslations('homework.check')
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
 
@@ -361,7 +364,7 @@ function MultiImageUploader({
     <div>
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
         {label}
-        <span className="text-gray-400 font-normal ml-2">({images.length}/{maxImages})</span>
+        <span className="text-gray-400 font-normal ms-2">({images.length}/{maxImages})</span>
       </label>
 
       {/* Hidden file inputs */}
@@ -429,25 +432,25 @@ function MultiImageUploader({
           <button
             type="button"
             onClick={() => cameraInputRef.current?.click()}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 active:bg-indigo-100 transition-colors"
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 active:bg-violet-100 transition-colors"
           >
             <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Take Photo</span>
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('takePhoto')}</span>
           </button>
 
           {/* From Gallery Button */}
           <button
             type="button"
             onClick={() => galleryInputRef.current?.click()}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 active:bg-indigo-100 transition-colors"
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 active:bg-violet-100 transition-colors"
           >
             <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">From Gallery</span>
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('fromGallery')}</span>
           </button>
         </div>
       )}
@@ -466,10 +469,11 @@ function InputModeToggle({
   mode: InputMode
   onChange: (mode: InputMode) => void
 }) {
+  const t = useTranslations('homework')
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-6">
+    <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-200 dark:border-gray-700 p-4 mb-6">
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-        How would you like to submit?
+        {t('inputMode.howToSubmit')}
       </label>
       <div className="grid grid-cols-2 gap-3">
         <button
@@ -478,22 +482,22 @@ function InputModeToggle({
           className={`
             flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all
             ${mode === 'image'
-              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-              : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700'
+              ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20'
+              : 'border-gray-200 dark:border-gray-700 hover:border-violet-300 dark:hover:border-violet-700'
             }
           `}
         >
           <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-            mode === 'image' ? 'bg-indigo-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+            mode === 'image' ? 'bg-violet-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
           }`}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
           <span className={`text-sm font-medium ${
-            mode === 'image' ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'
+            mode === 'image' ? 'text-violet-700 dark:text-violet-300' : 'text-gray-700 dark:text-gray-300'
           }`}>
-            Upload Image
+            {t('inputMode.uploadImage')}
           </span>
         </button>
 
@@ -503,22 +507,22 @@ function InputModeToggle({
           className={`
             flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all
             ${mode === 'text'
-              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-              : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700'
+              ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20'
+              : 'border-gray-200 dark:border-gray-700 hover:border-violet-300 dark:hover:border-violet-700'
             }
           `}
         >
           <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-            mode === 'text' ? 'bg-indigo-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+            mode === 'text' ? 'bg-violet-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
           }`}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
           </div>
           <span className={`text-sm font-medium ${
-            mode === 'text' ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'
+            mode === 'text' ? 'text-violet-700 dark:text-violet-300' : 'text-gray-700 dark:text-gray-300'
           }`}>
-            Paste Text
+            {t('inputMode.pasteText')}
           </span>
         </button>
       </div>
@@ -541,44 +545,37 @@ function TextInputSection({
   onTaskTextChange: (text: string) => void
   onAnswerTextChange: (text: string) => void
 }) {
+  const t = useTranslations('homework')
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-6">
+    <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-200 dark:border-gray-700 p-6 space-y-6">
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Your Question/Task <span className="text-red-500">*</span>
+          {t('inputMode.taskTextLabel')} <span className="text-red-500">*</span>
         </label>
         <textarea
           value={taskText}
           onChange={(e) => onTaskTextChange(e.target.value)}
-          placeholder="Paste or type your homework question here...
-
-Example:
-Solve for x: 2x + 5 = 13
-
-Or:
-Calculate the area of a rectangle with length 8cm and width 5cm."
+          placeholder={t('inputMode.taskTextPlaceholder')}
           rows={6}
-          className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+          className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
         />
         {taskText.length > 0 && taskText.length < MIN_TASK_TEXT_LENGTH && (
           <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
-            Please enter at least {MIN_TASK_TEXT_LENGTH} characters ({MIN_TASK_TEXT_LENGTH - taskText.length} more needed)
+            {t('inputMode.textMinLength', { min: MIN_TASK_TEXT_LENGTH })} ({t('check.moreCharsNeeded', { count: MIN_TASK_TEXT_LENGTH - taskText.length })})
           </p>
         )}
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Your Answer <span className="text-gray-400 font-normal">(optional)</span>
+          {t('inputMode.answerTextLabel')} <span className="text-gray-400 font-normal">({t('inputMode.optional')})</span>
         </label>
         <textarea
           value={answerText}
           onChange={(e) => onAnswerTextChange(e.target.value)}
-          placeholder="Paste or type your answer here...
-
-Leave blank if you just want to understand the question."
+          placeholder={t('inputMode.answerTextPlaceholder')}
           rows={4}
-          className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+          className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
         />
       </div>
     </div>
@@ -591,6 +588,7 @@ Leave blank if you just want to understand the question."
 
 export default function HomeworkCheckPage() {
   const router = useRouter()
+  const t = useTranslations('homework')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const autoRetryCountRef = useRef(0)
@@ -812,7 +810,7 @@ export default function HomeworkCheckPage() {
       // TEXT MODE: Skip image upload, go directly to API with text
       // ============================================================================
       if (inputMode === 'text') {
-        setSubmissionStatus('Analyzing homework...')
+        setSubmissionStatus(t('check.analyzingHomework'))
 
         // Create AbortController with timeout
         const isSafari = typeof navigator !== 'undefined' &&
@@ -934,7 +932,7 @@ export default function HomeworkCheckPage() {
       allFiles.push(...teacherReviews.map(img => img.file))
 
       // Upload all files to storage
-      setSubmissionStatus('Uploading files...')
+      setSubmissionStatus(t('check.uploadingFiles'))
 
       const formData = new FormData()
       allFiles.forEach((file) => {
@@ -991,7 +989,7 @@ export default function HomeworkCheckPage() {
       let answerDocumentText: string | undefined
 
       if (taskImage?.docType === 'docx' && taskFileData?.storagePath) {
-        setSubmissionStatus('Extracting document text...')
+        setSubmissionStatus(t('check.extractingDocText'))
         try {
           const docResponse = await fetch('/api/process-document', {
             method: 'POST',
@@ -1017,7 +1015,7 @@ export default function HomeworkCheckPage() {
       }
 
       if (answerImage?.docType === 'docx' && answerFileData?.storagePath) {
-        setSubmissionStatus('Extracting document text...')
+        setSubmissionStatus(t('check.extractingDocText'))
         try {
           const docResponse = await fetch('/api/process-document', {
             method: 'POST',
@@ -1048,7 +1046,7 @@ export default function HomeworkCheckPage() {
       // Step 3: Submit to homework check API (streaming response)
       // The API sends heartbeats every 5 seconds to keep mobile connections alive
       // If only one image provided, use it as taskImageUrl (the main image for analysis)
-      setSubmissionStatus('Analyzing homework...')
+      setSubmissionStatus(t('check.analyzingHomework'))
 
       // Create AbortController with timeout
       // Safari/iOS needs more time due to aggressive connection management
@@ -1195,7 +1193,7 @@ export default function HomeworkCheckPage() {
         console.log(`[HomeworkCheck] Auto-retrying (${autoRetryCountRef.current}/${MAX_AUTO_RETRIES}) after error: ${errorMessage}`)
 
         // Brief delay before retry
-        setSubmissionStatus('Retrying...')
+        setSubmissionStatus(t('check.retrying'))
         setTimeout(() => {
           handleSubmit()
         }, AUTO_RETRY_DELAY_MS)
@@ -1236,22 +1234,22 @@ export default function HomeworkCheckPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-sm w-full shadow-xl">
             <div className="text-4xl text-center mb-4">⚠️</div>
             <h3 className="font-semibold text-center text-gray-900 dark:text-white mb-2">
-              HEIC Image Detected
+              {t('check.heicDetected')}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
-              This image may not work on some devices. For best results:
+              {t('check.heicWarning')}
             </p>
             <ol className="text-sm text-gray-600 dark:text-gray-400 mb-6 space-y-2 list-decimal list-inside">
-              <li>Open the photo in your Gallery app</li>
-              <li>Tap Share or Export</li>
-              <li>Save as JPEG</li>
-              <li>Upload the JPEG version</li>
+              <li>{t('check.heicStep1')}</li>
+              <li>{t('check.heicStep2')}</li>
+              <li>{t('check.heicStep3')}</li>
+              <li>{t('check.heicStep4')}</li>
             </ol>
             <div className="space-y-3">
               <button
                 onClick={tryHeicConversion}
                 disabled={isConverting}
-                className="w-full py-3 bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 bg-violet-500 hover:bg-violet-600 disabled:bg-violet-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
               >
                 {isConverting ? (
                   <>
@@ -1259,10 +1257,10 @@ export default function HomeworkCheckPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Converting...
+                    {t('check.converting')}
                   </>
                 ) : (
-                  'Try Converting Anyway'
+                  t('check.tryConvertingAnyway')
                 )}
               </button>
               <button
@@ -1270,7 +1268,7 @@ export default function HomeworkCheckPage() {
                 disabled={isConverting}
                 className="w-full py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
               >
-                Cancel
+                {t('check.cancel')}
               </button>
             </div>
           </div>
@@ -1287,19 +1285,19 @@ export default function HomeworkCheckPage() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            Back to Homework Hub
+            {t('check.backToHub')}
           </Link>
 
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-2xl shadow-lg">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-2xl shadow-lg">
               📝
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                Homework Checker
+                {t('check.pageTitle')}
               </h1>
               <p className="text-gray-600 dark:text-gray-400 text-sm">
-                Get feedback before you submit
+                {t('check.pageSubtitle')}
               </p>
             </div>
           </div>
@@ -1309,30 +1307,30 @@ export default function HomeworkCheckPage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 max-w-3xl">
         {/* How it Works */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-5 mb-8 border border-blue-100 dark:border-blue-800">
+        <div className="bg-gradient-to-r from-blue-50 to-violet-50 dark:from-blue-900/20 dark:to-violet-900/20 rounded-[22px] shadow-card p-5 mb-8 border border-blue-100 dark:border-blue-800">
           <h2 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-            <span>💡</span> How it works
+            <span>💡</span> {t('check.howItWorks')}
           </h2>
           <div className="grid sm:grid-cols-3 gap-4">
             <div className="flex items-start gap-3">
               <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Upload Task</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Photo of the assignment</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('check.step1Title')}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{t('check.step1Desc')}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Upload Answer</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Your completed work</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('check.step2Title')}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{t('check.step2Desc')}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Get Feedback</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Instant AI review</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('check.step3Title')}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{t('check.step3Desc')}</p>
               </div>
             </div>
           </div>
@@ -1354,18 +1352,18 @@ export default function HomeworkCheckPage() {
           {inputMode === 'image' && (
             <>
               {/* Image Uploads */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Upload Images</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">At least one image is required</p>
+              <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{t('check.uploadImages')}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">{t('check.atLeastOneImage')}</p>
                 <div className="grid md:grid-cols-2 gap-6">
                   <ImageUploader
-                    label="Task / Question"
+                    label={t('check.taskQuestion')}
                     image={taskImage}
                     onUpload={handleTaskUpload}
                     onRemove={() => setTaskImage(null)}
                   />
                   <ImageUploader
-                    label="Your Answer"
+                    label={t('check.yourAnswer')}
                     image={answerImage}
                     onUpload={handleAnswerUpload}
                     onRemove={() => setAnswerImage(null)}
@@ -1374,12 +1372,12 @@ export default function HomeworkCheckPage() {
               </div>
 
               {/* Optional Uploads */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Optional</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Add more context for better feedback</p>
+              <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{t('check.optionalSection')}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">{t('check.moreContextHelp')}</p>
                 <div className="space-y-6">
                   <MultiImageUploader
-                    label="Reference Materials"
+                    label={t('check.referenceMaterials')}
                     description="Textbook pages, notes, examples"
                     images={referenceImages}
                     onUpload={handleReferenceUpload}
@@ -1388,7 +1386,7 @@ export default function HomeworkCheckPage() {
                     icon="📚"
                   />
                   <MultiImageUploader
-                    label="Previous Teacher Reviews"
+                    label={t('check.previousTeacherReviews')}
                     description="Past graded work to match style"
                     images={teacherReviews}
                     onUpload={handleTeacherReviewUpload}
@@ -1422,29 +1420,29 @@ export default function HomeworkCheckPage() {
             >
               {isSubmitting ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin -ms-1 me-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  {submissionStatus || 'Processing...'}
+                  {submissionStatus || t('check.processing')}
                 </>
               ) : (
                 <>
-                  <span className="mr-2">✓</span>
-                  Check My Homework
+                  <span className="me-2">✓</span>
+                  {t('checkMyHomework')}
                 </>
               )}
             </Button>
             <Link href="/homework" className="sm:w-auto">
               <Button variant="secondary" size="lg" className="w-full">
-                Cancel
+                {t('check.cancel')}
               </Button>
             </Link>
           </div>
 
           {/* Privacy Note */}
           <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-            Your uploads are private and only used to generate feedback.
+            {t('check.privacyNote')}
           </p>
         </div>
       </main>

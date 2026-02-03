@@ -11,6 +11,7 @@ import { useCourses } from '@/hooks'
 import { useEventTracking } from '@/lib/analytics'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
 import DifficultyFeedback from '@/components/shared/DifficultyFeedback'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 // Lazy load ShareResultCard - only loaded on session complete
 const ShareResultCard = dynamic(() => import('@/components/export/ShareResultCard'), { ssr: false })
@@ -161,6 +162,7 @@ export default function PracticePage() {
   const [interactiveResult, setInteractiveResult] = useState<boolean | null>(null) // Track if interactive card was answered correctly
   const [showHelp, setShowHelp] = useState(false)
   const [difficultyFeedbackGiven, setDifficultyFeedbackGiven] = useState(false)
+  const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [mistakes, setMistakes] = useState<MistakeItem[]>([])
   const answersRef = useRef<Answer[]>([])
   const mistakesRef = useRef<MistakeItem[]>([])
@@ -266,9 +268,9 @@ export default function PracticePage() {
 
       // Proceed with available questions (may be fewer than requested)
 
-      // Map course info to cards
+      // Map course info to cards and deduplicate
       const courseMap = new Map(courses.map(c => [c.id, c]))
-      const practiceCards: PracticeCard[] = data.cards.map((card: ReviewCardType) => {
+      const rawCards: PracticeCard[] = data.cards.map((card: ReviewCardType) => {
         const course = courseMap.get(card.course_id)
         const lessonTitle = course?.generated_course?.lessons?.[card.lesson_index]?.title || `Lesson ${card.lesson_index + 1}`
 
@@ -278,6 +280,9 @@ export default function PracticePage() {
           lessonTitle,
         }
       })
+
+      // Deduplicate cards by id
+      const practiceCards = [...new Map(rawCards.map(c => [c.id, c])).values()]
 
       // Initialize stats by course
       const byCourse: Record<string, CourseStats> = {}
@@ -641,7 +646,7 @@ export default function PracticePage() {
           {/* Header */}
           <div className="text-center mb-8">
             <div className="mb-4 flex justify-center">
-              <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
+              <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-violet-600 rounded-full flex items-center justify-center">
                 <span className="text-5xl">🧠</span>
               </div>
             </div>
@@ -655,15 +660,15 @@ export default function PracticePage() {
 
           {/* Overall Stats */}
           <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-sm border border-gray-100 dark:border-gray-700">
-              <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+            <div className="bg-white dark:bg-gray-800 rounded-[22px] p-4 text-center shadow-card border border-gray-100 dark:border-gray-700">
+              <div className="text-2xl font-bold text-violet-600 dark:text-violet-400">
                 {stats.totalCards}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 {t('questions')}
               </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 rounded-[22px] p-4 text-center shadow-card border border-gray-100 dark:border-gray-700">
               <div className={`text-2xl font-bold ${
                 accuracy >= 80 ? 'text-green-600 dark:text-green-400' :
                 accuracy >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
@@ -675,7 +680,7 @@ export default function PracticePage() {
                 {t('accuracy')}
               </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 rounded-[22px] p-4 text-center shadow-card border border-gray-100 dark:border-gray-700">
               <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">
                 {minutes}:{seconds.toString().padStart(2, '0')}
               </div>
@@ -686,7 +691,7 @@ export default function PracticePage() {
           </div>
 
           {/* Performance by Course */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-100 dark:border-gray-700 mb-6 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
               <h2 className="font-semibold text-gray-900 dark:text-white">{t('performanceByCourse')}</h2>
             </div>
@@ -761,7 +766,7 @@ export default function PracticePage() {
                 answersRef.current = []
                 mistakesRef.current = []
               }}
-              className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors"
+              className="w-full py-3 px-6 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl transition-colors"
             >
               {t('practiceAgain')}
             </button>
@@ -792,7 +797,7 @@ export default function PracticePage() {
           {/* Header */}
           <div className="text-center mb-8">
             <div className="mb-4 flex justify-center">
-              <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-violet-600 rounded-full flex items-center justify-center">
                 <span className="text-4xl">🔀</span>
               </div>
             </div>
@@ -847,7 +852,7 @@ export default function PracticePage() {
                       setError('Failed to generate questions. Please try again.')
                     }
                   }}
-                  className="mt-3 w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors text-sm"
+                  className="mt-3 w-full py-2 px-4 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg transition-colors text-sm"
                 >
                   {t('generatePracticeQuestions')}
                 </button>
@@ -862,7 +867,7 @@ export default function PracticePage() {
               </p>
               <Link
                 href="/dashboard"
-                className="inline-block py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors"
+                className="inline-block py-3 px-6 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl transition-colors"
               >
                 {t('goToDashboard')}
               </Link>
@@ -875,7 +880,7 @@ export default function PracticePage() {
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     {t('numberOfQuestions')}
                   </label>
-                  <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                  <span className="text-lg font-bold text-violet-600 dark:text-violet-400">
                     {questionCount}
                   </span>
                 </div>
@@ -903,7 +908,7 @@ export default function PracticePage() {
                         onClick={() => setQuestionCount(tick)}
                         className={`text-xs transition-colors ${
                           questionCount === tick
-                            ? 'text-indigo-600 dark:text-indigo-400 font-bold'
+                            ? 'text-violet-600 dark:text-violet-400 font-bold'
                             : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
                         }`}
                       >
@@ -921,7 +926,7 @@ export default function PracticePage() {
                       onClick={() => setQuestionCount(count)}
                       className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
                         questionCount === count
-                          ? 'bg-indigo-600 text-white shadow-md'
+                          ? 'bg-violet-600 text-white shadow-md'
                           : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                       }`}
                     >
@@ -941,7 +946,7 @@ export default function PracticePage() {
                     onClick={selectAllCourses}
                     className={`text-sm ${
                       selectedCourseIds.length === 0
-                        ? 'text-indigo-600 dark:text-indigo-400 font-medium'
+                        ? 'text-violet-600 dark:text-violet-400 font-medium'
                         : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                     }`}
                   >
@@ -956,9 +961,9 @@ export default function PracticePage() {
                       <button
                         key={course.id}
                         onClick={() => toggleCourse(course.id)}
-                        className={`w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 ${
+                        className={`w-full text-start p-3 rounded-xl transition-all flex items-center gap-3 ${
                           isSelected && selectedCourseIds.length > 0
-                            ? 'bg-indigo-50 dark:bg-indigo-900/30 border-2 border-indigo-500'
+                            ? 'bg-violet-50 dark:bg-violet-900/30 border-2 border-violet-500'
                             : selectedCourseIds.length === 0
                               ? 'bg-gray-50 dark:bg-gray-800 border-2 border-transparent'
                               : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 opacity-60'
@@ -966,7 +971,7 @@ export default function PracticePage() {
                       >
                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                           isSelected
-                            ? 'bg-indigo-600 border-indigo-600'
+                            ? 'bg-violet-600 border-violet-600'
                             : 'border-gray-300 dark:border-gray-600'
                         }`}>
                           {isSelected && (
@@ -1002,7 +1007,7 @@ export default function PracticePage() {
               {/* Start Button */}
               <button
                 onClick={startPractice}
-                className="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all text-lg shadow-lg"
+                className="w-full py-4 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-semibold rounded-xl transition-all text-lg shadow-lg"
               >
                 {t('startPractice')}
               </button>
@@ -1035,7 +1040,7 @@ export default function PracticePage() {
           <p className="text-gray-600 dark:text-gray-400">{t('noQuestionToDisplay')}</p>
           <button
             onClick={() => setSessionState('complete')}
-            className="mt-4 px-4 py-2 text-indigo-600 hover:text-indigo-700"
+            className="mt-4 px-4 py-2 text-violet-600 hover:text-violet-700"
           >
             {t('endSession')}
           </button>
@@ -1050,12 +1055,8 @@ export default function PracticePage() {
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <button
-            onClick={() => {
-              if (confirm(t('endSessionConfirm'))) {
-                setSessionState('complete')
-              }
-            }}
-            className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-2 -ml-2"
+            onClick={() => setShowEndConfirm(true)}
+            className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-2 -ms-2"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1075,7 +1076,7 @@ export default function PracticePage() {
         {/* Progress bar */}
         <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-purple-600 to-indigo-600 transition-all duration-300"
+            className="h-full bg-gradient-to-r from-purple-600 to-violet-600 transition-all duration-300"
             style={{ width: `${((currentIndex + 1) / cards.length) * 100}%` }}
           />
         </div>
@@ -1194,7 +1195,7 @@ export default function PracticePage() {
                 {helpContext && (
                   <button
                     onClick={() => setShowHelp(true)}
-                    className="absolute top-3 right-3 p-2 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition z-10"
+                    className="absolute top-3 right-3 p-2 text-gray-400 hover:text-violet-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition z-10"
                     aria-label="Get help"
                     type="button"
                   >
@@ -1220,14 +1221,14 @@ export default function PracticePage() {
                 {isAnswerShown && (
                   <>
                     <div className="border-t border-gray-100 dark:border-gray-700" />
-                    <div className="p-6 bg-indigo-50 dark:bg-indigo-900/20">
+                    <div className="p-6 bg-violet-50 dark:bg-violet-900/20">
                       <p className="text-lg text-gray-900 dark:text-white leading-relaxed whitespace-pre-wrap">
                         {currentCard.back}
                       </p>
 
                       {/* Course/Lesson info */}
-                      <div className="mt-4 pt-4 border-t border-indigo-100 dark:border-indigo-900/40">
-                        <p className="text-sm text-indigo-600 dark:text-indigo-400">
+                      <div className="mt-4 pt-4 border-t border-violet-100 dark:border-violet-900/40">
+                        <p className="text-sm text-violet-600 dark:text-violet-400">
                           <span className="font-medium">{t('from')}:</span> {currentCard.courseName} — {currentCard.lessonTitle}
                         </p>
                       </div>
@@ -1236,7 +1237,7 @@ export default function PracticePage() {
                       {helpContext && (
                         <button
                           onClick={() => setShowHelp(true)}
-                          className="mt-3 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition"
+                          className="mt-3 text-sm text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition"
                           type="button"
                         >
                           🤔 {t('needHelpUnderstanding')}
@@ -1261,7 +1262,7 @@ export default function PracticePage() {
               <button
                 onClick={() => submitAnswer(interactiveResult)}
                 disabled={isSubmitting}
-                className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-all text-lg disabled:opacity-50"
+                className="w-full py-4 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-all text-lg disabled:opacity-50"
               >
                 {isSubmitting ? t('saving') : t('nextCard')}
               </button>
@@ -1274,7 +1275,7 @@ export default function PracticePage() {
               return (
                 <button
                   onClick={showAnswer}
-                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold rounded-xl transition-colors text-lg"
+                  className="w-full py-4 bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white font-semibold rounded-xl transition-colors text-lg"
                 >
                   {t('showAnswer')}
                 </button>
@@ -1328,6 +1329,19 @@ export default function PracticePage() {
           context={helpContext}
         />
       )}
+
+      {/* End Session Confirm Modal */}
+      <ConfirmModal
+        isOpen={showEndConfirm}
+        onClose={() => setShowEndConfirm(false)}
+        onConfirm={() => {
+          setShowEndConfirm(false)
+          setSessionState('complete')
+        }}
+        title={t('endSession')}
+        message={t('endSessionConfirm')}
+        variant="warning"
+      />
     </div>
   )
 }

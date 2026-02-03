@@ -2,16 +2,26 @@
 
 import { useEffect, useState } from 'react'
 
+const confettiKeyframes = `
+@keyframes confetti-fall {
+  0% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(80px) rotate(720deg) scale(0.5); }
+}
+`
+
 // =============================================================================
 // Types
 // =============================================================================
 
 export interface XPPopupData {
   id: string
-  type: 'xp' | 'levelUp'
+  type: 'xp' | 'levelUp' | 'achievement'
   amount?: number
   level?: number
   title?: string
+  achievementName?: string
+  achievementEmoji?: string
 }
 
 interface XPPopupProps {
@@ -32,7 +42,8 @@ export function XPPopup({ popup, onComplete }: XPPopupProps) {
   const [stage, setStage] = useState<'enter' | 'visible' | 'exit'>('enter')
 
   const isLevelUp = popup.type === 'levelUp'
-  const duration = isLevelUp ? 3000 : 1500
+  const isAchievement = popup.type === 'achievement'
+  const duration = isLevelUp ? 3000 : isAchievement ? 2500 : 1500
 
   useEffect(() => {
     // Enter animation
@@ -112,6 +123,59 @@ export function XPPopup({ popup, onComplete }: XPPopupProps) {
               />
             ))}
           </div>
+
+          {/* Confetti particles */}
+          <div className="absolute">
+            {[...Array(12)].map((_, i) => {
+              const colors = ['bg-red-400', 'bg-blue-400', 'bg-green-400', 'bg-yellow-400', 'bg-pink-400', 'bg-purple-400']
+              const color = colors[i % colors.length]
+              const angle = (i / 12) * Math.PI * 2
+              const radius = 100 + Math.random() * 40
+              return (
+                <div
+                  key={`confetti-${i}`}
+                  className={`absolute h-2 w-2 rounded-sm ${color}`}
+                  style={{
+                    top: `${Math.sin(angle) * radius}px`,
+                    left: `${Math.cos(angle) * radius}px`,
+                    animation: `confetti-fall 2s ease-out ${i * 0.08}s forwards`,
+                    opacity: 0,
+                    transform: `rotate(${Math.random() * 360}deg)`,
+                  }}
+                />
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (isAchievement) {
+    return (
+      <div
+        className={`
+          pointer-events-none fixed inset-0 z-50 flex items-center justify-center
+          transition-all duration-300 ease-out
+          ${stage === 'enter' ? 'opacity-0 scale-90' : ''}
+          ${stage === 'visible' ? 'opacity-100 scale-100' : ''}
+          ${stage === 'exit' ? 'opacity-0 scale-110' : ''}
+        `}
+        aria-label={`Achievement unlocked: ${popup.achievementName}`}
+      >
+        <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border-2 border-amber-400 px-8 py-6 text-center max-w-xs">
+          <div className="text-5xl mb-3">{popup.achievementEmoji || '🏆'}</div>
+          <div className="text-sm font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">
+            Achievement Unlocked!
+          </div>
+          <div className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+            {popup.achievementName}
+          </div>
+          {popup.amount && popup.amount > 0 && (
+            <div className="inline-flex items-center gap-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-full text-sm font-semibold">
+              +{popup.amount} XP ✨
+            </div>
+          )}
         </div>
       </div>
     )
@@ -132,7 +196,7 @@ export function XPPopup({ popup, onComplete }: XPPopupProps) {
       }}
       aria-label={`Earned ${popup.amount} experience points`}
     >
-      <div className="flex items-center gap-1 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 px-4 py-2 shadow-lg shadow-yellow-500/30">
+      <div className="flex items-center gap-1 rounded-full bg-gradient-to-r from-violet-500 to-violet-600 px-4 py-2 shadow-lg shadow-violet-500/30">
         <span className="text-lg font-bold text-white drop-shadow">
           +{popup.amount} XP
         </span>
@@ -149,6 +213,7 @@ export function XPPopup({ popup, onComplete }: XPPopupProps) {
 export function XPPopupContainer({ popups, onComplete }: XPPopupContainerProps) {
   return (
     <div role="status" aria-live="polite" aria-label="XP notifications">
+      <style>{confettiKeyframes}</style>
       {popups.map((popup, index) => (
         <div
           key={popup.id}

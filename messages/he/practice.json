@@ -137,5 +137,6 @@
   "goToLesson": "עבור לשיעור",
   "practiceWeakAreas": "תרגל נקודות חולשה",
   "noMistakes": "מושלם! אין טעויות לסקירה.",
-  "explanationLabel": "הסבר"
+  "explanationLabel": "הסבר",
+  "quitSessionConfirm": "האם אתה בטוח שברצונך לצאת מהאימון?"
 }

@@ -220,6 +220,10 @@ export default function OnboardingPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward')
 
+  const [isQuickMode, setIsQuickMode] = useState(false)
+  const [showCelebration, setShowCelebration] = useState(false)
+  const [pendingComplete, setPendingComplete] = useState(false)
+
   const [data, setData] = useState<OnboardingData>({
     studySystem: null,
     grade: null,
@@ -247,13 +251,24 @@ export default function OnboardingPage() {
     }
   }, [data, currentStep, isLoading])
 
+  // Trigger completion when pendingComplete is set (quick mode finishes after goal selection)
+  useEffect(() => {
+    if (pendingComplete) {
+      setPendingComplete(false)
+      completeOnboarding()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingComplete])
+
   // Determine if we should show subject selection step
   const showSubjectStep = data.studySystem && hasCurriculumData(data.studySystem)
 
   // Step flow: 1=system, 2=grade, 3=subjects (if curriculum), 4=goal, 5=time, 6=preferred, 7=learning
+  // Quick mode: 1=system, 2=grade, 3=goal → complete
+  const QUICK_STEPS = 3
   const BASE_STEPS = 6 // system, grade, goal, time, preferred, learning
   const EXTENDED_STEPS = 7 // +subjects
-  const totalSteps = showSubjectStep ? EXTENDED_STEPS : BASE_STEPS
+  const totalSteps = isQuickMode ? QUICK_STEPS : (showSubjectStep ? EXTENDED_STEPS : BASE_STEPS)
 
   // Analytics tracking
   const { trackStep } = useFunnelTracking('onboarding')
@@ -302,7 +317,11 @@ export default function OnboardingPage() {
 
   // Get the actual step content based on current step and whether subjects are shown
   const getStepContent = (step: number): string => {
-    if (showSubjectStep) {
+    if (isQuickMode) {
+      // Quick mode: 1=system, 2=grade, 3=goal
+      const steps = ['system', 'grade', 'goal']
+      return steps[step - 1] || ''
+    } else if (showSubjectStep) {
       // With subject selection: 1=system, 2=grade, 3=subjects, 4=goal, 5=time, 6=preferred, 7=learning
       const steps = ['system', 'grade', 'subjects', 'goal', 'time', 'preferred', 'learning']
       return steps[step - 1] || ''
@@ -332,7 +351,12 @@ export default function OnboardingPage() {
         break
       case 'goal':
         setData(prev => ({ ...prev, studyGoal: value as StudyGoal }))
-        nextStep()
+        if (isQuickMode) {
+          // In quick mode, goal is the last step — trigger completion after state flushes
+          setPendingComplete(true)
+        } else {
+          nextStep()
+        }
         break
       case 'time':
         setData(prev => ({ ...prev, timeAvailability: value as TimeAvailability }))
@@ -506,8 +530,11 @@ export default function OnboardingPage() {
       // Clear localStorage since onboarding completed successfully
       clearOnboardingState()
 
-      // Redirect to dashboard
-      router.push('/dashboard?welcome=true')
+      // Show celebration overlay, then redirect after 2 seconds
+      setShowCelebration(true)
+      setTimeout(() => {
+        router.push('/dashboard?welcome=true')
+      }, 2000)
     } catch (err) {
       console.error('[Onboarding] Unexpected error:', err)
       showError('Something went wrong. Please try again.')
@@ -519,13 +546,13 @@ export default function OnboardingPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+        <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white dark:from-gray-900 dark:to-gray-800 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-violet-50 to-white dark:from-gray-900 dark:to-gray-800 flex flex-col">
       {/* Header */}
       <div className="p-4 sm:p-6">
         <div className="max-w-md mx-auto">
@@ -536,9 +563,9 @@ export default function OnboardingPage() {
                 key={i}
                 className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
                   i + 1 === currentStep
-                    ? 'bg-indigo-600 scale-125'
+                    ? 'bg-violet-600 scale-125'
                     : i + 1 < currentStep
-                    ? 'bg-indigo-400'
+                    ? 'bg-violet-400'
                     : 'bg-gray-300 dark:bg-gray-600'
                 }`}
               />
@@ -560,13 +587,25 @@ export default function OnboardingPage() {
             } fade-in duration-300`}
           >
             {getStepContent(currentStep) === 'system' && (
-              <StepContent
-                title="What study system are you in?"
-                subtitle="This helps us tailor content to your curriculum"
-                options={STUDY_SYSTEMS}
-                selected={data.studySystem}
-                onSelect={handleSelect}
-              />
+              <div>
+                <StepContent
+                  title="What study system are you in?"
+                  subtitle="This helps us tailor content to your curriculum"
+                  options={STUDY_SYSTEMS}
+                  selected={data.studySystem}
+                  onSelect={handleSelect}
+                />
+                {!isQuickMode && (
+                  <div className="mt-6 text-center">
+                    <button
+                      onClick={() => setIsQuickMode(true)}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 hover:bg-violet-100 dark:hover:bg-violet-900/50 rounded-full transition-colors"
+                    >
+                      <span>&#9889;</span> Quick Setup (3 steps)
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
 
             {getStepContent(currentStep) === 'grade' && data.studySystem && (
@@ -596,7 +635,7 @@ export default function OnboardingPage() {
                   Select the subjects you want to focus on
                 </p>
 
-                <div className="max-h-[50vh] overflow-y-auto text-left mb-6">
+                <div className="max-h-[50vh] overflow-y-auto text-start mb-6">
                   <SubjectPicker
                     system={data.studySystem}
                     grade={data.grade}
@@ -608,7 +647,7 @@ export default function OnboardingPage() {
 
                 <button
                   onClick={nextStep}
-                  className="w-full py-4 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors"
+                  className="w-full py-4 px-6 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl transition-colors"
                 >
                   {data.subjects.length > 0 ? `Continue with ${data.subjects.length} subject${data.subjects.length > 1 ? 's' : ''}` : 'Skip for now'}
                 </button>
@@ -661,12 +700,12 @@ export default function OnboardingPage() {
                       onClick={() => toggleLearningStyle(style.id)}
                       className={`w-full p-4 rounded-xl border-2 transition-all duration-200 flex items-center gap-4 ${
                         data.learningStyles.includes(style.id)
-                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700 bg-white dark:bg-gray-800'
+                          ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-violet-300 dark:hover:border-violet-700 bg-white dark:bg-gray-800'
                       }`}
                     >
                       <span className="text-3xl">{style.icon}</span>
-                      <div className="text-left flex-1">
+                      <div className="text-start flex-1">
                         <h3 className="font-semibold text-gray-900 dark:text-white">
                           {style.title}
                         </h3>
@@ -676,7 +715,7 @@ export default function OnboardingPage() {
                       </div>
                       <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
                         data.learningStyles.includes(style.id)
-                          ? 'border-indigo-500 bg-indigo-500'
+                          ? 'border-violet-500 bg-violet-500'
                           : 'border-gray-300 dark:border-gray-600'
                       }`}>
                         {data.learningStyles.includes(style.id) && (
@@ -692,7 +731,7 @@ export default function OnboardingPage() {
                 <button
                   onClick={completeOnboarding}
                   disabled={isSaving}
-                  className="w-full py-4 px-6 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-4 px-6 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-400 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
                   {isSaving ? (
                     <>
@@ -739,6 +778,28 @@ export default function OnboardingPage() {
           </button>
         </div>
       </div>
+
+      {/* Celebration Overlay */}
+      {showCelebration && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-blue-600 to-purple-700">
+          <style>{`
+            @keyframes celebration-bounce {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-24px); }
+            }
+            .celebration-emoji {
+              animation: celebration-bounce 0.6s ease-in-out infinite;
+            }
+          `}</style>
+          <span className="celebration-emoji text-7xl mb-6" role="img" aria-label="celebration">&#127881;</span>
+          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3">
+            You&apos;re all set!
+          </h1>
+          <p className="text-xl text-white/90">
+            Let&apos;s start learning
+          </p>
+        </div>
+      )}
     </div>
   )
 }
@@ -779,12 +840,12 @@ function StepContent({ title, subtitle, options, selected, onSelect }: StepConte
             onClick={() => onSelect(option.id)}
             className={`w-full p-4 rounded-xl border-2 transition-all duration-200 flex items-center gap-4 ${
               selected === option.id
-                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
-                : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700 bg-white dark:bg-gray-800 hover:scale-[1.02] active:scale-[0.98]'
+                ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30'
+                : 'border-gray-200 dark:border-gray-700 hover:border-violet-300 dark:hover:border-violet-700 bg-white dark:bg-gray-800 hover:scale-[1.02] active:scale-[0.98]'
             }`}
           >
             <span className="text-3xl">{option.icon}</span>
-            <div className="text-left">
+            <div className="text-start">
               <h3 className="font-semibold text-gray-900 dark:text-white">
                 {option.title}
               </h3>

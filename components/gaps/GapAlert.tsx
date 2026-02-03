@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { useKnowledgeGaps } from '@/hooks'
 import type { GapSeverity } from '@/lib/concepts/types'
 
@@ -73,6 +74,7 @@ const severityStyles: Record<GapSeverity, {
 }
 
 export function GapAlert({ className = '' }: GapAlertProps) {
+  const t = useTranslations('gaps')
   const { gaps, totalGaps, criticalGaps, resolvedRecently, isLoading, refetch } = useKnowledgeGaps()
   const [isDismissed, setIsDismissed] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -93,7 +95,7 @@ export function GapAlert({ className = '' }: GapAlertProps) {
             <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
             <div className="flex-1">
               <p className="text-sm font-medium text-green-700 dark:text-green-300">
-                All caught up! You resolved {resolvedRecently} knowledge {resolvedRecently === 1 ? 'gap' : 'gaps'} recently.
+                {t('allCaughtUp', { count: resolvedRecently })}
               </p>
             </div>
           </div>
@@ -113,13 +115,13 @@ export function GapAlert({ className = '' }: GapAlertProps) {
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-2">
           <AlertTriangle className={`w-5 h-5 ${criticalGaps > 0 ? 'text-red-500' : 'text-amber-500'}`} />
-          <h3 className="font-semibold text-foreground">Knowledge Gaps</h3>
+          <h3 className="font-semibold text-foreground">{t('title')}</h3>
           <span className={`text-xs px-2 py-0.5 rounded-full ${
             criticalGaps > 0
               ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
               : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
           }`}>
-            {totalGaps} {totalGaps === 1 ? 'gap' : 'gaps'}
+            {t('gapCount', { count: totalGaps })}
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -127,14 +129,14 @@ export function GapAlert({ className = '' }: GapAlertProps) {
             onClick={handleRefresh}
             disabled={isRefreshing}
             className="p-1.5 rounded-lg hover:bg-muted transition-colors disabled:opacity-50"
-            title="Refresh"
+            title={t('refresh')}
           >
             <RefreshCw className={`w-4 h-4 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={() => setIsDismissed(true)}
             className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-            title="Dismiss"
+            title={t('dismiss')}
           >
             <X className="w-4 h-4 text-muted-foreground" />
           </button>
@@ -145,7 +147,7 @@ export function GapAlert({ className = '' }: GapAlertProps) {
       <div className="p-4 space-y-3">
         {criticalGaps > 0 && (
           <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-            {criticalGaps} critical {criticalGaps === 1 ? 'gap' : 'gaps'} may be blocking your progress
+            {t('criticalBlocking', { count: criticalGaps })}
           </p>
         )}
 
@@ -161,7 +163,7 @@ export function GapAlert({ className = '' }: GapAlertProps) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className={`font-medium text-sm ${styles.text}`}>
-                      {gap.concept?.name || 'Unknown Concept'}
+                      {gap.concept?.name || t('unknownConcept')}
                     </span>
                   </div>
                   {gap.ai_explanation && (
@@ -177,7 +179,7 @@ export function GapAlert({ className = '' }: GapAlertProps) {
 
         {remainingCount > 0 && (
           <p className="text-xs text-muted-foreground text-center">
-            +{remainingCount} more {remainingCount === 1 ? 'gap' : 'gaps'}
+            {t('moreGaps', { count: remainingCount })}
           </p>
         )}
       </div>
@@ -189,13 +191,13 @@ export function GapAlert({ className = '' }: GapAlertProps) {
           className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
         >
           <BookOpen className="w-4 h-4" />
-          <span>Fix Gaps</span>
+          <span>{t('fixGaps')}</span>
         </Link>
         <Link
           href="/gaps"
           className="flex items-center justify-center gap-1 px-3 py-2.5 bg-muted text-muted-foreground rounded-lg font-medium hover:bg-muted/80 transition-colors"
         >
-          <span>View All</span>
+          <span>{t('viewAll')}</span>
           <ChevronRight className="w-4 h-4" />
         </Link>
       </div>

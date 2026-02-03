@@ -34,7 +34,7 @@ export default function CourseContent({ sections }: CourseContentProps) {
 
   if (safeSections.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8 border border-gray-100 dark:border-gray-700 text-center">
+      <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card p-8 border border-gray-100 dark:border-gray-700 text-center">
         <p className="text-gray-500 dark:text-gray-400">No sections available</p>
       </div>
     )
@@ -46,14 +46,14 @@ export default function CourseContent({ sections }: CourseContentProps) {
       <div className="flex items-center justify-end gap-2 text-sm">
         <button
           onClick={expandAll}
-          className="text-indigo-600 dark:text-indigo-400 hover:underline"
+          className="text-violet-600 dark:text-violet-400 hover:underline"
         >
           Expand All
         </button>
         <span className="text-gray-300 dark:text-gray-600">|</span>
         <button
           onClick={collapseAll}
-          className="text-indigo-600 dark:text-indigo-400 hover:underline"
+          className="text-violet-600 dark:text-violet-400 hover:underline"
         >
           Collapse All
         </button>
@@ -86,14 +86,14 @@ interface SectionCardProps {
 
 function SectionCard({ section, index, isExpanded, onToggle, totalSections }: SectionCardProps) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-100 dark:border-gray-700 overflow-hidden">
       {/* Section Header */}
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+        className="w-full flex items-center justify-between p-5 text-start hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
       >
         <div className="flex items-center gap-4">
-          <span className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-500 text-white rounded-xl text-sm font-bold shadow-sm">
+          <span className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gradient-to-br from-violet-500 to-purple-500 text-white rounded-xl text-sm font-bold shadow-sm">
             {index + 1}
           </span>
           <div>
@@ -187,7 +187,7 @@ function SectionCard({ section, index, isExpanded, onToggle, totalSections }: Se
                     key={i}
                     className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600"
                   >
-                    <code className="block text-lg text-indigo-600 dark:text-indigo-400 font-mono mb-2 overflow-x-auto">
+                    <code className="block text-lg text-violet-600 dark:text-violet-400 font-mono mb-2 overflow-x-auto">
                       {formula.formula}
                     </code>
                     <p className="text-sm text-gray-600 dark:text-gray-400">

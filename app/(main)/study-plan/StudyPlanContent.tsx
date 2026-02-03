@@ -74,7 +74,7 @@ export default function StudyPlanContent() {
           {t('title')}
         </h1>
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-8 text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <CalendarPlus className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
@@ -85,7 +85,7 @@ export default function StudyPlanContent() {
           </p>
           <Link
             href="/study-plan/create"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-xl transition-colors"
           >
             <CalendarPlus className="w-5 h-5" />
             {t('createFirstPlan')}
@@ -108,7 +108,7 @@ export default function StudyPlanContent() {
             <span>
               {t('examDate')}: {new Date(plan.exam_date).toLocaleDateString()}
             </span>
-            <span className="font-medium text-indigo-600 dark:text-indigo-400">
+            <span className="font-medium text-violet-600 dark:text-violet-400">
               {daysLeft === 0
                 ? t('today')
                 : daysLeft === 1
@@ -118,7 +118,7 @@ export default function StudyPlanContent() {
           </div>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+          <div className="text-2xl font-bold text-violet-600 dark:text-violet-400">
             {progressPercent}%
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -168,7 +168,7 @@ export default function StudyPlanContent() {
         </button>
         <Link
           href="/dashboard"
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors"
+          className="flex items-center justify-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-xl transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Dashboard

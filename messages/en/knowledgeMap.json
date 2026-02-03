@@ -1,0 +1,49 @@
+{
+  "title": "Knowledge Map",
+  "subtitle": "Visualize your concept mastery and learning progress",
+  "backToDashboard": "Back to Dashboard",
+  "stats": {
+    "totalConcepts": "Total Concepts",
+    "mastered": "Mastered",
+    "learning": "Learning",
+    "gaps": "Gaps",
+    "overallMastery": "Overall Mastery"
+  },
+  "filters": {
+    "allSubjects": "All Subjects",
+    "allMasteryLevels": "All Mastery Levels",
+    "mastered": "Mastered (80%+)",
+    "learning": "Learning (1-79%)",
+    "notStarted": "Not Started",
+    "gapsOnly": "Gaps Only"
+  },
+  "mastery": {
+    "mastered": "Mastered",
+    "proficient": "Proficient",
+    "learning": "Learning",
+    "beginner": "Beginner",
+    "started": "Started",
+    "notStarted": "Not Started",
+    "label": "Mastery",
+    "exposures": "Exposures",
+    "recallRate": "Recall Rate"
+  },
+  "detail": {
+    "practiceThisConcept": "Practice This Concept",
+    "prerequisites": "Prerequisites ({count})",
+    "unlocks": "Unlocks ({count})",
+    "knowledgeGapDetected": "Knowledge Gap Detected"
+  },
+  "empty": {
+    "noConceptsFound": "No Concepts Found",
+    "completeLesson": "Complete some lessons to start building your knowledge map.",
+    "adjustFilters": "Try adjusting your filters."
+  },
+  "gap": "Gap",
+  "legend": "Legend",
+  "legendMastered": "Mastered (80%+)",
+  "legendLearning": "Learning (40-79%)",
+  "legendBeginner": "Beginner (1-39%)",
+  "legendNotStarted": "Not Started",
+  "legendKnowledgeGap": "Knowledge Gap"
+}

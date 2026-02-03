@@ -146,13 +146,13 @@ export function InsightsSkeleton() {
 
 export function RecommendationSkeleton() {
   return (
-    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800/50 p-4 mb-6">
+    <div className="bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-xl border border-violet-200 dark:border-violet-800/50 p-4 mb-6">
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 bg-indigo-200 dark:bg-indigo-800/50 rounded-lg skeleton-shimmer-item" />
+        <div className="w-10 h-10 bg-violet-200 dark:bg-violet-800/50 rounded-lg skeleton-shimmer-item" />
         <div className="flex-1">
-          <div className="h-5 w-48 bg-indigo-200 dark:bg-indigo-800/50 rounded skeleton-shimmer-item mb-2" />
-          <div className="h-4 w-full bg-indigo-200 dark:bg-indigo-800/50 rounded skeleton-shimmer-item mb-1" />
-          <div className="h-4 w-2/3 bg-indigo-200 dark:bg-indigo-800/50 rounded skeleton-shimmer-item" />
+          <div className="h-5 w-48 bg-violet-200 dark:bg-violet-800/50 rounded skeleton-shimmer-item mb-2" />
+          <div className="h-4 w-full bg-violet-200 dark:bg-violet-800/50 rounded skeleton-shimmer-item mb-1" />
+          <div className="h-4 w-2/3 bg-violet-200 dark:bg-violet-800/50 rounded skeleton-shimmer-item" />
         </div>
       </div>
     </div>

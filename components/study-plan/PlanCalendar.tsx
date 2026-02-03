@@ -75,7 +75,7 @@ export default function PlanCalendar({ tasks, currentDate }: PlanCalendarProps) 
       {/* Mobile toggle button */}
       <button
         onClick={() => setIsCollapsed(prev => !prev)}
-        className="md:hidden w-full flex items-center justify-center gap-2 py-2 mb-3 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition"
+        className="md:hidden w-full flex items-center justify-center gap-2 py-2 mb-3 text-sm font-medium text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/30 transition"
       >
         <Calendar className="w-4 h-4" />
         {isCollapsed ? tPlan('showCalendar') : tPlan('hideCalendar')}
@@ -121,8 +121,8 @@ export default function PlanCalendar({ tasks, currentDate }: PlanCalendarProps) 
               textColor = 'text-red-700 dark:text-red-300'
             } else if (isToday) {
               // Today with tasks
-              bgColor = 'bg-indigo-100 dark:bg-indigo-900/30'
-              textColor = 'text-indigo-700 dark:text-indigo-300'
+              bgColor = 'bg-violet-100 dark:bg-violet-900/30'
+              textColor = 'text-violet-700 dark:text-violet-300'
             } else {
               // Future with tasks
               bgColor = 'bg-blue-50 dark:bg-blue-900/20'
@@ -134,7 +134,7 @@ export default function PlanCalendar({ tasks, currentDate }: PlanCalendarProps) 
             <div
               key={day}
               className={`aspect-square min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-sm font-medium transition ${bgColor} ${textColor} ${
-                isToday ? 'ring-2 ring-indigo-500' : ''
+                isToday ? 'ring-2 ring-violet-500' : ''
               }`}
             >
               {day}
@@ -150,7 +150,7 @@ export default function PlanCalendar({ tasks, currentDate }: PlanCalendarProps) 
           <span>{t('legend.done')}</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded bg-indigo-100 dark:bg-indigo-900/30 ring-1 ring-indigo-500" />
+          <div className="w-3 h-3 rounded bg-violet-100 dark:bg-violet-900/30 ring-1 ring-violet-500" />
           <span>{t('legend.today')}</span>
         </div>
         <div className="flex items-center gap-1">

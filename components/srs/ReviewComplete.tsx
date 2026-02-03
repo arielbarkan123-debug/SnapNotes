@@ -9,6 +9,7 @@ import { SessionReflection } from '@/components/reflection'
 import type { MistakeItem } from '@/components/practice/MistakeReview'
 
 const MistakeReview = dynamic(() => import('@/components/practice/MistakeReview'), { ssr: false })
+const StreakPopup = dynamic(() => import('@/components/gamification/StreakPopup'), { ssr: false })
 const ShareResultCard = dynamic(() => import('@/components/export/ShareResultCard'), { ssr: false })
 
 // =============================================================================
@@ -44,7 +45,8 @@ export default function ReviewComplete({
   const [showReflection, setShowReflection] = useState(false)
   const hasAwardedXP = useRef(false)
   const hasTriggeredReflection = useRef(false)
-  const { showXP, showLevelUp } = useXP()
+  const { showXP, showLevelUp, showAchievement } = useXP()
+  const [showStreakPopup, setShowStreakPopup] = useState(false)
   const t = useTranslations('review')
 
   const timeSpentMinutes = Math.round(timeSpentMs / 60000)
@@ -114,9 +116,12 @@ export default function ReviewComplete({
           try {
             const streakData = await streakResponse.json()
             setStreakInfo({
-              current: streakData.streak.current,
-              maintained: streakData.streak.maintained,
+              current: streakData.streak?.current ?? 0,
+              maintained: streakData.streak?.maintained ?? false,
             })
+            if (streakData.streak?.maintained) {
+              setShowStreakPopup(true)
+            }
 
             // Add streak XP to total
             if (streakData.bonusXP > 0) {
@@ -135,8 +140,23 @@ export default function ReviewComplete({
           }, 500)
         }
 
-        // Check for new achievements (fire-and-forget, ignore errors)
-        fetch('/api/gamification/check', { method: 'POST' }).catch(() => {})
+        // Check for new achievements
+        try {
+          const checkResponse = await fetch('/api/gamification/check', { method: 'POST' })
+          if (checkResponse.ok) {
+            const checkData = await checkResponse.json()
+            if (checkData.newAchievements && Array.isArray(checkData.newAchievements)) {
+              for (let i = 0; i < checkData.newAchievements.length; i++) {
+                const achievement = checkData.newAchievements[i]
+                setTimeout(() => {
+                  showAchievement(achievement.name, achievement.xpReward || 0, achievement.emoji)
+                }, 2000 + i * 2000)
+              }
+            }
+          }
+        } catch {
+          // Achievement check failed silently
+        }
 
         // Trigger reflection after a meaningful session (3+ cards)
         if (!hasTriggeredReflection.current && cardsReviewed >= 3) {
@@ -152,7 +172,7 @@ export default function ReviewComplete({
     }
 
     awardXP()
-  }, [cardsReviewed, estimatedXP, accuracy, showXP])
+  }, [cardsReviewed, estimatedXP, accuracy, showXP, showAchievement])
 
   // Show level up popup when levelUp state is set (separate effect to avoid stale closure)
   useEffect(() => {
@@ -201,7 +221,7 @@ export default function ReviewComplete({
             }
             label={t('complete.cardsReviewed')}
             value={cardsReviewed.toString()}
-            color="text-indigo-600 dark:text-indigo-400"
+            color="text-violet-600 dark:text-violet-400"
           />
           <StatCard
             icon={
@@ -237,7 +257,7 @@ export default function ReviewComplete({
 
         {/* XP Earned */}
         {totalXpEarned > 0 && (
-          <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl p-4 mb-4 border border-amber-200 dark:border-amber-800/50">
+          <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-[22px] shadow-card p-4 mb-4 border border-amber-200 dark:border-amber-800/50">
             <div className="flex items-center justify-center gap-2">
               <span className="text-2xl">⭐</span>
               <span className="text-xl font-bold text-amber-600 dark:text-amber-400">
@@ -254,7 +274,7 @@ export default function ReviewComplete({
 
         {/* Streak Status */}
         {streakInfo && streakInfo.current > 0 && (
-          <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 mb-4 border border-orange-200 dark:border-orange-800/50">
+          <div className="bg-orange-50 dark:bg-orange-900/20 rounded-[22px] shadow-card p-4 mb-4 border border-orange-200 dark:border-orange-800/50">
             <div className="flex items-center justify-center gap-2">
               <span className="text-2xl">🔥</span>
               <span className="text-lg font-bold text-orange-600 dark:text-orange-400">
@@ -284,8 +304,8 @@ export default function ReviewComplete({
         </div>
 
         {/* Encouragement Message */}
-        <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4 mb-8">
-          <p className="text-indigo-700 dark:text-indigo-300 text-sm">
+        <div className="bg-violet-50 dark:bg-violet-900/20 rounded-[22px] shadow-card p-4 mb-8">
+          <p className="text-violet-700 dark:text-violet-300 text-sm">
             {getEncouragementMessage(accuracy, cardsReviewed)}
           </p>
         </div>
@@ -294,7 +314,7 @@ export default function ReviewComplete({
         <div className="space-y-3">
           <Link
             href="/dashboard"
-            className="block w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold rounded-xl transition-colors text-center"
+            className="block w-full py-3 px-6 bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white font-semibold rounded-xl transition-colors text-center"
           >
             {t('complete.done')}
           </Link>
@@ -305,7 +325,38 @@ export default function ReviewComplete({
             {t('complete.reviewMore')}
           </Link>
         </div>
+
+        {/* Practice Weak Topics CTA */}
+        {accuracy < 80 && (
+          <div className="mt-6 bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-[22px] shadow-card p-4 border border-purple-200 dark:border-purple-800/50">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🎯</span>
+              <div className="flex-1">
+                <p className="font-semibold text-purple-900 dark:text-purple-100 text-sm">
+                  {t('complete.practiceWeak')}
+                </p>
+                <p className="text-purple-700 dark:text-purple-300 text-xs mt-0.5">
+                  {t('complete.practiceWeakDesc')}
+                </p>
+              </div>
+              <Link
+                href="/practice"
+                className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+              >
+                {t('complete.startPractice')}
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Streak Popup */}
+      {showStreakPopup && streakInfo && (
+        <StreakPopup
+          days={streakInfo.current}
+          onComplete={() => setShowStreakPopup(false)}
+        />
+      )}
 
       {/* Session Reflection Modal */}
       {showReflection && (
@@ -335,7 +386,7 @@ interface StatCardProps {
 
 function StatCard({ icon, label, value, color }: StatCardProps) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-[22px] p-4 shadow-card border border-gray-100 dark:border-gray-700">
       <div className={`${color} mb-2 flex justify-center`}>{icon}</div>
       <div className={`text-2xl font-bold ${color}`}>{value}</div>
       <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{label}</div>

@@ -78,7 +78,7 @@ export default function ForgotPasswordPage() {
           <div className="text-center mb-6 sm:mb-8">
             <Link
               href="/"
-              className="text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400"
+              className="text-xl sm:text-2xl font-bold text-violet-600 dark:text-violet-400"
             >
               NoteSnap
             </Link>
@@ -154,7 +154,7 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={isLoading || retryAfter !== null}
-              className="w-full py-3.5 sm:py-3 bg-indigo-600 text-white rounded-xl sm:rounded-lg hover:bg-indigo-700 active:bg-indigo-800 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-h-[48px] text-base"
+              className="w-full py-3.5 sm:py-3 bg-gradient-to-r from-violet-500 to-violet-600 text-white rounded-full hover:from-violet-600 hover:to-violet-700 active:from-violet-700 active:to-violet-800 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-h-[48px] text-base"
             >
               {isLoading ? (
                 <>
@@ -196,15 +196,15 @@ export default function ForgotPasswordPage() {
               </h3>
               <ul className="space-y-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                 <li className="flex items-start gap-2">
-                  <span className="text-indigo-500 mt-0.5">1.</span>
+                  <span className="text-violet-500 mt-0.5">1.</span>
                   <span>{t('forgotPassword.helpStep1')}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-indigo-500 mt-0.5">2.</span>
+                  <span className="text-violet-500 mt-0.5">2.</span>
                   <span>{t('forgotPassword.helpStep2')}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-indigo-500 mt-0.5">3.</span>
+                  <span className="text-violet-500 mt-0.5">3.</span>
                   <span>{t('forgotPassword.helpStep3')}</span>
                 </li>
               </ul>
@@ -215,7 +215,7 @@ export default function ForgotPasswordPage() {
           <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
               <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
                 {t('forgotPassword.needHelp')}
@@ -225,7 +225,7 @@ export default function ForgotPasswordPage() {
               </p>
               <a
                 href={`mailto:${ADMIN_EMAIL}?subject=Account Recovery Request&body=Hi,%0A%0AI need help recovering my NoteSnap account.%0A%0AMy registered email: ${email || '[your email]'}%0A%0APlease help me reset my password.%0A%0AThank you.`}
-                className="inline-flex items-center gap-2 text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+                className="inline-flex items-center gap-2 text-sm text-violet-600 dark:text-violet-400 hover:underline font-medium"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -239,7 +239,7 @@ export default function ForgotPasswordPage() {
           <p className="text-center text-gray-600 dark:text-gray-400 mt-6 text-sm sm:text-base">
             <Link
               href="/login"
-              className="text-indigo-600 dark:text-indigo-400 hover:underline active:text-indigo-700 font-medium"
+              className="text-violet-600 dark:text-violet-400 hover:underline active:text-violet-700 font-medium"
             >
               ← {t('forgotPassword.backToLogin')}
             </Link>

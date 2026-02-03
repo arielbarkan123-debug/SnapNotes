@@ -85,7 +85,7 @@ export default function DashboardWidget() {
       rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 border transition-all
       ${allDone
         ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-        : 'bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-indigo-200 dark:border-indigo-800'
+        : 'bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 border-violet-200 dark:border-violet-800'
       }
     `}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -184,7 +184,7 @@ export default function DashboardWidget() {
               inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-colors w-full sm:w-auto
               ${allDone
                 ? 'bg-green-600 hover:bg-green-700 active:bg-green-800 text-white'
-                : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white'
+                : 'bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white'
               }
             `}
           >
@@ -216,7 +216,7 @@ export default function DashboardWidget() {
           </div>
           <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
             <div
-              className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+              className="h-full bg-violet-500 rounded-full transition-all duration-500"
               style={{
                 width: `${Math.min(100, (stats.cards_reviewed_today / Math.max(totalDue + stats.cards_reviewed_today, 1)) * 100)}%`
               }}

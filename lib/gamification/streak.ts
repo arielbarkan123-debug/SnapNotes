@@ -47,8 +47,8 @@ export interface StreakData {
   currentStreak: number
   longestStreak: number
   lastActivityDate: string | null // ISO date string (YYYY-MM-DD)
-  streakFreezes: number // Future feature
-  lastFreezeUsed: string | null // Future feature
+  streakFreezes: number
+  lastFreezeUsed: string | null
 }
 
 export interface StreakMilestone {
@@ -82,19 +82,24 @@ const STREAK_MAINTAIN_XP = 5
 // ============================================
 
 /**
- * Get today's date as YYYY-MM-DD string (server timezone)
+ * Get today's date as YYYY-MM-DD string in the given timezone.
+ * Uses Intl.DateTimeFormat with 'en-CA' locale to produce YYYY-MM-DD format.
+ *
+ * @param timezone - IANA timezone string (e.g. 'America/New_York'). Defaults to 'UTC'.
  */
-export function getTodayDateString(): string {
-  return new Date().toISOString().split('T')[0]
+export function getTodayDateString(timezone: string = 'UTC'): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date())
 }
 
 /**
- * Get yesterday's date as YYYY-MM-DD string
+ * Get yesterday's date as YYYY-MM-DD string in the given timezone.
+ *
+ * @param timezone - IANA timezone string (e.g. 'America/New_York'). Defaults to 'UTC'.
  */
-export function getYesterdayDateString(): string {
+export function getYesterdayDateString(timezone: string = 'UTC'): string {
   const yesterday = new Date()
   yesterday.setDate(yesterday.getDate() - 1)
-  return yesterday.toISOString().split('T')[0]
+  return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(yesterday)
 }
 
 /**
@@ -138,11 +143,12 @@ export function daysBetween(dateStr1: string, dateStr2: string): number {
  * - If last activity was older: streak broken, reset to 1
  *
  * @param streakData - Current streak data from database
+ * @param timezone - IANA timezone string (e.g. 'America/New_York'). Defaults to 'UTC'.
  * @returns StreakResult with updated values
  */
-export function checkAndUpdateStreak(streakData: StreakData): StreakResult {
-  const today = getTodayDateString()
-  const yesterday = getYesterdayDateString()
+export function checkAndUpdateStreak(streakData: StreakData, timezone: string = 'UTC'): StreakResult {
+  const today = getTodayDateString(timezone)
+  const yesterday = getYesterdayDateString(timezone)
 
   let currentStreak = streakData.currentStreak || 0
   let longestStreak = streakData.longestStreak || 0
@@ -206,11 +212,12 @@ export function checkAndUpdateStreak(streakData: StreakData): StreakResult {
  * Get current streak status without modifying it
  *
  * @param streakData - Current streak data from database
+ * @param timezone - IANA timezone string (e.g. 'America/New_York'). Defaults to 'UTC'.
  * @returns StreakStatus with current state
  */
-export function getStreakStatus(streakData: StreakData): StreakStatus {
-  const today = getTodayDateString()
-  const yesterday = getYesterdayDateString()
+export function getStreakStatus(streakData: StreakData, timezone: string = 'UTC'): StreakStatus {
+  const today = getTodayDateString(timezone)
+  const yesterday = getYesterdayDateString(timezone)
 
   const current = streakData.currentStreak || 0
   const longest = streakData.longestStreak || 0
@@ -257,11 +264,12 @@ export function getStreakStatus(streakData: StreakData): StreakStatus {
  * Check if streak would be broken without activity today
  *
  * @param streakData - Current streak data
+ * @param timezone - IANA timezone string (e.g. 'America/New_York'). Defaults to 'UTC'.
  * @returns True if streak would break without today's activity
  */
-export function wouldStreakBreak(streakData: StreakData): boolean {
-  const today = getTodayDateString()
-  const yesterday = getYesterdayDateString()
+export function wouldStreakBreak(streakData: StreakData, timezone: string = 'UTC'): boolean {
+  const today = getTodayDateString(timezone)
+  const yesterday = getYesterdayDateString(timezone)
 
   if (!streakData.lastActivityDate) {
     return false // No streak to break
@@ -435,7 +443,7 @@ export function getMilestoneMessage(milestone: StreakMilestone): string {
 }
 
 // ============================================
-// STREAK FREEZE (FUTURE FEATURE)
+// STREAK FREEZE
 // ============================================
 
 /**
@@ -443,22 +451,17 @@ export function getMilestoneMessage(milestone: StreakMilestone): string {
  * @param streakData - Current streak data
  * @returns Whether freeze is available
  */
-export function canUseStreakFreeze(_streakData: StreakData): boolean {
-  // MVP: Always return false (feature disabled)
-  return false
+export function canUseStreakFreeze(streakData: StreakData): boolean {
+  if (streakData.streakFreezes <= 0) return false
 
-  // Future implementation:
-  // const today = getTodayDateString()
-  // const weekAgo = new Date()
-  // weekAgo.setDate(weekAgo.getDate() - 7)
-  // const weekAgoStr = weekAgo.toISOString().split('T')[0]
-  //
-  // // Check if freeze was used in the past week
-  // if (streakData.lastFreezeUsed && streakData.lastFreezeUsed > weekAgoStr) {
-  //   return false
-  // }
-  //
-  // return streakData.streakFreezes > 0
+  // Check if freeze was used in the past 7 days
+  if (streakData.lastFreezeUsed) {
+    const today = getTodayDateString()
+    const daysSinceFreeze = daysBetween(streakData.lastFreezeUsed, today)
+    if (daysSinceFreeze < 7) return false
+  }
+
+  return true
 }
 
 /**
@@ -466,21 +469,19 @@ export function canUseStreakFreeze(_streakData: StreakData): boolean {
  * @param streakData - Current streak data
  * @returns Updated streak data or null if freeze unavailable
  */
-export function useStreakFreeze(_streakData: StreakData): StreakData | null {
-  // MVP: Feature disabled
-  return null
+export function useStreakFreeze(streakData: StreakData): StreakData | null {
+  if (!canUseStreakFreeze(streakData)) {
+    return null
+  }
 
-  // Future implementation:
-  // if (!canUseStreakFreeze(streakData)) {
-  //   return null
-  // }
-  //
-  // return {
-  //   ...streakData,
-  //   streakFreezes: streakData.streakFreezes - 1,
-  //   lastFreezeUsed: getTodayDateString(),
-  //   lastActivityDate: getTodayDateString(), // Treat as activity
-  // }
+  const today = getTodayDateString()
+
+  return {
+    ...streakData,
+    streakFreezes: streakData.streakFreezes - 1,
+    lastFreezeUsed: today,
+    lastActivityDate: today, // Treat as activity to preserve streak
+  }
 }
 
 // ============================================
@@ -499,7 +500,7 @@ export function createDefaultStreakData(userId: string): StreakData {
     currentStreak: 0,
     longestStreak: 0,
     lastActivityDate: null,
-    streakFreezes: 0,
+    streakFreezes: 1,
     lastFreezeUsed: null,
   }
 }
@@ -508,9 +509,10 @@ export function createDefaultStreakData(userId: string): StreakData {
  * Prepare streak data for database update
  *
  * @param result - StreakResult from checkAndUpdateStreak
+ * @param timezone - IANA timezone string (e.g. 'America/New_York'). Defaults to 'UTC'.
  * @returns Object ready for database update
  */
-export function prepareStreakUpdate(result: StreakResult): {
+export function prepareStreakUpdate(result: StreakResult, timezone: string = 'UTC'): {
   current_streak: number
   longest_streak: number
   last_activity_date: string
@@ -518,6 +520,6 @@ export function prepareStreakUpdate(result: StreakResult): {
   return {
     current_streak: result.currentStreak,
     longest_streak: result.longestStreak,
-    last_activity_date: getTodayDateString(),
+    last_activity_date: getTodayDateString(timezone),
   }
 }

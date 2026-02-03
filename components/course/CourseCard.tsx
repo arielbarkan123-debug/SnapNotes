@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
 import { type Course, type GeneratedCourse } from '@/types'
@@ -270,7 +271,7 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
         {/* Delete Button */}
         <button
           onClick={handleDeleteClick}
-          className="absolute top-2 right-2 z-10 p-2 bg-white/90 dark:bg-gray-800/90 rounded-full shadow-md opacity-0 group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all duration-200"
+          className="absolute top-2 right-2 z-10 p-2 bg-white/90 dark:bg-gray-800/90 rounded-full shadow-md sm:opacity-0 sm:group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all duration-200"
           aria-label="Delete course"
         >
           <svg
@@ -302,12 +303,12 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
 
             {/* AI-generated cover image - show directly without opacity transition */}
             {course.cover_image_url && !imageError && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={course.cover_image_url}
                 alt={course.title}
-                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                loading="eager"
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                sizes="(max-width: 768px) 100vw, 300px"
                 onError={() => setImageError(true)}
               />
             )}
@@ -321,7 +322,7 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
 
           {/* Content */}
           <div className="p-4">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors line-clamp-2">
               {truncateText(course.title, 50)}
             </h3>
             <div className="flex items-center justify-between">

@@ -60,6 +60,9 @@
     "streakMaintained": "Streak maintained!",
     "done": "Done",
     "reviewMore": "Review More Cards",
+    "practiceWeak": "Practice weak topics?",
+    "practiceWeakDesc": "Strengthen your understanding with targeted practice",
+    "startPractice": "Practice",
     "encouragement": {
       "noCards": "No cards to review right now. Check back later!",
       "outstanding": "Outstanding! Your memory is on fire! Keep up the excellent work!",

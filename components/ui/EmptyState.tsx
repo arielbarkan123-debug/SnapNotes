@@ -55,11 +55,11 @@ export default function EmptyState({
       className={`flex flex-col items-center justify-center py-12 px-4 text-center ${className}`}
     >
       {icon && (
-        <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6">
+        <div className="w-20 h-20 bg-violet-100 dark:bg-violet-900/30 rounded-full flex items-center justify-center mb-6">
           {typeof icon === 'string' ? (
             <span className="text-4xl">{icon}</span>
           ) : (
-            <div className="text-gray-400 dark:text-gray-500 w-10 h-10">{icon}</div>
+            <div className="text-violet-400 dark:text-violet-500 w-10 h-10">{icon}</div>
           )}
         </div>
       )}
@@ -78,7 +78,7 @@ export default function EmptyState({
         <div className="flex flex-col sm:flex-row gap-3">
           {action && (
             <Button size="lg" onClick={action.onClick}>
-              {action.icon && <span className="mr-2">{action.icon}</span>}
+              {action.icon && <span className="me-2">{action.icon}</span>}
               {action.label}
             </Button>
           )}

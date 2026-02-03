@@ -314,7 +314,7 @@ export function EquationSteps({
                   className={`
                     relative p-4 rounded-xl transition-colors duration-300
                     ${isCurrentStep
-                      ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 border-2 border-indigo-300 dark:border-indigo-700 shadow-md'
+                      ? 'bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/30 dark:to-purple-900/30 border-2 border-violet-300 dark:border-violet-700 shadow-md'
                       : 'bg-gray-50 dark:bg-gray-800/50'
                     }
                   `}
@@ -346,7 +346,7 @@ export function EquationSteps({
                     <motion.span
                       className={`
                         px-3 py-1 rounded-lg
-                        ${isCurrentStep ? 'font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-800/50' : 'text-gray-700 dark:text-gray-300'}
+                        ${isCurrentStep ? 'font-bold text-violet-700 dark:text-violet-300 bg-violet-100 dark:bg-violet-800/50' : 'text-gray-700 dark:text-gray-300'}
                       `}
                       layout
                       key={`left-${stepInfo.leftSide}`}
@@ -357,7 +357,7 @@ export function EquationSteps({
                     <motion.span
                       className={`
                         px-3 py-1 rounded-lg
-                        ${isCurrentStep ? 'font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-800/50' : 'text-gray-700 dark:text-gray-300'}
+                        ${isCurrentStep ? 'font-bold text-violet-700 dark:text-violet-300 bg-violet-100 dark:bg-violet-800/50' : 'text-gray-700 dark:text-gray-300'}
                       `}
                       layout
                       key={`right-${stepInfo.rightSide}`}

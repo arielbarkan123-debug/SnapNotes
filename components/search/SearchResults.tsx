@@ -22,7 +22,7 @@ const typeIcons: Record<SearchResult['type'], React.FC<{ className?: string }>> 
 }
 
 const typeBadgeColors: Record<SearchResult['type'], string> = {
-  course: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400',
+  course: 'bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400',
   review_card: 'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400',
   homework: 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400',
   practice: 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400',
@@ -78,8 +78,8 @@ export default function SearchResults({ results, isLoading, isAISearching, query
   return (
     <div className="py-2" role="listbox" id="search-results-listbox">
       {isAISearching && (
-        <div className="px-4 py-2 text-sm text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
-          <div className="w-4 h-4 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin" />
+        <div className="px-4 py-2 text-sm text-violet-600 dark:text-violet-400 flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-violet-600 dark:border-violet-400 border-t-transparent rounded-full animate-spin" />
           {t('searchingAI')}
         </div>
       )}

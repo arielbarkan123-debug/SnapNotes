@@ -65,7 +65,7 @@ export default function AnnotationButton({ annotation, onSave, onDelete }: Annot
         className={`
           inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all
           ${hasAnnotation
-            ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+            ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400'
             : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
           }
         `}
@@ -92,7 +92,7 @@ export default function AnnotationButton({ annotation, onSave, onDelete }: Annot
         value={noteText}
         onChange={(e) => setNoteText(e.target.value)}
         placeholder={t('notePlaceholder')}
-        className="w-full text-sm p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+        className="w-full text-sm p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 resize-none focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none"
         rows={2}
       />
 
@@ -138,7 +138,7 @@ export default function AnnotationButton({ annotation, onSave, onDelete }: Annot
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1 px-3 py-1 bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
           >
             {showSaved ? (
               <>

@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+    <div className="min-h-screen flex items-center justify-center aurora-bg px-4">
       <div className="max-w-md w-full text-center">
         {/* 404 Illustration */}
         <div className="relative mb-8">
@@ -10,9 +10,9 @@ export default function NotFound() {
             404
           </div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-24 h-24 sm:w-32 sm:h-32 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center">
+            <div className="w-24 h-24 sm:w-32 sm:h-32 bg-violet-100 dark:bg-violet-900/30 rounded-full flex items-center justify-center">
               <svg
-                className="w-12 h-12 sm:w-16 sm:h-16 text-indigo-600 dark:text-indigo-400"
+                className="w-12 h-12 sm:w-16 sm:h-16 text-violet-600 dark:text-violet-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -41,7 +41,7 @@ export default function NotFound() {
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
             href="/"
-            className="inline-flex items-center justify-center px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 active:bg-indigo-800 font-medium transition-colors"
+            className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-violet-500 to-violet-600 text-white rounded-full hover:from-violet-600 hover:to-violet-700 active:from-violet-700 active:to-violet-800 font-medium transition-colors"
           >
             <svg
               className="w-5 h-5 mr-2"
@@ -60,7 +60,7 @@ export default function NotFound() {
           </Link>
           <Link
             href="/dashboard"
-            className="inline-flex items-center justify-center px-6 py-3 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 font-medium transition-colors"
+            className="inline-flex items-center justify-center px-6 py-3 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 font-medium transition-colors"
           >
             <svg
               className="w-5 h-5 mr-2"
@@ -84,7 +84,7 @@ export default function NotFound() {
           Need help?{' '}
           <a
             href="mailto:support@notesnap.app"
-            className="text-indigo-600 dark:text-indigo-400 hover:underline"
+            className="text-violet-600 dark:text-violet-400 hover:underline"
           >
             Contact Support
           </a>

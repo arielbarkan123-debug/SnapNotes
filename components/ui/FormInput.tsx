@@ -29,7 +29,7 @@ const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
             min-h-[48px] sm:min-h-[44px]
             ${error
               ? 'border-red-500 focus:ring-2 focus:ring-red-500'
-              : 'border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-transparent'
+              : 'border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-transparent'
             }
             ${className}
           `}

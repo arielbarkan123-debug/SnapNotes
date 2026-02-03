@@ -65,7 +65,7 @@ function NavItem({ href, icon, label }: { href: string; icon: string; label: str
       href={href}
       className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
         isActive
-          ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
+          ? 'bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300'
           : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
       }`}
     >

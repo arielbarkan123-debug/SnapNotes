@@ -128,7 +128,7 @@ export default function ImageLabelRenderer({
     }
 
     if (hasAnswer) {
-      return 'bg-indigo-100 dark:bg-indigo-900/40 border-indigo-500 text-indigo-700 dark:text-indigo-300'
+      return 'bg-violet-100 dark:bg-violet-900/40 border-violet-500 text-violet-700 dark:text-violet-300'
     }
 
     return 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
@@ -157,7 +157,7 @@ export default function ImageLabelRenderer({
             onClick={() => setActiveMode('drag')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
               activeMode === 'drag'
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-violet-600 text-white'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
             }`}
           >
@@ -167,7 +167,7 @@ export default function ImageLabelRenderer({
             onClick={() => setActiveMode('type')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
               activeMode === 'type'
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-violet-600 text-white'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
             }`}
           >
@@ -259,8 +259,8 @@ export default function ImageLabelRenderer({
                 onDragEnd={() => setDraggedLabel(null)}
                 className={`px-2 py-1 rounded text-sm font-medium cursor-grab active:cursor-grabbing transition-all ${
                   draggedLabel === label
-                    ? 'bg-indigo-500 text-white shadow-lg scale-105'
-                    : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-indigo-400'
+                    ? 'bg-violet-500 text-white shadow-lg scale-105'
+                    : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-violet-400'
                 }`}
               >
                 {label}

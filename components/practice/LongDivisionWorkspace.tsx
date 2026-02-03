@@ -266,7 +266,7 @@ export default function LongDivisionWorkspace({
       <div className={`font-mono text-2xl sm:text-3xl ${isRTL ? 'direction-ltr' : ''}`}>
         {/* Quotient row */}
         <div className="flex justify-end mb-1">
-          <span className="text-indigo-600 dark:text-indigo-400 font-bold tracking-widest">
+          <span className="text-violet-600 dark:text-violet-400 font-bold tracking-widest">
             {completedQuotientDigits.join('')}
             {currentStep?.type === 'quotient_digit' && (
               <span className="animate-pulse text-gray-400">_</span>
@@ -353,7 +353,7 @@ export default function LongDivisionWorkspace({
 
         <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
           <div className="text-center font-mono text-2xl mb-2">
-            {dividend} ÷ {divisor} = <span className="text-indigo-600 font-bold">{quotient}</span>
+            {dividend} ÷ {divisor} = <span className="text-violet-600 font-bold">{quotient}</span>
             {remainder > 0 && (
               <span className="text-gray-500"> R{remainder}</span>
             )}
@@ -367,8 +367,8 @@ export default function LongDivisionWorkspace({
               {language === 'he' ? 'צעדים נכונים' : 'Steps Correct'}
             </div>
           </div>
-          <div className="bg-indigo-50 dark:bg-indigo-900/30 rounded-lg p-3">
-            <div className="text-2xl font-bold text-indigo-600">{accuracy}%</div>
+          <div className="bg-violet-50 dark:bg-violet-900/30 rounded-lg p-3">
+            <div className="text-2xl font-bold text-violet-600">{accuracy}%</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">
               {language === 'he' ? 'דיוק' : 'Accuracy'}
             </div>
@@ -403,7 +403,7 @@ export default function LongDivisionWorkspace({
         </div>
         <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
           <div
-            className="h-full bg-indigo-500 transition-all duration-300"
+            className="h-full bg-violet-500 transition-all duration-300"
             style={{ width: `${((currentStepIndex + 1) / steps.length) * 100}%` }}
           />
         </div>
@@ -411,8 +411,8 @@ export default function LongDivisionWorkspace({
 
       {/* Current step instruction */}
       {currentStep && (
-        <div className="mb-4 p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
-          <p className="text-indigo-800 dark:text-indigo-200 font-medium">
+        <div className="mb-4 p-4 bg-violet-50 dark:bg-violet-900/30 rounded-lg">
+          <p className="text-violet-800 dark:text-violet-200 font-medium">
             {getStepInstruction(currentStep)}
           </p>
         </div>
@@ -430,13 +430,13 @@ export default function LongDivisionWorkspace({
             onChange={(e) => setUserInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={language === 'he' ? 'הכנס תשובה' : 'Enter answer'}
-            className="flex-1 px-4 py-3 text-xl text-center font-mono border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:bg-gray-700 dark:text-white"
+            className="flex-1 px-4 py-3 text-xl text-center font-mono border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:bg-gray-700 dark:text-white"
             disabled={isComplete}
           />
           <button
             type="submit"
             disabled={!userInput.trim() || isComplete}
-            className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-3 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {language === 'he' ? 'בדוק' : 'Check'}
           </button>
@@ -460,7 +460,7 @@ export default function LongDivisionWorkspace({
       {showHints && currentStep && !showHint && !isComplete && (
         <button
           onClick={() => setShowHint(true)}
-          className="w-full py-2 text-gray-500 hover:text-indigo-600 text-sm flex items-center justify-center gap-1"
+          className="w-full py-2 text-gray-500 hover:text-violet-600 text-sm flex items-center justify-center gap-1"
         >
           <span>💡</span>
           <span>{language === 'he' ? 'צריך רמז?' : 'Need a hint?'}</span>

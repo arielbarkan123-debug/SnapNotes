@@ -55,7 +55,7 @@ export default function StudyPlanWidget() {
   // Error state
   if (error) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card mb-6">
         <SWRErrorState onRetry={() => mutate()} />
       </div>
     )
@@ -64,9 +64,9 @@ export default function StudyPlanWidget() {
   // No plan - show CTA
   if (!plan) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card p-4 mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center shrink-0">
             <CalendarPlus className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1 min-w-0">
@@ -79,7 +79,7 @@ export default function StudyPlanWidget() {
           </div>
           <Link
             href="/study-plan/create"
-            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors shrink-0"
+            className="px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium rounded-lg transition-colors shrink-0"
           >
             {t('start')}
           </Link>
@@ -90,11 +90,11 @@ export default function StudyPlanWidget() {
 
   // Active plan - show today's tasks
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card mb-6 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center gap-2">
-          <CalendarPlus className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          <CalendarPlus className="w-4 h-4 text-violet-600 dark:text-violet-400" />
           <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
             {t('title')}
           </h3>
@@ -148,7 +148,7 @@ export default function StudyPlanWidget() {
       {/* View full plan link */}
       <Link
         href="/study-plan"
-        className="flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition border-t border-gray-100 dark:border-gray-700"
+        className="flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition border-t border-gray-100 dark:border-gray-700"
       >
         {t('viewPlan')}
         <ChevronRight className="w-4 h-4" />

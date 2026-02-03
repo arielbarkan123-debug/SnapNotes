@@ -293,7 +293,7 @@ function FactoringDiagram({
             {title}
           </h3>
         )}
-        <div className="text-center text-sm text-indigo-600 dark:text-indigo-400 font-medium mb-3">
+        <div className="text-center text-sm text-violet-600 dark:text-violet-400 font-medium mb-3">
           {getMethodName()}
         </div>
 
@@ -315,14 +315,14 @@ function FactoringDiagram({
 
       {/* Original Expression */}
       <motion.div
-        className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-xl p-4 mb-4 text-center"
+        className="bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/30 dark:to-purple-900/30 rounded-xl p-4 mb-4 text-center"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
       >
         <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">
           {language === 'he' ? 'פרק:' : 'Factor:'}
         </div>
-        <div className="text-2xl font-mono font-bold text-indigo-700 dark:text-indigo-300">
+        <div className="text-2xl font-mono font-bold text-violet-700 dark:text-violet-300">
           {expression}
         </div>
       </motion.div>

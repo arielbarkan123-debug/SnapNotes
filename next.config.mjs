@@ -118,7 +118,16 @@ const nextConfig = {
   // Bundle optimization
   experimental: {
     // Optimize package imports - only import what's used
-    optimizePackageImports: ['@supabase/supabase-js', 'swr'],
+    optimizePackageImports: [
+      '@supabase/supabase-js',
+      'swr',
+      'mathjs',
+      'katex',
+      'dompurify',
+      'framer-motion',
+      'lucide-react',
+      'react-markdown',
+    ],
   },
 
   // Webpack optimizations

@@ -222,7 +222,7 @@ export default function QuestionStep({
     <div className="animate-fadeIn space-y-4 xs:space-y-6">
       {/* Question badge and text */}
       <div className="text-center">
-        <span className="inline-block px-2 xs:px-3 py-1 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 text-xs font-bold uppercase tracking-wider rounded-full mb-3 xs:mb-4">
+        <span className="inline-block px-2 xs:px-3 py-1 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 text-xs font-bold uppercase tracking-wider rounded-full mb-3 xs:mb-4">
           {t('question')}
         </span>
         <h2 className="text-lg xs:text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white leading-relaxed">
@@ -267,7 +267,7 @@ export default function QuestionStep({
                       ? 'bg-red-50 dark:bg-red-900/30 border-red-500 dark:border-red-500'
                       : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 opacity-50'
                   : isSelected
-                    ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-500 dark:border-indigo-500 shadow-lg shadow-indigo-100 dark:shadow-indigo-900/20 scale-[1.02]'
+                    ? 'bg-violet-50 dark:bg-violet-900/30 border-violet-500 dark:border-violet-500 shadow-lg shadow-violet-100 dark:shadow-violet-900/20 scale-[1.02]'
                     : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-750'
                 }
                 ${!hasChecked && 'cursor-pointer active:scale-[0.98]'}
@@ -285,7 +285,7 @@ export default function QuestionStep({
                           ? 'bg-red-500 text-white'
                           : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
                       : isSelected
-                        ? 'bg-indigo-500 text-white'
+                        ? 'bg-violet-500 text-white'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                     }
                   `}
@@ -318,7 +318,7 @@ export default function QuestionStep({
                           ? 'text-red-800 dark:text-red-200'
                           : 'text-gray-400 dark:text-gray-500'
                       : isSelected
-                        ? 'text-indigo-900 dark:text-indigo-200'
+                        ? 'text-violet-900 dark:text-violet-200'
                         : 'text-gray-700 dark:text-gray-300'
                     }
                   `}
@@ -329,7 +329,7 @@ export default function QuestionStep({
                 {/* Selection indicator */}
                 {!hasChecked && isSelected && (
                   <div className="flex-shrink-0">
-                    <svg className="w-5 h-5 text-indigo-500" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-violet-500" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                     </svg>
                   </div>
@@ -430,7 +430,7 @@ export default function QuestionStep({
                 <button
                   onClick={() => setShowHelp(true)}
                   type="button"
-                  className="flex-1 py-2 px-4 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg font-medium hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition flex items-center justify-center gap-2"
+                  className="flex-1 py-2 px-4 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded-lg font-medium hover:bg-violet-200 dark:hover:bg-violet-900/50 transition flex items-center justify-center gap-2"
                 >
                   <span>🤔</span>
                   <span>{t('explain')}</span>
@@ -457,7 +457,7 @@ export default function QuestionStep({
           className={`
             w-full py-3 xs:py-4 rounded-xl xs:rounded-2xl font-semibold text-base xs:text-lg transition-all duration-200 min-h-[48px]
             ${selectedAnswer !== null
-              ? 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30 cursor-pointer'
+              ? 'bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white shadow-lg shadow-violet-200 dark:shadow-violet-900/30 cursor-pointer'
               : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
             }
           `}
@@ -471,7 +471,7 @@ export default function QuestionStep({
             w-full py-3 xs:py-4 rounded-xl xs:rounded-2xl font-semibold text-base xs:text-lg transition-all duration-200 animate-fadeIn min-h-[48px]
             ${isCorrect
               ? 'bg-green-600 hover:bg-green-700 active:bg-green-800 text-white shadow-lg shadow-green-200 dark:shadow-green-900/30'
-              : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30'
+              : 'bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white shadow-lg shadow-violet-200 dark:shadow-violet-900/30'
             }
           `}
         >

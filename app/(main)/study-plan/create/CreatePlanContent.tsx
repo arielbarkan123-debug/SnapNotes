@@ -245,7 +245,7 @@ export default function CreatePlanContent() {
             key={i}
             className={`h-1.5 flex-1 rounded-full transition-colors ${
               i + 1 <= step
-                ? 'bg-indigo-600 dark:bg-indigo-500'
+                ? 'bg-violet-600 dark:bg-violet-500'
                 : 'bg-gray-200 dark:bg-gray-700'
             }`}
           />
@@ -253,11 +253,11 @@ export default function CreatePlanContent() {
       </div>
 
       {/* Step content */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card p-6 mb-6">
         {/* Step header */}
         <div className="flex items-center gap-3 mb-1">
-          <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
-            <StepIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          <div className="w-10 h-10 bg-violet-100 dark:bg-violet-900/30 rounded-lg flex items-center justify-center">
+            <StepIcon className="w-5 h-5 text-violet-600 dark:text-violet-400" />
           </div>
           <div>
             <h2 className="font-semibold text-gray-900 dark:text-white">
@@ -285,15 +285,15 @@ export default function CreatePlanContent() {
                     <button
                       key={course.id}
                       onClick={() => toggleCourse(course.id)}
-                      className={`w-full text-left p-4 rounded-xl transition-all flex items-center gap-3 ${
+                      className={`w-full text-start p-4 rounded-xl transition-all flex items-center gap-3 ${
                         isSelected
-                          ? 'bg-indigo-50 dark:bg-indigo-900/30 border-2 border-indigo-500'
+                          ? 'bg-violet-50 dark:bg-violet-900/30 border-2 border-violet-500'
                           : 'bg-gray-50 dark:bg-gray-700/50 border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
                       }`}
                     >
                       <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
                         isSelected
-                          ? 'bg-indigo-600 border-indigo-600'
+                          ? 'bg-violet-600 border-violet-600'
                           : 'border-gray-300 dark:border-gray-600'
                       }`}>
                         {isSelected && <Check className="w-4 h-4 text-white" />}
@@ -343,7 +343,7 @@ export default function CreatePlanContent() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-gray-700 dark:text-gray-300">{t('minutesPerDay', { count: dailyTimeMinutes })}</span>
-                <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                <span className="text-2xl font-bold text-violet-600 dark:text-violet-400">
                   {dailyTimeMinutes}
                 </span>
               </div>
@@ -375,7 +375,7 @@ export default function CreatePlanContent() {
                     onClick={() => setDailyTimeMinutes(v)}
                     className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
                       dailyTimeMinutes === v
-                        ? 'bg-indigo-600 text-white'
+                        ? 'bg-violet-600 text-white'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                     }`}
                   >
@@ -492,7 +492,7 @@ export default function CreatePlanContent() {
                               <button
                                 key={idx}
                                 onClick={() => toggleLesson(course.id, idx)}
-                                className={`w-full text-left p-3 rounded-lg flex items-center gap-3 transition ${
+                                className={`w-full text-start p-3 rounded-lg flex items-center gap-3 transition ${
                                   isSkipped
                                     ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300'
                                     : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-700 dark:text-gray-300'
@@ -568,7 +568,7 @@ export default function CreatePlanContent() {
               <button
                 onClick={handleGenerate}
                 disabled={generating}
-                className="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-4 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-semibold rounded-xl transition-all text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {generating ? t('generating') : t('generate')}
               </button>
@@ -591,7 +591,7 @@ export default function CreatePlanContent() {
           <button
             onClick={goNext}
             disabled={!canGoNext}
-            className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-2 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {t('next')}
             <ChevronRight className="w-4 h-4" />

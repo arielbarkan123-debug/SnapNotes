@@ -137,7 +137,7 @@ export default function SessionReflection({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="relative p-6 pb-4 bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+        <div className="relative p-6 pb-4 bg-gradient-to-br from-violet-500 to-purple-600 text-white">
           <button
             onClick={onSkip}
             className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/20 transition-colors"
@@ -155,7 +155,7 @@ export default function SessionReflection({
             <h2 className="text-xl font-bold">
               {isWeekly ? 'Weekly Check-in' : 'Quick Reflection'}
             </h2>
-            <p className="text-indigo-200 text-sm mt-1">
+            <p className="text-violet-200 text-sm mt-1">
               {isWeekly
                 ? 'How was your study week?'
                 : 'Take a moment to reflect on your session'
@@ -225,7 +225,7 @@ export default function SessionReflection({
           <button
             onClick={handleNext}
             disabled={isSaving || (isWeekly && currentStep === 0 && weeklyData.rating === 0)}
-            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold rounded-xl transition-colors disabled:cursor-not-allowed"
+            className="px-6 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-400 text-white font-semibold rounded-xl transition-colors disabled:cursor-not-allowed"
           >
             {isSaving ? 'Saving...' : currentStep === totalSteps - 1 ? 'Done' : 'Next'}
           </button>
@@ -275,14 +275,14 @@ function SessionReflectionContent({
     return (
       <div className="animate-in fade-in slide-in-from-right-4 duration-200">
         {/* Session summary */}
-        <div className="mb-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl">
-          <div className="flex items-center gap-3 text-indigo-700 dark:text-indigo-300">
+        <div className="mb-6 p-4 bg-violet-50 dark:bg-violet-900/20 rounded-xl">
+          <div className="flex items-center gap-3 text-violet-700 dark:text-violet-300">
             <span className="text-2xl">
               {sessionType === 'review' ? '📚' : sessionType === 'lessons' ? '📖' : '✍️'}
             </span>
             <div>
               <p className="font-medium">{getSessionSummary()}</p>
-              <p className="text-sm text-indigo-600 dark:text-indigo-400">
+              <p className="text-sm text-violet-600 dark:text-violet-400">
                 {formatTime(timeSpentMs)} of study time
               </p>
             </div>
@@ -296,7 +296,7 @@ function SessionReflectionContent({
           value={data.learned}
           onChange={(e) => onChange({ ...data, learned: e.target.value })}
           placeholder="Even small insights count! (optional)"
-          className="w-full p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none h-32"
+          className="w-full p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none resize-none h-32"
           autoFocus
         />
       </div>
@@ -312,7 +312,7 @@ function SessionReflectionContent({
         value={data.challenges}
         onChange={(e) => onChange({ ...data, challenges: e.target.value })}
         placeholder="Identifying challenges helps improve your learning path (optional)"
-        className="w-full p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none h-32"
+        className="w-full p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none resize-none h-32"
         autoFocus
       />
     </div>
@@ -346,7 +346,7 @@ function WeeklyReflectionContent({
       <div className="animate-in fade-in slide-in-from-right-4 duration-200">
         {/* Week summary */}
         {weekStats && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl">
+          <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-xl">
             <div className="flex justify-around text-center">
               <div>
                 <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
@@ -356,7 +356,7 @@ function WeeklyReflectionContent({
               </div>
               <div className="w-px bg-gray-200 dark:bg-gray-700" />
               <div>
-                <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">
                   {weekStats.currentStreak}
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400">Day streak</p>
@@ -412,7 +412,7 @@ function WeeklyReflectionContent({
           value={data.wentWell}
           onChange={(e) => onChange({ ...data, wentWell: e.target.value })}
           placeholder="Celebrate your wins, big or small! (optional)"
-          className="w-full p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none h-32"
+          className="w-full p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none resize-none h-32"
           autoFocus
         />
       </div>
@@ -428,7 +428,7 @@ function WeeklyReflectionContent({
         value={data.couldBeBetter}
         onChange={(e) => onChange({ ...data, couldBeBetter: e.target.value })}
         placeholder="Any adjustments you'd like to make? (optional)"
-        className="w-full p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none h-32"
+        className="w-full p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none resize-none h-32"
         autoFocus
       />
     </div>

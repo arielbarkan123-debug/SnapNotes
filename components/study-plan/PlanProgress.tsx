@@ -40,7 +40,7 @@ export default function PlanProgress({ totalTasks, completedTasks, overdueTasks 
 
   const barColor = useMemo(() => {
     if (overdueTasks > 0) return 'from-orange-500 to-red-500'
-    return 'from-indigo-500 to-purple-500'
+    return 'from-violet-500 to-purple-500'
   }, [overdueTasks])
 
   return (

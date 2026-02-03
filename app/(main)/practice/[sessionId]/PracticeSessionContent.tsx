@@ -6,11 +6,13 @@
 // =============================================================================
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useToast } from '@/contexts/ToastContext'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import DifficultyFeedback from '@/components/shared/DifficultyFeedback'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import type {
   PracticeSession,
   PracticeQuestion,
@@ -64,7 +66,7 @@ function ProgressBar({
       </div>
       <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
         <div
-          className="h-full bg-indigo-600 transition-all duration-300"
+          className="h-full bg-violet-600 transition-all duration-300"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -105,10 +107,10 @@ function QuestionCard({ question, onAnswer, isSubmitting }: QuestionCardProps) {
   }, [question.id])
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card p-6 border border-gray-200 dark:border-gray-700">
       {/* Question Type Badge */}
       <div className="flex items-center gap-2 mb-4">
-        <span className="px-2 py-1 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded">
+        <span className="px-2 py-1 text-xs font-medium bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded">
           {question.question_type.replace('_', ' ')}
         </span>
         <span className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
@@ -129,10 +131,10 @@ function QuestionCard({ question, onAnswer, isSubmitting }: QuestionCardProps) {
               key={choice.value}
               onClick={() => setSelectedAnswer(choice.label)}
               className={`
-                w-full p-4 rounded-lg border text-left transition-all
+                w-full p-4 rounded-lg border text-start transition-all
                 ${
                   selectedAnswer === choice.label
-                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                    ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20'
                     : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                 }
               `}
@@ -156,7 +158,7 @@ function QuestionCard({ question, onAnswer, isSubmitting }: QuestionCardProps) {
                 flex-1 py-4 rounded-lg border font-medium transition-all
                 ${
                   selectedAnswer === option.toLowerCase()
-                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                    ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300'
                     : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 text-gray-700 dark:text-gray-300'
                 }
               `}
@@ -178,7 +180,7 @@ function QuestionCard({ question, onAnswer, isSubmitting }: QuestionCardProps) {
                 ? 'Fill in the blank...'
                 : 'Type your answer...'
             }
-            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !isSubmitting) {
                 handleSubmit()
@@ -198,7 +200,7 @@ function QuestionCard({ question, onAnswer, isSubmitting }: QuestionCardProps) {
           ((question.question_type === 'fill_blank' || question.question_type === 'short_answer') &&
             !textAnswer.trim())
         }
-        className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors"
+        className="w-full py-3 px-4 bg-violet-600 hover:bg-violet-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors"
       >
         {isSubmitting ? 'Checking...' : 'Submit Answer'}
       </button>
@@ -221,7 +223,7 @@ interface ResultCardProps {
 
 function ResultCard({ question, isCorrect, userAnswer, onNext, onDifficultyFeedback, questionIndex = 0 }: ResultCardProps) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card p-6 border border-gray-200 dark:border-gray-700">
       {/* Result Badge */}
       <div
         className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 ${
@@ -273,7 +275,7 @@ function ResultCard({ question, isCorrect, userAnswer, onNext, onDifficultyFeedb
       {/* Next Button */}
       <button
         onClick={onNext}
-        className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
+        className="w-full py-3 px-4 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg transition-colors"
       >
         Next Question
       </button>
@@ -304,7 +306,7 @@ function SessionComplete({ session: _session, answeredCount, correctCount }: Ses
   const grade = getGrade(accuracy)
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm border border-gray-200 dark:border-gray-700 text-center">
+    <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card p-8 border border-gray-200 dark:border-gray-700 text-center">
       <div className="text-6xl mb-4">🎉</div>
       <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
         Session Complete!
@@ -337,7 +339,7 @@ function SessionComplete({ session: _session, answeredCount, correctCount }: Ses
         </Link>
         <Link
           href="/dashboard"
-          className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
+          className="flex-1 py-3 px-4 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg transition-colors"
         >
           Go to Dashboard
         </Link>
@@ -357,6 +359,7 @@ export default function PracticeSessionContent({
 }: PracticeSessionContentProps) {
   const router = useRouter()
   const { error: showError } = useToast()
+  const tp = useTranslations('practice')
   const startTimeRef = useRef<number>(Date.now())
 
   // Analytics
@@ -372,6 +375,7 @@ export default function PracticeSessionContent({
   const [correctCount, setCorrectCount] = useState(session.questions_correct)
   const [hasTrackedView, setHasTrackedView] = useState(false)
   const [_submitError, setSubmitError] = useState<{ answer: string; error: string } | null>(null)
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false)
 
   // Current question
   const currentQuestion = questions[currentIndex]
@@ -519,8 +523,6 @@ export default function PracticeSessionContent({
 
   // Handle abandon
   const handleAbandon = useCallback(async () => {
-    if (!confirm('Are you sure you want to quit this session?')) return
-
     try {
       await fetch(`/api/practice/session/${session.id}`, {
         method: 'PATCH',
@@ -548,7 +550,7 @@ export default function PracticeSessionContent({
   // Render complete view
   if (view === 'complete') {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="min-h-screen bg-transparent py-8">
         <div className="max-w-2xl mx-auto px-4">
           <SessionComplete
             session={session}
@@ -561,7 +563,7 @@ export default function PracticeSessionContent({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="min-h-screen bg-transparent py-8">
       <div className="max-w-2xl mx-auto px-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -572,7 +574,7 @@ export default function PracticeSessionContent({
             ← Back
           </Link>
           <button
-            onClick={handleAbandon}
+            onClick={() => setShowQuitConfirm(true)}
             className="text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
           >
             Quit Session
@@ -604,6 +606,19 @@ export default function PracticeSessionContent({
           />
         )}
       </div>
+
+      {/* Quit Session Confirm Modal */}
+      <ConfirmModal
+        isOpen={showQuitConfirm}
+        onClose={() => setShowQuitConfirm(false)}
+        onConfirm={() => {
+          setShowQuitConfirm(false)
+          handleAbandon()
+        }}
+        title={tp('endSession')}
+        message={tp('quitSessionConfirm')}
+        variant="warning"
+      />
     </div>
   )
 }

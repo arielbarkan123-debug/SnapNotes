@@ -223,7 +223,7 @@ export default function EquationWorkspace({
   // Render equation with balance scale visualization
   const renderEquation = (equationStr: string, highlight?: boolean) => {
     return (
-      <div className={`text-2xl sm:text-3xl font-mono ${highlight ? 'text-indigo-600' : 'text-gray-900 dark:text-white'}`}>
+      <div className={`text-2xl sm:text-3xl font-mono ${highlight ? 'text-violet-600' : 'text-gray-900 dark:text-white'}`}>
         {equationStr}
       </div>
     )
@@ -289,7 +289,7 @@ export default function EquationWorkspace({
             {renderEquation(formatEquation(a, 'x', b, c))}
             <div className="text-lg mt-4">
               {language === 'he' ? 'הפתרון:' : 'Solution:'}
-              <span className="font-bold text-indigo-600 ml-2">x = {solution}</span>
+              <span className="font-bold text-violet-600 ml-2">x = {solution}</span>
             </div>
           </div>
         </div>
@@ -301,8 +301,8 @@ export default function EquationWorkspace({
               {language === 'he' ? 'צעדים נכונים' : 'Steps Correct'}
             </div>
           </div>
-          <div className="bg-indigo-50 dark:bg-indigo-900/30 rounded-lg p-3">
-            <div className="text-2xl font-bold text-indigo-600">{accuracy}%</div>
+          <div className="bg-violet-50 dark:bg-violet-900/30 rounded-lg p-3">
+            <div className="text-2xl font-bold text-violet-600">{accuracy}%</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">
               {language === 'he' ? 'דיוק' : 'Accuracy'}
             </div>
@@ -340,7 +340,7 @@ export default function EquationWorkspace({
         </div>
         <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
           <div
-            className="h-full bg-indigo-500 transition-all duration-300"
+            className="h-full bg-violet-500 transition-all duration-300"
             style={{ width: `${((currentStepIndex + 1) / steps.length) * 100}%` }}
           />
         </div>
@@ -348,8 +348,8 @@ export default function EquationWorkspace({
 
       {/* Current step instruction */}
       {currentStep && (
-        <div className="mb-4 p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
-          <p className="text-indigo-800 dark:text-indigo-200 font-medium">
+        <div className="mb-4 p-4 bg-violet-50 dark:bg-violet-900/30 rounded-lg">
+          <p className="text-violet-800 dark:text-violet-200 font-medium">
             {language === 'he' ? currentStep.instructionHe : currentStep.instruction}
           </p>
         </div>
@@ -366,13 +366,13 @@ export default function EquationWorkspace({
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             placeholder={language === 'he' ? 'הכנס תשובה' : 'Enter answer'}
-            className="flex-1 px-4 py-3 text-xl text-center font-mono border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:bg-gray-700 dark:text-white"
+            className="flex-1 px-4 py-3 text-xl text-center font-mono border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:bg-gray-700 dark:text-white"
             disabled={isComplete}
           />
           <button
             type="submit"
             disabled={!userInput.trim() || isComplete}
-            className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-3 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {language === 'he' ? 'בדוק' : 'Check'}
           </button>
@@ -394,7 +394,7 @@ export default function EquationWorkspace({
       {showHints && currentStep && !showHint && !isComplete && (
         <button
           onClick={() => setShowHint(true)}
-          className="w-full py-2 text-gray-500 hover:text-indigo-600 text-sm flex items-center justify-center gap-1"
+          className="w-full py-2 text-gray-500 hover:text-violet-600 text-sm flex items-center justify-center gap-1"
         >
           <span>💡</span>
           <span>{language === 'he' ? 'צריך רמז?' : 'Need a hint?'}</span>

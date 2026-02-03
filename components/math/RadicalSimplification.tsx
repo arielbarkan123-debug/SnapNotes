@@ -224,7 +224,7 @@ export function RadicalSimplification({
 
       {/* Original Expression */}
       <motion.div
-        className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-xl p-5 mb-4 text-center"
+        className="bg-gradient-to-r from-blue-50 to-violet-50 dark:from-blue-900/30 dark:to-violet-900/30 rounded-xl p-5 mb-4 text-center"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
       >
@@ -417,11 +417,11 @@ export function RadicalSimplification({
         {/* Current Expression */}
         {currentStepInfo?.expression && currentStep > 0 && (
           <motion.div
-            className="mt-4 text-center p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg"
+            className="mt-4 text-center p-3 bg-violet-50 dark:bg-violet-900/20 rounded-lg"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <span className="text-xl font-mono font-bold text-indigo-700 dark:text-indigo-300">
+            <span className="text-xl font-mono font-bold text-violet-700 dark:text-violet-300">
               {currentStepInfo.expression}
             </span>
           </motion.div>

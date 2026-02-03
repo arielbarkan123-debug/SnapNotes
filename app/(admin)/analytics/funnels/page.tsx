@@ -54,7 +54,7 @@ export default function FunnelsPage() {
                   {funnel.name.replace(/_/g, ' ')}
                 </h3>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                  <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">
                     {funnel.overallConversionRate}%
                   </p>
                   <p className="text-sm text-gray-500">Overall Conversion</p>
@@ -70,7 +70,7 @@ export default function FunnelsPage() {
                       </div>
                       <div className="flex-1 relative">
                         <div
-                          className="h-8 bg-indigo-500 rounded flex items-center justify-end px-3"
+                          className="h-8 bg-violet-500 rounded flex items-center justify-end px-3"
                           style={{ width: `${width}%` }}
                         >
                           <span className="text-white text-sm font-medium">{step.count}</span>

@@ -19,6 +19,7 @@ interface ErrorBoundaryProps {
     description: string
     tryAgain: string
     reloadPage: string
+    errorCode: string
   }
 }
 
@@ -104,11 +105,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         description: 'We encountered an unexpected error. Please try again, or contact support if the problem persists.',
         tryAgain: 'Try Again',
         reloadPage: 'Reload Page',
+        errorCode: 'Error code:',
       }
 
       // Default error UI
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+        <div className="min-h-screen flex items-center justify-center aurora-bg px-4">
           <div className="max-w-md w-full text-center">
             {/* Error Icon */}
             <div className="w-20 h-20 mx-auto mb-6 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
@@ -137,7 +139,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
             {/* Error Code */}
             <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
-              Error code: <code className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">{this.state.errorCode}</code>
+              {t.errorCode} <code className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">{this.state.errorCode}</code>
             </p>
 
             {/* Error Details (Development Only) */}
@@ -231,7 +233,7 @@ export function ErrorFallback({
 
         {/* Error Code */}
         <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">
-          Error code: <code className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">{displayCode}</code>
+          {t('errorCode')} <code className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">{displayCode}</code>
         </p>
 
         {/* Error Details (Development Only) */}
@@ -337,6 +339,7 @@ export function TranslatedErrorBoundary({ children, fallback }: TranslatedErrorB
         description: t('genericDescription'),
         tryAgain: t('tryAgain'),
         reloadPage: t('reloadPage'),
+        errorCode: t('errorCode'),
       }}
     >
       {children}

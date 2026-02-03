@@ -1,6 +1,6 @@
 export default function LessonLoading() {
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-[calc(100vh-4rem)] bg-transparent">
       {/* Top navigation skeleton */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between">

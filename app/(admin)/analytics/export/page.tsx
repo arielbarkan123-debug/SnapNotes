@@ -178,7 +178,7 @@ export default function ExportPage() {
               key={type.id}
               className={`flex items-start gap-3 p-4 border-2 rounded-xl cursor-pointer transition-colors ${
                 selectedTypes.includes(type.id)
-                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                  ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20'
                   : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
@@ -186,7 +186,7 @@ export default function ExportPage() {
                 type="checkbox"
                 checked={selectedTypes.includes(type.id)}
                 onChange={() => toggleDataType(type.id)}
-                className="mt-1 w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                className="mt-1 w-4 h-4 text-violet-600 border-gray-300 rounded focus:ring-violet-500"
               />
               <div>
                 <p className="font-medium text-gray-900 dark:text-white">{type.label}</p>
@@ -206,7 +206,7 @@ export default function ExportPage() {
           <label
             className={`flex items-center gap-3 px-4 py-3 border-2 rounded-xl cursor-pointer transition-colors ${
               format === 'csv'
-                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20'
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
@@ -216,7 +216,7 @@ export default function ExportPage() {
               value="csv"
               checked={format === 'csv'}
               onChange={() => setFormat('csv')}
-              className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+              className="w-4 h-4 text-violet-600 border-gray-300 focus:ring-violet-500"
             />
             <div>
               <p className="font-medium text-gray-900 dark:text-white">CSV</p>
@@ -228,7 +228,7 @@ export default function ExportPage() {
           <label
             className={`flex items-center gap-3 px-4 py-3 border-2 rounded-xl cursor-pointer transition-colors ${
               format === 'json'
-                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20'
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
@@ -238,7 +238,7 @@ export default function ExportPage() {
               value="json"
               checked={format === 'json'}
               onChange={() => setFormat('json')}
-              className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+              className="w-4 h-4 text-violet-600 border-gray-300 focus:ring-violet-500"
             />
             <div>
               <p className="font-medium text-gray-900 dark:text-white">JSON</p>
@@ -258,7 +258,7 @@ export default function ExportPage() {
           className={`w-full md:w-auto px-8 py-3 rounded-xl font-semibold transition-colors ${
             isExporting || selectedTypes.length === 0
               ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+              : 'bg-violet-600 hover:bg-violet-700 text-white'
           }`}
         >
           {isExporting ? (

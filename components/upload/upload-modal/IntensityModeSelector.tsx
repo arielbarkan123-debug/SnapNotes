@@ -35,7 +35,7 @@ export default function IntensityModeSelector({
             className={`
               relative flex flex-col items-center p-2 xs:p-2.5 rounded-lg xs:rounded-xl border-2 transition-all min-h-[72px] xs:min-h-[80px]
               ${value === mode.id
-                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
+                ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30'
                 : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-700'
               }
               disabled:opacity-50
@@ -50,7 +50,7 @@ export default function IntensityModeSelector({
             {/* Name */}
             <span className={`text-xs font-medium ${
               value === mode.id
-                ? 'text-indigo-700 dark:text-indigo-300'
+                ? 'text-violet-700 dark:text-violet-300'
                 : 'text-gray-700 dark:text-gray-300'
             }`}>
               {t(`intensityMode.${mode.id}.label`)}
@@ -62,7 +62,7 @@ export default function IntensityModeSelector({
             {/* Selected indicator */}
             {value === mode.id && (
               <div className="absolute top-1 right-1">
-                <svg className="w-3.5 h-3.5 text-indigo-500" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-3.5 h-3.5 text-violet-500" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
               </div>

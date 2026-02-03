@@ -648,7 +648,7 @@ export function InequalityDiagram({
                 <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                   {language === 'he' ? 'סימון קטע:' : 'Interval:'}
                 </div>
-                <div className="font-mono font-semibold text-indigo-600 dark:text-indigo-400">
+                <div className="font-mono font-semibold text-violet-600 dark:text-violet-400">
                   {intervalNotation}
                 </div>
               </div>

@@ -65,11 +65,11 @@ export default function QuickActions() {
             router.push('/dashboard')
           }
         }}
-        className="group relative overflow-hidden p-4 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 dark:from-indigo-600 dark:to-indigo-700 text-white shadow-sm hover:shadow-md transition-all text-start"
+        className="group relative overflow-hidden p-4 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 dark:from-violet-600 dark:to-violet-700 text-white shadow-sm hover:shadow-md transition-all text-start"
       >
         <BookOpen className="w-6 h-6 mb-2 opacity-80 group-hover:opacity-100 transition-opacity" />
         <p className="font-semibold text-sm">{t('continueLearning')}</p>
-        <p className="text-xs text-indigo-100 mt-0.5 truncate">
+        <p className="text-xs text-violet-100 mt-0.5 truncate">
           {latestCourse ? latestCourse.title : t('noCourseYet')}
         </p>
       </button>

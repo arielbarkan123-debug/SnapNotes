@@ -1,0 +1,12 @@
+{
+  "title": "פערי ידע",
+  "gapCount": "{count, plural, one {פער #} other {# פערים}}",
+  "criticalBlocking": "{count, plural, one {פער קריטי #} other {# פערים קריטיים}} עלולים לעכב את ההתקדמות שלך",
+  "unknownConcept": "מושג לא ידוע",
+  "moreGaps": "+{count} {count, plural, one {פער} other {פערים}} נוספים",
+  "fixGaps": "תקן פערים",
+  "viewAll": "הצג הכל",
+  "refresh": "רענן",
+  "dismiss": "סגור",
+  "allCaughtUp": "הכל מעודכן! פתרת {count, plural, one {פער ידע #} other {# פערי ידע}} לאחרונה."
+}

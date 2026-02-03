@@ -125,7 +125,7 @@ function MessageBubble({
       <div className={`max-w-[85%] ${isTutor ? '' : 'order-last'}`}>
         {isTutor && (
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-sm">
+            <div className="w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/50 flex items-center justify-center text-sm">
               🎓
             </div>
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('tutor')}</span>
@@ -141,7 +141,7 @@ function MessageBubble({
             rounded-2xl px-4 py-3 text-sm
             ${isTutor
               ? 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-tl-md'
-              : 'bg-indigo-600 text-white rounded-tr-md'
+              : 'bg-violet-600 text-white rounded-tr-md'
             }
           `}
         >
@@ -226,7 +226,7 @@ function ChatProgressBar({
     <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
       <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
+          className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full transition-all duration-500"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -243,7 +243,7 @@ function LoadingIndicator({ t }: { t: ReturnType<typeof useTranslations<'chat'>>
     <div className="flex justify-start">
       <div className="max-w-[85%]">
         <div className="flex items-center gap-2 mb-1">
-          <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-sm">
+          <div className="w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/50 flex items-center justify-center text-sm">
             🎓
           </div>
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('tutor')}</span>
@@ -423,12 +423,12 @@ export default function TutoringChat({
               placeholder={t('typeAnswer')}
               disabled={isLoading}
               rows={1}
-              className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
+              className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent disabled:opacity-50"
             />
             <button
               type="submit"
               disabled={!input.trim() || isLoading}
-              className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-10 h-10 flex items-center justify-center rounded-xl bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -441,7 +441,7 @@ export default function TutoringChat({
             <button
               onClick={onComplete}
               disabled={isLoading}
-              className="text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors disabled:opacity-50"
+              className="text-sm text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 font-medium transition-colors disabled:opacity-50"
             >
               {t('markComplete')}
             </button>

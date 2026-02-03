@@ -59,10 +59,10 @@ function FeatureCard({
   popularLabel?: string
 }) {
   return (
-    <div className={`relative bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-indigo-300 dark:hover:border-indigo-600`}>
+    <div className={`relative bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-violet-300 dark:hover:border-violet-600`}>
       {popular && (
         <div className="absolute top-4 right-4">
-          <span className="px-2.5 py-1 text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-full">
+          <span className="px-2.5 py-1 text-xs font-semibold bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300 rounded-full">
             {popularLabel}
           </span>
         </div>
@@ -93,7 +93,7 @@ function FeatureCard({
       <div className="px-6 pb-6">
         <Link href={href}>
           <Button variant="primary" size="lg" className="w-full">
-            <span className="mr-2">{buttonIcon}</span>
+            <span className="me-2">{buttonIcon}</span>
             {buttonText}
           </Button>
         </Link>
@@ -120,16 +120,16 @@ function QuickActionCard({
   return (
     <Link
       href={href}
-      className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md transition-all group"
+      className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-200 dark:border-gray-700 hover:border-violet-300 dark:hover:border-violet-600 hover:shadow-md transition-all group"
     >
-      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform">
+      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/50 dark:to-purple-900/50 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform">
         {icon}
       </div>
       <div className="flex-1 min-w-0">
         <h4 className="font-semibold text-gray-900 dark:text-white text-sm">{title}</h4>
         <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{description}</p>
       </div>
-      <svg className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-5 h-5 text-gray-400 group-hover:text-violet-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
       </svg>
     </Link>
@@ -142,7 +142,7 @@ function QuickActionCard({
 
 function StatsCard({ value, label, icon }: { value: string; label: string; icon: string }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
+    <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-200 dark:border-gray-700 p-4 text-center">
       <div className="text-2xl mb-1">{icon}</div>
       <div className="text-2xl font-bold text-gray-900 dark:text-white">{value}</div>
       <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
@@ -213,7 +213,7 @@ export default function HomeworkHubPage() {
           </Link>
 
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-3xl shadow-lg">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-3xl shadow-lg">
               📚
             </div>
             <div>
@@ -258,7 +258,7 @@ export default function HomeworkHubPage() {
               buttonText={t('checkMyHomework')}
               buttonIcon="✓"
               href="/homework/check"
-              gradient="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20"
+              gradient="bg-gradient-to-br from-blue-50 to-violet-50 dark:from-blue-900/20 dark:to-violet-900/20"
               popular
               popularLabel={t('popular')}
             />
@@ -325,12 +325,12 @@ export default function HomeworkHubPage() {
               </h2>
               <Link
                 href="/homework/history"
-                className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+                className="text-sm text-violet-600 dark:text-violet-400 hover:underline font-medium"
               >
                 {t('viewAll')}
               </Link>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-200 dark:border-gray-700 overflow-hidden">
               {recentItems.map((item, idx) => (
                 <Link
                   key={item.id}
@@ -340,7 +340,7 @@ export default function HomeworkHubPage() {
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-lg">
+                    <div className="w-10 h-10 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-lg">
                       {item.type === 'check' ? '📝' : '🎓'}
                     </div>
                     <div>
@@ -368,7 +368,7 @@ export default function HomeworkHubPage() {
 
         {/* Empty State */}
         {!isLoading && recentItems.length === 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-200 dark:border-gray-700 p-8 text-center">
             <div className="text-5xl mb-4">🚀</div>
             <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
               {t('readyToStart')}

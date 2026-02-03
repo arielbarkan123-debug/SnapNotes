@@ -37,7 +37,7 @@ export default function MultipleChoiceRenderer({
     const optionIsCorrect = isCorrectOption(option)
 
     let baseClass =
-      'w-full p-4 text-left rounded-xl border-2 transition-all duration-200 font-medium min-h-[56px] '
+      'w-full p-4 text-start rounded-xl border-2 transition-all duration-200 font-medium min-h-[56px] '
 
     if (showResults) {
       if (optionIsCorrect) {
@@ -51,10 +51,10 @@ export default function MultipleChoiceRenderer({
     } else {
       if (isSelected) {
         baseClass +=
-          'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+          'border-violet-500 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
       } else {
         baseClass +=
-          'border-gray-200 dark:border-gray-700 hover:border-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 text-gray-700 dark:text-gray-300'
+          'border-gray-200 dark:border-gray-700 hover:border-violet-400 hover:bg-violet-50/50 dark:hover:bg-violet-900/20 text-gray-700 dark:text-gray-300'
       }
     }
 
@@ -75,7 +75,7 @@ export default function MultipleChoiceRenderer({
       }
     } else {
       if (isSelected) {
-        return 'bg-indigo-500 text-white'
+        return 'bg-violet-500 text-white'
       } else {
         return 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
       }
