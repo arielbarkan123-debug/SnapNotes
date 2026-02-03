@@ -4,10 +4,8 @@ import { useState, useEffect, useMemo } from 'react'
 import {
   type InclinedPlaneData,
   type DiagramStepConfig,
-  type Force,
   FORCE_COLORS,
 } from '@/types/physics'
-import { ForceVector } from './ForceVector'
 
 interface InclinedPlaneProps {
   data: InclinedPlaneData
@@ -30,15 +28,14 @@ interface InclinedPlaneProps {
 }
 
 /**
- * InclinedPlane - SVG component for inclined plane physics diagrams
+ * InclinedPlane - Professional SVG component for inclined plane physics diagrams
  *
  * Features:
- * - Inclined surface with configurable angle
- * - Object on the slope
- * - Progressive force vector reveal
- * - Force decomposition into parallel/perpendicular components
- * - Angle arc and measurement display
- * - Friction indication on surface
+ * - Clear, well-spaced layout
+ * - Large, visible object on slope
+ * - Non-overlapping force vectors with proper origins
+ * - Clean angle indicator
+ * - Coordinate axes in corner (not overlapping)
  */
 export function InclinedPlane({
   data,
@@ -46,8 +43,8 @@ export function InclinedPlane({
   stepConfig,
   onStepComplete,
   animationDuration = 400,
-  width = 450,
-  height = 350,
+  width = 500,
+  height = 380,
   className = '',
   language = 'en',
 }: InclinedPlaneProps) {
@@ -63,39 +60,59 @@ export function InclinedPlane({
     title,
   } = data
 
-  // Defensive defaults for missing data
+  // Defensive defaults
   const object = rawObject || {
     type: 'block' as const,
     position: { x: 0, y: 0 },
     mass: undefined,
     label: undefined,
-    color: '#f3f4f6',
+    color: '#e5e7eb',
   }
   const forces = rawForces || []
 
   const [animatingForces, setAnimatingForces] = useState<Set<string>>(new Set())
 
-  // SVG geometry calculations - improved spacing
-  const padding = { left: 60, right: 40, top: 50, bottom: 60 }
-  const planeLength = width - padding.left - padding.right - 20
+  // === LAYOUT CALCULATIONS ===
+  const margin = { left: 50, right: 30, top: 60, bottom: 50 }
+  const diagramWidth = width - margin.left - margin.right
+  const diagramHeight = height - margin.top - margin.bottom
+
   const angleRad = (angle * Math.PI) / 180
 
-  // Calculate plane vertices - start more to the left for angle label space
-  const planeStart = { x: padding.left + 30, y: height - padding.bottom }
+  // Plane geometry - use most of the available space
+  const planeLength = Math.min(diagramWidth * 0.85, diagramHeight / Math.sin(angleRad) * 0.8)
+
+  // Ground level
+  const groundY = height - margin.bottom
+
+  // Plane start (bottom-left of incline)
+  const planeStart = {
+    x: margin.left + 40,
+    y: groundY
+  }
+
+  // Plane end (top-right of incline)
   const planeEnd = {
     x: planeStart.x + planeLength * Math.cos(angleRad),
     y: planeStart.y - planeLength * Math.sin(angleRad),
   }
 
-  // Object position (somewhere on the slope) - moved up slightly
-  const objectPosition = 0.45 // 0 = bottom, 1 = top
-  const objectOnPlane = {
+  // Object on slope - positioned at 40% up the slope
+  const objectPosition = 0.4
+  const objectOnSlope = {
     x: planeStart.x + planeLength * objectPosition * Math.cos(angleRad),
     y: planeStart.y - planeLength * objectPosition * Math.sin(angleRad),
   }
 
-  // Object size - slightly smaller for better fit
-  const objSize = 40
+  // Object size - LARGER for visibility
+  const objSize = 55
+
+  // Object center (perpendicular offset from slope surface)
+  const perpOffset = objSize / 2 + 3
+  const objectCenter = {
+    x: objectOnSlope.x + perpOffset * Math.sin(angleRad),
+    y: objectOnSlope.y - perpOffset * Math.cos(angleRad),
+  }
 
   // Get current step configuration
   const currentStepConfig = useMemo(() => {
@@ -116,11 +133,6 @@ export function InclinedPlane({
     return forces.slice(0, currentStep)
   }, [forces, currentStep, currentStepConfig])
 
-  // Calculate highlighted forces
-  const highlightedForces = useMemo(() => {
-    return new Set(currentStepConfig.highlightForces || [])
-  }, [currentStepConfig])
-
   // Handle animation completion
   useEffect(() => {
     if (animatingForces.size > 0) {
@@ -132,103 +144,95 @@ export function InclinedPlane({
     }
   }, [animatingForces, animationDuration, onStepComplete])
 
-  // Render the inclined plane surface
-  const renderPlane = () => {
-    // Ground line
-    const groundY = height - padding.bottom
+  // === RENDER FUNCTIONS ===
 
-    return (
-      <g className="inclined-plane-surface">
-        {/* Ground */}
+  // Ground and inclined surface
+  const renderPlane = () => (
+    <g className="plane-surface">
+      {/* Ground line */}
+      <line
+        x1={margin.left}
+        y1={groundY}
+        x2={width - margin.right}
+        y2={groundY}
+        stroke="#374151"
+        strokeWidth={2}
+      />
+
+      {/* Ground hatching */}
+      {Array.from({ length: Math.floor((width - margin.left - margin.right) / 12) }).map((_, i) => (
         <line
-          x1={padding.left - 10}
+          key={i}
+          x1={margin.left + i * 12}
           y1={groundY}
-          x2={width - padding.right + 10}
-          y2={groundY}
-          stroke="#6b7280"
-          strokeWidth={2}
+          x2={margin.left + i * 12 + 6}
+          y2={groundY + 6}
+          stroke="#9ca3af"
+          strokeWidth={1}
         />
+      ))}
 
-        {/* Ground hatching (indicates fixed surface) */}
-        {Array.from({ length: Math.floor((width - padding.left) / 15) }).map((_, i) => (
-          <line
-            key={i}
-            x1={padding.left + i * 15}
-            y1={groundY}
-            x2={padding.left + i * 15 + 8}
-            y2={groundY + 8}
-            stroke="#9ca3af"
-            strokeWidth={1}
-          />
-        ))}
+      {/* Inclined surface - thick and prominent */}
+      <line
+        x1={planeStart.x}
+        y1={planeStart.y}
+        x2={planeEnd.x}
+        y2={planeEnd.y}
+        stroke="#1f2937"
+        strokeWidth={4}
+        strokeLinecap="round"
+      />
 
-        {/* Inclined surface */}
-        <line
-          x1={planeStart.x}
-          y1={planeStart.y}
-          x2={planeEnd.x}
-          y2={planeEnd.y}
-          stroke="#374151"
-          strokeWidth={3}
-          strokeLinecap="round"
-        />
+      {/* Surface texture for friction */}
+      {(frictionCoefficient || surface?.hasRoughness) && (
+        <g className="friction-texture">
+          {Array.from({ length: 10 }).map((_, i) => {
+            const t = (i + 1) / 11
+            const x = planeStart.x + (planeEnd.x - planeStart.x) * t
+            const y = planeStart.y + (planeEnd.y - planeStart.y) * t
+            const perpX = Math.sin(angleRad) * 5
+            const perpY = Math.cos(angleRad) * 5
+            return (
+              <line
+                key={i}
+                x1={x - perpX}
+                y1={y - perpY}
+                x2={x + perpX}
+                y2={y + perpY}
+                stroke="#6b7280"
+                strokeWidth={1.5}
+              />
+            )
+          })}
+        </g>
+      )}
 
-        {/* Surface roughness indication (if friction) */}
-        {(frictionCoefficient || surface?.hasRoughness) && (
-          <g className="surface-roughness">
-            {Array.from({ length: 8 }).map((_, i) => {
-              const t = (i + 1) / 9
-              const x = planeStart.x + (planeEnd.x - planeStart.x) * t
-              const y = planeStart.y + (planeEnd.y - planeStart.y) * t
-              const perpX = Math.sin(angleRad) * 4
-              const perpY = Math.cos(angleRad) * 4
-              return (
-                <line
-                  key={i}
-                  x1={x - perpX}
-                  y1={y - perpY}
-                  x2={x + perpX}
-                  y2={y + perpY}
-                  stroke="#9ca3af"
-                  strokeWidth={1}
-                />
-              )
-            })}
-          </g>
-        )}
+      {/* Vertical support (dashed) */}
+      <line
+        x1={planeEnd.x}
+        y1={planeEnd.y}
+        x2={planeEnd.x}
+        y2={groundY}
+        stroke="#9ca3af"
+        strokeWidth={1.5}
+        strokeDasharray="6 3"
+      />
+    </g>
+  )
 
-        {/* Vertical support line */}
-        <line
-          x1={planeEnd.x}
-          y1={planeEnd.y}
-          x2={planeEnd.x}
-          y2={groundY}
-          stroke="#6b7280"
-          strokeWidth={1.5}
-          strokeDasharray="4 2"
-        />
-      </g>
-    )
-  }
-
-  // Render angle arc and label
+  // Angle arc and label - positioned clearly at bottom left
   const renderAngle = () => {
     if (!showAngleLabel) return null
 
-    const arcRadius = 50
-    const arcX = planeStart.x + arcRadius
-    const arcY = planeStart.y
-
-    // Arc path
+    const arcRadius = 45
     const endAngle = -angleRad
     const arcEndX = planeStart.x + arcRadius * Math.cos(endAngle)
     const arcEndY = planeStart.y + arcRadius * Math.sin(endAngle)
+    const arcPath = `M ${planeStart.x + arcRadius} ${planeStart.y} A ${arcRadius} ${arcRadius} 0 0 0 ${arcEndX} ${arcEndY}`
 
-    const arcPath = `M ${arcX} ${arcY} A ${arcRadius} ${arcRadius} 0 0 0 ${arcEndX} ${arcEndY}`
-
-    // Label position - further out and with background for visibility
+    // Label positioned along the arc midpoint, outside
     const labelAngle = -angleRad / 2
-    const labelRadius = arcRadius + 25
+    const labelRadius = arcRadius + 22
     const labelX = planeStart.x + labelRadius * Math.cos(labelAngle)
     const labelY = planeStart.y + labelRadius * Math.sin(labelAngle)
 
@@ -238,15 +242,17 @@ export function InclinedPlane({
           d={arcPath}
           fill="none"
           stroke="#6366f1"
-          strokeWidth={2}
+          strokeWidth={2.5}
         />
-        {/* Background for label readability */}
+        {/* White background for readability */}
         <rect
-          x={labelX - 30}
-          y={labelY - 10}
-          width={60}
-          height={20}
+          x={labelX - 28}
+          y={labelY - 11}
+          width={56}
+          height={22}
           fill="white"
+          stroke="#e5e7eb"
+          strokeWidth={1}
           rx={4}
         />
         <text
@@ -254,7 +260,7 @@ export function InclinedPlane({
           y={labelY}
           textAnchor="middle"
           dominantBaseline="middle"
-          fontSize={14}
+          fontSize={15}
           fontWeight="600"
           fill="#4f46e5"
         >
@@ -264,205 +270,234 @@ export function InclinedPlane({
     )
   }
 
-  // Render the object on the plane
+  // The object (block/crate) on the slope
   const renderObject = () => {
-    // Object center (offset perpendicular to plane surface)
-    const perpOffset = objSize / 2 + 2
-    const centerX = objectOnPlane.x + perpOffset * Math.sin(angleRad)
-    const centerY = objectOnPlane.y - perpOffset * Math.cos(angleRad)
-
-    // Rotated rectangle for block
-    const halfWidth = objSize / 2
-    const halfHeight = objSize / 2
-
-    // Calculate rotated corners
+    const halfSize = objSize / 2
     const cos = Math.cos(-angleRad)
     const sin = Math.sin(-angleRad)
 
+    // Rotated rectangle corners
     const corners = [
-      { x: -halfWidth, y: -halfHeight },
-      { x: halfWidth, y: -halfHeight },
-      { x: halfWidth, y: halfHeight },
-      { x: -halfWidth, y: halfHeight },
+      { x: -halfSize, y: -halfSize },
+      { x: halfSize, y: -halfSize },
+      { x: halfSize, y: halfSize },
+      { x: -halfSize, y: halfSize },
     ].map((c) => ({
-      x: centerX + c.x * cos - c.y * sin,
-      y: centerY + c.x * sin + c.y * cos,
+      x: objectCenter.x + c.x * cos - c.y * sin,
+      y: objectCenter.y + c.x * sin + c.y * cos,
     }))
 
     const pathD = `M ${corners.map((c) => `${c.x},${c.y}`).join(' L ')} Z`
 
     return (
-      <g className="physics-object">
+      <g className="object-block">
+        {/* Shadow */}
         <path
           d={pathD}
-          fill={object.color || '#f3f4f6'}
-          stroke="#374151"
-          strokeWidth={2}
+          fill="#00000015"
+          transform="translate(3, 3)"
         />
+        {/* Block */}
+        <path
+          d={pathD}
+          fill={object.color || '#e5e7eb'}
+          stroke="#374151"
+          strokeWidth={2.5}
+        />
+        {/* Label inside block */}
         {object.label && (
           <text
-            x={centerX}
-            y={centerY}
+            x={objectCenter.x}
+            y={objectCenter.y - (object.mass ? 6 : 0)}
             textAnchor="middle"
             dominantBaseline="middle"
-            fontSize={16}
+            fontSize={18}
             fontWeight="bold"
-            fill="#374151"
-            transform={`rotate(${-angle}, ${centerX}, ${centerY})`}
+            fill="#1f2937"
+            transform={`rotate(${-angle}, ${objectCenter.x}, ${objectCenter.y - (object.mass ? 6 : 0)})`}
           >
             {object.label}
           </text>
         )}
         {object.mass && (
           <text
-            x={centerX}
-            y={centerY + 15}
+            x={objectCenter.x}
+            y={objectCenter.y + 10}
             textAnchor="middle"
             dominantBaseline="middle"
-            fontSize={11}
-            fill="#6b7280"
-            transform={`rotate(${-angle}, ${centerX}, ${centerY + 15})`}
+            fontSize={12}
+            fill="#4b5563"
+            transform={`rotate(${-angle}, ${objectCenter.x}, ${objectCenter.y + 10})`}
           >
-            m = {object.mass} kg
+            {object.mass} kg
           </text>
         )}
       </g>
     )
   }
 
-  // Calculate force origin for inclined plane
-  const getForceOrigin = (_force: Force): { x: number; y: number } => {
-    // Note: _force param reserved for future per-force positioning
-    const perpOffset = objSize / 2 + 2
-    const centerX = objectOnPlane.x + perpOffset * Math.sin(angleRad)
-    const centerY = objectOnPlane.y - perpOffset * Math.cos(angleRad)
+  // Force vectors - each with proper origin based on force type
+  const renderForces = () => {
+    const forceScale = 1.8
+    const arrowSize = 10
 
-    return { x: centerX, y: centerY }
-  }
+    return visibleForces.map((force) => {
+      const mag = (force.magnitude ?? 0) * forceScale
+      const forceAngleRad = ((force.angle ?? 0) * Math.PI) / 180
 
-  // Render force decomposition components
-  const renderDecomposition = () => {
-    if (!showDecomposition || !currentStepConfig.showComponents) return null
+      // Determine force origin based on type
+      let origin = { ...objectCenter }
+      const halfSize = objSize / 2
 
-    const origin = getForceOrigin(forces[0])
-    const components: JSX.Element[] = []
-
-    visibleForces.forEach((force) => {
-      if (force.type === 'weight' && force.components) {
-        // Weight parallel component (along slope)
-        const parallelAngle = -90 + angle // Down the slope
-        const parallelMag = (force.magnitude ?? 0) * Math.sin(angleRad)
-
-        components.push(
-          <ForceVector
-            key={`${force.name}-parallel`}
-            force={{
-              name: `${force.name}_parallel`,
-              type: 'component',
-              magnitude: parallelMag,
-              angle: parallelAngle,
-              symbol: 'W',
-              subscript: '∥',
-              color: FORCE_COLORS.weight,
-            }}
-            origin={origin}
-            scale={2.5}
-            highlighted={highlightedForces.has(force.name)}
-            animation="fade"
-            strokeWidth={2}
-          />
-        )
-
-        // Weight perpendicular component (into slope)
-        const perpAngle = -angle // Into the slope
-        const perpMag = (force.magnitude ?? 0) * Math.cos(angleRad)
-
-        components.push(
-          <ForceVector
-            key={`${force.name}-perp`}
-            force={{
-              name: `${force.name}_perp`,
-              type: 'component',
-              magnitude: perpMag,
-              angle: perpAngle,
-              symbol: 'W',
-              subscript: '⊥',
-              color: FORCE_COLORS.weight,
-            }}
-            origin={origin}
-            scale={2.5}
-            highlighted={highlightedForces.has(force.name)}
-            animation="fade"
-            strokeWidth={2}
-          />
-        )
+      if (force.type === 'normal') {
+        // Normal force: from center of bottom surface (touching slope)
+        origin = {
+          x: objectOnSlope.x,
+          y: objectOnSlope.y,
+        }
+      } else if (force.type === 'friction') {
+        // Friction: from bottom-front of object along slope
+        origin = {
+          x: objectOnSlope.x + halfSize * Math.cos(angleRad) * 0.5,
+          y: objectOnSlope.y - halfSize * Math.sin(angleRad) * 0.5,
+        }
+      } else if (force.type === 'weight') {
+        // Weight: from center of object
+        origin = { ...objectCenter }
       }
-    })
 
-    return <g className="force-decomposition">{components}</g>
+      const endX = origin.x + mag * Math.cos(forceAngleRad)
+      const endY = origin.y - mag * Math.sin(forceAngleRad)
+
+      // Arrow head
+      const arrowAngle = Math.atan2(origin.y - endY, endX - origin.x)
+      const arrow1 = {
+        x: endX - arrowSize * Math.cos(arrowAngle - Math.PI / 6),
+        y: endY + arrowSize * Math.sin(arrowAngle - Math.PI / 6),
+      }
+      const arrow2 = {
+        x: endX - arrowSize * Math.cos(arrowAngle + Math.PI / 6),
+        y: endY + arrowSize * Math.sin(arrowAngle + Math.PI / 6),
+      }
+
+      // Force color
+      const color = force.color || FORCE_COLORS[force.type] || '#3b82f6'
+
+      // Label position - offset from arrow tip
+      const labelOffset = 18
+      const labelX = endX + labelOffset * Math.cos(forceAngleRad)
+      const labelY = endY - labelOffset * Math.sin(forceAngleRad)
+
+      return (
+        <g key={force.name} className={`force-${force.type}`}>
+          {/* Force arrow line */}
+          <line
+            x1={origin.x}
+            y1={origin.y}
+            x2={endX}
+            y2={endY}
+            stroke={color}
+            strokeWidth={3.5}
+            strokeLinecap="round"
+          />
+          {/* Arrow head */}
+          <polygon
+            points={`${endX},${endY} ${arrow1.x},${arrow1.y} ${arrow2.x},${arrow2.y}`}
+            fill={color}
+          />
+          {/* Label with background */}
+          <rect
+            x={labelX - 14}
+            y={labelY - 10}
+            width={28}
+            height={20}
+            fill="white"
+            stroke={color}
+            strokeWidth={1}
+            rx={3}
+            opacity={0.95}
+          />
+          <text
+            x={labelX}
+            y={labelY}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fontSize={14}
+            fontWeight="bold"
+            fill={color}
+          >
+            {force.symbol || force.name.charAt(0).toUpperCase()}
+            {force.subscript && (
+              <tspan fontSize={10} dy={3}>{force.subscript}</tspan>
+            )}
+          </text>
+        </g>
+      )
+    })
   }
 
-  // Render coordinate axes (optional rotated system) - positioned to the side
+  // Coordinate axes - in top-right corner, small and unobtrusive
   const renderAxes = () => {
     if (coordinateSystem === 'none') return null
 
-    // Position axes to the right of the object, not overlapping
-    const origin = getForceOrigin(forces[0] || { name: '', type: 'weight', magnitude: 0, angle: 0 })
-    const axisLength = 40
+    const axisOrigin = { x: width - 70, y: 50 }
+    const axisLength = 35
     const rotation = coordinateSystem === 'inclined' ? -angle : 0
-
-    // Offset axes to the right side of object
-    const axisOriginX = origin.x + objSize + 15
-    const axisOriginY = origin.y
 
     return (
       <g
         className="coordinate-axes"
-        transform={`rotate(${rotation}, ${axisOriginX}, ${axisOriginY})`}
-        opacity={0.7}
+        transform={`rotate(${rotation}, ${axisOrigin.x}, ${axisOrigin.y})`}
+        opacity={0.6}
       >
+        {/* Background */}
+        <rect
+          x={axisOrigin.x - 10}
+          y={axisOrigin.y - axisLength - 15}
+          width={axisLength + 30}
+          height={axisLength + 25}
+          fill="white"
+          stroke="#e5e7eb"
+          strokeWidth={1}
+          rx={4}
+        />
         {/* X-axis */}
         <line
-          x1={axisOriginX}
-          y1={axisOriginY}
-          x2={axisOriginX + axisLength}
-          y2={axisOriginY}
+          x1={axisOrigin.x}
+          y1={axisOrigin.y}
+          x2={axisOrigin.x + axisLength}
+          y2={axisOrigin.y}
           stroke="#6366f1"
-          strokeWidth={1.5}
-          strokeDasharray="4 2"
-          markerEnd="url(#arrowhead)"
+          strokeWidth={2}
+          markerEnd="url(#axis-arrow)"
         />
         <text
-          x={axisOriginX + axisLength + 10}
-          y={axisOriginY}
-          textAnchor="start"
-          dominantBaseline="middle"
+          x={axisOrigin.x + axisLength + 8}
+          y={axisOrigin.y}
           fontSize={12}
-          fontWeight="500"
+          fontWeight="600"
           fill="#4f46e5"
+          dominantBaseline="middle"
         >
           x
         </text>
-
         {/* Y-axis */}
         <line
-          x1={axisOriginX}
-          y1={axisOriginY}
-          x2={axisOriginX}
-          y2={axisOriginY - axisLength}
+          x1={axisOrigin.x}
+          y1={axisOrigin.y}
+          x2={axisOrigin.x}
+          y2={axisOrigin.y - axisLength}
           stroke="#6366f1"
-          strokeWidth={1.5}
-          strokeDasharray="4 2"
-          markerEnd="url(#arrowhead)"
+          strokeWidth={2}
+          markerEnd="url(#axis-arrow)"
         />
         <text
-          x={axisOriginX}
-          y={axisOriginY - axisLength - 10}
-          textAnchor="middle"
-          dominantBaseline="middle"
+          x={axisOrigin.x}
+          y={axisOrigin.y - axisLength - 8}
           fontSize={12}
-          fontWeight="500"
+          fontWeight="600"
           fill="#4f46e5"
+          textAnchor="middle"
         >
           y
         </text>
@@ -470,43 +505,82 @@ export function InclinedPlane({
     )
   }
 
-  // Render forces
-  const renderForces = () => {
-    return visibleForces.map((force) => {
-      const isHighlighted = highlightedForces.has(force.name)
-      const origin = getForceOrigin(force)
+  // Force decomposition (if enabled)
+  const renderDecomposition = () => {
+    if (!showDecomposition || !currentStepConfig.showComponents) return null
 
-      return (
-        <ForceVector
-          key={force.name}
-          force={force}
-          origin={origin}
-          scale={2.5}
-          highlighted={isHighlighted}
-          showLabel={true}
-          showMagnitude={false}
-          animation={animatingForces.has(force.name) ? 'fade' : 'none'}
-          animationDuration={animationDuration}
-        />
-      )
+    const components: JSX.Element[] = []
+
+    visibleForces.forEach((force) => {
+      if (force.type === 'weight' && force.components) {
+        const mag = (force.magnitude ?? 0) * 1.5
+        const parallelMag = mag * Math.sin(angleRad)
+        const perpMag = mag * Math.cos(angleRad)
+
+        // Parallel component (down the slope)
+        const parallelAngle = -90 + angle
+        const parallelRad = (parallelAngle * Math.PI) / 180
+        const pEndX = objectCenter.x + parallelMag * Math.cos(parallelRad)
+        const pEndY = objectCenter.y - parallelMag * Math.sin(parallelRad)
+
+        components.push(
+          <g key="parallel">
+            <line
+              x1={objectCenter.x}
+              y1={objectCenter.y}
+              x2={pEndX}
+              y2={pEndY}
+              stroke={FORCE_COLORS.weight}
+              strokeWidth={2}
+              strokeDasharray="5 3"
+            />
+            <text x={pEndX + 10} y={pEndY} fontSize={12} fill={FORCE_COLORS.weight}>
+              W∥
+            </text>
+          </g>
+        )
+
+        // Perpendicular component (into slope)
+        const perpAngle = -angle
+        const perpRad = (perpAngle * Math.PI) / 180
+        const perpEndX = objectCenter.x + perpMag * Math.cos(perpRad)
+        const perpEndY = objectCenter.y - perpMag * Math.sin(perpRad)
+
+        components.push(
+          <g key="perpendicular">
+            <line
+              x1={objectCenter.x}
+              y1={objectCenter.y}
+              x2={perpEndX}
+              y2={perpEndY}
+              stroke={FORCE_COLORS.weight}
+              strokeWidth={2}
+              strokeDasharray="5 3"
+            />
+            <text x={perpEndX} y={perpEndY - 10} fontSize={12} fill={FORCE_COLORS.weight}>
+              W⊥
+            </text>
+          </g>
+        )
+      }
     })
+
+    return <g className="decomposition">{components}</g>
   }
 
-  // Render step info
+  // Step info display
   const renderStepInfo = () => {
-    const label = language === 'he'
-      ? currentStepConfig.stepLabelHe
-      : currentStepConfig.stepLabel
+    const label = language === 'he' ? currentStepConfig.stepLabelHe : currentStepConfig.stepLabel
 
     return (
       <g className="step-info">
         {label && (
           <text
-            x={width - 10}
-            y={30}
+            x={width - 15}
+            y={height - 15}
             textAnchor="end"
-            fontSize={13}
-            fill="#4b5563"
+            fontSize={12}
+            fill="#6b7280"
             fontStyle="italic"
           >
             {label}
@@ -514,25 +588,16 @@ export function InclinedPlane({
         )}
         {currentStepConfig.showCalculation && (
           <text
-            x={width - 10}
-            y={50}
-            textAnchor="end"
-            fontSize={14}
+            x={width / 2}
+            y={height - 15}
+            textAnchor="middle"
+            fontSize={13}
             fill="#1f2937"
             fontWeight="500"
           >
             {currentStepConfig.showCalculation}
           </text>
         )}
-        {/* Step counter */}
-        <text
-          x={10}
-          y={height - 10}
-          fontSize={11}
-          fill="#9ca3af"
-        >
-          {language === 'he' ? `שלב ${currentStep}` : `Step ${currentStep}`}
-        </text>
       </g>
     )
   }
@@ -545,6 +610,20 @@ export function InclinedPlane({
       className={`inclined-plane-diagram ${className}`}
       style={{ backgroundColor: '#ffffff', borderRadius: '8px' }}
     >
+      {/* Definitions */}
+      <defs>
+        <marker
+          id="axis-arrow"
+          markerWidth="8"
+          markerHeight="8"
+          refX="6"
+          refY="3"
+          orient="auto"
+        >
+          <path d="M0,0 L0,6 L8,3 Z" fill="#6366f1" />
+        </marker>
+      </defs>
+
       {/* Background */}
       <rect width={width} height={height} fill="#ffffff" rx={8} />
 
@@ -552,7 +631,7 @@ export function InclinedPlane({
       {title && (
         <text
           x={width / 2}
-          y={25}
+          y={28}
           textAnchor="middle"
           fontSize={16}
           fontWeight="bold"
@@ -562,46 +641,21 @@ export function InclinedPlane({
         </text>
       )}
 
-      {/* Inclined plane surface */}
-      {renderPlane()}
-
-      {/* Angle indicator */}
-      {renderAngle()}
-
-      {/* Coordinate axes */}
-      {renderAxes()}
-
-      {/* Object on plane */}
-      {renderObject()}
-
-      {/* Force vectors */}
-      {renderForces()}
-
-      {/* Force decomposition (if enabled) */}
-      {renderDecomposition()}
-
-      {/* Step information */}
-      {renderStepInfo()}
-
-      {/* Friction coefficient display */}
+      {/* Friction coefficient - top left */}
       {frictionCoefficient !== undefined && (
-        <text
-          x={10}
-          y={30}
-          fontSize={12}
-          fill="#6b7280"
-        >
+        <text x={15} y={28} fontSize={14} fontWeight="500" fill="#4b5563">
           μ = {frictionCoefficient}
         </text>
       )}
 
-      <style>
-        {`
-          .inclined-plane-diagram {
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          }
-        `}
-      </style>
+      {/* Render order matters for layering */}
+      {renderPlane()}
+      {renderAngle()}
+      {renderAxes()}
+      {renderObject()}
+      {renderForces()}
+      {renderDecomposition()}
+      {renderStepInfo()}
     </svg>
   )
 }
