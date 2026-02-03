@@ -38,3 +38,13 @@ export {
   calculatePhysicsLayout,
   findAxesPosition,
 } from './layout-engine'
+
+// Step Synchronization
+export {
+  StepSyncManager,
+  createStepsFromDiagramConfig,
+  type StepState,
+  type StepConfig,
+  type StepSyncCallbacks,
+  type StepSyncOptions,
+} from './step-sync-manager'
