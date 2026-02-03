@@ -75,27 +75,27 @@ export function InclinedPlane({
 
   const [animatingForces, setAnimatingForces] = useState<Set<string>>(new Set())
 
-  // SVG geometry calculations
-  const padding = 40
-  const planeLength = width - padding * 2.5
+  // SVG geometry calculations - improved spacing
+  const padding = { left: 60, right: 40, top: 50, bottom: 60 }
+  const planeLength = width - padding.left - padding.right - 20
   const angleRad = (angle * Math.PI) / 180
 
-  // Calculate plane vertices
-  const planeStart = { x: padding, y: height - padding }
+  // Calculate plane vertices - start more to the left for angle label space
+  const planeStart = { x: padding.left + 30, y: height - padding.bottom }
   const planeEnd = {
     x: planeStart.x + planeLength * Math.cos(angleRad),
     y: planeStart.y - planeLength * Math.sin(angleRad),
   }
 
-  // Object position (somewhere on the slope)
-  const objectPosition = 0.5 // 0 = bottom, 1 = top
+  // Object position (somewhere on the slope) - moved up slightly
+  const objectPosition = 0.45 // 0 = bottom, 1 = top
   const objectOnPlane = {
     x: planeStart.x + planeLength * objectPosition * Math.cos(angleRad),
     y: planeStart.y - planeLength * objectPosition * Math.sin(angleRad),
   }
 
-  // Object size
-  const objSize = 45
+  // Object size - slightly smaller for better fit
+  const objSize = 40
 
   // Get current step configuration
   const currentStepConfig = useMemo(() => {
@@ -135,27 +135,27 @@ export function InclinedPlane({
   // Render the inclined plane surface
   const renderPlane = () => {
     // Ground line
-    const groundY = height - padding
+    const groundY = height - padding.bottom
 
     return (
       <g className="inclined-plane-surface">
         {/* Ground */}
         <line
-          x1={0}
+          x1={padding.left - 10}
           y1={groundY}
-          x2={width}
+          x2={width - padding.right + 10}
           y2={groundY}
           stroke="#6b7280"
           strokeWidth={2}
         />
 
         {/* Ground hatching (indicates fixed surface) */}
-        {Array.from({ length: Math.floor(width / 15) }).map((_, i) => (
+        {Array.from({ length: Math.floor((width - padding.left) / 15) }).map((_, i) => (
           <line
             key={i}
-            x1={i * 15}
+            x1={padding.left + i * 15}
             y1={groundY}
-            x2={i * 15 + 8}
+            x2={padding.left + i * 15 + 8}
             y2={groundY + 8}
             stroke="#9ca3af"
             strokeWidth={1}
@@ -215,21 +215,20 @@ export function InclinedPlane({
   const renderAngle = () => {
     if (!showAngleLabel) return null
 
-    const arcRadius = 40
+    const arcRadius = 50
     const arcX = planeStart.x + arcRadius
     const arcY = planeStart.y
 
     // Arc path
-    const _startAngle = 0 // Used for arc start position (horizontal)
     const endAngle = -angleRad
     const arcEndX = planeStart.x + arcRadius * Math.cos(endAngle)
     const arcEndY = planeStart.y + arcRadius * Math.sin(endAngle)
 
     const arcPath = `M ${arcX} ${arcY} A ${arcRadius} ${arcRadius} 0 0 0 ${arcEndX} ${arcEndY}`
 
-    // Label position
+    // Label position - further out and with background for visibility
     const labelAngle = -angleRad / 2
-    const labelRadius = arcRadius + 15
+    const labelRadius = arcRadius + 25
     const labelX = planeStart.x + labelRadius * Math.cos(labelAngle)
     const labelY = planeStart.y + labelRadius * Math.sin(labelAngle)
 
@@ -238,8 +237,17 @@ export function InclinedPlane({
         <path
           d={arcPath}
           fill="none"
-          stroke="#6b7280"
-          strokeWidth={1.5}
+          stroke="#6366f1"
+          strokeWidth={2}
+        />
+        {/* Background for label readability */}
+        <rect
+          x={labelX - 30}
+          y={labelY - 10}
+          width={60}
+          height={20}
+          fill="white"
+          rx={4}
         />
         <text
           x={labelX}
@@ -247,8 +255,8 @@ export function InclinedPlane({
           textAnchor="middle"
           dominantBaseline="middle"
           fontSize={14}
-          fontWeight="500"
-          fill="#374151"
+          fontWeight="600"
+          fill="#4f46e5"
         >
           θ = {angle}°
         </text>
@@ -394,60 +402,69 @@ export function InclinedPlane({
     return <g className="force-decomposition">{components}</g>
   }
 
-  // Render coordinate axes (optional rotated system)
+  // Render coordinate axes (optional rotated system) - positioned to the side
   const renderAxes = () => {
     if (coordinateSystem === 'none') return null
 
+    // Position axes to the right of the object, not overlapping
     const origin = getForceOrigin(forces[0] || { name: '', type: 'weight', magnitude: 0, angle: 0 })
-    const axisLength = 50
+    const axisLength = 40
     const rotation = coordinateSystem === 'inclined' ? -angle : 0
+
+    // Offset axes to the right side of object
+    const axisOriginX = origin.x + objSize + 15
+    const axisOriginY = origin.y
 
     return (
       <g
         className="coordinate-axes"
-        transform={`rotate(${rotation}, ${origin.x}, ${origin.y})`}
-        opacity={0.6}
+        transform={`rotate(${rotation}, ${axisOriginX}, ${axisOriginY})`}
+        opacity={0.7}
       >
         {/* X-axis */}
         <line
-          x1={origin.x}
-          y1={origin.y}
-          x2={origin.x + axisLength}
-          y2={origin.y}
-          stroke="#9ca3af"
+          x1={axisOriginX}
+          y1={axisOriginY}
+          x2={axisOriginX + axisLength}
+          y2={axisOriginY}
+          stroke="#6366f1"
           strokeWidth={1.5}
           strokeDasharray="4 2"
+          markerEnd="url(#arrowhead)"
         />
         <text
-          x={origin.x + axisLength + 8}
-          y={origin.y}
+          x={axisOriginX + axisLength + 10}
+          y={axisOriginY}
           textAnchor="start"
           dominantBaseline="middle"
-          fontSize={11}
-          fill="#6b7280"
+          fontSize={12}
+          fontWeight="500"
+          fill="#4f46e5"
         >
-          {coordinateSystem === 'inclined' ? 'x' : 'x'}
+          x
         </text>
 
         {/* Y-axis */}
         <line
-          x1={origin.x}
-          y1={origin.y}
-          x2={origin.x}
-          y2={origin.y - axisLength}
-          stroke="#9ca3af"
+          x1={axisOriginX}
+          y1={axisOriginY}
+          x2={axisOriginX}
+          y2={axisOriginY - axisLength}
+          stroke="#6366f1"
           strokeWidth={1.5}
           strokeDasharray="4 2"
+          markerEnd="url(#arrowhead)"
         />
         <text
-          x={origin.x}
-          y={origin.y - axisLength - 8}
+          x={axisOriginX}
+          y={axisOriginY - axisLength - 10}
           textAnchor="middle"
           dominantBaseline="middle"
-          fontSize={11}
-          fill="#6b7280"
+          fontSize={12}
+          fontWeight="500"
+          fill="#4f46e5"
         >
-          {coordinateSystem === 'inclined' ? 'y' : 'y'}
+          y
         </text>
       </g>
     )
