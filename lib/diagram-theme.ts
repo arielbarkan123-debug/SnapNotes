@@ -752,6 +752,111 @@ export const BIOLOGY_COLORS = {
 // Theme Export
 // ============================================================================
 
+// ============================================================================
+// RTL (Right-to-Left) Support Utilities
+// ============================================================================
+
+/**
+ * RTL utilities for proper diagram rendering in Hebrew/Arabic locales.
+ * These helpers ensure diagrams display correctly regardless of text direction.
+ */
+export const RTL = {
+  /**
+   * Get the text anchor for labels based on direction
+   * In RTL, 'start' becomes 'end' and vice versa
+   */
+  getTextAnchor: (
+    anchor: 'start' | 'middle' | 'end',
+    isRtl: boolean
+  ): 'start' | 'middle' | 'end' => {
+    if (!isRtl || anchor === 'middle') return anchor
+    return anchor === 'start' ? 'end' : 'start'
+  },
+
+  /**
+   * Flip X coordinate for RTL layouts
+   * Used when the entire diagram needs to be mirrored
+   */
+  flipX: (x: number, width: number, isRtl: boolean): number => {
+    return isRtl ? width - x : x
+  },
+
+  /**
+   * Get transform for horizontal flip
+   * Applies CSS transform to mirror diagram content
+   */
+  getFlipTransform: (width: number, isRtl: boolean): string => {
+    return isRtl ? `translate(${width}, 0) scale(-1, 1)` : ''
+  },
+
+  /**
+   * Adjust label position for RTL
+   * Ensures labels stay correctly positioned when flipped
+   */
+  adjustLabelPosition: (
+    x: number,
+    width: number,
+    offset: number,
+    isRtl: boolean
+  ): number => {
+    if (isRtl) {
+      return width - x - offset
+    }
+    return x + offset
+  },
+
+  /**
+   * Get direction-aware padding/margin
+   */
+  getDirectionalSpacing: (
+    start: number,
+    end: number,
+    isRtl: boolean
+  ): { left: number; right: number } => {
+    return isRtl
+      ? { left: end, right: start }
+      : { left: start, right: end }
+  },
+
+  /**
+   * Determine if content should flow right-to-left
+   * Can be used with locale detection
+   */
+  isRtlLocale: (locale: string): boolean => {
+    const rtlLocales = ['he', 'ar', 'fa', 'ur', 'yi']
+    return rtlLocales.some(rtl => locale.startsWith(rtl))
+  },
+
+  /**
+   * Get CSS direction property
+   */
+  getCssDirection: (isRtl: boolean): 'ltr' | 'rtl' => {
+    return isRtl ? 'rtl' : 'ltr'
+  },
+
+  /**
+   * SVG transform for mirroring number lines and axes
+   * Keeps numbers readable while flipping the line direction
+   */
+  getAxisTransform: (isRtl: boolean, width: number): string => {
+    if (!isRtl) return ''
+    return `translate(${width}, 0) scale(-1, 1)`
+  },
+
+  /**
+   * Preserve text orientation in flipped diagrams
+   * Apply this to text elements to keep them readable
+   */
+  getTextPreserveTransform: (x: number, isRtl: boolean): string => {
+    if (!isRtl) return ''
+    return `translate(${x * 2}, 0) scale(-1, 1)`
+  },
+}
+
+// ============================================================================
+// Diagram Theme Export
+// ============================================================================
+
 export const DIAGRAM_THEME = {
   colors: COLORS,
   forces: FORCE_COLORS,
@@ -770,6 +875,7 @@ export const DIAGRAM_THEME = {
   arrows: ARROW_STYLES,
   zIndex: Z_INDEX,
   themed: THEMED,
+  rtl: RTL,
 }
 
 export default DIAGRAM_THEME

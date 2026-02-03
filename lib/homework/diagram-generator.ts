@@ -37,7 +37,7 @@ export function detectPhysicsDiagramType(
   questionText: string,
   topic: string,
   subject: string
-): 'fbd' | 'inclined_plane' | 'projectile' | null {
+): 'fbd' | 'inclined_plane' | 'projectile' | 'collision' | 'circular_motion' | 'energy' | null {
   const text = (questionText + ' ' + topic).toLowerCase()
 
   // Check for inclined plane problems
@@ -48,6 +48,46 @@ export function detectPhysicsDiagramType(
     (text.includes('angle') && (text.includes('surface') || text.includes('plane')))
   ) {
     return 'inclined_plane'
+  }
+
+  // Check for collision/momentum problems
+  if (
+    text.includes('collision') ||
+    text.includes('momentum') ||
+    text.includes('collide') ||
+    text.includes('elastic') ||
+    text.includes('inelastic') ||
+    text.includes('conservation of momentum') ||
+    (text.includes('mass') && text.includes('velocity') && (text.includes('before') || text.includes('after')))
+  ) {
+    return 'collision'
+  }
+
+  // Check for circular motion problems
+  if (
+    text.includes('circular motion') ||
+    text.includes('centripetal') ||
+    text.includes('centrifugal') ||
+    text.includes('orbit') ||
+    text.includes('revolve') ||
+    text.includes('rotating') ||
+    text.includes('angular velocity') ||
+    text.includes('radius') && (text.includes('velocity') || text.includes('speed'))
+  ) {
+    return 'circular_motion'
+  }
+
+  // Check for energy problems
+  if (
+    text.includes('kinetic energy') ||
+    text.includes('potential energy') ||
+    text.includes('conservation of energy') ||
+    text.includes('work-energy') ||
+    text.includes('gravitational potential') ||
+    text.includes('elastic potential') ||
+    (text.includes('height') && text.includes('energy'))
+  ) {
+    return 'energy'
   }
 
   // Check for free body diagram problems
@@ -61,6 +101,8 @@ export function detectPhysicsDiagramType(
     text.includes('acceleration') ||
     text.includes('pull') ||
     text.includes('push') ||
+    text.includes('weight') ||
+    text.includes('normal force') ||
     (subject === 'science' && text.includes('block'))
   ) {
     return 'fbd'
@@ -71,6 +113,9 @@ export function detectPhysicsDiagramType(
     text.includes('projectile') ||
     text.includes('trajectory') ||
     text.includes('launch') ||
+    text.includes('parabolic') ||
+    text.includes('horizontal velocity') ||
+    text.includes('vertical velocity') ||
     (text.includes('throw') && text.includes('angle'))
   ) {
     return 'projectile'
@@ -318,10 +363,40 @@ export function generateInclinedPlaneDiagram(
 export function detectMathDiagramType(
   questionText: string,
   topic: string
-): 'long_division' | 'equation' | 'fraction' | 'coordinate_plane' | 'bar_model' | 'triangle' | 'number_line' | null {
+): 'long_division' | 'equation' | 'fraction' | 'coordinate_plane' | 'bar_model' | 'triangle' | 'circle' | 'number_line' | 'quadratic' | 'linear' | null {
   const text = (questionText + ' ' + topic).toLowerCase()
 
-  // Check for coordinate plane / graphing
+  // Check for quadratic functions (high priority - specific detection)
+  if (
+    text.includes('quadratic') ||
+    text.includes('parabola') ||
+    text.includes('vertex') ||
+    text.includes('axis of symmetry') ||
+    text.match(/[+-]?\d*x\^?2/) ||           // x², 2x², -x²
+    text.match(/[+-]?\d*x²/) ||               // Using superscript ²
+    text.match(/ax\^?2\s*[+\-]\s*bx/) ||      // ax² + bx pattern
+    text.includes('roots') ||
+    text.includes('discriminant') ||
+    text.includes('completing the square') ||
+    text.includes('factoring') && text.includes('quadratic')
+  ) {
+    return 'quadratic'
+  }
+
+  // Check for linear functions
+  if (
+    text.includes('linear') ||
+    text.includes('slope') ||
+    text.includes('y-intercept') ||
+    text.includes('rise over run') ||
+    text.match(/y\s*=\s*[+-]?\d*x\s*[+\-]\s*\d+/) ||  // y = mx + b pattern
+    text.match(/y\s*=\s*[+-]?\d*x/) ||                 // y = mx pattern
+    text.includes('gradient')
+  ) {
+    return 'linear'
+  }
+
+  // Check for coordinate plane / graphing (general)
   if (
     text.includes('graph') ||
     text.includes('plot') ||
@@ -330,7 +405,10 @@ export function detectMathDiagramType(
     text.includes('y-axis') ||
     text.includes('function') ||
     text.match(/f\(x\)/) ||
-    text.match(/y\s*=/)
+    text.match(/y\s*=/) ||
+    text.includes('domain') ||
+    text.includes('range') ||
+    text.includes('intercept')
   ) {
     return 'coordinate_plane'
   }
@@ -348,11 +426,35 @@ export function detectMathDiagramType(
     return 'bar_model'
   }
 
-  // Check for geometry (triangle)
+  // Check for geometry - circle
+  if (
+    text.includes('circle') ||
+    text.includes('radius') ||
+    text.includes('diameter') ||
+    text.includes('circumference') ||
+    text.includes('arc') && !text.includes('search') ||  // Avoid false positive with "search"
+    text.includes('sector') ||
+    text.includes('chord') ||
+    text.includes('tangent') && text.includes('circle') ||
+    text.includes('inscribed') ||
+    text.includes('central angle')
+  ) {
+    return 'circle'
+  }
+
+  // Check for geometry - triangle
   if (
     text.includes('triangle') ||
-    text.includes('angle') && (text.includes('side') || text.includes('degree')) ||
-    text.includes('pythagorean')
+    (text.includes('angle') && (text.includes('side') || text.includes('degree'))) ||
+    text.includes('pythagorean') ||
+    text.includes('hypotenuse') ||
+    text.includes('similar triangles') ||
+    text.includes('congruent') ||
+    text.includes('isosceles') ||
+    text.includes('equilateral') ||
+    text.includes('scalene') ||
+    text.includes('right triangle') ||
+    text.includes('sine') || text.includes('cosine') || text.includes('tangent') && !text.includes('circle')
   ) {
     return 'triangle'
   }
@@ -362,7 +464,8 @@ export function detectMathDiagramType(
     text.includes('number line') ||
     (text.includes('negative') && text.includes('positive')) ||
     text.includes('integers') ||
-    text.includes('absolute value')
+    text.includes('absolute value') ||
+    text.includes('inequality') && (text.includes('<') || text.includes('>'))
   ) {
     return 'number_line'
   }
@@ -383,7 +486,9 @@ export function detectMathDiagramType(
     text.includes('equation') ||
     text.includes('find x') ||
     text.includes('find the value') ||
-    text.match(/\d*x\s*[+\-]\s*\d+\s*=/)
+    text.match(/\d*x\s*[+\-]\s*\d+\s*=/) ||
+    text.includes('simultaneous') ||
+    text.includes('system of equations')
   ) {
     return 'equation'
   }
@@ -393,7 +498,10 @@ export function detectMathDiagramType(
     text.includes('fraction') ||
     text.includes('numerator') ||
     text.includes('denominator') ||
-    text.match(/\d+\/\d+/)
+    text.match(/\d+\/\d+/) ||
+    text.includes('simplify') && text.includes('/') ||
+    text.includes('common denominator') ||
+    text.includes('mixed number')
   ) {
     return 'fraction'
   }
@@ -626,6 +734,273 @@ export function generateLongDivisionDiagram(
       title: `${dividend} ÷ ${divisor}`,
     },
     stepConfig,
+  }
+}
+
+// ============================================================================
+// Coordinate Plane / Graphing Diagram Generation
+// ============================================================================
+
+interface QuadraticCoefficients {
+  a: number
+  b: number
+  c: number
+}
+
+interface LinearCoefficients {
+  m: number  // slope
+  b: number  // y-intercept
+}
+
+/**
+ * Extract quadratic coefficients from problem text (ax² + bx + c)
+ */
+function extractQuadraticCoefficients(questionText: string): QuadraticCoefficients | null {
+  // Patterns for quadratic expressions
+  const patterns = [
+    // Standard form: ax² + bx + c, 2x² - 3x + 1, etc.
+    /([+-]?\d*)?x\^?2\s*([+-]\s*\d*)?x?\s*([+-]\s*\d+)?/i,
+    // y = ax² + bx + c
+    /y\s*=\s*([+-]?\d*)?x\^?2\s*([+-]\s*\d*)?x?\s*([+-]\s*\d+)?/i,
+    // f(x) = ax² + bx + c
+    /f\s*\(\s*x\s*\)\s*=\s*([+-]?\d*)?x\^?2\s*([+-]\s*\d*)?x?\s*([+-]\s*\d+)?/i,
+  ]
+
+  for (const pattern of patterns) {
+    const match = questionText.match(pattern)
+    if (match) {
+      // Parse coefficients with defaults
+      const aStr = match[1]?.replace(/\s/g, '') || '1'
+      const bStr = match[2]?.replace(/\s/g, '') || '0'
+      const cStr = match[3]?.replace(/\s/g, '') || '0'
+
+      const a = aStr === '' || aStr === '+' ? 1 : aStr === '-' ? -1 : parseFloat(aStr)
+      const b = bStr === '' || bStr === '+' ? 1 : bStr === '-' ? -1 : parseFloat(bStr.replace(/x/i, ''))
+      const c = parseFloat(cStr) || 0
+
+      if (!isNaN(a) && a !== 0) {
+        return { a, b: isNaN(b) ? 0 : b, c: isNaN(c) ? 0 : c }
+      }
+    }
+  }
+
+  // Default quadratic for general quadratic questions
+  if (questionText.toLowerCase().includes('quadratic') || questionText.toLowerCase().includes('parabola')) {
+    return { a: 1, b: -2, c: -3 }  // x² - 2x - 3 (has nice roots at -1 and 3)
+  }
+
+  return null
+}
+
+/**
+ * Extract linear coefficients from problem text (y = mx + b)
+ */
+function extractLinearCoefficients(questionText: string): LinearCoefficients | null {
+  // Patterns for linear expressions
+  const patterns = [
+    // y = mx + b, y = 2x + 3, y = -x - 1
+    /y\s*=\s*([+-]?\d*\.?\d*)?x\s*([+-]\s*\d+\.?\d*)?/i,
+    // f(x) = mx + b
+    /f\s*\(\s*x\s*\)\s*=\s*([+-]?\d*\.?\d*)?x\s*([+-]\s*\d+\.?\d*)?/i,
+    // slope m and y-intercept b mentioned
+    /slope\s*(?:is|=|of)?\s*([+-]?\d+\.?\d*)/i,
+  ]
+
+  for (const pattern of patterns) {
+    const match = questionText.match(pattern)
+    if (match) {
+      const mStr = match[1]?.replace(/\s/g, '') || '1'
+      const bStr = match[2]?.replace(/\s/g, '') || '0'
+
+      const m = mStr === '' || mStr === '+' ? 1 : mStr === '-' ? -1 : parseFloat(mStr)
+      const b = parseFloat(bStr) || 0
+
+      if (!isNaN(m)) {
+        return { m, b: isNaN(b) ? 0 : b }
+      }
+    }
+  }
+
+  // Look for slope/intercept separately
+  const slopeMatch = questionText.match(/slope\s*(?:is|=|of)?\s*([+-]?\d+\.?\d*)/i)
+  const interceptMatch = questionText.match(/y-intercept\s*(?:is|=|of)?\s*([+-]?\d+\.?\d*)/i) ||
+                         questionText.match(/intercept\s*(?:is|=|of)?\s*\(?\s*0\s*,\s*([+-]?\d+\.?\d*)\s*\)?/i)
+
+  if (slopeMatch || interceptMatch) {
+    const m = slopeMatch ? parseFloat(slopeMatch[1]) : 1
+    const b = interceptMatch ? parseFloat(interceptMatch[1]) : 0
+    return { m, b }
+  }
+
+  return null
+}
+
+/**
+ * Generate a coordinate plane diagram for a quadratic function
+ */
+export function generateQuadraticDiagram(questionText: string): TutorDiagramState | undefined {
+  const coeffs = extractQuadraticCoefficients(questionText)
+  if (!coeffs) return undefined
+
+  const { a, b, c } = coeffs
+
+  // Calculate key features
+  const vertexX = -b / (2 * a)
+  const vertexY = a * vertexX * vertexX + b * vertexX + c
+  const discriminant = b * b - 4 * a * c
+  const roots: { x: number; y: number }[] = []
+
+  if (discriminant >= 0) {
+    const root1 = (-b + Math.sqrt(discriminant)) / (2 * a)
+    const root2 = (-b - Math.sqrt(discriminant)) / (2 * a)
+    roots.push({ x: Math.round(root1 * 100) / 100, y: 0 })
+    if (Math.abs(root1 - root2) > 0.01) {
+      roots.push({ x: Math.round(root2 * 100) / 100, y: 0 })
+    }
+  }
+
+  // Calculate axis bounds based on vertex and roots
+  const xExtent = Math.max(Math.abs(vertexX) + 5, ...roots.map(r => Math.abs(r.x) + 2))
+  const yExtent = Math.max(Math.abs(vertexY) + 5, 10)
+
+  // Format the expression
+  const formatCoeff = (coeff: number, isFirst: boolean, variable: string): string => {
+    if (coeff === 0) return ''
+    const sign = coeff > 0 ? (isFirst ? '' : ' + ') : ' - '
+    const absCoeff = Math.abs(coeff)
+    const coeffStr = absCoeff === 1 && variable ? '' : absCoeff.toString()
+    return `${sign}${coeffStr}${variable}`
+  }
+
+  const expression = `${formatCoeff(a, true, 'x^2')}${formatCoeff(b, false, 'x')}${formatCoeff(c, false, '')}`
+    .trim() || '0'
+
+  return {
+    type: 'coordinate_plane',
+    visibleStep: 0,
+    totalSteps: 5,
+    data: {
+      xMin: -Math.ceil(xExtent),
+      xMax: Math.ceil(xExtent),
+      yMin: a > 0 ? Math.floor(vertexY) - 3 : -Math.ceil(yExtent),
+      yMax: a > 0 ? Math.ceil(yExtent) : Math.ceil(vertexY) + 3,
+      curves: [
+        {
+          expression: `${a}*x^2 + ${b}*x + ${c}`,
+          color: '#6366f1',
+          label: `y = ${expression}`,
+        },
+      ],
+      points: [
+        { x: vertexX, y: vertexY, label: `Vertex (${Math.round(vertexX * 10) / 10}, ${Math.round(vertexY * 10) / 10})`, color: '#ef4444' },
+        { x: 0, y: c, label: `y-int (0, ${c})`, color: '#22c55e' },
+        ...roots.map((r, i) => ({
+          x: r.x,
+          y: r.y,
+          label: `Root ${i + 1} (${r.x}, 0)`,
+          color: '#f59e0b',
+        })),
+      ],
+      lines: [
+        { points: [{ x: vertexX, y: -100 }, { x: vertexX, y: 100 }], color: '#9ca3af', dashed: true, label: 'Axis of symmetry' },
+      ],
+      title: `Quadratic Function: y = ${expression}`,
+      showGrid: true,
+    },
+    stepConfig: [
+      { step: 0, stepLabel: 'Set up the coordinate plane' },
+      { step: 1, stepLabel: `Identify the equation: y = ${expression}`, showCalculation: `a = ${a}, b = ${b}, c = ${c}` },
+      { step: 2, stepLabel: `Find the vertex: x = -b/(2a) = ${Math.round(vertexX * 10) / 10}`, showCalculation: `Vertex: (${Math.round(vertexX * 10) / 10}, ${Math.round(vertexY * 10) / 10})` },
+      { step: 3, stepLabel: `y-intercept at x = 0: (0, ${c})`, showCalculation: `Plug in x = 0: y = ${c}` },
+      { step: 4, stepLabel: discriminant >= 0 ? `Roots: ${roots.map(r => r.x).join(', ')}` : 'No real roots', showCalculation: `Discriminant = ${Math.round(discriminant * 10) / 10}` },
+    ],
+  }
+}
+
+/**
+ * Generate a coordinate plane diagram for a linear function
+ */
+export function generateLinearDiagram(questionText: string): TutorDiagramState | undefined {
+  const coeffs = extractLinearCoefficients(questionText)
+  if (!coeffs) return undefined
+
+  const { m, b } = coeffs
+
+  // Calculate x-intercept
+  const xIntercept = m !== 0 ? -b / m : undefined
+
+  // Format the expression
+  const formatSlope = m === 1 ? '' : m === -1 ? '-' : m.toString()
+  const formatIntercept = b === 0 ? '' : b > 0 ? ` + ${b}` : ` - ${Math.abs(b)}`
+  const expression = m === 0 ? `${b}` : `${formatSlope}x${formatIntercept}`
+
+  // Calculate bounds
+  const xExtent = Math.max(10, xIntercept ? Math.abs(xIntercept) + 3 : 10)
+  const yExtent = Math.max(10, Math.abs(b) + Math.abs(m) * 5 + 3)
+
+  return {
+    type: 'coordinate_plane',
+    visibleStep: 0,
+    totalSteps: 4,
+    data: {
+      xMin: -Math.ceil(xExtent),
+      xMax: Math.ceil(xExtent),
+      yMin: -Math.ceil(yExtent),
+      yMax: Math.ceil(yExtent),
+      curves: [
+        {
+          expression: `${m}*x + ${b}`,
+          color: '#3b82f6',
+          label: `y = ${expression}`,
+        },
+      ],
+      points: [
+        { x: 0, y: b, label: `y-intercept (0, ${b})`, color: '#22c55e' },
+        ...(xIntercept !== undefined ? [{ x: Math.round(xIntercept * 100) / 100, y: 0, label: `x-intercept (${Math.round(xIntercept * 100) / 100}, 0)`, color: '#f59e0b' }] : []),
+        { x: 1, y: m + b, label: `(1, ${m + b})`, color: '#6366f1' },
+      ],
+      title: `Linear Function: y = ${expression}`,
+      showGrid: true,
+    },
+    stepConfig: [
+      { step: 0, stepLabel: 'Set up the coordinate plane' },
+      { step: 1, stepLabel: `Identify slope m = ${m} and y-intercept b = ${b}`, showCalculation: `y = mx + b → y = ${expression}` },
+      { step: 2, stepLabel: `Plot y-intercept at (0, ${b})`, showCalculation: 'Where the line crosses the y-axis' },
+      { step: 3, stepLabel: `Use slope to find another point: rise ${m}, run 1`, showCalculation: xIntercept !== undefined ? `x-intercept at (${Math.round(xIntercept * 100) / 100}, 0)` : 'Connect the points' },
+    ],
+  }
+}
+
+/**
+ * Generate a generic coordinate plane diagram
+ */
+export function generateCoordinatePlaneDiagram(questionText: string): TutorDiagramState | undefined {
+  // Try quadratic first
+  const quadratic = generateQuadraticDiagram(questionText)
+  if (quadratic) return quadratic
+
+  // Try linear
+  const linear = generateLinearDiagram(questionText)
+  if (linear) return linear
+
+  // Default empty coordinate plane
+  return {
+    type: 'coordinate_plane',
+    visibleStep: 0,
+    totalSteps: 1,
+    data: {
+      xMin: -10,
+      xMax: 10,
+      yMin: -10,
+      yMax: 10,
+      curves: [],
+      points: [],
+      title: 'Coordinate Plane',
+      showGrid: true,
+    },
+    stepConfig: [
+      { step: 0, stepLabel: 'Coordinate plane ready for graphing' },
+    ],
   }
 }
 
@@ -1229,10 +1604,37 @@ export function generateDiagramForProblem(
 
     // Try math diagrams
     const mathType = detectMathDiagramType(safeQuestionText, safeTopic)
-    if (mathType === 'long_division') {
+    if (mathType) {
       try {
-        const diagram = generateLongDivisionDiagram(safeQuestionText)
-        return validateDiagramState(diagram, 'long_division')
+        switch (mathType) {
+          case 'long_division': {
+            const diagram = generateLongDivisionDiagram(safeQuestionText)
+            if (diagram) return validateDiagramState(diagram, 'long_division')
+            break
+          }
+          case 'quadratic': {
+            const diagram = generateQuadraticDiagram(safeQuestionText)
+            if (diagram) return validateDiagramState(diagram, 'quadratic')
+            break
+          }
+          case 'linear': {
+            const diagram = generateLinearDiagram(safeQuestionText)
+            if (diagram) return validateDiagramState(diagram, 'linear')
+            break
+          }
+          case 'coordinate_plane': {
+            const diagram = generateCoordinatePlaneDiagram(safeQuestionText)
+            if (diagram) return validateDiagramState(diagram, 'coordinate_plane')
+            break
+          }
+          // Other math types can be added here as generators are implemented
+          // case 'equation':
+          // case 'fraction':
+          // case 'bar_model':
+          // case 'triangle':
+          // case 'circle':
+          // case 'number_line':
+        }
       } catch (mathError) {
         logDiagramError('Math diagram generation failed', mathError, {
           mathType,

@@ -185,11 +185,16 @@ When helping with SCIENCE/OTHER subjects:
 **The diagram should be a complete visual representation of the problem - a student should be able to understand the entire problem just by looking at the diagram.**
 
 ### When to Generate Diagrams
-Only include a "diagram" field when visual representation would SIGNIFICANTLY help student understanding beyond text alone. Consider diagrams for:
+**PREFER DIAGRAMS:** Visual learning is more effective. Include a "diagram" whenever it can help student understanding. Consider diagrams for:
 
-**Spatial Concepts:**
-- Physics: Forces, motion, inclines, projectiles, circuits, waves
-- Geometry: Triangles, circles, coordinate planes, transformations
+**Spatial Concepts (ALWAYS use diagrams):**
+- Physics: Forces, motion, inclines, projectiles, collisions, circular motion, energy
+- Geometry: Triangles, circles, coordinate planes, transformations, angles
+
+**Graphing & Functions (ALWAYS use diagrams):**
+- Linear functions (y = mx + b): Show slope, intercepts, direction
+- Quadratic functions (y = ax² + bx + c): Show parabola, vertex, roots, axis of symmetry
+- Any equation with graphing keywords: plot, graph, coordinate, function
 
 **Multi-Step Processes:**
 - Math: Long division, equation solving, fraction operations
@@ -198,13 +203,13 @@ Only include a "diagram" field when visual representation would SIGNIFICANTLY he
 
 **Abstract Relationships:**
 - Math word problems: Proportions, ratios, comparisons (bar models)
-- Function graphs: Input-output relationships on coordinate planes
+- Number relationships: Number lines for negative numbers, inequalities
 
 **Complex Structures:**
 - Chemistry: Molecule structures (atoms, bonds, electron shells)
-- Biology: Cell structures (organelles), system diagrams (digestive system)
+- Biology: Cell structures (organelles), DNA, system diagrams
 
-**IMPORTANT:** Only generate diagrams when they ADD VALUE beyond your text explanation. Simple concepts don't need diagrams.
+**BIAS TOWARDS VISUALS:** When in doubt, include a diagram. Visual aids significantly improve learning retention and understanding.
 
 ### Diagram Evolution - CRITICAL
 Diagrams should EVOLVE step-by-step as the conversation progresses:
@@ -219,9 +224,10 @@ Diagrams should EVOLVE step-by-step as the conversation progresses:
 
 ### Available Diagram Types
 
-**Physics:** fbd (free body diagram), inclined_plane, projectile, circuit, wave
-**Math:** long_division, equation, fraction, number_line, coordinate_plane, triangle, circle, bar_model, area_model
-**Chemistry:** molecule, reaction, energy_diagram
+**Physics:** fbd (free body diagram), inclined_plane, projectile, collision, circular_motion, energy, pendulum, circuit, wave
+**Math:** long_division, equation, fraction, number_line, coordinate_plane, quadratic, linear, triangle, circle, bar_model, area_model, systems_of_equations, inequality
+**Chemistry:** atom, molecule, reaction, energy_diagram
+**Biology:** cell, dna, system, process_flow
 **Biology:** cell, system, process_flow
 
 ### Diagram Response Structure
@@ -895,8 +901,14 @@ function parseDiagramResponse(diagram: unknown): TutorResponse['diagram'] {
   const validTypes = [
     // Physics diagrams
     'fbd', 'inclined_plane', 'projectile', 'pulley', 'circuit', 'wave', 'optics', 'motion',
+    'collision', 'circular_motion', 'energy', 'pendulum',
     // Math diagrams
     'long_division', 'equation', 'fraction', 'number_line', 'coordinate_plane', 'triangle', 'circle', 'bar_model', 'area_model',
+    'quadratic', 'linear', 'systems_of_equations', 'inequality',
+    // Chemistry diagrams
+    'atom', 'molecule', 'reaction', 'energy_diagram',
+    // Biology diagrams
+    'cell', 'dna', 'system', 'process_flow',
   ]
   if (!d.type || !validTypes.includes(String(d.type))) {
     return undefined

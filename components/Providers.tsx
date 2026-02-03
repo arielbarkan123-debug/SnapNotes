@@ -5,6 +5,7 @@ import { ThemeProvider } from 'next-themes'
 import { ErrorBoundary } from './ErrorBoundary'
 import { ToastProvider } from '@/contexts/ToastContext'
 import { XPProvider } from '@/contexts/XPContext'
+import { VisualsProvider } from '@/contexts/VisualsContext'
 import { SWRProvider } from './providers/SWRProvider'
 import { AnalyticsProvider } from './providers/AnalyticsProvider'
 import { PWAProvider } from './providers/PWAProvider'
@@ -24,7 +25,9 @@ export function Providers({ children }: ProvidersProps) {
               <PWAProvider>
                 <ToastProvider>
                   <XPProvider>
-                    {children}
+                    <VisualsProvider>
+                      {children}
+                    </VisualsProvider>
                   </XPProvider>
                 </ToastProvider>
               </PWAProvider>

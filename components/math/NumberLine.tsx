@@ -1,6 +1,10 @@
 'use client'
 
+import { motion } from 'framer-motion'
 import type { NumberLineData, NumberLineErrorHighlight } from '@/types'
+import { useVisualComplexity, useComplexityAnimations } from '@/hooks/useVisualComplexity'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
+import { CONCRETE_ICONS } from '@/lib/visual-complexity'
 
 interface NumberLineDataWithErrors extends NumberLineData {
   errorHighlight?: NumberLineErrorHighlight
@@ -11,23 +15,53 @@ interface NumberLineProps {
   className?: string
   width?: number
   height?: number
+  /** Override complexity level for this diagram */
+  complexity?: VisualComplexityLevel
+  /** Whether to animate on mount */
+  animate?: boolean
 }
 
 /**
  * NumberLine - SVG component for displaying number lines
  * Used for inequalities, solution sets, and intervals
+ *
+ * Now with age-adaptive visuals:
+ * - Elementary: Larger fonts, concrete examples, slower animations
+ * - Middle/High School: Standard display
+ * - Advanced: Compact, instant animations
  */
 export function NumberLine({
   data,
   className = '',
   width = 400,
   height = 80,
+  complexity: forcedComplexity,
+  animate = true,
 }: NumberLineProps) {
   const { min, max, points = [], intervals = [], title, errorHighlight } = data
 
-  // Padding and dimensions
-  const padding = { left: 40, right: 40, top: 30, bottom: 20 }
-  const lineY = height - padding.bottom - 15
+  // Get complexity-based settings
+  const {
+    complexity,
+    fontSize,
+    showConcreteExamples,
+    colors,
+  } = useVisualComplexity({ forceComplexity: forcedComplexity })
+
+  const { duration, stagger, enabled: animationsEnabled } = useComplexityAnimations()
+
+  // Adjust dimensions based on complexity
+  const isElementary = complexity === 'elementary'
+  const adjustedHeight = isElementary ? Math.max(height, 120) : height
+
+  // Padding and dimensions (larger for elementary)
+  const padding = {
+    left: isElementary ? 50 : 40,
+    right: isElementary ? 50 : 40,
+    top: isElementary ? 40 : 30,
+    bottom: isElementary ? 30 : 20,
+  }
+  const lineY = adjustedHeight - padding.bottom - 15
   const lineStartX = padding.left
   const lineEndX = width - padding.right
   const lineLength = lineEndX - lineStartX
@@ -46,23 +80,80 @@ export function NumberLine({
     ticks.push(v)
   }
 
+  // Animation variants for Framer Motion
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: animationsEnabled ? duration / 1000 : 0,
+        staggerChildren: animationsEnabled ? stagger / 1000 : 0,
+      },
+    },
+  }
+
+  const pointVariants = {
+    hidden: { scale: 0, opacity: 0 },
+    visible: {
+      scale: 1,
+      opacity: 1,
+      transition: {
+        type: 'spring' as const,
+        stiffness: isElementary ? 150 : 300,
+        damping: isElementary ? 15 : 25,
+      },
+    },
+  }
+
+  // Generate concrete examples for elementary level
+  const renderConcreteExample = (value: number, x: number, y: number) => {
+    if (!showConcreteExamples || !isElementary) return null
+    const absValue = Math.abs(Math.round(value))
+    if (absValue > 10) return null // Too many to show
+
+    const icon = value >= 0 ? CONCRETE_ICONS.apple : CONCRETE_ICONS.star
+    const spacing = 12
+    const startX = x - ((absValue - 1) * spacing) / 2
+
+    return (
+      <g>
+        {Array.from({ length: absValue }).map((_, i) => (
+          <text
+            key={`concrete-${i}`}
+            x={startX + i * spacing}
+            y={y - 25}
+            textAnchor="middle"
+            fontSize={10}
+          >
+            {icon}
+          </text>
+        ))}
+      </g>
+    )
+  }
+
   return (
-    <svg
+    <motion.svg
       width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
+      height={adjustedHeight}
+      viewBox={`0 0 ${width} ${adjustedHeight}`}
       className={`text-gray-800 dark:text-gray-200 ${className}`}
+      initial={animate && animationsEnabled ? 'hidden' : 'visible'}
+      animate="visible"
+      variants={containerVariants}
     >
       {/* Title */}
       {title && (
-        <text
+        <motion.text
           x={width / 2}
-          y={15}
+          y={isElementary ? 20 : 15}
           textAnchor="middle"
-          className="fill-current text-sm font-medium"
+          className="fill-current font-medium"
+          style={{ fontSize: fontSize.normal }}
+          variants={pointVariants}
         >
           {title}
-        </text>
+        </motion.text>
       )}
 
       {/* Intervals (shaded regions) */}
@@ -131,27 +222,34 @@ export function NumberLine({
       />
 
       {/* Tick marks and labels */}
-      {ticks.map((tick) => {
+      {ticks.map((tick, index) => {
         const x = valueToX(tick)
         return (
-          <g key={`tick-${tick}`}>
+          <motion.g
+            key={`tick-${tick}`}
+            variants={pointVariants}
+            custom={index}
+          >
             <line
               x1={x}
-              y1={lineY - 5}
+              y1={lineY - (isElementary ? 6 : 5)}
               x2={x}
-              y2={lineY + 5}
+              y2={lineY + (isElementary ? 6 : 5)}
               stroke="currentColor"
-              strokeWidth={1}
+              strokeWidth={isElementary ? 2 : 1}
             />
             <text
               x={x}
-              y={lineY + 18}
+              y={lineY + (isElementary ? 22 : 18)}
               textAnchor="middle"
-              className="fill-current text-xs"
+              className="fill-current"
+              style={{ fontSize: fontSize.small }}
             >
               {tick}
             </text>
-          </g>
+            {/* Concrete example for elementary level */}
+            {renderConcreteExample(tick, x, lineY)}
+          </motion.g>
         )
       })}
 
@@ -159,30 +257,39 @@ export function NumberLine({
       {points.map((point, index) => {
         const x = valueToX(point.value)
         const isFilled = point.style === 'filled'
+        const pointRadius = isElementary ? 8 : 6
 
         return (
-          <g key={`point-${index}`}>
+          <motion.g
+            key={`point-${index}`}
+            variants={pointVariants}
+            custom={index}
+          >
             {/* Point circle */}
-            <circle
+            <motion.circle
               cx={x}
               cy={lineY}
-              r={6}
-              fill={isFilled ? '#EF4444' : 'white'}
-              stroke="#EF4444"
-              strokeWidth={2}
+              r={pointRadius}
+              fill={isFilled ? colors.primary : 'white'}
+              stroke={colors.primary}
+              strokeWidth={isElementary ? 3 : 2}
+              whileHover={animationsEnabled ? { scale: 1.2 } : undefined}
             />
             {/* Point label */}
             {point.label && (
               <text
                 x={x}
-                y={lineY - 12}
+                y={lineY - (isElementary ? 16 : 12)}
                 textAnchor="middle"
-                className="fill-red-600 dark:fill-red-400 text-xs font-medium"
+                className="fill-red-600 dark:fill-red-400 font-medium"
+                style={{ fontSize: fontSize.small }}
               >
                 {point.label}
               </text>
             )}
-          </g>
+            {/* Concrete example for elementary level */}
+            {renderConcreteExample(point.value, x, lineY)}
+          </motion.g>
         )
       })}
 
@@ -335,13 +442,16 @@ export function NumberLine({
         const startX = interval.start !== null ? valueToX(interval.start) : lineStartX
         const endX = interval.end !== null ? valueToX(interval.end) : lineEndX
         return (
-          <g key={`correct-interval-${index}`}>
+          <motion.g
+            key={`correct-interval-${index}`}
+            variants={pointVariants}
+          >
             {/* Green shaded region */}
             <rect
               x={startX}
-              y={lineY - 10}
+              y={lineY - (isElementary ? 12 : 10)}
               width={endX - startX}
-              height={20}
+              height={isElementary ? 24 : 20}
               fill="#22C55E"
               opacity={0.15}
             />
@@ -352,15 +462,31 @@ export function NumberLine({
               x2={endX}
               y2={lineY}
               stroke="#22C55E"
-              strokeWidth={4}
+              strokeWidth={isElementary ? 5 : 4}
             />
             {/* Checkmarks at endpoints */}
-            <text x={startX} y={lineY - 18} textAnchor="middle" className="fill-green-600 text-xs">✓</text>
-            <text x={endX} y={lineY - 18} textAnchor="middle" className="fill-green-600 text-xs">✓</text>
-          </g>
+            <text
+              x={startX}
+              y={lineY - (isElementary ? 22 : 18)}
+              textAnchor="middle"
+              className="fill-green-600"
+              style={{ fontSize: fontSize.small }}
+            >
+              {isElementary ? '👍' : '✓'}
+            </text>
+            <text
+              x={endX}
+              y={lineY - (isElementary ? 22 : 18)}
+              textAnchor="middle"
+              className="fill-green-600"
+              style={{ fontSize: fontSize.small }}
+            >
+              {isElementary ? '👍' : '✓'}
+            </text>
+          </motion.g>
         )
       })}
-    </svg>
+    </motion.svg>
   )
 }
 
