@@ -22,6 +22,8 @@ import exportMessages from './export.json'
 import studyPlan from './studyPlan.json'
 import gaps from './gaps.json'
 import knowledgeMap from './knowledgeMap.json'
+import diagram from './diagram.json'
+import prepare from './prepare.json'
 
 const messages = {
   common,
@@ -48,6 +50,8 @@ const messages = {
   studyPlan,
   gaps,
   knowledgeMap,
+  diagram,
+  prepare,
 }
 
 export default messages

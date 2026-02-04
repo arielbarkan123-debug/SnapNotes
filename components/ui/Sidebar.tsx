@@ -38,7 +38,7 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
 
   // Prefetch all navigation routes on mount
   useEffect(() => {
-    const routes = ['/dashboard', '/review', '/practice', '/homework', '/progress', '/exams', '/study-plan', '/settings']
+    const routes = ['/dashboard', '/review', '/practice', '/homework', '/progress', '/exams', '/study-plan', '/prepare', '/settings']
     routes.forEach(route => {
       router.prefetch(route)
     })
@@ -103,6 +103,7 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
     { href: '/practice', icon: '🎯', label: t('nav.practice'), active: isActive('/practice') },
     { href: '/homework', icon: '📝', label: t('nav.homework'), active: isActive('/homework') },
     { href: '/exams', icon: '📋', label: t('nav.exams'), active: isActive('/exams') },
+    { href: '/prepare', icon: '📖', label: t('nav.prepare'), active: isActive('/prepare') },
     { href: '/study-plan', icon: '📅', label: t('nav.studyPlan'), active: isActive('/study-plan') },
     { href: '/progress', icon: '📊', label: t('nav.progress'), active: isActive('/progress') },
     { href: '/settings', icon: '⚙️', label: t('nav.settings'), active: isActive('/settings') },
@@ -319,7 +320,7 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
           <BottomNavLink href="/review" icon="🧠" label={t('nav.review')} active={isActive('/review')} />
           <BottomNavLink href="/practice" icon="🎯" label={t('nav.practice')} active={isActive('/practice')} />
           <BottomNavLink href="/homework" icon="📝" label={t('nav.homework')} active={isActive('/homework')} />
-          <BottomNavLink href="/study-plan" icon="📅" label={t('nav.studyPlan')} active={isActive('/study-plan')} />
+          <BottomNavLink href="/prepare" icon="📖" label={t('nav.prepare')} active={isActive('/prepare')} />
           <BottomNavLink href="/progress" icon="📊" label={t('nav.progress')} active={isActive('/progress')} />
         </div>
       </nav>

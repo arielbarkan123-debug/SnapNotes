@@ -965,3 +965,5 @@ export * from './help'
 export * from './exam'
 
 export * from './past-exam'
+
+export * from './prepare'

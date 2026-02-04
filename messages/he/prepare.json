@@ -1,0 +1,72 @@
+{
+  "title": "הכנה",
+  "subtitle": "מדריכי לימוד AI",
+  "description": "צור מדריכי לימוד מקיפים מהסיכומים, הספרים או כל חומר שלך",
+  "hub": {
+    "title": "מדריכי הלימוד שלך",
+    "empty": "אין עדיין מדריכי לימוד",
+    "emptyDescription": "העלה סיכומים, ספרים או הדבק טקסט כדי ליצור מדריך לימוד מקיף",
+    "createNew": "צור מדריך לימוד",
+    "searchPlaceholder": "חפש מדריכים...",
+    "deleteConfirm": "האם אתה בטוח שברצונך למחוק מדריך זה?",
+    "deleteSuccess": "המדריך נמחק",
+    "readingTime": "{minutes} דקות קריאה",
+    "topics": "{count} נושאים",
+    "generating": "מייצר...",
+    "failed": "היצירה נכשלה"
+  },
+  "generate": {
+    "title": "צור מדריך לימוד",
+    "description": "העלה סיכומים או הדבק טקסט כדי ליצור מדריך לימוד",
+    "textPlaceholder": "הדבק כאן את הסיכומים, תוכן הספר או תיאור הנושא...",
+    "generating": "מייצר את מדריך הלימוד שלך...",
+    "generatingDescription": "זה עשוי לקחת 30-60 שניות",
+    "success": "מדריך הלימוד נוצר!",
+    "error": "יצירת מדריך הלימוד נכשלה"
+  },
+  "viewer": {
+    "tableOfContents": "תוכן עניינים",
+    "quickReference": "עיון מהיר",
+    "downloadPdf": "הורד PDF",
+    "share": "שתף",
+    "copied": "הקישור הועתק!",
+    "backToGuides": "חזרה למדריכים",
+    "estimatedReading": "{minutes} דקות קריאה",
+    "generatedOn": "נוצר ב-{date}"
+  },
+  "sections": {
+    "overview": "סקירה כללית",
+    "definitions": "הגדרות מפתח",
+    "theory": "תיאוריה",
+    "examples": "דוגמאות מהעולם האמיתי",
+    "model_answer": "תשובה לדוגמה",
+    "formula": "נוסחאות מפתח",
+    "comparison": "השוואה",
+    "quick_reference": "עיון מהיר",
+    "possible_questions": "שאלות אפשריות למבחן"
+  },
+  "chat": {
+    "title": "מורה פרטי",
+    "placeholder": "שאל על המדריך הזה...",
+    "welcome": "שאל אותי כל דבר על מדריך הלימוד! אני יכול לבחון אותך, להסביר מושגים או לעזור לך לתרגל.",
+    "quizMe": "בחן אותי",
+    "practiceQuestions": "שאלות תרגול",
+    "explainMore": "הסבר עוד",
+    "sectionContext": "שואל על: {section}",
+    "sending": "חושב...",
+    "error": "שליחת ההודעה נכשלה"
+  },
+  "pdf": {
+    "generating": "מייצר PDF...",
+    "success": "ה-PDF הורד!",
+    "error": "יצירת ה-PDF נכשלה"
+  },
+  "share": {
+    "title": "שתף מדריך לימוד",
+    "description": "כל מי שיש לו את הקישור יכול לצפות במדריך",
+    "copyLink": "העתק קישור",
+    "generating": "מייצר קישור שיתוף...",
+    "success": "קישור השיתוף נוצר!",
+    "error": "יצירת קישור השיתוף נכשלה"
+  }
+}
