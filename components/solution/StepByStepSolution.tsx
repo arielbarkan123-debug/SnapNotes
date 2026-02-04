@@ -166,7 +166,7 @@ export function StepByStepSolution({
   const progress = ((currentStepIndex + 1) / visibleSteps.length) * 100
 
   return (
-    <div className={`step-by-step-solution ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-xl p-5 shadow-lg ${className}`}>
       {/* Header */}
       <div className="solution-header mb-4">
         <div className="flex items-center justify-between">
@@ -286,20 +286,6 @@ export function StepByStepSolution({
         )}
       </AnimatePresence>
 
-      <style jsx>{`
-        .step-by-step-solution {
-          background: white;
-          border-radius: 12px;
-          padding: 20px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        }
-
-        @media (prefers-color-scheme: dark) {
-          .step-by-step-solution {
-            background: #1f2937;
-          }
-        }
-      `}</style>
     </div>
   )
 }

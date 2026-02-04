@@ -8,7 +8,6 @@ import {
   SUBJECT_COLORS,
 } from '@/types/solution'
 import { SolutionDiagram } from './SolutionDiagram'
-import { COLORS } from '@/lib/diagram-theme'
 
 interface SolutionStepComponentProps {
   step: SolutionStep
@@ -48,7 +47,7 @@ export function SolutionStepComponent({
 
   return (
     <motion.div
-      className="solution-step"
+      className="p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700"
       initial={animate ? { opacity: 0, y: 20 } : false}
       animate={{ opacity: 1, y: 0 }}
       exit={animate ? { opacity: 0, y: -20 } : undefined}
@@ -193,21 +192,6 @@ export function SolutionStepComponent({
         </div>
       )}
 
-      <style jsx>{`
-        .solution-step {
-          padding: 16px;
-          background: rgba(255, 255, 255, 0.5);
-          border-radius: 12px;
-          border: 1px solid ${COLORS.gray[200]};
-        }
-
-        @media (prefers-color-scheme: dark) {
-          .solution-step {
-            background: rgba(31, 41, 55, 0.5);
-            border-color: ${COLORS.gray[700]};
-          }
-        }
-      `}</style>
     </motion.div>
   )
 }

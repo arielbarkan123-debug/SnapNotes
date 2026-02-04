@@ -43,7 +43,7 @@ export function StepNavigation({
   const isLast = currentStep === totalSteps - 1
 
   return (
-    <div className="step-navigation mt-4">
+    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
       {/* Step indicator dots */}
       <div className="step-dots flex justify-center gap-2 mb-4">
         {Array.from({ length: totalSteps }).map((_, index) => {
@@ -199,18 +199,6 @@ export function StepNavigation({
         </motion.div>
       )}
 
-      <style jsx>{`
-        .step-navigation {
-          padding-top: 16px;
-          border-top: 1px solid ${COLORS.gray[200]};
-        }
-
-        @media (prefers-color-scheme: dark) {
-          .step-navigation {
-            border-color: ${COLORS.gray[700]};
-          }
-        }
-      `}</style>
     </div>
   )
 }
