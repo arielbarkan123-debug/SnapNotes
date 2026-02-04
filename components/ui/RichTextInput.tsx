@@ -42,7 +42,7 @@ export default function RichTextInput({
         horizontalRule: false,
         // Link is built into StarterKit v3 — configure here, not separately
         link: {
-          openOnClick: false,
+          openOnClick: true,
           autolink: true,
           linkOnPaste: true,
           HTMLAttributes: {
