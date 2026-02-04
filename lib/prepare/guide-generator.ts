@@ -9,8 +9,8 @@ import type { GeneratedGuide } from '@/types/prepare'
 import type { UserLearningContext } from '@/lib/ai/prompts'
 
 const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929'
-const MAX_TOKENS = 8000
-const MAX_RETRIES = 0
+const MAX_TOKENS = 16000
+const MAX_RETRIES = 1
 const RETRY_DELAY_MS = 2000
 
 let anthropicClient: Anthropic | null = null
@@ -391,10 +391,13 @@ export async function generateGuide(options: GuideGenerationOptions): Promise<Ge
 
       let rawText = ''
       let lastLogTime = Date.now()
+      let stopReason = ''
 
       for await (const event of stream) {
         if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
           rawText += event.delta.text
+        } else if (event.type === 'message_delta') {
+          stopReason = (event as { delta?: { stop_reason?: string } }).delta?.stop_reason || ''
         }
         // Log progress every 15s
         const now = Date.now()
@@ -404,8 +407,15 @@ export async function generateGuide(options: GuideGenerationOptions): Promise<Ge
         }
       }
 
+      console.log(`[GuideGen] Stream complete: ${rawText.length} chars, stop_reason: ${stopReason}`)
+
       if (!rawText) {
         throw new Error('No text response from AI')
+      }
+
+      // If truncated by max_tokens, the JSON will be incomplete — repair will handle it
+      if (stopReason === 'max_tokens') {
+        console.warn('[GuideGen] Response truncated by max_tokens — will attempt repair')
       }
 
       // Extract JSON — try bare JSON first, then code-fenced
