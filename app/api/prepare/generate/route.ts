@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      const funcStart = Date.now()
       try {
         const supabase = await createClient()
         const {
@@ -218,10 +219,9 @@ export async function POST(request: NextRequest) {
           hasVideos: youtubeVideos.length > 0,
         })
       } catch (error) {
-        console.error('[Prepare] Generation error:', error)
-        send('error', {
-          message: error instanceof Error ? error.message : 'Failed to generate study guide',
-        })
+        const errMsg = error instanceof Error ? error.message : 'Failed to generate study guide'
+        console.error(`[Prepare] Generation error after ${((Date.now() - funcStart) / 1000).toFixed(1)}s:`, errMsg)
+        send('error', { message: errMsg })
       } finally {
         if (heartbeatInterval) {
           clearInterval(heartbeatInterval)

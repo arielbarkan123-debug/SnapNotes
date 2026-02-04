@@ -10,7 +10,7 @@ import type { UserLearningContext } from '@/lib/ai/prompts'
 
 const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929'
 const MAX_TOKENS = 8000
-const MAX_RETRIES = 1
+const MAX_RETRIES = 0
 const RETRY_DELAY_MS = 2000
 
 let anthropicClient: Anthropic | null = null
