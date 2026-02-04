@@ -4,7 +4,7 @@ import { generateGuide } from '@/lib/prepare/guide-generator'
 import { searchMultipleQueries } from '@/lib/prepare/youtube-search'
 import type { PrepareGuideInsert, GuideYouTubeVideo } from '@/types/prepare'
 
-export const maxDuration = 120
+export const maxDuration = 240
 
 interface GenerateRequest {
   content: string
@@ -151,12 +151,14 @@ export async function POST(request: NextRequest) {
         send('status', { stage: 'generating', guideId, message: 'Generating study guide...' })
 
         // Generate the guide (with retry and JSON repair)
+        const genStart = Date.now()
         const guide = await generateGuide({
           content,
           imageUrls,
           learningContext,
           language,
         })
+        console.log(`[Prepare] Guide generated in ${((Date.now() - genStart) / 1000).toFixed(1)}s`)
 
         send('status', { stage: 'videos', message: 'Searching for educational videos...' })
 
