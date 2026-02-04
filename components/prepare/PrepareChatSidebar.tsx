@@ -3,12 +3,20 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { createBrowserClient } from '@supabase/ssr'
+import dynamic from 'next/dynamic'
+import type { DiagramState } from '@/components/homework/diagram/types'
 import MarkdownWithMath from './MarkdownWithMath'
+
+const InlineDiagram = dynamic(
+  () => import('@/components/homework/diagram/InlineDiagram'),
+  { ssr: false }
+)
 
 interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
+  diagram?: DiagramState | null
 }
 
 interface PrepareChatSidebarProps {
@@ -43,7 +51,7 @@ export default function PrepareChatSidebar({ guideId, sectionRef, onClearSection
         )
         const { data } = await supabase
           .from('prepare_chat_messages')
-          .select('id, role, content, created_at')
+          .select('id, role, content, diagram, created_at')
           .eq('guide_id', guideId)
           .order('created_at', { ascending: true })
           .limit(50)
@@ -54,6 +62,7 @@ export default function PrepareChatSidebar({ guideId, sectionRef, onClearSection
               id: msg.id,
               role: msg.role as 'user' | 'assistant',
               content: msg.content,
+              diagram: msg.diagram as DiagramState | null,
             }))
           )
         }
@@ -64,12 +73,15 @@ export default function PrepareChatSidebar({ guideId, sectionRef, onClearSection
     loadHistory()
   }, [guideId])
 
-  const sendMessage = useCallback(async (text: string, action?: 'quiz' | 'practice' | 'explain') => {
+  const sendMessage = useCallback(async (text: string, action?: 'quiz' | 'practice' | 'explain' | 'diagram') => {
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
       content: action
-        ? action === 'quiz' ? t('chat.quizMe') : action === 'practice' ? t('chat.practiceQuestions') : t('chat.explainMore')
+        ? action === 'quiz' ? t('chat.quizMe')
+          : action === 'practice' ? t('chat.practiceQuestions')
+          : action === 'explain' ? t('chat.explainMore')
+          : t('chat.drawDiagram')
         : text,
     }
 
@@ -95,6 +107,7 @@ export default function PrepareChatSidebar({ guideId, sectionRef, onClearSection
         id: `assistant-${Date.now()}`,
         role: 'assistant',
         content: data.response?.message || 'Sorry, I could not generate a response.',
+        diagram: data.response?.diagram || null,
       }
 
       setMessages((prev) => [...prev, assistantMessage])
@@ -146,9 +159,19 @@ export default function PrepareChatSidebar({ guideId, sectionRef, onClearSection
               }`}
             >
               {msg.role === 'assistant' ? (
-                <MarkdownWithMath className="prose prose-sm dark:prose-invert max-w-none [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1">
-                  {msg.content}
-                </MarkdownWithMath>
+                <>
+                  <MarkdownWithMath className="prose prose-sm dark:prose-invert max-w-none [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1">
+                    {msg.content}
+                  </MarkdownWithMath>
+                  {msg.diagram && (
+                    <InlineDiagram
+                      diagram={msg.diagram}
+                      currentStep={0}
+                      size="compact"
+                      showExpandButton={true}
+                    />
+                  )}
+                </>
               ) : (
                 <p>{msg.content}</p>
               )}
@@ -210,6 +233,13 @@ export default function PrepareChatSidebar({ guideId, sectionRef, onClearSection
           className="px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 disabled:opacity-50 transition-colors"
         >
           {t('chat.explainMore')}
+        </button>
+        <button
+          onClick={() => sendMessage('', 'diagram')}
+          disabled={isLoading}
+          className="px-3 py-1.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 disabled:opacity-50 transition-colors"
+        >
+          {t('chat.drawDiagram')}
         </button>
       </div>
 

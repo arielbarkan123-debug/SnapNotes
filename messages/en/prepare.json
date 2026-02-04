@@ -53,6 +53,7 @@
     "quizMe": "Quiz Me",
     "practiceQuestions": "Practice Qs",
     "explainMore": "Explain More",
+    "drawDiagram": "Draw Diagram",
     "sectionContext": "Asking about: {section}",
     "sending": "Thinking...",
     "error": "Failed to send message"

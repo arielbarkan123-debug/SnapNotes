@@ -22,7 +22,7 @@ function getAnthropicClient(): Anthropic {
 interface ChatRequest {
   message: string
   sectionRef?: string
-  action?: 'quiz' | 'practice' | 'explain'
+  action?: 'quiz' | 'practice' | 'explain' | 'diagram'
   language?: 'en' | 'he'
 }
 
@@ -55,15 +55,16 @@ ${guideContent.slice(0, 15000)}
 - "Quiz Me": Generate a multiple choice or short answer question from the guide
 - "Practice Qs": Generate 3-5 practice questions from a random topic
 - "Explain More": Explain the referenced section in simpler terms with an analogy
+- "Draw Diagram": Generate a visual diagram that helps explain the concept. Return a diagram object with the appropriate type (physics: fbd, inclined_plane, projectile, pulley, circuit, wave, optics, motion; math: long_division, equation, fraction, number_line, coordinate_plane, triangle, circle, bar_model, area_model; chemistry: atom, molecule, periodic_element, bonding; biology: cell, organelle, dna, process). The diagram object should match the DiagramState schema for that type.
 
 ## Response Format
 Return JSON:
 {
-  "message": "Your response in markdown",
-  "diagram": null
+  "message": "Your response in markdown explaining the diagram",
+  "diagram": { "type": "coordinate_plane", "totalSteps": 3, ... } or null
 }
 
-Only include "diagram" if a visual would genuinely help understanding. Return ONLY valid JSON.`
+When "diagram" action is used, you MUST include a valid diagram object. The diagram must have at minimum: "type" (string), "totalSteps" (number, minimum 1). Include relevant data fields for the chosen diagram type. Return ONLY valid JSON.`
 }
 
 export async function POST(
@@ -151,6 +152,10 @@ export async function POST(
       userMessage = sectionRef
         ? `Explain this section in simpler terms: ${sectionRef}`
         : 'Explain the most important concept from this guide in simpler terms'
+    } else if (action === 'diagram') {
+      userMessage = sectionRef
+        ? `Draw a visual diagram to help explain: ${sectionRef}`
+        : 'Draw a visual diagram for the most important concept in this guide'
     }
 
     if (sectionRef && !action) {
