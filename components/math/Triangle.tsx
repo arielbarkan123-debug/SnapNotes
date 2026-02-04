@@ -25,6 +25,18 @@ export function Triangle({
 }: TriangleProps) {
   const { vertices, sides = [], angles = [], altitude, title, errorHighlight } = data
 
+  // Guard against empty or insufficient vertices
+  if (!vertices || vertices.length < 3) {
+    return (
+      <svg width={width} height={height} className={className} role="img" aria-label="Triangle diagram - insufficient data">
+        <rect width={width} height={height} fill="#f9fafb" rx={8} />
+        <text x={width / 2} y={height / 2} textAnchor="middle" fill="#9ca3af" fontSize={14}>
+          Insufficient vertex data
+        </text>
+      </svg>
+    )
+  }
+
   // Calculate bounds and scaling
   const padding = 40
   const titleHeight = title ? 25 : 0
@@ -150,6 +162,8 @@ export function Triangle({
       height={height}
       viewBox={`0 0 ${width} ${height}`}
       className={`text-gray-800 dark:text-gray-200 ${className}`}
+      role="img"
+      aria-label={`Triangle${title ? `: ${title}` : ''} with vertices ${vertices.map(v => v.label).join(', ')}`}
     >
       {/* Title */}
       {title && (

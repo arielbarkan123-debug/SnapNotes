@@ -282,8 +282,8 @@ export function ProjectileMotion({
         </pattern>
 
         <linearGradient id="ground-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#a3e635" />
-          <stop offset="100%" stopColor="#65a30d" />
+          <stop offset="0%" stopColor="#86efac" />
+          <stop offset="100%" stopColor="#4ade80" />
         </linearGradient>
       </defs>
 
@@ -304,7 +304,7 @@ export function ProjectileMotion({
         y1={groundLevel}
         x2={width}
         y2={groundLevel}
-        stroke="#4d7c0f"
+        stroke="#22c55e"
         strokeWidth={3}
       />
 
@@ -333,7 +333,7 @@ export function ProjectileMotion({
           fill="none"
           stroke={COLORS.gray[400]}
           strokeWidth={2}
-          strokeDasharray="8 4"
+          strokeDasharray="6 3"
           initial={{ pathLength: 0, opacity: 0 }}
           animate={{ pathLength: 1, opacity: 0.7 }}
           transition={{ duration: reducedMotion ? 0 : 1, delay: 0.2 }}

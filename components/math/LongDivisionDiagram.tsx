@@ -259,10 +259,13 @@ export function LongDivisionDiagram({
   const fontSize = 24
   const smallFontSize = 16
 
-  // Colors
-  const lineColor = '#f59e0b'  // Orange for subtraction lines
-  const guideLineColor = 'rgba(156, 163, 175, 0.3)'  // Light gray dotted lines
+  // Colors - distinct for each element to aid visual hierarchy
+  const lineColor = '#f59e0b'  // Amber for subtraction lines
+  const guideLineColor = 'rgba(156, 163, 175, 0.4)'  // Light gray dotted lines
   const textColor = '#1f2937'
+  const quotientColor = '#2563eb'  // Blue for quotient (answer)
+  const divisorColor = '#7c3aed'  // Violet for divisor
+  const dividendColor = '#1f2937'  // Dark for dividend (default)
 
   // Calculate bring-down arrow position (for big visual arrow from dividend to working number)
   const bringDownArrowInfo = useMemo(() => {
@@ -364,8 +367,8 @@ export function LongDivisionDiagram({
                 style={{ color: textColor }}
               >
                 <span className="w-4 text-right">{multiplier}</span>
-                <span className="text-gray-400">-</span>
-                <span className="font-medium">{product}</span>
+                <span className="text-gray-400">×</span>
+                <span className="font-medium" style={{ color: divisorColor }}>{product}</span>
               </div>
             ))}
           </div>
@@ -456,7 +459,7 @@ export function LongDivisionDiagram({
                       className="text-center font-bold"
                       style={{
                         width: digitWidth,
-                        color: qDigit ? MATH_COLORS.quotient : 'transparent',
+                        color: qDigit ? quotientColor : 'transparent',
                         lineHeight: `${digitHeight}px`,
                       }}
                     >
@@ -474,7 +477,7 @@ export function LongDivisionDiagram({
                 className="text-right font-semibold pr-1"
                 style={{
                   width: divisorStr.length * digitWidth * 0.6,
-                  color: MATH_COLORS.divisor,
+                  color: divisorColor,
                   lineHeight: `${digitHeight}px`,
                 }}
               >
@@ -518,7 +521,7 @@ export function LongDivisionDiagram({
                     className="text-center font-semibold"
                     style={{
                       width: digitWidth,
-                      color: MATH_COLORS.dividend,
+                      color: dividendColor,
                       lineHeight: `${digitHeight}px`,
                     }}
                   >
@@ -812,7 +815,7 @@ export function LongDivisionDiagram({
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.3, type: 'spring', stiffness: 300 }}
                 className="font-bold inline-block"
-                style={{ color: MATH_COLORS.quotient }}
+                style={{ color: quotientColor }}
               >
                 {quotientStr}
               </motion.span>

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTheme } from 'next-themes'
 import {
   type CellDiagramData,
   type Organelle,
@@ -68,6 +69,11 @@ export function CellDiagram({
   } = data
 
   const reducedMotion = prefersReducedMotion()
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
+  const cardBg = isDark ? COLORS.gray[800] : 'white'
+  const cardStroke = isDark ? COLORS.gray[600] : COLORS.gray[200]
+  const textColor = isDark ? COLORS.gray[300] : COLORS.gray[600]
   const [hoveredOrganelle, setHoveredOrganelle] = useState<OrganelleType | null>(null)
 
   // Calculate center and dimensions
@@ -86,6 +92,7 @@ export function CellDiagram({
       if (currentStepConfig.type === 'organelle' && currentStepConfig.organelleType) {
         // Show organelles up to and including this one
         const targetIndex = organelles.findIndex(o => o.type === currentStepConfig.organelleType)
+        if (targetIndex === -1) return organelles.slice(0, currentStep)
         return organelles.slice(0, targetIndex + 1)
       }
       if (['label', 'function', 'complete'].includes(currentStepConfig.type)) {
@@ -218,7 +225,7 @@ export function CellDiagram({
     const pos = transformPosition(organelle.position)
     const color = organelle.color || ORGANELLE_COLORS[organelle.type]
     const size = (organelle.size || 0.1) * cellRadius * 2
-    const baseDelay = index * 0.15
+    const baseDelay = index * 0.08
     const isHovered = hoveredOrganelle === organelle.type
     const isVisible = visibleOrganelles.includes(organelle)
 
@@ -449,7 +456,12 @@ export function CellDiagram({
             }}
             onMouseEnter={() => setHoveredOrganelle(organelle.type)}
             onMouseLeave={() => setHoveredOrganelle(null)}
-            style={{ cursor: 'pointer' }}
+            onFocus={() => setHoveredOrganelle(organelle.type)}
+            onBlur={() => setHoveredOrganelle(null)}
+            tabIndex={0}
+            role="button"
+            aria-label={`${getOrganelleName(organelle.type)}${organelle.function ? `: ${language === 'he' ? organelle.functionHe || organelle.function : organelle.function}` : ''}`}
+            style={{ cursor: 'pointer', outline: 'none' }}
           >
             {/* Organelle shape */}
             {renderOrganelleShape()}
@@ -461,15 +473,15 @@ export function CellDiagram({
                 animate={{ opacity: 1 }}
                 transition={{ delay: reducedMotion ? 0 : baseDelay + 0.2 }}
               >
-                {/* Label background */}
+                {/* Label background - use wider multiplier for Hebrew (RTL) */}
                 <rect
                   x={pos.x + size + 5}
                   y={pos.y - 8}
-                  width={getOrganelleName(organelle.type).length * 6 + 10}
+                  width={getOrganelleName(organelle.type).length * (language === 'he' ? 8 : 6) + 14}
                   height={16}
                   rx={3}
-                  fill="white"
-                  stroke={COLORS.gray[200]}
+                  fill={cardBg}
+                  stroke={cardStroke}
                   strokeWidth={1}
                   opacity={0.9}
                 />
@@ -499,7 +511,7 @@ export function CellDiagram({
                   width={160}
                   height={40}
                   rx={6}
-                  fill="white"
+                  fill={cardBg}
                   stroke={color}
                   strokeWidth={1}
                   style={{ filter: SHADOWS.card }}
@@ -543,8 +555,8 @@ export function CellDiagram({
           y={height - 50}
           width={190}
           height={40}
-          fill="white"
-          stroke={COLORS.gray[200]}
+          fill={cardBg}
+          stroke={cardStroke}
           strokeWidth={1}
           rx={6}
           style={{ filter: SHADOWS.soft }}
@@ -554,7 +566,7 @@ export function CellDiagram({
           y={height - 26}
           textAnchor="middle"
           fontSize={11}
-          fill={COLORS.gray[600]}
+          fill={textColor}
           fontFamily="'Inter', system-ui, sans-serif"
         >
           {label}
@@ -638,7 +650,7 @@ export function CellDiagram({
           y={height - 40}
           width={100}
           height={30}
-          fill="white"
+          fill={cardBg}
           stroke={cellColors.membrane}
           strokeWidth={1.5}
           rx={6}
@@ -650,7 +662,7 @@ export function CellDiagram({
           fontSize={12}
           fontWeight="600"
           fontFamily="'Inter', system-ui, sans-serif"
-          fill={COLORS.gray[700]}
+          fill={isDark ? COLORS.gray[200] : COLORS.gray[700]}
         >
           {getCellTypeName()}
         </text>
@@ -670,8 +682,8 @@ export function CellDiagram({
           y={8}
           width={65}
           height={22}
-          fill="white"
-          stroke={COLORS.gray[200]}
+          fill={cardBg}
+          stroke={cardStroke}
           strokeWidth={1}
           rx={4}
         />

@@ -280,7 +280,7 @@ function AtomDiagram({
           cx={centerX}
           cy={centerY}
           r={nucleusRadius}
-          fill={`url(#nucleus-gradient)`}
+          fill={`url(#atom-nucleus-gradient)`}
           stroke={categoryColor}
           strokeWidth={2}
         />
@@ -408,8 +408,8 @@ function AtomDiagram({
                 y={centerY - 6}
                 textAnchor="start"
                 dominantBaseline="middle"
-                fontSize={10}
-                fontWeight="500"
+                fontSize={11}
+                fontWeight="600"
                 fontFamily="'Inter', system-ui, sans-serif"
                 fill={isValence ? '#f59e0b' : COLORS.gray[600]}
               >
@@ -421,9 +421,9 @@ function AtomDiagram({
                   y={centerY + 8}
                   textAnchor="start"
                   dominantBaseline="middle"
-                  fontSize={8}
+                  fontSize={10}
                   fontFamily="'Inter', system-ui, sans-serif"
-                  fill={COLORS.gray[400]}
+                  fill={COLORS.gray[500]}
                 >
                   {language === 'he' ? `מקס ${shell.maxElectrons}` : `max ${shell.maxElectrons}`}
                 </text>
@@ -437,8 +437,8 @@ function AtomDiagram({
                 <motion.circle
                   cx={pos.x}
                   cy={pos.y}
-                  r={isValence ? 10 : 8}
-                  fill={hexToRgba(effectiveShellColor, isValence ? 0.4 : 0.3)}
+                  r={isValence ? 12 : 9}
+                  fill={hexToRgba(effectiveShellColor, isValence ? 0.45 : 0.3)}
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{
@@ -857,21 +857,21 @@ function AtomDiagram({
       {/* Definitions */}
       <defs>
         {/* Nucleus gradient */}
-        <radialGradient id="nucleus-gradient" cx="35%" cy="35%">
+        <radialGradient id="atom-nucleus-gradient" cx="35%" cy="35%">
           <stop offset="0%" stopColor={hexToRgba(CHARGE_COLORS.positive, 0.8)} />
           <stop offset="70%" stopColor={CHARGE_COLORS.positive} />
           <stop offset="100%" stopColor={hexToRgba(CHARGE_COLORS.positive, 0.6)} />
         </radialGradient>
 
         {/* Background gradient */}
-        <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id="atom-bg-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#ffffff" />
           <stop offset="100%" stopColor={COLORS.gray[50]} />
         </linearGradient>
       </defs>
 
       {/* Background */}
-      <rect width={width} height={height} fill="url(#bg-gradient)" rx={12} />
+      <rect width={width} height={height} fill="url(#atom-bg-gradient)" rx={12} />
 
       {/* Title */}
       {title && (

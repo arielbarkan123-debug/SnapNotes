@@ -209,9 +209,9 @@ export function PhysicsDiagramRenderer({
   const totalSteps = diagram.totalSteps || diagram.stepConfig?.length || 1
 
   return (
-    <div className={`physics-diagram-container ${className}`}>
+    <div className={`flex flex-col ${className}`}>
       {/* Diagram */}
-      <div className="diagram-wrapper">
+      <div className="flex justify-center bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
         {renderDiagram()}
       </div>
 
@@ -253,8 +253,8 @@ export function PhysicsDiagramRenderer({
 
       {/* Current step info */}
       {diagram.stepConfig?.[currentStep]?.stepLabel && (
-        <div className="step-info mt-2 p-2 bg-violet-50 rounded-md">
-          <p className="text-sm text-violet-700">
+        <div className="mt-2 p-2 bg-violet-50 dark:bg-violet-900/30 rounded-md mx-2">
+          <p className="text-sm text-violet-700 dark:text-violet-300">
             {language === 'he'
               ? diagram.stepConfig[currentStep].stepLabelHe || diagram.stepConfig[currentStep].stepLabel
               : diagram.stepConfig[currentStep].stepLabel}
@@ -262,24 +262,6 @@ export function PhysicsDiagramRenderer({
         </div>
       )}
 
-      <style jsx>{`
-        .physics-diagram-container {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .diagram-wrapper {
-          display: flex;
-          justify-content: center;
-          background: white;
-          border-radius: 8px;
-          overflow: hidden;
-        }
-
-        .step-controls {
-          padding: 8px 0;
-        }
-      `}</style>
     </div>
   )
 }

@@ -68,9 +68,10 @@ export function NumberLine({
   const lineEndX = width - padding.right
   const lineLength = lineEndX - lineStartX
 
-  // Convert value to x coordinate
+  // Convert value to x coordinate (guard against division by zero)
+  const safeRange = Math.abs(max - min) < 1e-10 ? 1 : max - min
   const valueToX = (value: number): number => {
-    const ratio = (value - min) / (max - min)
+    const ratio = (value - min) / safeRange
     return lineStartX + ratio * lineLength
   }
 
@@ -188,6 +189,8 @@ export function NumberLine({
       initial={animate && animationsEnabled ? 'hidden' : 'visible'}
       animate="visible"
       variants={containerVariants}
+      role="img"
+      aria-label={`Number line from ${min} to ${max}${title ? `: ${title}` : ''}${points.length ? ` with ${points.length} marked points` : ''}`}
     >
       {/* Title */}
       {title && (

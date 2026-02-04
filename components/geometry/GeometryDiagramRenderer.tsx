@@ -184,7 +184,7 @@ export function GeometryDiagramRenderer({
   }
 
   return (
-    <div className={`geometry-diagram-container ${className}`}>
+    <div className={`flex flex-col ${className}`}>
       {/* Shape type header */}
       <div className="flex items-center justify-between mb-3 px-2">
         <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -198,7 +198,7 @@ export function GeometryDiagramRenderer({
       </div>
 
       {/* Diagram */}
-      <div className="diagram-wrapper">
+      <div className="flex justify-center bg-white dark:bg-gray-800 rounded-lg p-2 overflow-hidden">
         {renderDiagram()}
       </div>
 
@@ -249,27 +249,6 @@ export function GeometryDiagramRenderer({
         </div>
       )}
 
-      <style jsx>{`
-        .geometry-diagram-container {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .diagram-wrapper {
-          display: flex;
-          justify-content: center;
-          background: white;
-          border-radius: 8px;
-          padding: 8px;
-          overflow: hidden;
-        }
-
-        @media (prefers-color-scheme: dark) {
-          .diagram-wrapper {
-            background: #1f2937;
-          }
-        }
-      `}</style>
     </div>
   )
 }

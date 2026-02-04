@@ -186,7 +186,7 @@ export function FreeBodyDiagram({
     const objHeight = object.height || objSize
     const objX = centerX - objWidth / 2
     const objY = centerY - objHeight / 2
-    const gradientId = 'object-gradient'
+    const gradientId = 'fbd-object-gradient'
 
     const objectContent = (() => {
       switch (object.type) {
@@ -200,7 +200,7 @@ export function FreeBodyDiagram({
                 y={objY + 3}
                 width={objWidth}
                 height={objHeight}
-                fill="rgba(0,0,0,0.1)"
+                fill="rgba(0,0,0,0.15)"
                 rx={6}
               />
               {/* Main block with gradient */}
@@ -1320,37 +1320,39 @@ export function FreeBodyDiagram({
       viewBox={`0 0 ${width} ${height}`}
       className={`free-body-diagram ${className}`}
       style={{ borderRadius: '12px', overflow: 'hidden' }}
+      role="img"
+      aria-label={`Free body diagram${title ? `: ${title}` : ''} with ${forces.length} forces`}
     >
       {/* Definitions */}
       <defs>
         {/* Object gradient */}
-        <linearGradient id="object-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="fbd-object-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor={object.color || COLORS.gray[100]} />
           <stop offset="100%" stopColor={object.color ? hexToRgba(object.color, 0.8) : COLORS.gray[200]} />
         </linearGradient>
 
         {/* Background gradient */}
-        <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id="fbd-bg-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#ffffff" />
           <stop offset="100%" stopColor={COLORS.gray[50]} />
         </linearGradient>
 
         {/* Subtle grid pattern */}
-        <pattern id="grid-pattern" width="20" height="20" patternUnits="userSpaceOnUse">
+        <pattern id="fbd-grid-pattern" width="20" height="20" patternUnits="userSpaceOnUse">
           <path
             d="M 20 0 L 0 0 0 20"
             fill="none"
             stroke={COLORS.gray[100]}
-            strokeWidth="0.5"
+            strokeWidth="0.75"
           />
         </pattern>
       </defs>
 
       {/* Background with subtle gradient */}
-      <rect width={width} height={height} fill="url(#bg-gradient)" rx={12} />
+      <rect width={width} height={height} fill="url(#fbd-bg-gradient)" rx={12} />
 
       {/* Subtle grid */}
-      <rect width={width} height={height} fill="url(#grid-pattern)" opacity={0.5} rx={12} />
+      <rect width={width} height={height} fill="url(#fbd-grid-pattern)" opacity={0.6} rx={12} />
 
       {/* Title */}
       {title && (
@@ -1551,7 +1553,7 @@ export function FreeBodyDiagram({
           fontWeight={500}
           fill={COLORS.gray[500]}
         >
-          {language === 'he' ? `שלב ${currentStep}` : `Step ${currentStep}`}
+          {language === 'he' ? `שלב ${currentStep + 1}` : `Step ${currentStep + 1}`}
         </text>
       </motion.g>
     </svg>

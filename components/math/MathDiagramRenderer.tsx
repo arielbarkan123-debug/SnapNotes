@@ -320,7 +320,7 @@ export function MathDiagramRenderer({
   }
 
   return (
-    <div className={`math-diagram-container ${className}`}>
+    <div className={`flex flex-col ${className}`}>
       {/* Diagram type header */}
       <div className="flex items-center justify-between mb-3 px-2">
         <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -332,7 +332,7 @@ export function MathDiagramRenderer({
       </div>
 
       {/* Diagram */}
-      <div className="diagram-wrapper">
+      <div className="flex justify-center rounded-lg overflow-x-auto">
         {renderDiagram()}
       </div>
 
@@ -380,19 +380,6 @@ export function MathDiagramRenderer({
         </div>
       )}
 
-      <style jsx>{`
-        .math-diagram-container {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .diagram-wrapper {
-          display: flex;
-          justify-content: center;
-          border-radius: 8px;
-          overflow-x: auto;
-        }
-      `}</style>
     </div>
   )
 }

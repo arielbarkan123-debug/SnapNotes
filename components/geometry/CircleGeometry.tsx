@@ -234,7 +234,7 @@ export function CircleGeometry({
           <path
             d={sectorPath(sector.startAngle, sector.endAngle)}
             fill={GEOMETRY_COLORS.highlight.tertiary}
-            fillOpacity={0.3}
+            fillOpacity={0.45}
             stroke={GEOMETRY_COLORS.highlight.tertiary}
             strokeWidth={2}
           />

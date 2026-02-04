@@ -77,21 +77,27 @@ export function CoordinatePlane({
   const plotWidth = width - padding.left - padding.right
   const plotHeight = height - padding.top - padding.bottom
 
+  // Guard against degenerate ranges (division by zero)
+  const xRange = xMax - xMin
+  const yRange = yMax - yMin
+  const safeXRange = Math.abs(xRange) < 1e-10 ? 1 : xRange
+  const safeYRange = Math.abs(yRange) < 1e-10 ? 1 : yRange
+
   // Convert coordinates to SVG coordinates
   const xToSvg = useCallback(
     (x: number): number => {
-      const ratio = (x - xMin) / (xMax - xMin)
+      const ratio = (x - xMin) / safeXRange
       return padding.left + ratio * plotWidth
     },
-    [xMin, xMax, plotWidth]
+    [xMin, safeXRange, plotWidth]
   )
 
   const yToSvg = useCallback(
     (y: number): number => {
-      const ratio = (y - yMin) / (yMax - yMin)
+      const ratio = (y - yMin) / safeYRange
       return padding.top + plotHeight - ratio * plotHeight
     },
-    [yMin, yMax, plotHeight]
+    [yMin, safeYRange, plotHeight]
   )
 
   // Find origin position (if visible)
@@ -255,6 +261,8 @@ export function CoordinatePlane({
       viewBox={`0 0 ${width} ${height}`}
       className={`coordinate-plane ${className}`}
       style={{ borderRadius: '12px', overflow: 'hidden' }}
+      role="img"
+      aria-label={`Coordinate plane${title ? `: ${title}` : ''} with x from ${xMin} to ${xMax} and y from ${yMin} to ${yMax}`}
     >
       {/* Definitions */}
       <defs>
@@ -280,7 +288,7 @@ export function CoordinatePlane({
         ))}
 
         {/* Point glow filter */}
-        <filter id="point-glow" x="-50%" y="-50%" width="200%" height="200%">
+        <filter id="coord-point-glow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="2" result="coloredBlur" />
           <feMerge>
             <feMergeNode in="coloredBlur" />
@@ -310,9 +318,9 @@ export function CoordinatePlane({
         </motion.text>
       )}
 
-      {/* Minor grid lines (Desmos-style - very subtle) */}
+      {/* Minor grid lines (Desmos-style) */}
       {showGrid && (
-        <g opacity={0.3}>
+        <g opacity={0.45}>
           {/* Vertical minor grid lines */}
           {gridData.xMinorTicks.map((x) => (
             <line
@@ -322,7 +330,7 @@ export function CoordinatePlane({
               x2={xToSvg(x)}
               y2={height - padding.bottom}
               stroke={COLORS.gray[300]}
-              strokeWidth={0.5}
+              strokeWidth={0.75}
             />
           ))}
           {/* Horizontal minor grid lines */}
@@ -334,7 +342,7 @@ export function CoordinatePlane({
               x2={width - padding.right}
               y2={yToSvg(y)}
               stroke={COLORS.gray[300]}
-              strokeWidth={0.5}
+              strokeWidth={0.75}
             />
           ))}
         </g>
@@ -342,7 +350,7 @@ export function CoordinatePlane({
 
       {/* Major grid lines (more visible) */}
       {showGrid && (
-        <g opacity={0.5}>
+        <g opacity={0.65}>
           {/* Vertical major grid lines */}
           {gridData.xMajorTicks.map((x) =>
             x === 0 ? null : (
@@ -578,7 +586,7 @@ export function CoordinatePlane({
             {/* Outer glow */}
             <circle cx={svgX} cy={svgY} r={10} fill={hexToRgba(color, 0.2)} />
             {/* Point */}
-            <circle cx={svgX} cy={svgY} r={6} fill={color} filter="url(#point-glow)" />
+            <circle cx={svgX} cy={svgY} r={6} fill={color} filter="url(#coord-point-glow)" />
             {/* Inner highlight */}
             <circle cx={svgX - 1.5} cy={svgY - 1.5} r={2} fill="rgba(255,255,255,0.5)" />
             {point.label && (

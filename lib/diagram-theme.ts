@@ -375,6 +375,18 @@ export const DIAGRAM_SIZES = {
 
   // Coordinate plane (square)
   coordinatePlane: { width: 400, height: 400 },
+
+  // Expanded view (modal overlay)
+  expanded: { width: '80vw', height: '60vh', minWidth: 600, minHeight: 450 },
+
+  // Fullscreen dedicated view
+  fullscreen: { width: '100vw', height: '80vh', minWidth: 800, minHeight: 600 },
+
+  // Work Together split layout (70% of container)
+  workTogether: { width: '100%', height: '100%', aspectRatio: '4/3' },
+
+  // Mobile fullscreen (stacked layout)
+  mobileFullscreen: { width: '100vw', height: '50vh', minHeight: 300 },
 }
 
 // ============================================================================
