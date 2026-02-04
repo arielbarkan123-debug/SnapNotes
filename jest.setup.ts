@@ -1,5 +1,22 @@
 import '@testing-library/jest-dom'
 
+// Polyfill for ResizeObserver in jsdom
+global.ResizeObserver = class ResizeObserver {
+  private callback: ResizeObserverCallback
+  constructor(callback: ResizeObserverCallback) {
+    this.callback = callback
+  }
+  observe() {
+    // Immediately call the callback with an empty array
+    this.callback([], this)
+  }
+  unobserve() {}
+  disconnect() {}
+}
+
+// Polyfill for Element.scrollIntoView in jsdom
+Element.prototype.scrollIntoView = jest.fn()
+
 // Polyfill for Request/Response in Node environment
 import { TextEncoder, TextDecoder } from 'util'
 global.TextEncoder = TextEncoder

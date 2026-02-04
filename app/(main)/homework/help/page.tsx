@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import Button from '@/components/ui/Button'
+import RichTextInput from '@/components/ui/RichTextInput'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
 
@@ -380,18 +381,11 @@ function QuestionTextInput({
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
         Your Question <span className="text-red-500">*</span>
       </label>
-      <textarea
+      <RichTextInput
         value={questionText}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Paste or type your homework question here...
-
-Example:
-Solve for x: 2x + 5 = 13
-
-Or:
-Find the derivative of f(x) = 3x² + 2x - 5"
-        rows={6}
-        className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+        onChange={onChange}
+        placeholder="Paste or type your homework question here..."
+        minHeight="144px"
       />
       {questionText.length > 0 && questionText.length < MIN_QUESTION_TEXT_LENGTH && (
         <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">

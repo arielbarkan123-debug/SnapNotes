@@ -110,16 +110,56 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       updateData.total_courses_completed = (gamification?.total_courses_completed || 0) + 1
     }
 
-    // Upsert gamification record
+    // Upsert gamification record with optimistic locking to prevent race conditions
     if (gamification) {
-      const { error: updateError } = await supabase
-        .from('user_gamification')
-        .update(updateData)
-        .eq('user_id', user.id)
+      let updated = false
+      let retries = 0
+      const MAX_RETRIES = 3
 
-      if (updateError) {
-        logError('Gamification:xp:update', updateError)
-        return createErrorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to update XP')
+      while (!updated && retries < MAX_RETRIES) {
+        // Re-read current XP on retry to get latest value
+        let expectedXP = currentXP
+        if (retries > 0) {
+          const { data: freshData } = await supabase
+            .from('user_gamification')
+            .select('*')
+            .eq('user_id', user.id)
+            .single()
+
+          if (!freshData) break
+          expectedXP = freshData.total_xp || 0
+
+          // Recalculate XP gain based on fresh data
+          const freshXPGain = body.bonusXP
+            ? awardXP(expectedXP, body.event, body.bonusXP)
+            : awardXP(expectedXP, body.event)
+
+          updateData.total_xp = freshXPGain.newTotal
+          updateData.current_level = calculateLevel(freshXPGain.newTotal)
+        }
+
+        const { data: updateResult, error: updateError } = await supabase
+          .from('user_gamification')
+          .update(updateData)
+          .eq('user_id', user.id)
+          .eq('total_xp', expectedXP)
+          .select()
+
+        if (updateError) {
+          logError('Gamification:xp:update', updateError)
+          return createErrorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to update XP')
+        }
+
+        if (updateResult && updateResult.length > 0) {
+          updated = true
+        } else {
+          retries++
+        }
+      }
+
+      if (!updated) {
+        logError('Gamification:xp:update', new Error('Optimistic lock failed after max retries'))
+        return createErrorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to update XP due to concurrent modification, please retry')
       }
     } else {
       const { error: insertError } = await supabase.from('user_gamification').insert({

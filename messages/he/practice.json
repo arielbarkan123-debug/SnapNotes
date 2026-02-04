@@ -35,7 +35,18 @@
     "resumeSession": "חזור לתרגול קודם",
     "resumePrompt": "יש לך תרגול שלא הושלם. האם תרצה להמשיך?",
     "startFresh": "התחל מחדש",
-    "endSession": "סיום תרגול"
+    "endSession": "סיום תרגול",
+    "workTogether": "בואו נעבוד ביחד",
+    "workTogetherDesc": "קבל עזרה צעד אחר צעד ממורה AI",
+    "workTogetherWith": "עבוד יחד עם המורה שלך על השאלה הזו",
+    "closeWorkTogether": "סגור את שיחת ההדרכה",
+    "askTutor": "שאל את המורה...",
+    "tutorThinking": "המורה חושב...",
+    "sendMessage": "שלח",
+    "viewDiagram": "הצג דיאגרמה",
+    "getHint": "קבל רמז",
+    "showSolution": "הצג פתרון",
+    "understandBetter": "עזור לי להבין את זה טוב יותר"
   },
   "encouragement": {
     "1": "כמעט! בוא נראה למה זה לא היה בדיוק נכון.",

@@ -60,6 +60,9 @@ const HelpModal = dynamic(() => import('@/components/help/HelpModal'), { ssr: fa
 // Lazy load MistakeReview - only loaded on session complete
 const MistakeReview = dynamic(() => import('@/components/practice/MistakeReview'), { ssr: false })
 
+// Lazy load WorkTogetherModal - only loaded when user requests tutoring
+const WorkTogetherModal = dynamic(() => import('@/components/practice/WorkTogetherModal'), { ssr: false })
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -164,6 +167,9 @@ export default function PracticePage() {
   const [difficultyFeedbackGiven, setDifficultyFeedbackGiven] = useState(false)
   const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [mistakes, setMistakes] = useState<MistakeItem[]>([])
+  const [showWorkTogether, setShowWorkTogether] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_lastUserAnswer, _setLastUserAnswer] = useState<string>('')
   const answersRef = useRef<Answer[]>([])
   const mistakesRef = useRef<MistakeItem[]>([])
 
@@ -1259,13 +1265,25 @@ export default function PracticePage() {
           // For interactive cards that have been answered
           if (interactiveResult !== null) {
             return (
-              <button
-                onClick={() => submitAnswer(interactiveResult)}
-                disabled={isSubmitting}
-                className="w-full py-4 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-all text-lg disabled:opacity-50"
-              >
-                {isSubmitting ? t('saving') : t('nextCard')}
-              </button>
+              <div className="space-y-3">
+                {/* Work Together button for incorrect answers */}
+                {interactiveResult === false && (
+                  <button
+                    onClick={() => setShowWorkTogether(true)}
+                    className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+                  >
+                    <span className="text-lg">👥</span>
+                    {t('workTogether')}
+                  </button>
+                )}
+                <button
+                  onClick={() => submitAnswer(interactiveResult)}
+                  disabled={isSubmitting}
+                  className="w-full py-4 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-all text-lg disabled:opacity-50"
+                >
+                  {isSubmitting ? t('saving') : t('nextCard')}
+                </button>
+              </div>
             )
           }
 
@@ -1282,31 +1300,46 @@ export default function PracticePage() {
               )
             } else {
               return (
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => submitAnswer(false)}
-                    disabled={isSubmitting}
-                    className="py-4 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
-                  >
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                      {t('incorrectBtn')}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => submitAnswer(true)}
-                    disabled={isSubmitting}
-                    className="py-4 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
-                  >
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      {t('correctBtn')}
-                    </span>
-                  </button>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => {
+                        setInteractiveResult(false)
+                        setShowWorkTogether(true)
+                      }}
+                      disabled={isSubmitting}
+                      className="py-4 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
+                    >
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        {t('incorrectBtn')}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => submitAnswer(true)}
+                      disabled={isSubmitting}
+                      className="py-4 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
+                    >
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        {t('correctBtn')}
+                      </span>
+                    </button>
+                  </div>
+                  {/* Work Together button after marking incorrect */}
+                  {interactiveResult === false && (
+                    <button
+                      onClick={() => setShowWorkTogether(true)}
+                      className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+                    >
+                      <span className="text-lg">👥</span>
+                      {t('workTogether')}
+                    </button>
+                  )}
                 </div>
               )
             }
@@ -1342,6 +1375,27 @@ export default function PracticePage() {
         message={t('endSessionConfirm')}
         variant="warning"
       />
+
+      {/* Work Together Tutoring Modal */}
+      {currentCard && (
+        <WorkTogetherModal
+          isOpen={showWorkTogether}
+          onClose={() => setShowWorkTogether(false)}
+          question={{
+            question: currentCard.front,
+            correctAnswer: currentCard.back,
+            explanation: typeof parseCardBack(currentCard) === 'object'
+              ? (parseCardBack(currentCard) as { explanation?: string }).explanation
+              : undefined,
+            courseId: currentCard.course_id,
+            lessonIndex: currentCard.lesson_index,
+            lessonTitle: currentCard.lessonTitle,
+            cardType: currentCard.card_type,
+          }}
+          userAnswer={_lastUserAnswer}
+          wasCorrect={interactiveResult ?? undefined}
+        />
+      )}
     </div>
   )
 }

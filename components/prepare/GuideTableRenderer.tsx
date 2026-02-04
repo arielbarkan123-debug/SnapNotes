@@ -1,6 +1,14 @@
 'use client'
 
+import { MathText } from '@/components/ui/MathRenderer'
 import type { GuideTable } from '@/types/prepare'
+
+function CellContent({ text }: { text: string }) {
+  if (text.includes('$')) {
+    return <MathText>{text}</MathText>
+  }
+  return <>{text}</>
+}
 
 interface GuideTableRendererProps {
   table: GuideTable
@@ -20,7 +28,7 @@ export default function GuideTableRenderer({ table }: GuideTableRendererProps) {
                   key={idx}
                   className="px-4 py-2.5 text-start font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700"
                 >
-                  {header}
+                  <CellContent text={header} />
                 </th>
               ))}
             </tr>
@@ -37,7 +45,7 @@ export default function GuideTableRenderer({ table }: GuideTableRendererProps) {
                   key={cellIdx}
                   className="px-4 py-2.5 text-gray-700 dark:text-gray-300"
                 >
-                  {cell}
+                  <CellContent text={cell} />
                 </td>
               ))}
             </tr>

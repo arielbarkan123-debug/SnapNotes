@@ -59,9 +59,54 @@ export async function PATCH(
       return createErrorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to complete task')
     }
 
+    // Award XP for completing the task
+    let xpAwarded = 0
+    let dailyComplete = false
+
+    try {
+      // Determine XP based on task type
+      const isAssessmentTask = task.task_type === 'practice_test' || task.task_type === 'mock_exam'
+      xpAwarded = isAssessmentTask ? 10 : 5
+
+      // Check if all today's tasks are complete
+      const today = new Date().toISOString().split('T')[0]
+      const { data: todayTasks } = await supabase
+        .from('study_plan_tasks')
+        .select('id, status')
+        .eq('plan_id', planId)
+        .eq('scheduled_date', today)
+
+      if (todayTasks) {
+        const allComplete = todayTasks.every(t => t.id === taskId || t.status === 'completed')
+        if (allComplete && todayTasks.length > 1) {
+          xpAwarded += 15 // Daily completion bonus
+          dailyComplete = true
+        }
+      }
+
+      // Award the XP via the gamification system
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('total_xp')
+        .eq('id', user.id)
+        .single()
+
+      if (profile) {
+        const newTotalXP = (profile.total_xp || 0) + xpAwarded
+        await supabase
+          .from('profiles')
+          .update({ total_xp: newTotalXP })
+          .eq('id', user.id)
+      }
+    } catch {
+      // XP awarding failed - not critical, still return success
+    }
+
     return NextResponse.json({
       success: true,
       task,
+      xpAwarded,
+      dailyComplete,
     })
   } catch (error) {
     logError('StudyPlan:completeTaskUnhandled', error)

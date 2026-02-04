@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useTranslations } from 'next-intl'
 import Button from '@/components/ui/Button'
+import RichTextInput from '@/components/ui/RichTextInput'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
 
@@ -552,12 +553,11 @@ function TextInputSection({
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           {t('inputMode.taskTextLabel')} <span className="text-red-500">*</span>
         </label>
-        <textarea
+        <RichTextInput
           value={taskText}
-          onChange={(e) => onTaskTextChange(e.target.value)}
+          onChange={onTaskTextChange}
           placeholder={t('inputMode.taskTextPlaceholder')}
-          rows={6}
-          className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
+          minHeight="144px"
         />
         {taskText.length > 0 && taskText.length < MIN_TASK_TEXT_LENGTH && (
           <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
@@ -570,12 +570,11 @@ function TextInputSection({
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           {t('inputMode.answerTextLabel')} <span className="text-gray-400 font-normal">({t('inputMode.optional')})</span>
         </label>
-        <textarea
+        <RichTextInput
           value={answerText}
-          onChange={(e) => onAnswerTextChange(e.target.value)}
+          onChange={onAnswerTextChange}
           placeholder={t('inputMode.answerTextPlaceholder')}
-          rows={4}
-          className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
+          minHeight="96px"
         />
       </div>
     </div>

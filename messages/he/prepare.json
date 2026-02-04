@@ -13,7 +13,8 @@
     "readingTime": "{minutes} דקות קריאה",
     "topics": "{count} נושאים",
     "generating": "מייצר...",
-    "failed": "היצירה נכשלה"
+    "failed": "היצירה נכשלה",
+    "untitledGuide": "מדריך ללא שם"
   },
   "generate": {
     "title": "צור מדריך לימוד",

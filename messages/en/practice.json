@@ -35,7 +35,18 @@
     "resumeSession": "Resume Previous Session",
     "resumePrompt": "You have an unfinished practice session. Would you like to continue?",
     "startFresh": "Start Fresh",
-    "endSession": "End Session"
+    "endSession": "End Session",
+    "workTogether": "Work Together",
+    "workTogetherDesc": "Get step-by-step help from an AI tutor",
+    "workTogetherWith": "Work together with your tutor on this question",
+    "closeWorkTogether": "Close tutoring session",
+    "askTutor": "Ask your tutor...",
+    "tutorThinking": "Tutor is thinking...",
+    "sendMessage": "Send",
+    "viewDiagram": "View Diagram",
+    "getHint": "Get a hint",
+    "showSolution": "Show solution",
+    "understandBetter": "Help me understand this better"
   },
   "encouragement": {
     "1": "Almost there! Let's see why this wasn't quite right.",

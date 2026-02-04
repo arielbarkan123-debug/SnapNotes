@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       batch = JSON.parse(text)
     }
 
-    const { sessionId, userId, events, pageViews, errors, funnelSteps, sessionUpdate } = batch
+    const { sessionId, events, pageViews, errors, funnelSteps, sessionUpdate } = batch
 
     if (!sessionId) {
       return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Session ID is required')
@@ -101,12 +101,9 @@ export async function POST(request: NextRequest) {
     // Use service client for database operations to bypass RLS
     const serviceClient = createServiceClient()
 
-    // Get current user if not provided
-    let actualUserId = userId
-    if (actualUserId === undefined) {
-      const { data: { user } } = await supabase.auth.getUser()
-      actualUserId = user?.id || null
-    }
+    // Always use authenticated user — never trust client-provided userId
+    const { data: { user } } = await supabase.auth.getUser()
+    const actualUserId = user?.id || null
 
     const results = {
       events: 0,

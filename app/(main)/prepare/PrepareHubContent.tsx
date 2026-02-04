@@ -55,13 +55,24 @@ export default function PrepareHubContent() {
     }
   }
 
+  const isStaleGenerating = (guide: GuideListItem) => {
+    if (guide.generation_status !== 'generating') return false
+    const createdAt = new Date(guide.created_at).getTime()
+    return Date.now() - createdAt > 5 * 60 * 1000 // 5 minutes
+  }
+
+  // Hide stale/failed guides
+  const visibleGuides = guides.filter(
+    (g) => g.generation_status === 'complete' || !isStaleGenerating(g)
+  )
+
   const filteredGuides = searchQuery
-    ? guides.filter(
+    ? visibleGuides.filter(
         (g) =>
           g.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
           g.subject?.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : guides
+    : visibleGuides
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString(undefined, {
@@ -71,7 +82,8 @@ export default function PrepareHubContent() {
     })
   }
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (guide: GuideListItem) => {
+    const status = isStaleGenerating(guide) ? 'failed' : guide.generation_status
     switch (status) {
       case 'complete':
         return null
@@ -162,9 +174,9 @@ export default function PrepareHubContent() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
-                        {guide.title}
+                        {guide.title === 'Generating...' ? t('hub.untitledGuide') : guide.title}
                       </h3>
-                      {getStatusBadge(guide.generation_status)}
+                      {getStatusBadge(guide)}
                     </div>
                     {guide.subtitle && (
                       <p className="text-sm text-gray-500 dark:text-gray-400 truncate">

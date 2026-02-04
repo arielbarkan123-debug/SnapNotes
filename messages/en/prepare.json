@@ -13,7 +13,8 @@
     "readingTime": "{minutes} min read",
     "topics": "{count} topics",
     "generating": "Generating...",
-    "failed": "Generation failed"
+    "failed": "Generation failed",
+    "untitledGuide": "Untitled Guide"
   },
   "generate": {
     "title": "Create Study Guide",
