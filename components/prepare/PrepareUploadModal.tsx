@@ -122,6 +122,38 @@ export default function PrepareUploadModal({ isOpen, onClose, onGenerated }: Pre
     setFiles(prev => prev.filter((_, i) => i !== index))
   }
 
+  /** Convert pasted HTML hyperlinks to markdown format so the AI preserves them */
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const html = e.clipboardData.getData('text/html')
+    if (!html || !html.includes('<a ')) return // No links in paste — use default behavior
+
+    e.preventDefault()
+
+    // Use plain text as base, then overlay markdown links extracted from HTML
+    let text = e.clipboardData.getData('text/plain') || ''
+
+    // Extract all <a href="...">text</a> pairs from the HTML via matchAll
+    const linkRegex = /<a\s[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi
+    const matches = Array.from(html.matchAll(linkRegex))
+    for (const m of matches) {
+      const url = m[1]
+      // Strip any nested HTML tags from the link text
+      const linkText = m[2].replace(/<[^>]*>/g, '').trim()
+      if (url && linkText && text.includes(linkText)) {
+        // Replace the first occurrence of the plain link text with markdown link
+        text = text.replace(linkText, `[${linkText}](${url})`)
+      }
+    }
+
+    // Insert at cursor position
+    const textarea = e.currentTarget
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const before = textContent.slice(0, start)
+    const after = textContent.slice(end)
+    setTextContent(before + text + after)
+  }, [textContent])
+
   /** Consume SSE stream from the generation API */
   const consumeSSE = async (response: Response): Promise<void> => {
     const reader = response.body?.getReader()
@@ -448,6 +480,7 @@ export default function PrepareUploadModal({ isOpen, onClose, onGenerated }: Pre
                 <textarea
                   value={textContent}
                   onChange={(e) => setTextContent(e.target.value)}
+                  onPaste={handlePaste}
                   placeholder={t('generate.textPlaceholder')}
                   className="w-full h-64 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder:text-gray-400 resize-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                 />

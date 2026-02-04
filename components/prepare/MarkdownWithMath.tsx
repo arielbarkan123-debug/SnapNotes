@@ -37,6 +37,17 @@ export default function MarkdownWithMath({ children, className }: MarkdownWithMa
           li: ({ children: c }) => <li>{processChildren(c)}</li>,
           td: ({ children: c }) => <td>{processChildren(c)}</td>,
           th: ({ children: c }) => <th>{processChildren(c)}</th>,
+          // Render links as clickable, styled, opening in new tab
+          a: ({ href, children: c }) => (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-violet-600 dark:text-violet-400 underline hover:text-violet-800 dark:hover:text-violet-300"
+            >
+              {c}
+            </a>
+          ),
           // Don't process math inside code blocks
           code: ({ children: c, className: cn }) => {
             if (cn?.includes('language-')) {
