@@ -9,8 +9,8 @@ import type { GeneratedGuide } from '@/types/prepare'
 import type { UserLearningContext } from '@/lib/ai/prompts'
 
 const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929'
-const MAX_TOKENS = 16000
-const MAX_RETRIES = 1
+const MAX_TOKENS = 8000
+const MAX_RETRIES = 0
 const RETRY_DELAY_MS = 2000
 
 let anthropicClient: Anthropic | null = null
@@ -209,12 +209,13 @@ Return ONLY valid JSON matching this exact structure:
 - **possible_questions**: Likely exam questions. Number them clearly.
 
 ## Rules
-- Generate 3-8 topics depending on content richness
-- Each topic should have 3-7 sections
+- Generate 3-4 topics (keep it focused)
+- Each topic should have 3-5 sections (overview + 2-4 content sections)
 - Include at least one table per topic where appropriate
-- Model answers should be exam-quality with clear structure
-- Include youtubeSearchQueries (3-6 queries) for finding relevant educational videos
-- Content should be dense and comprehensive - this is a study reference, not a beginner tutorial
+- Model answers should be exam-quality but concise (1-2 paragraphs)
+- Include youtubeSearchQueries (3-4 queries) for finding relevant educational videos
+- Content should be dense and scannable - prioritize definitions, formulas, and key points over lengthy prose
+- Keep string values concise: definitions under 50 words, explanations under 150 words
 - Use LaTeX notation ($...$) for math formulas
 - Return ONLY the JSON object, no surrounding text or code fences`
 
@@ -223,53 +224,85 @@ Return ONLY valid JSON matching this exact structure:
 // ============================================================================
 
 function repairJSON(text: string): string {
-  let json = text
-
-  // Remove trailing commas before } or ]
-  json = json.replace(/,\s*([\]}])/g, '$1')
-
   // Find the first opening brace
-  const firstBrace = json.indexOf('{')
-  if (firstBrace < 0) return json
+  const firstBrace = text.indexOf('{')
+  if (firstBrace < 0) return text
 
-  // Walk through and track brace depth to find the main JSON object
+  let json = text.slice(firstBrace)
+
+  // String-aware parser: find the last position where we have a valid close
+  // Track depth while respecting string boundaries
   let depth = 0
-  let lastValidClose = -1
+  let inString = false
+  let escaped = false
+  let lastSafeClose = -1 // position after a complete key-value pair or object/array close
 
-  for (let i = firstBrace; i < json.length; i++) {
+  for (let i = 0; i < json.length; i++) {
     const ch = json[i]
-    if (ch === '{') depth++
-    else if (ch === '}') {
+
+    if (escaped) {
+      escaped = false
+      continue
+    }
+
+    if (ch === '\\' && inString) {
+      escaped = true
+      continue
+    }
+
+    if (ch === '"') {
+      inString = !inString
+      continue
+    }
+
+    if (inString) continue
+
+    if (ch === '{' || ch === '[') {
+      depth++
+    } else if (ch === '}' || ch === ']') {
       depth--
-      lastValidClose = i
-      if (depth === 0) break
+      if (depth === 0) {
+        // Found complete root object
+        return json.slice(0, i + 1)
+      }
+      lastSafeClose = i
+    } else if (ch === ',' && depth > 0) {
+      // A comma after a complete value — safe truncation point
+      lastSafeClose = i - 1
     }
   }
 
-  if (depth > 0 && lastValidClose >= 0) {
-    // Truncated JSON — trim to last valid position and try to close
-    json = json.slice(firstBrace, lastValidClose + 1)
+  // JSON is truncated — repair it
+  if (lastSafeClose <= 0) return json
 
-    // Remove any incomplete trailing key-value
-    json = json.replace(/,\s*"[^"]*"?\s*:?\s*[^}\]]*$/, '')
+  // Slice to last safe position (before the trailing comma if any)
+  json = json.slice(0, lastSafeClose + 1)
 
-    // Close remaining open braces/brackets
-    const openBraces = (json.match(/\{/g) || []).length - (json.match(/\}/g) || []).length
-    const openBrackets = (json.match(/\[/g) || []).length - (json.match(/\]/g) || []).length
+  // Remove trailing commas
+  json = json.replace(/,\s*$/, '')
 
-    if (openBrackets > 0) {
-      json += ']'.repeat(openBrackets)
-    }
-    if (openBraces > 0) {
-      json += '}'.repeat(openBraces)
-    }
+  // Re-count open braces/brackets (string-aware)
+  let braces = 0
+  let brackets = 0
+  inString = false
+  escaped = false
 
-    console.log('[GuideGen] Repaired truncated JSON')
-  } else if (depth === 0 && lastValidClose >= 0) {
-    // Complete JSON — just trim to the main object
-    json = json.slice(firstBrace, lastValidClose + 1)
+  for (let i = 0; i < json.length; i++) {
+    const ch = json[i]
+    if (escaped) { escaped = false; continue }
+    if (ch === '\\' && inString) { escaped = true; continue }
+    if (ch === '"') { inString = !inString; continue }
+    if (inString) continue
+    if (ch === '{') braces++
+    else if (ch === '}') braces--
+    else if (ch === '[') brackets++
+    else if (ch === ']') brackets--
   }
 
+  if (brackets > 0) json += ']'.repeat(brackets)
+  if (braces > 0) json += '}'.repeat(braces)
+
+  console.log(`[GuideGen] Repaired truncated JSON (trimmed to ${json.length} chars, closed ${braces} braces, ${brackets} brackets)`)
   return json
 }
 

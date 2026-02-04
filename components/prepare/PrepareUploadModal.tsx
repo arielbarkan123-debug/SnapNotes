@@ -162,6 +162,10 @@ export default function PrepareUploadModal({ isOpen, onClose, onGenerated }: Pre
     const decoder = new TextDecoder()
     let buffer = ''
     let currentEvent = ''
+    let lastEventType = ''
+    let lastEventData = ''
+    let eventCount = 0
+    const startTime = Date.now()
 
     while (true) {
       const { done, value } = await reader.read()
@@ -175,6 +179,9 @@ export default function PrepareUploadModal({ isOpen, onClose, onGenerated }: Pre
         if (line.startsWith('event: ')) {
           currentEvent = line.slice(7).trim()
         } else if (line.startsWith('data: ') && currentEvent) {
+          eventCount++
+          lastEventType = currentEvent
+          lastEventData = line.slice(6)
           try {
             const data = JSON.parse(line.slice(6))
             if (currentEvent === 'status') {
@@ -187,7 +194,7 @@ export default function PrepareUploadModal({ isOpen, onClose, onGenerated }: Pre
             }
             // Ignore heartbeat events
           } catch (e) {
-            if (e instanceof Error && e.message !== 'Unexpected token') {
+            if (e instanceof Error && !e.message.includes('Unexpected token')) {
               throw e
             }
           }
@@ -198,7 +205,10 @@ export default function PrepareUploadModal({ isOpen, onClose, onGenerated }: Pre
       }
     }
 
-    throw new Error('Stream ended without completion')
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+    throw new Error(
+      `Stream ended after ${elapsed}s (${eventCount} events). Last: ${lastEventType}=${lastEventData.slice(0, 200)}`
+    )
   }
 
   const startGeneration = async (params: {
