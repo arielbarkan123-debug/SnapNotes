@@ -10,7 +10,7 @@ import type { UserLearningContext } from '@/lib/ai/prompts'
 
 const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929'
 const MAX_TOKENS = 12000
-const MAX_RETRIES = 2
+const MAX_RETRIES = 1
 const RETRY_DELAY_MS = 2000
 
 let anthropicClient: Anthropic | null = null
@@ -381,19 +381,32 @@ export async function generateGuide(options: GuideGenerationOptions): Promise<Ge
         await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt))
       }
 
-      const response = await client.messages.create({
+      // Use streaming to avoid connection timeouts on long generations
+      const stream = client.messages.stream({
         model: AI_MODEL,
         max_tokens: MAX_TOKENS,
         system: systemPrompt,
         messages: [{ role: 'user', content: userContent }],
       })
 
-      const textBlock = response.content.find((b) => b.type === 'text')
-      if (!textBlock || textBlock.type !== 'text') {
-        throw new Error('No text response from AI')
+      let rawText = ''
+      let lastLogTime = Date.now()
+
+      for await (const event of stream) {
+        if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+          rawText += event.delta.text
+        }
+        // Log progress every 15s
+        const now = Date.now()
+        if (now - lastLogTime > 15000) {
+          console.log(`[GuideGen] Streaming: ${rawText.length} chars`)
+          lastLogTime = now
+        }
       }
 
-      const rawText = textBlock.text
+      if (!rawText) {
+        throw new Error('No text response from AI')
+      }
 
       // Extract JSON — try bare JSON first, then code-fenced
       let jsonText = rawText.match(/\{[\s\S]*\}/)?.[0]
