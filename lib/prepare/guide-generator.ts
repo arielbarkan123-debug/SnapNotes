@@ -9,7 +9,7 @@ import type { GeneratedGuide } from '@/types/prepare'
 import type { UserLearningContext } from '@/lib/ai/prompts'
 
 const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929'
-const MAX_TOKENS = 12000
+const MAX_TOKENS = 8000
 const MAX_RETRIES = 1
 const RETRY_DELAY_MS = 2000
 
@@ -21,7 +21,7 @@ function getAnthropicClient(): Anthropic {
     if (!apiKey) {
       throw new Error('ANTHROPIC_API_KEY environment variable is not set')
     }
-    anthropicClient = new Anthropic({ apiKey, timeout: 180000 })
+    anthropicClient = new Anthropic({ apiKey, timeout: 600000 })
   }
   return anthropicClient
 }
