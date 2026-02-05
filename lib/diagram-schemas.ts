@@ -249,6 +249,167 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     }),
   },
 
+  triangle: {
+    type: 'triangle',
+    subject: 'math',
+    gradeRange: '5-12',
+    description: 'Triangle with labeled vertices, sides, angles, and optional altitude',
+    jsonExample: JSON.stringify({
+      type: 'triangle',
+      visibleStep: 0,
+      totalSteps: 3,
+      data: {
+        vertices: [
+          { label: 'A', x: 150, y: 50 },
+          { label: 'B', x: 50, y: 250 },
+          { label: 'C', x: 300, y: 250 },
+        ],
+        sides: [
+          { from: 'A', to: 'B', length: 10, label: '10 cm' },
+          { from: 'B', to: 'C', length: 12, label: '12 cm' },
+          { from: 'A', to: 'C', length: 8, label: '8 cm' },
+        ],
+        angles: [
+          { vertex: 'A', value: 60, label: '60\u00b0' },
+          { vertex: 'B', value: 50, label: '50\u00b0' },
+          { vertex: 'C', value: 70, label: '70\u00b0' },
+        ],
+        title: 'Triangle ABC',
+      },
+    }),
+  },
+
+  circle: {
+    type: 'circle',
+    subject: 'math',
+    gradeRange: '5-12',
+    description: 'Circle with radius, diameter, center label, and optional chords/sectors',
+    jsonExample: JSON.stringify({
+      type: 'circle',
+      visibleStep: 0,
+      totalSteps: 3,
+      data: {
+        centerX: 0,
+        centerY: 0,
+        radius: 5,
+        centerLabel: 'O',
+        showRadius: true,
+        radiusLabel: 'r = 5',
+        showDiameter: true,
+        title: 'Circle with radius 5',
+      },
+    }),
+  },
+
+  unit_circle: {
+    type: 'unit_circle',
+    subject: 'math',
+    gradeRange: '9-12',
+    description: 'Unit circle showing angles with sin/cos values and optional quadrant highlighting',
+    jsonExample: JSON.stringify({
+      type: 'unit_circle',
+      visibleStep: 0,
+      totalSteps: 3,
+      data: {
+        angles: [
+          { degrees: 30, radians: '\u03c0/6', sin: '1/2', cos: '\u221a3/2' },
+          { degrees: 45, radians: '\u03c0/4', sin: '\u221a2/2', cos: '\u221a2/2' },
+          { degrees: 60, radians: '\u03c0/3', sin: '\u221a3/2', cos: '1/2' },
+        ],
+        showSinCos: true,
+        highlightQuadrant: 1,
+        title: 'Standard angles in Quadrant I',
+      },
+    }),
+  },
+
+  tree_diagram: {
+    type: 'tree_diagram',
+    subject: 'math',
+    gradeRange: '5-12',
+    description: 'Probability tree diagram with branching nodes and probabilities',
+    jsonExample: JSON.stringify({
+      type: 'tree_diagram',
+      visibleStep: 0,
+      totalSteps: 3,
+      data: {
+        root: {
+          label: 'Start',
+          children: [
+            {
+              label: 'Heads',
+              probability: '1/2',
+              children: [
+                { label: 'Heads', probability: '1/2' },
+                { label: 'Tails', probability: '1/2' },
+              ],
+            },
+            {
+              label: 'Tails',
+              probability: '1/2',
+              children: [
+                { label: 'Heads', probability: '1/2' },
+                { label: 'Tails', probability: '1/2' },
+              ],
+            },
+          ],
+        },
+        showProbabilities: true,
+        title: 'Two coin flips',
+      },
+    }),
+  },
+
+  // ---- GEOMETRY: Currently Implemented ----
+
+  triangle_geometry: {
+    type: 'triangle_geometry',
+    subject: 'geometry',
+    gradeRange: '7-12',
+    description: 'Geometry triangle with side lengths, angles, height, area/perimeter calculations',
+    jsonExample: JSON.stringify({
+      type: 'triangle_geometry',
+      visibleStep: 0,
+      totalSteps: 4,
+      data: {
+        type: 'scalene',
+        vertices: [{ x: 150, y: 50 }, { x: 50, y: 250 }, { x: 300, y: 250 }],
+        sides: {
+          a: 10,
+          b: 12,
+          c: 8,
+          labels: { a: '10 cm', b: '12 cm', c: '8 cm' },
+        },
+        angles: { A: 55.77, B: 82.82, C: 41.41 },
+        height: { value: 7.5, from: 'A', showLine: true },
+        title: 'Find the area of triangle ABC',
+        showFormulas: true,
+      },
+    }),
+  },
+
+  regular_polygon: {
+    type: 'regular_polygon',
+    subject: 'geometry',
+    gradeRange: '7-12',
+    description: 'Regular polygon with side length, apothem, central angle, and interior angle',
+    jsonExample: JSON.stringify({
+      type: 'regular_polygon',
+      visibleStep: 0,
+      totalSteps: 4,
+      data: {
+        sides: 6,
+        sideLength: 5,
+        sideLabel: '5 cm',
+        showApothem: true,
+        showCentralAngle: true,
+        showInteriorAngle: true,
+        title: 'Regular hexagon',
+        showFormulas: true,
+      },
+    }),
+  },
+
   // ---- PHYSICS: Currently Implemented ----
 
   fbd: {

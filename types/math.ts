@@ -298,6 +298,7 @@ export type MathDiagramType =
   | 'radical'
   | 'systems'
   | 'inequality'
+  | 'tree_diagram'
 
 // Base MathDiagramData - new diagram types use 'unknown' casting in renderer
 // to avoid circular dependencies

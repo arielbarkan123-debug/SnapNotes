@@ -21,10 +21,11 @@ import { PolynomialOperations, type PolynomialOperationsData } from './Polynomia
 import { RadicalSimplification, type RadicalSimplificationData } from './RadicalSimplification'
 import { SystemsOfEquations, type SystemsOfEquationsData } from './SystemsOfEquations'
 import { InequalityDiagram, type InequalityData } from './InequalityDiagram'
+import { TreeDiagram } from './TreeDiagram'
 import { Triangle } from './Triangle'
 import { Circle } from './Circle'
 import { UnitCircle } from './UnitCircle'
-import type { TriangleDataWithErrors, CircleDataWithErrors, UnitCircleDataWithErrors } from '@/types'
+import type { TriangleDataWithErrors, CircleDataWithErrors, UnitCircleDataWithErrors, TreeDiagramDataWithErrors } from '@/types'
 
 interface MathDiagramRendererProps {
   /** Diagram state from tutor response */
@@ -306,6 +307,18 @@ export function MathDiagramRenderer({
           />
         )
 
+      case 'tree_diagram':
+        return (
+          <TreeDiagram
+            data={diagram.data as unknown as TreeDiagramDataWithErrors}
+            width={width || 500}
+            height={height || 400}
+            className="diagram-content"
+            subject={subject}
+            complexity={complexity}
+          />
+        )
+
       // Placeholder for future diagram types
       case 'bar_model':
       case 'area_model':
@@ -350,6 +363,7 @@ export function MathDiagramRenderer({
         radical: 'Radical Simplification',
         systems: 'Systems of Equations',
         inequality: 'Inequalities',
+        tree_diagram: 'Tree Diagram',
       },
       he: {
         long_division: 'חילוק ארוך',
@@ -368,6 +382,7 @@ export function MathDiagramRenderer({
         radical: 'פישוט שורשים',
         systems: 'מערכת משוואות',
         inequality: 'אי-שוויונות',
+        tree_diagram: 'תרשים עץ',
       },
     }
     return names[language][diagram.type] || diagram.type
