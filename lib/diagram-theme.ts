@@ -869,6 +869,126 @@ export const RTL = {
 // Diagram Theme Export
 // ============================================================================
 
+// ============================================================================
+// Subject-Coded Color Palettes
+// ============================================================================
+
+export const SUBJECT_COLORS = {
+  math: {
+    primary: '#6366f1',
+    accent: '#8b5cf6',
+    light: '#c7d2fe',
+    dark: '#4338ca',
+    bg: '#eef2ff',
+    bgDark: '#1e1b4b',
+    curve: '#818cf8',
+    point: '#6366f1',
+    highlight: '#a5b4fc',
+  },
+  physics: {
+    primary: '#f97316',
+    accent: '#ef4444',
+    light: '#fed7aa',
+    dark: '#c2410c',
+    bg: '#fff7ed',
+    bgDark: '#431407',
+    curve: '#fb923c',
+    point: '#f97316',
+    highlight: '#fdba74',
+  },
+  chemistry: {
+    primary: '#10b981',
+    accent: '#14b8a6',
+    light: '#a7f3d0',
+    dark: '#047857',
+    bg: '#ecfdf5',
+    bgDark: '#022c22',
+    curve: '#34d399',
+    point: '#10b981',
+    highlight: '#6ee7b7',
+  },
+  biology: {
+    primary: '#84cc16',
+    accent: '#eab308',
+    light: '#d9f99d',
+    dark: '#4d7c0f',
+    bg: '#f7fee7',
+    bgDark: '#1a2e05',
+    curve: '#a3e635',
+    point: '#84cc16',
+    highlight: '#bef264',
+  },
+  geometry: {
+    primary: '#ec4899',
+    accent: '#d946ef',
+    light: '#fbcfe8',
+    dark: '#be185d',
+    bg: '#fdf2f8',
+    bgDark: '#500724',
+    curve: '#f472b6',
+    point: '#ec4899',
+    highlight: '#f9a8d4',
+  },
+  economy: {
+    primary: '#f59e0b',
+    accent: '#64748b',
+    light: '#fde68a',
+    dark: '#b45309',
+    bg: '#fffbeb',
+    bgDark: '#451a03',
+    curve: '#fbbf24',
+    point: '#f59e0b',
+    highlight: '#fcd34d',
+  },
+} as const
+
+export type SubjectKey = keyof typeof SUBJECT_COLORS
+
+export function getSubjectColor(subject: SubjectKey) {
+  return SUBJECT_COLORS[subject]
+}
+
+// ============================================================================
+// Adaptive Line Weight by Grade Level
+// ============================================================================
+
+export function getAdaptiveLineWeight(complexity: 'elementary' | 'middle' | 'high' | 'advanced'): number {
+  switch (complexity) {
+    case 'elementary': return 4
+    case 'middle': return 3
+    case 'high':
+    case 'advanced': return 2
+    default: return 3
+  }
+}
+
+// ============================================================================
+// Diagram Backgrounds (Dark / Light Mode)
+// ============================================================================
+
+export const DIAGRAM_BACKGROUNDS = {
+  light: {
+    fill: '#ffffff',
+    grid: '#e5e7eb',
+    gridMinor: '#f3f4f6',
+    axis: '#374151',
+    text: '#111827',
+    textMuted: '#6b7280',
+  },
+  dark: {
+    fill: '#1a1a2e',
+    grid: '#2d2d44',
+    gridMinor: '#23233a',
+    axis: '#d1d5db',
+    text: '#f9fafb',
+    textMuted: '#9ca3af',
+  },
+} as const
+
+// ============================================================================
+// Master Theme Export
+// ============================================================================
+
 export const DIAGRAM_THEME = {
   colors: COLORS,
   forces: FORCE_COLORS,
