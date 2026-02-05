@@ -52,7 +52,6 @@ export function NumberLine({
     complexity,
     fontSize,
     showConcreteExamples,
-    colors,
   } = useVisualComplexity({ forceComplexity: forcedComplexity })
 
   const { duration, stagger, enabled: animationsEnabled } = useComplexityAnimations()
@@ -357,8 +356,8 @@ export function NumberLine({
                   x={x}
                   y={labelPositions.get(point.value)?.y ?? lineY - (isElementary ? 16 : 12)}
                   textAnchor="middle"
-                  className="fill-red-600 dark:fill-red-400 font-medium"
-                  style={{ fontSize: fontSize.small }}
+                  className="font-medium"
+                  style={{ fontSize: fontSize.small, fill: subjectColors.primary }}
                 >
                   {point.label}
                 </text>

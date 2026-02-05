@@ -533,7 +533,7 @@ export function CoordinatePlane({
             d={pathD}
             fill="none"
             stroke={`url(#curve-gradient-${index})`}
-            strokeWidth={2.5}
+            strokeWidth={adaptiveLineWeight - 0.5}
             strokeLinecap="round"
             strokeLinejoin="round"
             initial={animateCurves && !reducedMotion ? 'hidden' : 'visible'}
@@ -568,7 +568,7 @@ export function CoordinatePlane({
             y1={y1}
             x2={x2}
             y2={y2}
-            stroke={line.color || COLORS.error[500]}
+            stroke={line.color || subjectColors.primary}
             strokeWidth={2}
             strokeDasharray={line.dashed ? '6,4' : undefined}
             strokeLinecap="round"

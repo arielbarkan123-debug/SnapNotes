@@ -88,11 +88,11 @@ describe('NumberLine', () => {
     expect(container.textContent).toContain('Test Number Line')
   })
 
-  it('renders hollow points correctly', () => {
+  it('renders open points correctly', () => {
     const data = {
       ...baseData,
-      points: [{ value: 3, label: '3', style: 'hollow' as const }],
-    } as any
+      points: [{ value: 3, label: '3', style: 'open' as const }],
+    }
     const { container } = render(<NumberLine data={data} />)
     const circles = container.querySelectorAll('circle')
     const hollowCircle = Array.from(circles).find(
@@ -101,13 +101,37 @@ describe('NumberLine', () => {
     expect(hollowCircle).toBeTruthy()
   })
 
+  it('uses adaptive line weight for main line with elementary complexity', () => {
+    const { container } = render(
+      <NumberLine data={baseData} complexity="elementary" />
+    )
+    // Elementary line weight is 4
+    const lines = container.querySelectorAll('line')
+    const thickLine = Array.from(lines).find(
+      (l) => l.getAttribute('stroke-width') === '4'
+    )
+    expect(thickLine).toBeTruthy()
+  })
+
+  it('uses default middle_school line weight without complexity prop', () => {
+    const { container } = render(
+      <NumberLine data={baseData} />
+    )
+    // middle_school line weight is 3
+    const lines = container.querySelectorAll('line')
+    const defaultLine = Array.from(lines).find(
+      (l) => l.getAttribute('stroke-width') === '3'
+    )
+    expect(defaultLine).toBeTruthy()
+  })
+
   it('uses subject color for interval default colors', () => {
     const data = {
       min: 0,
       max: 10,
       points: [],
       intervals: [{ start: 2, end: 5, startInclusive: true, endInclusive: false }],
-    } as any
+    }
     const { container } = render(
       <NumberLine data={data} subject="geometry" />
     )
