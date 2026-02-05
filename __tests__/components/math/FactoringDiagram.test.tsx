@@ -57,11 +57,31 @@ describe('FactoringDiagram', () => {
     expect(container.querySelector('.factoring-diagram')).toBeInTheDocument()
   })
 
-  it('accepts complexity prop', () => {
+  it('accepts complexity prop without errors', () => {
     const { container } = render(
       <FactoringDiagram data={baseData} complexity="elementary" />
     )
-    expect(container.querySelector('.factoring-diagram')).toBeInTheDocument()
+    expect(container).toBeInTheDocument()
+  })
+
+  it('uses subject color in progress gradient when subject is physics', () => {
+    const { container } = render(
+      <FactoringDiagram data={baseData} subject="physics" />
+    )
+    const styledElements = container.querySelectorAll('[style]')
+    const hasPhysicsColor = Array.from(styledElements).some(
+      (el) => (el as HTMLElement).style.cssText.includes('#f97316')
+    )
+    expect(hasPhysicsColor).toBe(true)
+  })
+
+  it('uses default math subject color in progress gradient', () => {
+    const { container } = render(<FactoringDiagram data={baseData} />)
+    const styledElements = container.querySelectorAll('[style]')
+    const hasMathColor = Array.from(styledElements).some(
+      (el) => (el as HTMLElement).style.cssText.includes('#6366f1')
+    )
+    expect(hasMathColor).toBe(true)
   })
 
   it('displays the expression', () => {

@@ -73,11 +73,34 @@ describe('EquationSteps', () => {
     expect(container.querySelector('.equation-steps')).toBeInTheDocument()
   })
 
-  it('accepts complexity prop', () => {
+  it('accepts complexity prop without errors', () => {
+    // EquationSteps accepts complexity for interface compatibility but does not use it for rendering
     const { container } = render(
       <EquationSteps data={baseData} complexity="elementary" />
     )
     expect(container.querySelector('.equation-steps')).toBeInTheDocument()
+  })
+
+  it('uses subject color in progress bar when subject is physics', () => {
+    const { container } = render(
+      <EquationSteps data={baseData} subject="physics" />
+    )
+    // Physics primary is #f97316 — should appear in progress gradient inline style
+    const styledElements = container.querySelectorAll('[style]')
+    const hasPhysicsColor = Array.from(styledElements).some(
+      (el) => (el as HTMLElement).style.cssText.includes('#f97316')
+    )
+    expect(hasPhysicsColor).toBe(true)
+  })
+
+  it('uses default math subject color in progress bar', () => {
+    const { container } = render(<EquationSteps data={baseData} />)
+    // Math primary is #6366f1 — default subject color
+    const styledElements = container.querySelectorAll('[style]')
+    const hasMathColor = Array.from(styledElements).some(
+      (el) => (el as HTMLElement).style.cssText.includes('#6366f1')
+    )
+    expect(hasMathColor).toBe(true)
   })
 
   it('renders title when provided', () => {

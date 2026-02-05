@@ -3,11 +3,22 @@ import { LongDivisionDiagram } from '@/components/math/LongDivisionDiagram'
 import type { LongDivisionData } from '@/types/math'
 
 // Mock framer-motion to avoid animation issues in tests
+// Merges `animate` object values into `style` so inline style assertions work
+// (framer-motion applies animate values as inline styles at runtime)
 jest.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    span: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-    p: ({ children, ...props }: any) => <p {...props}>{children}</p>,
+    div: ({ children, animate, initial, exit, transition, whileHover, whileTap, variants, layout, ...props }: any) => {
+      const mergedStyle = { ...props.style, ...(typeof animate === 'object' ? animate : {}) }
+      return <div {...props} style={mergedStyle}>{children}</div>
+    },
+    span: ({ children, animate, initial, exit, transition, whileHover, whileTap, variants, layout, ...props }: any) => {
+      const mergedStyle = { ...props.style, ...(typeof animate === 'object' ? animate : {}) }
+      return <span {...props} style={mergedStyle}>{children}</span>
+    },
+    p: ({ children, animate, initial, exit, transition, whileHover, whileTap, variants, layout, ...props }: any) => {
+      const mergedStyle = { ...props.style, ...(typeof animate === 'object' ? animate : {}) }
+      return <p {...props} style={mergedStyle}>{children}</p>
+    },
     svg: ({ children, ...props }: any) => <svg {...props}>{children}</svg>,
     g: ({ children, ...props }: any) => <g {...props}>{children}</g>,
     circle: (props: any) => <circle {...props} />,
@@ -105,11 +116,34 @@ describe('LongDivisionDiagram', () => {
     expect(container.querySelector('.long-division-diagram')).toBeInTheDocument()
   })
 
-  it('accepts complexity prop', () => {
+  it('accepts complexity prop without errors', () => {
+    // LongDivisionDiagram accepts complexity for interface compatibility but does not use it for rendering
     const { container } = render(
       <LongDivisionDiagram data={baseData} complexity="elementary" />
     )
     expect(container.querySelector('.long-division-diagram')).toBeInTheDocument()
+  })
+
+  it('uses subject color in progress gradient when subject is physics', () => {
+    const { container } = render(
+      <LongDivisionDiagram data={baseData} subject="physics" />
+    )
+    // Physics primary is #f97316 — should appear in progress gradient inline style
+    const styledElements = container.querySelectorAll('[style]')
+    const hasPhysicsColor = Array.from(styledElements).some(
+      (el) => (el as HTMLElement).style.cssText.includes('#f97316')
+    )
+    expect(hasPhysicsColor).toBe(true)
+  })
+
+  it('uses default math subject color in progress gradient', () => {
+    const { container } = render(<LongDivisionDiagram data={baseData} />)
+    // Math primary is #6366f1
+    const styledElements = container.querySelectorAll('[style]')
+    const hasMathColor = Array.from(styledElements).some(
+      (el) => (el as HTMLElement).style.cssText.includes('#6366f1')
+    )
+    expect(hasMathColor).toBe(true)
   })
 
   it('renders title when provided', () => {

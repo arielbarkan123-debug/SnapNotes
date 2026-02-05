@@ -68,14 +68,16 @@ describe('FractionOperation', () => {
     expect(container.querySelector('.fraction-operation')).toBeInTheDocument()
   })
 
-  it('accepts subject prop', () => {
+  it('accepts subject prop without errors', () => {
+    // FractionOperation uses only semantic colors (FRACTION_COLORS/MATH_COLORS), not subject colors
     const { container } = render(
       <FractionOperation data={baseData} subject="physics" />
     )
     expect(container.querySelector('.fraction-operation')).toBeInTheDocument()
   })
 
-  it('accepts complexity prop', () => {
+  it('accepts complexity prop without errors', () => {
+    // FractionOperation accepts complexity for interface compatibility but does not use it
     const { container } = render(
       <FractionOperation data={baseData} complexity="elementary" />
     )

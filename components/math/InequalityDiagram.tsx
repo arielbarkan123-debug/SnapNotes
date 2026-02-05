@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
-import { COLORS, getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import { COLORS, getSubjectColor } from '@/lib/diagram-theme'
 import type { SubjectKey } from '@/lib/diagram-theme'
 import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import { prefersReducedMotion } from '@/lib/diagram-animations'
@@ -333,9 +333,7 @@ export function InequalityDiagram({
   const { originalInequality, variable: _variable, solution, boundaryValue, finalOperator, intervalNotation, setBuilderNotation, steps, numberLineBounds, title } = data
   const reducedMotion = prefersReducedMotion()
   const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
-  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
   void animationDuration // reserved for future animation customization
-  void adaptiveLineWeight // available for future line-weight customization
 
   const actualTotalSteps = totalStepsProp ?? steps.length
   const progressPercent = ((currentStep + 1) / actualTotalSteps) * 100

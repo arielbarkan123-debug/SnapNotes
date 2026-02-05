@@ -9,7 +9,7 @@ import {
 } from '@/types/math'
 import { COLORS, MATH_OPERATION_COLORS } from '@/lib/diagram-theme'
 import type { SubjectKey } from '@/lib/diagram-theme'
-import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import { getSubjectColor } from '@/lib/diagram-theme'
 import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import { prefersReducedMotion } from '@/lib/diagram-animations'
 
@@ -70,7 +70,6 @@ export function EquationSteps({
   const reducedMotion = prefersReducedMotion()
 
   const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
-  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   // Calculate total steps for progress
   const actualTotalSteps = totalStepsProp ?? steps.length
