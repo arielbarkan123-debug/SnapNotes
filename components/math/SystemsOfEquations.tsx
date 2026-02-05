@@ -2,7 +2,9 @@
 
 import { useMemo } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
-import { COLORS } from '@/lib/diagram-theme'
+import { COLORS, getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import { prefersReducedMotion } from '@/lib/diagram-animations'
 
 // ============================================================================
@@ -61,6 +63,10 @@ interface SystemsOfEquationsProps {
   className?: string
   language?: 'en' | 'he'
   showStepCounter?: boolean
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
 }
 
 // ============================================================================
@@ -76,10 +82,15 @@ export function SystemsOfEquations({
   className = '',
   language = 'en',
   showStepCounter = true,
+  subject = 'math',
+  complexity = 'middle_school',
 }: SystemsOfEquationsProps) {
   const { equation1, equation2, variables, method, solutions, steps, title } = data
   const reducedMotion = prefersReducedMotion()
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
   void animationDuration // reserved for future animation customization
+  void adaptiveLineWeight // available for future line-weight customization
 
   const actualTotalSteps = totalStepsProp ?? steps.length
   const progressPercent = ((currentStep + 1) / actualTotalSteps) * 100
@@ -204,7 +215,7 @@ export function SystemsOfEquations({
             style={{
               background: isComplete
                 ? 'linear-gradient(90deg, #22c55e, #16a34a)'
-                : 'linear-gradient(90deg, #4f46e5, #6366f1)',
+                : `linear-gradient(90deg, ${subjectColors.dark}, ${subjectColors.primary})`,
             }}
           />
         </div>
@@ -337,7 +348,7 @@ export function SystemsOfEquations({
                     animate={{ scale: 1 }}
                     transition={{ type: 'spring', stiffness: 400 }}
                     style={{
-                      backgroundColor: isCurrentStep ? COLORS.primary[500] : COLORS.gray[200],
+                      backgroundColor: isCurrentStep ? subjectColors.primary : COLORS.gray[200],
                       color: isCurrentStep ? 'white' : COLORS.gray[500],
                     }}
                   >

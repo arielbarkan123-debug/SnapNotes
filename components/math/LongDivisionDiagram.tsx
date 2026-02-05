@@ -8,6 +8,9 @@ import {
   type MathDiagramStepConfig,
   MATH_COLORS,
 } from '@/types/math'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 // Animation variants for step elements (available for SVG element animations)
 const _stepVariants = {
@@ -69,6 +72,10 @@ interface LongDivisionDiagramProps {
   className?: string
   language?: 'en' | 'he'
   showStepCounter?: boolean
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
 }
 
 /**
@@ -93,8 +100,13 @@ export function LongDivisionDiagram({
   className = '',
   language = 'en',
   showStepCounter = true,
+  subject = 'math',
+  complexity = 'middle_school',
 }: LongDivisionDiagramProps) {
   const { dividend, divisor, quotient, remainder, steps: rawSteps, title } = data
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   // Guard against undefined steps array
   const steps = rawSteps ?? []
@@ -342,7 +354,7 @@ export function LongDivisionDiagram({
             width: `${progressPercent}%`,
             background: isComplete
               ? 'linear-gradient(90deg, #22c55e, #16a34a)'
-              : 'linear-gradient(90deg, #f59e0b, #d97706)',
+              : `linear-gradient(90deg, ${subjectColors.dark}, ${subjectColors.primary})`,
           }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         />

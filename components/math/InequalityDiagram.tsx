@@ -2,7 +2,9 @@
 
 import { useMemo } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
-import { COLORS } from '@/lib/diagram-theme'
+import { COLORS, getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import { prefersReducedMotion } from '@/lib/diagram-animations'
 
 // ============================================================================
@@ -69,6 +71,10 @@ interface InequalityDiagramProps {
   className?: string
   language?: 'en' | 'he'
   showStepCounter?: boolean
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
 }
 
 // ============================================================================
@@ -83,6 +89,7 @@ interface NumberLineProps {
   showSolution: boolean
   width: number
   language: 'en' | 'he'
+  subjectColors: ReturnType<typeof getSubjectColor>
 }
 
 function InequalityNumberLine({
@@ -93,6 +100,7 @@ function InequalityNumberLine({
   showSolution,
   width,
   language: _language,
+  subjectColors,
 }: NumberLineProps) {
   const padding = 40
   const lineWidth = width - padding * 2
@@ -226,7 +234,7 @@ function InequalityNumberLine({
               y1={isBoundary ? 32 : 36}
               x2={x}
               y2={isBoundary ? 48 : 44}
-              stroke={isBoundary ? COLORS.primary[500] : COLORS.gray[400]}
+              stroke={isBoundary ? subjectColors.primary : COLORS.gray[400]}
               strokeWidth={isBoundary ? 2 : 1}
             />
             <text
@@ -236,7 +244,7 @@ function InequalityNumberLine({
               fontSize={isBoundary ? 14 : 11}
               fontWeight={isBoundary ? 600 : 400}
               fontFamily="'JetBrains Mono', monospace"
-              fill={isBoundary ? COLORS.primary[600] : COLORS.gray[500]}
+              fill={isBoundary ? subjectColors.dark : COLORS.gray[500]}
             >
               {value}
             </text>
@@ -319,10 +327,15 @@ export function InequalityDiagram({
   className = '',
   language = 'en',
   showStepCounter = true,
+  subject = 'math',
+  complexity = 'middle_school',
 }: InequalityDiagramProps) {
   const { originalInequality, variable: _variable, solution, boundaryValue, finalOperator, intervalNotation, setBuilderNotation, steps, numberLineBounds, title } = data
   const reducedMotion = prefersReducedMotion()
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
   void animationDuration // reserved for future animation customization
+  void adaptiveLineWeight // available for future line-weight customization
 
   const actualTotalSteps = totalStepsProp ?? steps.length
   const progressPercent = ((currentStep + 1) / actualTotalSteps) * 100
@@ -419,7 +432,7 @@ export function InequalityDiagram({
             style={{
               background: isComplete
                 ? 'linear-gradient(90deg, #22c55e, #16a34a)'
-                : 'linear-gradient(90deg, #f97316, #fb923c)',
+                : `linear-gradient(90deg, ${subjectColors.dark}, ${subjectColors.primary})`,
             }}
           />
         </div>
@@ -605,6 +618,7 @@ export function InequalityDiagram({
             showSolution={true}
             width={width - 32}
             language={language}
+            subjectColors={subjectColors}
           />
         </motion.div>
       )}

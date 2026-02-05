@@ -2,7 +2,9 @@
 
 import { useMemo } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
-import { COLORS } from '@/lib/diagram-theme'
+import { COLORS, getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import { prefersReducedMotion } from '@/lib/diagram-animations'
 
 // ============================================================================
@@ -67,6 +69,10 @@ interface PolynomialOperationsProps {
   className?: string
   language?: 'en' | 'he'
   showStepCounter?: boolean
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
 }
 
 // ============================================================================
@@ -137,10 +143,16 @@ export function PolynomialOperations({
   className = '',
   language = 'en',
   showStepCounter = true,
+  subject = 'math',
+  complexity = 'middle_school',
 }: PolynomialOperationsProps) {
   const { polynomial1: _polynomial1, polynomial2: _polynomial2, operation, result, terms1, terms2, resultTerms, variable = 'x', steps, title } = data
   const reducedMotion = prefersReducedMotion()
   void animationDuration // reserved for future animation customization
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
+  void adaptiveLineWeight // available for future line weight customization
 
   const actualTotalSteps = totalStepsProp ?? steps.length
   const progressPercent = ((currentStep + 1) / actualTotalSteps) * 100
@@ -222,7 +234,7 @@ export function PolynomialOperations({
             style={{
               background: isComplete
                 ? 'linear-gradient(90deg, #22c55e, #16a34a)'
-                : 'linear-gradient(90deg, #4f46e5, #6366f1)',
+                : `linear-gradient(90deg, ${subjectColors.dark}, ${subjectColors.primary})`,
             }}
           />
         </div>
@@ -465,8 +477,8 @@ export function PolynomialOperations({
             key={currentStep}
             className="p-4 rounded-xl border-l-4"
             style={{
-              backgroundColor: isComplete ? 'rgba(34, 197, 94, 0.08)' : 'rgba(79, 70, 229, 0.08)',
-              borderLeftColor: isComplete ? COLORS.success[500] : COLORS.primary[500],
+              backgroundColor: isComplete ? 'rgba(34, 197, 94, 0.08)' : `${subjectColors.light}33`,
+              borderLeftColor: isComplete ? COLORS.success[500] : subjectColors.primary,
             }}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}

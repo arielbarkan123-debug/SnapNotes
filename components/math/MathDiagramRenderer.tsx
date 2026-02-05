@@ -175,6 +175,8 @@ export function MathDiagramRenderer({
             width={width || 400}
             height={height || 100}
             className="diagram-content"
+            subject={subject}
+            complexity={complexity}
           />
         )
 
@@ -187,6 +189,8 @@ export function MathDiagramRenderer({
             width={width || 400}
             height={height || 400}
             className="diagram-content"
+            subject={subject}
+            complexity={complexity}
           />
         )
 

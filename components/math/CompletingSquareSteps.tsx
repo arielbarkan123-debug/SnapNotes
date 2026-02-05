@@ -2,7 +2,9 @@
 
 import { useMemo } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
-import { COLORS } from '@/lib/diagram-theme'
+import { COLORS, getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import { prefersReducedMotion } from '@/lib/diagram-animations'
 
 // ============================================================================
@@ -57,6 +59,10 @@ interface CompletingSquareStepsProps {
   className?: string
   language?: 'en' | 'he'
   showStepCounter?: boolean
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
 }
 
 // ============================================================================
@@ -72,10 +78,16 @@ export function CompletingSquareSteps({
   className = '',
   language = 'en',
   showStepCounter = true,
+  subject = 'math',
+  complexity = 'middle_school',
 }: CompletingSquareStepsProps) {
   const { originalEquation, b, halfB, squaredHalfB, variable, solutions, vertexForm, steps, title } = data
   const reducedMotion = prefersReducedMotion()
   void animationDuration // reserved for future animation customization
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
+  void adaptiveLineWeight // available for future line weight customization
 
   const actualTotalSteps = totalStepsProp ?? steps.length
   const progressPercent = ((currentStep + 1) / actualTotalSteps) * 100
@@ -164,7 +176,7 @@ export function CompletingSquareSteps({
             style={{
               background: isComplete
                 ? 'linear-gradient(90deg, #22c55e, #16a34a)'
-                : 'linear-gradient(90deg, #9333ea, #a855f7)',
+                : `linear-gradient(90deg, ${subjectColors.dark}, ${subjectColors.primary})`,
             }}
           />
         </div>
@@ -258,7 +270,7 @@ export function CompletingSquareSteps({
                     animate={{ scale: 1 }}
                     transition={{ type: 'spring', stiffness: 400, delay: reducedMotion ? 0 : index * 0.05 }}
                     style={{
-                      backgroundColor: isCurrentStep ? '#9333ea' : COLORS.gray[200],
+                      backgroundColor: isCurrentStep ? subjectColors.dark : COLORS.gray[200],
                       color: isCurrentStep ? 'white' : COLORS.gray[500],
                     }}
                   >

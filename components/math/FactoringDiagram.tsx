@@ -2,7 +2,9 @@
 
 import { useMemo, Component, type ReactNode } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
-import { COLORS } from '@/lib/diagram-theme'
+import { COLORS, getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import { prefersReducedMotion } from '@/lib/diagram-animations'
 
 // Error Boundary for graceful fallback
@@ -129,6 +131,10 @@ interface FactoringDiagramProps {
   className?: string
   language?: 'en' | 'he'
   showStepCounter?: boolean
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
 }
 
 // ============================================================================
@@ -144,6 +150,8 @@ function FactoringDiagram({
   className = '',
   language = 'en',
   showStepCounter = true,
+  subject = 'math',
+  complexity = 'middle_school',
 }: FactoringDiagramProps) {
   // Data validation - ensure we have required fields
   const safeData = useMemo(() => {
@@ -193,6 +201,10 @@ function FactoringDiagram({
 
   const reducedMotion = prefersReducedMotion()
   void animationDuration // reserved for future animation customization
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
+  void adaptiveLineWeight // available for future line weight customization
 
   // Generate FOIL verification if not provided (with try/catch)
   const generatedFoilVerification = useMemo(() => {
@@ -307,7 +319,7 @@ function FactoringDiagram({
             style={{
               background: isComplete
                 ? 'linear-gradient(90deg, #22c55e, #16a34a)'
-                : 'linear-gradient(90deg, #4f46e5, #6366f1)',
+                : `linear-gradient(90deg, ${subjectColors.dark}, ${subjectColors.primary})`,
             }}
           />
         </div>
@@ -495,8 +507,8 @@ function FactoringDiagram({
             key={currentStep}
             className="p-4 rounded-xl border-l-4 mb-4"
             style={{
-              backgroundColor: isComplete ? 'rgba(34, 197, 94, 0.08)' : 'rgba(79, 70, 229, 0.08)',
-              borderLeftColor: isComplete ? COLORS.success[500] : COLORS.primary[500],
+              backgroundColor: isComplete ? 'rgba(34, 197, 94, 0.08)' : `${subjectColors.light}33`,
+              borderLeftColor: isComplete ? COLORS.success[500] : subjectColors.primary,
             }}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}

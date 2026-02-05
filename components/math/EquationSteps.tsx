@@ -8,6 +8,9 @@ import {
   type MathDiagramStepConfig,
 } from '@/types/math'
 import { COLORS, MATH_OPERATION_COLORS } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import { prefersReducedMotion } from '@/lib/diagram-animations'
 
 interface EquationStepsProps {
@@ -32,6 +35,10 @@ interface EquationStepsProps {
   language?: 'en' | 'he'
   /** Whether to show the step counter (default: true) */
   showStepCounter?: boolean
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
 }
 
 /**
@@ -56,9 +63,14 @@ export function EquationSteps({
   className = '',
   language = 'en',
   showStepCounter = true,
+  subject = 'math',
+  complexity = 'middle_school',
 }: EquationStepsProps) {
   const { originalEquation: _originalEquation, variable, solution, steps, title, showBalanceScale } = data
   const reducedMotion = prefersReducedMotion()
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   // Calculate total steps for progress
   const actualTotalSteps = totalStepsProp ?? steps.length
@@ -190,8 +202,8 @@ export function EquationSteps({
       case 'combine':
         return {
           symbol: '⟹',
-          color: COLORS.primary[500],
-          bgColor: COLORS.primary[50],
+          color: subjectColors.primary,
+          bgColor: subjectColors.light + '20',
           icon: '🔗',
           label: 'Combine',
           labelHe: 'איחוד',
@@ -199,8 +211,8 @@ export function EquationSteps({
       case 'distribute':
         return {
           symbol: '⟹',
-          color: COLORS.primary[500],
-          bgColor: COLORS.primary[50],
+          color: subjectColors.primary,
+          bgColor: subjectColors.light + '20',
           icon: '📤',
           label: 'Distribute',
           labelHe: 'פיזור',
@@ -208,8 +220,8 @@ export function EquationSteps({
       case 'factor':
         return {
           symbol: '⟹',
-          color: COLORS.primary[500],
-          bgColor: COLORS.primary[50],
+          color: subjectColors.primary,
+          bgColor: subjectColors.light + '20',
           icon: '📦',
           label: 'Factor',
           labelHe: 'פירוק',
@@ -226,8 +238,8 @@ export function EquationSteps({
       default:
         return {
           symbol: '',
-          color: COLORS.primary[500],
-          bgColor: COLORS.primary[50],
+          color: subjectColors.primary,
+          bgColor: subjectColors.light + '20',
           icon: '📐',
           label: 'Step',
           labelHe: 'שלב',
@@ -260,7 +272,7 @@ export function EquationSteps({
             style={{
               background: isComplete
                 ? 'linear-gradient(90deg, #22c55e, #16a34a)'
-                : 'linear-gradient(90deg, #4f46e5, #6366f1)',
+                : `linear-gradient(90deg, ${subjectColors.dark}, ${subjectColors.primary})`,
             }}
           />
         </div>
@@ -280,6 +292,7 @@ export function EquationSteps({
             isBalanced={isComplete}
             operation={steps[currentStep]?.operation}
             reducedMotion={reducedMotion}
+            subjectColors={subjectColors}
           />
         </motion.div>
       )}
@@ -331,7 +344,7 @@ export function EquationSteps({
                       delay: reducedMotion ? 0 : index * 0.05,
                     }}
                     style={{
-                      backgroundColor: isCurrentStep ? COLORS.primary[500] : COLORS.gray[200],
+                      backgroundColor: isCurrentStep ? subjectColors.primary : COLORS.gray[200],
                       color: isCurrentStep ? 'white' : COLORS.gray[500],
                     }}
                   >
@@ -470,7 +483,7 @@ export function EquationSteps({
           className="mt-4 p-3 rounded-xl border-l-4"
           style={{
             backgroundColor: 'rgba(59, 130, 246, 0.08)',
-            borderLeftColor: COLORS.primary[500],
+            borderLeftColor: subjectColors.primary,
           }}
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
@@ -507,18 +520,20 @@ function BalanceScale({
   isBalanced,
   operation,
   reducedMotion = false,
+  subjectColors,
 }: {
   leftSide: string
   rightSide: string
   isBalanced: boolean
   operation?: EquationStep['operation']
   reducedMotion?: boolean
+  subjectColors: ReturnType<typeof getSubjectColor>
 }) {
   // Calculate tilt based on whether balanced
   const tiltAngle = isBalanced ? 0 : -3
 
   // Get glow color based on operation
-  const glowColor = isBalanced ? 'rgba(34, 197, 94, 0.3)' : 'rgba(79, 70, 229, 0.2)'
+  const glowColor = isBalanced ? 'rgba(34, 197, 94, 0.3)' : `${subjectColors.light}40`
 
   return (
     <div className="relative w-full max-w-sm mx-auto h-40">
@@ -532,7 +547,7 @@ function BalanceScale({
         <motion.div
           className="w-8 h-8 rounded-full flex items-center justify-center text-lg shadow-lg"
           animate={{
-            backgroundColor: isBalanced ? COLORS.success[500] : COLORS.primary[500],
+            backgroundColor: isBalanced ? COLORS.success[500] : subjectColors.primary,
             boxShadow: `0 0 15px ${glowColor}`,
           }}
           transition={{ duration: reducedMotion ? 0 : 0.5 }}
@@ -603,8 +618,8 @@ function BalanceScale({
             animate={{
               background: isBalanced
                 ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.15))'
-                : 'linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(99, 102, 241, 0.15))',
-              borderColor: isBalanced ? 'rgba(34, 197, 94, 0.4)' : 'rgba(79, 70, 229, 0.4)',
+                : `linear-gradient(135deg, ${subjectColors.light}26, ${subjectColors.primary}26)`,
+              borderColor: isBalanced ? 'rgba(34, 197, 94, 0.4)' : `${subjectColors.primary}66`,
             }}
             transition={{ duration: reducedMotion ? 0 : 0.3 }}
             style={{ border: '2px solid' }}
@@ -616,7 +631,7 @@ function BalanceScale({
               animate={{
                 opacity: 1,
                 scale: 1,
-                color: isBalanced ? COLORS.success[500] : COLORS.primary[500]
+                color: isBalanced ? COLORS.success[500] : subjectColors.primary
               }}
               transition={{ duration: reducedMotion ? 0 : 0.2 }}
             >
@@ -639,8 +654,8 @@ function BalanceScale({
             animate={{
               background: isBalanced
                 ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.15))'
-                : 'linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(99, 102, 241, 0.15))',
-              borderColor: isBalanced ? 'rgba(34, 197, 94, 0.4)' : 'rgba(79, 70, 229, 0.4)',
+                : `linear-gradient(135deg, ${subjectColors.light}26, ${subjectColors.primary}26)`,
+              borderColor: isBalanced ? 'rgba(34, 197, 94, 0.4)' : `${subjectColors.primary}66`,
             }}
             transition={{ duration: reducedMotion ? 0 : 0.3 }}
             style={{ border: '2px solid' }}
@@ -652,7 +667,7 @@ function BalanceScale({
               animate={{
                 opacity: 1,
                 scale: 1,
-                color: isBalanced ? COLORS.success[500] : COLORS.primary[500]
+                color: isBalanced ? COLORS.success[500] : subjectColors.primary
               }}
               transition={{ duration: reducedMotion ? 0 : 0.2 }}
             >
@@ -675,8 +690,8 @@ function BalanceScale({
             <motion.div
               className="px-2 py-1 rounded-lg text-xs font-medium"
               style={{
-                backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                color: COLORS.primary[500],
+                backgroundColor: `${subjectColors.primary}1a`,
+                color: subjectColors.primary,
               }}
               animate={{ opacity: [0.7, 1, 0.7] }}
               transition={{ repeat: Infinity, duration: 2 }}

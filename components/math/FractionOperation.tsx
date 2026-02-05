@@ -9,6 +9,9 @@ import {
   MATH_COLORS,
   FRACTION_COLORS,
 } from '@/types/math'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface FractionOperationProps {
   data: FractionOperationData
@@ -32,6 +35,10 @@ interface FractionOperationProps {
   language?: 'en' | 'he'
   /** Whether to show the step counter (default: true) */
   showStepCounter?: boolean
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
 }
 
 /**
@@ -56,6 +63,8 @@ export function FractionOperation({
   className = '',
   language = 'en',
   showStepCounter = true,
+  subject = 'math',
+  complexity = 'middle_school',
 }: FractionOperationProps) {
   const {
     operationType,
@@ -67,6 +76,9 @@ export function FractionOperation({
     showPieChart,
     showBarModel,
   } = data
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   // Get visible steps
   const visibleSteps = useMemo(() => {

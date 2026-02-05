@@ -2,7 +2,9 @@
 
 import { useMemo } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
-import { COLORS } from '@/lib/diagram-theme'
+import { COLORS, getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import { prefersReducedMotion } from '@/lib/diagram-animations'
 
 // ============================================================================
@@ -65,6 +67,10 @@ interface RadicalSimplificationProps {
   className?: string
   language?: 'en' | 'he'
   showStepCounter?: boolean
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
 }
 
 // ============================================================================
@@ -134,10 +140,15 @@ export function RadicalSimplification({
   className = '',
   language = 'en',
   showStepCounter = true,
+  subject = 'math',
+  complexity = 'middle_school',
 }: RadicalSimplificationProps) {
   const { originalExpression: _originalExpression, radicand, index, primeFactors, extracted, remaining, simplifiedForm, steps, method, title } = data
   const reducedMotion = prefersReducedMotion()
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
   void animationDuration // reserved for future animation customization
+  void adaptiveLineWeight // available for future line-weight customization
 
   const actualTotalSteps = totalStepsProp ?? steps.length
   const progressPercent = ((currentStep + 1) / actualTotalSteps) * 100
@@ -216,7 +227,7 @@ export function RadicalSimplification({
             style={{
               background: isComplete
                 ? 'linear-gradient(90deg, #22c55e, #16a34a)'
-                : 'linear-gradient(90deg, #3b82f6, #60a5fa)',
+                : `linear-gradient(90deg, ${subjectColors.dark}, ${subjectColors.primary})`,
             }}
           />
         </div>
@@ -232,7 +243,7 @@ export function RadicalSimplification({
           {language === 'he' ? 'פשט:' : 'Simplify:'}
         </div>
         <div className="text-3xl font-mono font-bold text-blue-700 dark:text-blue-300">
-          <RadicalSymbol index={index} color="#3b82f6">
+          <RadicalSymbol index={index} color={subjectColors.primary}>
             {radicand}
           </RadicalSymbol>
         </div>
@@ -394,8 +405,8 @@ export function RadicalSimplification({
             key={currentStep}
             className="p-4 rounded-xl border-l-4"
             style={{
-              backgroundColor: isComplete ? 'rgba(34, 197, 94, 0.08)' : 'rgba(59, 130, 246, 0.08)',
-              borderLeftColor: isComplete ? COLORS.success[500] : '#3b82f6',
+              backgroundColor: isComplete ? 'rgba(34, 197, 94, 0.08)' : `${subjectColors.bg}`,
+              borderLeftColor: isComplete ? COLORS.success[500] : subjectColors.primary,
             }}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
