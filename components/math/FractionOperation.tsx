@@ -9,6 +9,7 @@ import {
   MATH_COLORS,
   FRACTION_COLORS,
 } from '@/types/math'
+import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
 import type { SubjectKey } from '@/lib/diagram-theme'
 import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
@@ -76,6 +77,8 @@ export function FractionOperation({
     showBarModel,
   } = data
 
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   // Get visible steps
   const visibleSteps = useMemo(() => {

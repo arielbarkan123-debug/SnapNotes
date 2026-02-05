@@ -1,6 +1,10 @@
 'use client'
 
+import { useMemo } from 'react'
 import type { TreeDiagramData, TreeNode, TreeDiagramErrorHighlight } from '@/types'
+import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface TreeDiagramDataWithErrors extends TreeDiagramData {
   errorHighlight?: TreeDiagramErrorHighlight
@@ -11,6 +15,8 @@ interface TreeDiagramProps {
   className?: string
   width?: number
   height?: number
+  subject?: SubjectKey
+  complexity?: VisualComplexityLevel
 }
 
 interface NodePosition {
@@ -28,8 +34,13 @@ export function TreeDiagram({
   className = '',
   width = 500,
   height = 400,
+  subject = 'math',
+  complexity = 'middle_school',
 }: TreeDiagramProps) {
   const { root, showProbabilities = true, title, errorHighlight } = data
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   const padding = { top: 40, bottom: 30, left: 50, right: 50 }
   const titleHeight = title ? 30 : 0
@@ -178,9 +189,9 @@ export function TreeDiagram({
               cx={pos.x}
               cy={pos.y}
               r={nodeRadius}
-              fill={isWrongNode ? '#FEE2E2' : isCorrectPath ? '#DCFCE7' : isHighlighted ? '#3B82F6' : 'white'}
-              stroke={isWrongNode ? '#EF4444' : isCorrectPath ? '#22C55E' : isHighlighted ? '#3B82F6' : 'currentColor'}
-              strokeWidth={isWrongNode || isCorrectPath ? 3 : 2}
+              fill={isWrongNode ? '#FEE2E2' : isCorrectPath ? '#DCFCE7' : isHighlighted ? subjectColors.primary : 'white'}
+              stroke={isWrongNode ? '#EF4444' : isCorrectPath ? '#22C55E' : isHighlighted ? subjectColors.primary : 'currentColor'}
+              strokeWidth={isWrongNode || isCorrectPath ? adaptiveLineWeight + 1 : adaptiveLineWeight}
               className={isHighlighted && !isWrongNode && !isCorrectPath ? '' : 'dark:fill-gray-800'}
             />
             {/* Node label */}
