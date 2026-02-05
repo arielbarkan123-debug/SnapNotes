@@ -27,7 +27,7 @@ interface ChatRequest {
   language?: 'en' | 'he'
 }
 
-function buildSystemPrompt(guideContent: string, language: 'en' | 'he'): string {
+function buildSystemPrompt(guideContent: string, language: 'en' | 'he', action?: string): string {
   const langInstruction = language === 'he'
     ? `\n## Language: Respond ONLY in Hebrew (עברית). Keep math notation standard.\n`
     : ''
@@ -56,9 +56,7 @@ ${guideContent.slice(0, 15000)}
 - "Quiz Me": Generate a multiple choice or short answer question from the guide
 - "Practice Qs": Generate 3-5 practice questions from a random topic
 - "Explain More": Explain the referenced section in simpler terms with an analogy
-- "Draw Diagram": Generate a visual diagram. You MUST use one of these exact schemas:
-
-${getDiagramSchemaPrompt()}
+- "Draw Diagram": Generate a visual diagram.${action === 'diagram' ? ` You MUST use one of these exact schemas:\n\n${getDiagramSchemaPrompt()}` : ' (Ask the user to click the "Draw Diagram" button for full diagram support)'}
 
 ## Response Format
 Return ONLY valid JSON:
@@ -169,7 +167,7 @@ export async function POST(
     const response = await client.messages.create({
       model: AI_MODEL,
       max_tokens: MAX_TOKENS,
-      system: buildSystemPrompt(guideContent, language),
+      system: buildSystemPrompt(guideContent, language, action),
       messages,
     })
 

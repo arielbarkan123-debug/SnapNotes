@@ -29,6 +29,8 @@ export function DiagramStepControls({
   const isFirst = currentStep === 0
   const isLast = currentStep === totalSteps - 1
   const label = isRTL && stepLabelHe ? stepLabelHe : stepLabel
+  const prevLabel = isRTL ? 'הצעד הקודם' : 'Previous step'
+  const nextLabel = isRTL ? 'הצעד הבא' : 'Next step'
 
   return (
     <div
@@ -38,7 +40,7 @@ export function DiagramStepControls({
       <button
         onClick={onPrev}
         disabled={isFirst}
-        aria-label="Previous step"
+        aria-label={prevLabel}
         className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
       >
         {isRTL ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
@@ -60,7 +62,7 @@ export function DiagramStepControls({
                     : 'bg-indigo-500 dark:bg-indigo-400 scale-125'
                   : isPast
                     ? subjectColor
-                      ? 'opacity-40'
+                      ? ''
                       : 'bg-indigo-300 dark:bg-indigo-600'
                     : 'bg-gray-300 dark:bg-gray-600'
               }`}
@@ -81,7 +83,7 @@ export function DiagramStepControls({
       <button
         onClick={onNext}
         disabled={isLast}
-        aria-label="Next step"
+        aria-label={nextLabel}
         className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
       >
         {isRTL ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
