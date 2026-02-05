@@ -360,6 +360,46 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     }),
   },
 
+  interactive_coordinate_plane: {
+    type: 'interactive_coordinate_plane',
+    subject: 'math',
+    gradeRange: '7-12',
+    description: 'Interactive coordinate plane where students can drag points and add new points. Uses the same data format as coordinate_plane.',
+    jsonExample: JSON.stringify({
+      type: 'interactive_coordinate_plane',
+      visibleStep: 0,
+      totalSteps: 3,
+      data: {
+        xMin: -10, xMax: 10, yMin: -10, yMax: 10, showGrid: true,
+        title: 'Plot the points',
+        points: [
+          { id: 'A', x: 2, y: 3, label: 'A(2,3)', color: '#6366f1' },
+          { id: 'B', x: -1, y: 4, label: 'B(-1,4)', color: '#ef4444' },
+        ],
+      },
+    }),
+  },
+
+  equation_grapher: {
+    type: 'equation_grapher',
+    subject: 'math',
+    gradeRange: '8-12',
+    description: 'Interactive equation grapher for plotting and comparing functions. Students can type equations to see live graphs.',
+    jsonExample: JSON.stringify({
+      type: 'equation_grapher',
+      visibleStep: 0,
+      totalSteps: 2,
+      data: {
+        equations: [
+          { expression: 'x^2', color: '#3b82f6' },
+          { expression: '2*x + 1', color: '#ef4444' },
+        ],
+        xRange: [-5, 5],
+        yRange: [-5, 10],
+      },
+    }),
+  },
+
   // ---- GEOMETRY: Currently Implemented ----
 
   triangle_geometry: {

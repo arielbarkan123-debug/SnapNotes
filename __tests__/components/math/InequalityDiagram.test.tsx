@@ -76,6 +76,15 @@ jest.mock('@/lib/diagram-animations', () => ({
   }),
   lineDrawVariants: { hidden: { pathLength: 0 }, visible: { pathLength: 1 } },
   labelAppearVariants: { hidden: { opacity: 0 }, visible: { opacity: 1 } },
+  prefersReducedMotion: () => false,
+}))
+
+// Mock MathRenderer (uses katex not available in JSDOM)
+jest.mock('@/components/ui/MathRenderer', () => ({
+  MathText: ({ children }: any) => <span data-testid="math-text">{children}</span>,
+  InlineMath: ({ children }: any) => <span data-testid="inline-math">{children}</span>,
+  BlockMath: ({ children }: any) => <div data-testid="block-math">{children}</div>,
+  MathRenderer: ({ latex }: any) => <span data-testid="math-renderer">{latex}</span>,
 }))
 
 // =============================================================================
@@ -208,8 +217,9 @@ describe('InequalityDiagram', () => {
     it('shows solution label when boundaries visible (step 3)', () => {
       mockCurrentStep = 3
       render(<InequalityDiagram data={baseData} />)
+      // After KaTeX integration, solution and interval notation are rendered via InlineMath mock
       expect(screen.getByText(/x < 2/)).toBeInTheDocument()
-      expect(screen.getByText(/\(-\u221e, 2\)/)).toBeInTheDocument()
+      expect(screen.getByText(/\\infty.*2|2.*\\infty/)).toBeInTheDocument()
     })
 
     it('hides solution label before boundaries step', () => {

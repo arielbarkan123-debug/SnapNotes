@@ -6,9 +6,10 @@ import type { DiagramState as PhysicsDiagramState } from '@/types/physics'
 import type { MathDiagramState } from '@/types/math'
 import type { ChemistryDiagramState } from '@/types/chemistry'
 import type { BiologyDiagramState } from '@/types/biology'
+import type { GeometryDiagramState } from '@/types/geometry'
 
-// Combined diagram type that can be physics, math, chemistry, or biology
-export type DiagramState = PhysicsDiagramState | MathDiagramState | ChemistryDiagramState | BiologyDiagramState
+// Combined diagram type that can be physics, math, chemistry, biology, or geometry
+export type DiagramState = PhysicsDiagramState | MathDiagramState | ChemistryDiagramState | BiologyDiagramState | GeometryDiagramState
 
 // Physics diagram types
 export const PHYSICS_DIAGRAM_TYPES = [
@@ -39,6 +40,10 @@ export const MATH_DIAGRAM_TYPES = [
   'radical',
   'systems',
   'inequality',
+  'unit_circle',
+  'tree_diagram',
+  'interactive_coordinate_plane',
+  'equation_grapher',
 ]
 
 // Chemistry diagram types
@@ -46,6 +51,18 @@ export const CHEMISTRY_DIAGRAM_TYPES = ['atom', 'molecule', 'periodic_element', 
 
 // Biology diagram types
 export const BIOLOGY_DIAGRAM_TYPES = ['cell', 'organelle', 'dna', 'process']
+
+// Geometry diagram types
+export const GEOMETRY_DIAGRAM_TYPES = [
+  'square',
+  'rectangle',
+  'triangle',
+  'circle',
+  'parallelogram',
+  'rhombus',
+  'trapezoid',
+  'regular_polygon',
+]
 
 // Human-readable diagram type names
 export const DIAGRAM_TYPE_NAMES: Record<string, string> = {
@@ -74,6 +91,10 @@ export const DIAGRAM_TYPE_NAMES: Record<string, string> = {
   radical: 'Radical Simplification',
   systems: 'Systems of Equations',
   inequality: 'Inequalities',
+  unit_circle: 'Unit Circle',
+  tree_diagram: 'Tree Diagram',
+  interactive_coordinate_plane: 'Interactive Graph',
+  equation_grapher: 'Equation Grapher',
   // Chemistry diagrams
   atom: 'Atom Structure',
   molecule: 'Molecule Structure',
@@ -84,6 +105,13 @@ export const DIAGRAM_TYPE_NAMES: Record<string, string> = {
   organelle: 'Organelle',
   dna: 'DNA Structure',
   process: 'Biological Process',
+  // Geometry diagrams (triangle and circle already defined in math section)
+  square: 'Square',
+  rectangle: 'Rectangle',
+  parallelogram: 'Parallelogram',
+  rhombus: 'Rhombus',
+  trapezoid: 'Trapezoid',
+  regular_polygon: 'Regular Polygon',
 }
 
 /**
@@ -112,6 +140,13 @@ export function isChemistryDiagram(diagram: DiagramState): diagram is ChemistryD
  */
 export function isBiologyDiagram(diagram: DiagramState): diagram is BiologyDiagramState {
   return BIOLOGY_DIAGRAM_TYPES.includes(diagram.type as string)
+}
+
+/**
+ * Type guard for geometry diagrams
+ */
+export function isGeometryDiagram(diagram: DiagramState): diagram is GeometryDiagramState {
+  return GEOMETRY_DIAGRAM_TYPES.includes(diagram.type as string)
 }
 
 /**

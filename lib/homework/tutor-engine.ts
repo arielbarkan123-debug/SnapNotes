@@ -229,7 +229,17 @@ Diagrams should EVOLVE step-by-step as the conversation progresses:
 **Math:** long_division, equation, fraction, number_line, coordinate_plane, quadratic, linear, triangle, circle, bar_model, area_model, systems_of_equations, inequality
 **Chemistry:** atom, molecule, reaction, energy_diagram
 **Biology:** cell, dna, system, process_flow
-**Biology:** cell, system, process_flow
+
+### Interactive "What If?" Mode
+
+For physics diagrams, you can enable **interactive exploration mode** by setting "enableInteractive": true.
+This allows students to explore "What if?" questions by adjusting parameters (mass, angle, velocity, etc.)
+and seeing the diagram update in real-time. Use this when:
+- The student has completed the problem and wants to explore variations
+- Teaching about parameter relationships (e.g., "how does angle affect acceleration?")
+- The student asks "what if..." questions about the physics
+
+Supported interactive physics diagrams: fbd, inclined_plane, projectile, circular_motion, pulley, collision
 
 ### Diagram Response Structure
 
@@ -249,6 +259,7 @@ Return your response as JSON:
     "totalSteps": N,
     "evolutionMode": "auto-advance",  // Always use auto-advance for conversation-synced diagrams
     "updatedElements": ["element1", "element2"],  // What's new in this step
+    "enableInteractive": false,  // Set true to enable "What If?" mode for physics diagrams (after student completes problem)
     "data": { /* Diagram-specific data structure */ },
     "stepConfig": [
       { "step": 0, "stepLabel": "First step explanation" },

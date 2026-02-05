@@ -40,8 +40,21 @@ describe('CircleGeometry', () => {
   it('renders with custom dimensions', () => {
     const { container } = render(<CircleGeometry data={baseData} width={500} height={500} />)
     const svg = container.querySelector('svg')
-    expect(svg).toHaveAttribute('width', '500')
+    expect(svg).toHaveAttribute('viewBox', '0 0 500 500')
     expect(svg).toHaveAttribute('height', '500')
+  })
+
+  it('has correct data-testid attributes', () => {
+    render(<CircleGeometry data={baseData} />)
+    expect(screen.getByTestId('circle-diagram')).toBeInTheDocument()
+    expect(screen.getByTestId('circle-background')).toBeInTheDocument()
+  })
+
+  it('renders step controls', () => {
+    render(<CircleGeometry data={baseData} />)
+    // Step controls appear when there are multiple steps
+    const stepDots = screen.getAllByTestId('step-dot')
+    expect(stepDots.length).toBeGreaterThan(0)
   })
 
   it('supports Hebrew language', () => {

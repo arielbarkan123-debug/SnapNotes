@@ -25,7 +25,9 @@ import { TreeDiagram } from './TreeDiagram'
 import { Triangle } from './Triangle'
 import { Circle } from './Circle'
 import { UnitCircle } from './UnitCircle'
-import type { TriangleDataWithErrors, CircleDataWithErrors, UnitCircleDataWithErrors, TreeDiagramDataWithErrors } from '@/types'
+import { InteractiveCoordinatePlane } from './InteractiveCoordinatePlane'
+import { EquationGrapher } from './EquationGrapher'
+import type { TriangleDataWithErrors, CircleDataWithErrors, UnitCircleDataWithErrors, TreeDiagramDataWithErrors, CoordinatePlaneData } from '@/types'
 
 interface MathDiagramRendererProps {
   /** Diagram state from tutor response */
@@ -319,6 +321,35 @@ export function MathDiagramRenderer({
           />
         )
 
+      case 'interactive_coordinate_plane':
+        return (
+          <InteractiveCoordinatePlane
+            data={diagram.data as unknown as CoordinatePlaneData}
+            width={width || 400}
+            height={height || 400}
+            className="diagram-content"
+            subject={subject}
+            complexity={complexity}
+            language={language}
+          />
+        )
+
+      case 'equation_grapher':
+        return (
+          <EquationGrapher
+            initialEquations={(diagram.data as { equations?: Array<{ expression: string; color?: string }> })?.equations}
+            width={width || 500}
+            height={height || 400}
+            xRange={(diagram.data as { xRange?: [number, number] })?.xRange}
+            yRange={(diagram.data as { yRange?: [number, number] })?.yRange}
+            showGrid={true}
+            className="diagram-content"
+            subject={subject}
+            complexity={complexity}
+            language={language}
+          />
+        )
+
       // Placeholder for future diagram types
       case 'bar_model':
       case 'area_model':
@@ -364,6 +395,8 @@ export function MathDiagramRenderer({
         systems: 'Systems of Equations',
         inequality: 'Inequalities',
         tree_diagram: 'Tree Diagram',
+        interactive_coordinate_plane: 'Interactive Graph',
+        equation_grapher: 'Equation Grapher',
       },
       he: {
         long_division: 'חילוק ארוך',
@@ -383,6 +416,8 @@ export function MathDiagramRenderer({
         systems: 'מערכת משוואות',
         inequality: 'אי-שוויונות',
         tree_diagram: 'תרשים עץ',
+        interactive_coordinate_plane: 'גרף אינטראקטיבי',
+        equation_grapher: 'שרטוט משוואות',
       },
     }
     return names[language][diagram.type] || diagram.type

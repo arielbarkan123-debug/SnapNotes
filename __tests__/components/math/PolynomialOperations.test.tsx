@@ -25,6 +25,14 @@ jest.mock('@/lib/diagram-animations', () => ({
   createPathDrawVariants: () => ({ hidden: {}, visible: {} }),
 }))
 
+// Mock MathRenderer (uses katex not available in JSDOM)
+jest.mock('@/components/ui/MathRenderer', () => ({
+  MathText: ({ children }: any) => <span data-testid="math-text">{children}</span>,
+  InlineMath: ({ children }: any) => <span data-testid="inline-math">{children}</span>,
+  BlockMath: ({ children }: any) => <div data-testid="block-math">{children}</div>,
+  MathRenderer: ({ latex }: any) => <span data-testid="math-renderer">{latex}</span>,
+}))
+
 describe('PolynomialOperations', () => {
   const baseData: PolynomialOperationsData = {
     polynomial1: '3x\u00B2 + 2x - 5',
@@ -101,8 +109,10 @@ describe('PolynomialOperations', () => {
 
   it('displays result when complete', () => {
     const { container } = render(
-      <PolynomialOperations data={baseData} currentStep={3} />
+      <PolynomialOperations data={baseData} initialStep={3} />
     )
-    expect(container.textContent).toContain('4x\u00B2 - 2x - 4')
+    // After KaTeX integration, result is wrapped in MathText with normalizeToLatex
+    // Unicode ² becomes ^{2} in the LaTeX string
+    expect(container.textContent).toContain('4x^{2} - 2x - 4')
   })
 })

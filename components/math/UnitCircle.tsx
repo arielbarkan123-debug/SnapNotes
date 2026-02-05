@@ -2,9 +2,10 @@
 
 import { useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTheme } from 'next-themes'
 import type { UnitCircleData, UnitCircleErrorHighlight } from '@/types'
 import { useDiagramBase } from '@/hooks/useDiagramBase'
-import type { SubjectKey } from '@/lib/diagram-theme'
+import type { SubjectKey, ColorMode } from '@/lib/diagram-theme'
 import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import { DiagramStepControls } from '@/components/diagrams/DiagramStepControls'
 import {
@@ -12,6 +13,8 @@ import {
   lineDrawVariants,
   labelAppearVariants,
 } from '@/lib/diagram-animations'
+import { DiagramMathLabel } from '@/components/diagrams/DiagramMathLabel'
+import { radianToLatex, fractionToLatex } from '@/lib/normalize-latex'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,22 +42,22 @@ interface UnitCircleProps {
 // ---------------------------------------------------------------------------
 
 const STANDARD_ANGLES = [
-  { degrees: 0, radians: '0', cos: '1', sin: '0' },
-  { degrees: 30, radians: '\u03C0/6', cos: '\u221A3/2', sin: '1/2' },
-  { degrees: 45, radians: '\u03C0/4', cos: '\u221A2/2', sin: '\u221A2/2' },
-  { degrees: 60, radians: '\u03C0/3', cos: '1/2', sin: '\u221A3/2' },
-  { degrees: 90, radians: '\u03C0/2', cos: '0', sin: '1' },
-  { degrees: 120, radians: '2\u03C0/3', cos: '-1/2', sin: '\u221A3/2' },
-  { degrees: 135, radians: '3\u03C0/4', cos: '-\u221A2/2', sin: '\u221A2/2' },
-  { degrees: 150, radians: '5\u03C0/6', cos: '-\u221A3/2', sin: '1/2' },
-  { degrees: 180, radians: '\u03C0', cos: '-1', sin: '0' },
-  { degrees: 210, radians: '7\u03C0/6', cos: '-\u221A3/2', sin: '-1/2' },
-  { degrees: 225, radians: '5\u03C0/4', cos: '-\u221A2/2', sin: '-\u221A2/2' },
-  { degrees: 240, radians: '4\u03C0/3', cos: '-1/2', sin: '-\u221A3/2' },
-  { degrees: 270, radians: '3\u03C0/2', cos: '0', sin: '-1' },
-  { degrees: 300, radians: '5\u03C0/3', cos: '1/2', sin: '-\u221A3/2' },
-  { degrees: 315, radians: '7\u03C0/4', cos: '\u221A2/2', sin: '-\u221A2/2' },
-  { degrees: 330, radians: '11\u03C0/6', cos: '\u221A3/2', sin: '-1/2' },
+  { degrees: 0, radians: '0', cos: '1', sin: '0', radiansLatex: '0', cosLatex: '1', sinLatex: '0' },
+  { degrees: 30, radians: '\u03C0/6', cos: '\u221A3/2', sin: '1/2', radiansLatex: '\\frac{\\pi}{6}', cosLatex: '\\frac{\\sqrt{3}}{2}', sinLatex: '\\frac{1}{2}' },
+  { degrees: 45, radians: '\u03C0/4', cos: '\u221A2/2', sin: '\u221A2/2', radiansLatex: '\\frac{\\pi}{4}', cosLatex: '\\frac{\\sqrt{2}}{2}', sinLatex: '\\frac{\\sqrt{2}}{2}' },
+  { degrees: 60, radians: '\u03C0/3', cos: '1/2', sin: '\u221A3/2', radiansLatex: '\\frac{\\pi}{3}', cosLatex: '\\frac{1}{2}', sinLatex: '\\frac{\\sqrt{3}}{2}' },
+  { degrees: 90, radians: '\u03C0/2', cos: '0', sin: '1', radiansLatex: '\\frac{\\pi}{2}', cosLatex: '0', sinLatex: '1' },
+  { degrees: 120, radians: '2\u03C0/3', cos: '-1/2', sin: '\u221A3/2', radiansLatex: '\\frac{2\\pi}{3}', cosLatex: '-\\frac{1}{2}', sinLatex: '\\frac{\\sqrt{3}}{2}' },
+  { degrees: 135, radians: '3\u03C0/4', cos: '-\u221A2/2', sin: '\u221A2/2', radiansLatex: '\\frac{3\\pi}{4}', cosLatex: '-\\frac{\\sqrt{2}}{2}', sinLatex: '\\frac{\\sqrt{2}}{2}' },
+  { degrees: 150, radians: '5\u03C0/6', cos: '-\u221A3/2', sin: '1/2', radiansLatex: '\\frac{5\\pi}{6}', cosLatex: '-\\frac{\\sqrt{3}}{2}', sinLatex: '\\frac{1}{2}' },
+  { degrees: 180, radians: '\u03C0', cos: '-1', sin: '0', radiansLatex: '\\pi', cosLatex: '-1', sinLatex: '0' },
+  { degrees: 210, radians: '7\u03C0/6', cos: '-\u221A3/2', sin: '-1/2', radiansLatex: '\\frac{7\\pi}{6}', cosLatex: '-\\frac{\\sqrt{3}}{2}', sinLatex: '-\\frac{1}{2}' },
+  { degrees: 225, radians: '5\u03C0/4', cos: '-\u221A2/2', sin: '-\u221A2/2', radiansLatex: '\\frac{5\\pi}{4}', cosLatex: '-\\frac{\\sqrt{2}}{2}', sinLatex: '-\\frac{\\sqrt{2}}{2}' },
+  { degrees: 240, radians: '4\u03C0/3', cos: '-1/2', sin: '-\u221A3/2', radiansLatex: '\\frac{4\\pi}{3}', cosLatex: '-\\frac{1}{2}', sinLatex: '-\\frac{\\sqrt{3}}{2}' },
+  { degrees: 270, radians: '3\u03C0/2', cos: '0', sin: '-1', radiansLatex: '\\frac{3\\pi}{2}', cosLatex: '0', sinLatex: '-1' },
+  { degrees: 300, radians: '5\u03C0/3', cos: '1/2', sin: '-\u221A3/2', radiansLatex: '\\frac{5\\pi}{3}', cosLatex: '\\frac{1}{2}', sinLatex: '-\\frac{\\sqrt{3}}{2}' },
+  { degrees: 315, radians: '7\u03C0/4', cos: '\u221A2/2', sin: '-\u221A2/2', radiansLatex: '\\frac{7\\pi}{4}', cosLatex: '\\frac{\\sqrt{2}}{2}', sinLatex: '-\\frac{\\sqrt{2}}{2}' },
+  { degrees: 330, radians: '11\u03C0/6', cos: '\u221A3/2', sin: '-1/2', radiansLatex: '\\frac{11\\pi}{6}', cosLatex: '\\frac{\\sqrt{3}}{2}', sinLatex: '-\\frac{1}{2}' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -109,16 +112,23 @@ export function UnitCircle({
     errorHighlight,
   } = data
 
+  // Dark mode detection for SVG labels
+  const { resolvedTheme } = useTheme()
+  const colorMode: ColorMode = resolvedTheme === 'dark' ? 'dark' : 'light'
+
   // Determine which display angles exist
   const displayAngles = useMemo(() => {
     if (showStandardAngles) {
       return STANDARD_ANGLES.map((a) => ({
         degrees: a.degrees,
         radians: a.radians,
+        radiansLatex: a.radiansLatex,
         showCoordinates: showSinCos,
         highlight: angles.some((ua) => ua.degrees === a.degrees && ua.highlight),
         cos: a.cos,
         sin: a.sin,
+        cosLatex: a.cosLatex,
+        sinLatex: a.sinLatex,
       }))
     }
     return angles.map((a) => {
@@ -127,6 +137,9 @@ export function UnitCircle({
         ...a,
         cos: std?.cos || Math.cos((a.degrees * Math.PI) / 180).toFixed(2),
         sin: std?.sin || Math.sin((a.degrees * Math.PI) / 180).toFixed(2),
+        radiansLatex: std?.radiansLatex || radianToLatex(a.radians || ''),
+        cosLatex: std?.cosLatex || fractionToLatex(std?.cos || Math.cos((a.degrees * Math.PI) / 180).toFixed(2)),
+        sinLatex: std?.sinLatex || fractionToLatex(std?.sin || Math.sin((a.degrees * Math.PI) / 180).toFixed(2)),
       }
     })
   }, [angles, showStandardAngles, showSinCos])
@@ -530,32 +543,27 @@ export function UnitCircle({
                       />
                     )}
 
-                    {/* Radian label */}
+                    {/* Radian label (KaTeX) */}
                     {(() => {
-                      const labelOffset = 20
+                      const labelOffset = 22
                       const rad = (angle.degrees * Math.PI) / 180
                       const labelX = center.x + (radius + labelOffset) * Math.cos(rad)
                       const labelY = center.y - (radius + labelOffset) * Math.sin(rad)
                       const textAnchor =
-                        angle.degrees > 90 && angle.degrees < 270 ? 'end' : 'start'
+                        angle.degrees > 90 && angle.degrees < 270 ? 'end' as const : 'start' as const
 
                       return (
-                        <motion.text
+                        <DiagramMathLabel
+                          latex={angle.radiansLatex || radianToLatex(angle.radians || '')}
                           x={labelX}
                           y={labelY}
+                          fontSize={11}
+                          color={isHighlighted ? '#EF4444' : diagram.colors.primary}
                           textAnchor={textAnchor}
-                          className="text-xs"
-                          style={{
-                            fill: isHighlighted ? '#EF4444' : diagram.colors.primary,
-                            fontWeight: isHighlighted ? 500 : undefined,
-                          }}
-                          initial="hidden"
-                          animate="visible"
-                          variants={labelAppearVariants}
-                          transition={{ delay: index * 0.05 + 0.2 }}
-                        >
-                          {angle.radians}
-                        </motion.text>
+                          animate={true}
+                          animationDelay={(index * 50) + 200}
+                          colorMode={colorMode}
+                        />
                       )
                     })()}
                   </motion.g>
@@ -591,19 +599,17 @@ export function UnitCircle({
                     animate={{ opacity: 1 }}
                     transition={{ delay: index * 0.04 }}
                   >
-                    {/* Coordinate label */}
-                    <motion.text
+                    {/* Coordinate label (KaTeX) */}
+                    <DiagramMathLabel
+                      latex={`(${angle.cosLatex || angle.cos},\\, ${angle.sinLatex || angle.sin})`}
                       x={labelX}
                       y={labelY + (angle.degrees > 0 && angle.degrees < 180 ? 12 : -12)}
+                      fontSize={9}
+                      color={diagram.backgrounds.light.textMuted}
                       textAnchor={textAnchor}
-                      className="fill-gray-500 dark:fill-gray-400 text-xs"
-                      style={{ fontSize: '10px' }}
-                      initial="hidden"
-                      animate="visible"
-                      variants={labelAppearVariants}
-                    >
-                      ({angle.cos}, {angle.sin})
-                    </motion.text>
+                      animate={true}
+                      animationDelay={index * 40}
+                    />
 
                     {/* Sin/Cos projections for highlighted angles */}
                     {angle.highlight && (

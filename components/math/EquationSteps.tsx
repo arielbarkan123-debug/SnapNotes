@@ -11,6 +11,8 @@ import {
   createSpotlightVariants,
   labelAppearVariants,
 } from '@/lib/diagram-animations'
+import { MathText } from '@/components/ui/MathRenderer'
+import { normalizeToLatex } from '@/lib/normalize-latex'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -202,7 +204,7 @@ export function EquationSteps({
 
                     {/* Equation display */}
                     <motion.div
-                      className="flex items-center justify-center gap-3 font-mono text-xl mt-1"
+                      className="flex items-center justify-center gap-3 text-xl mt-1"
                       initial="hidden"
                       animate="visible"
                       variants={labelAppearVariants}
@@ -211,14 +213,14 @@ export function EquationSteps({
                         className={isCurrentStep ? 'font-bold' : 'text-gray-700 dark:text-gray-300'}
                         style={isCurrentStep ? { color: diagram.colors.primary } : undefined}
                       >
-                        {stepInfo.leftSide}
+                        <MathText>{`$${normalizeToLatex(stepInfo.leftSide)}$`}</MathText>
                       </span>
                       <span className="text-gray-500 text-2xl">=</span>
                       <span
                         className={isCurrentStep ? 'font-bold' : 'text-gray-700 dark:text-gray-300'}
                         style={isCurrentStep ? { color: diagram.colors.primary } : undefined}
                       >
-                        {stepInfo.rightSide}
+                        <MathText>{`$${normalizeToLatex(stepInfo.rightSide)}$`}</MathText>
                       </span>
                     </motion.div>
 
@@ -236,7 +238,9 @@ export function EquationSteps({
                         >
                           {getOperationLabel(stepInfo.operation, language)}
                           {stepInfo.calculation && (
-                            <span className="ml-1 opacity-80">{stepInfo.calculation}</span>
+                            <span className="ml-1 opacity-80">
+                              <MathText>{`$${normalizeToLatex(stepInfo.calculation)}$`}</MathText>
+                            </span>
                           )}
                         </span>
                       </motion.div>
@@ -274,8 +278,8 @@ export function EquationSteps({
           <p className="text-sm text-green-600 dark:text-green-400 mb-1 font-medium">
             {language === 'he' ? '\u05E4\u05EA\u05E8\u05D5\u05DF:' : 'Solution:'}
           </p>
-          <p className="text-2xl font-bold font-mono" style={{ color: '#22c55e' }}>
-            {variable} = {solution}
+          <p className="text-2xl font-bold" style={{ color: '#22c55e' }}>
+            <MathText>{`$${normalizeToLatex(variable)} = ${normalizeToLatex(String(solution))}$`}</MathText>
           </p>
         </motion.div>
       )}
@@ -297,7 +301,8 @@ export function EquationSteps({
               )}
               {errorHighlight?.correctEquation && (
                 <p className="mt-2 text-sm font-mono text-green-600 dark:text-green-400">
-                  {language === 'he' ? '\u05E0\u05DB\u05D5\u05DF:' : 'Correct:'} {errorHighlight.correctEquation}
+                  {language === 'he' ? '\u05E0\u05DB\u05D5\u05DF:' : 'Correct:'}{' '}
+                  <MathText>{`$${normalizeToLatex(errorHighlight.correctEquation)}$`}</MathText>
                 </p>
               )}
             </div>

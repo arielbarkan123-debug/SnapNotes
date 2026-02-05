@@ -10,6 +10,8 @@ import {
   createSpotlightVariants,
   labelAppearVariants,
 } from '@/lib/diagram-animations'
+import { MathText } from '@/components/ui/MathRenderer'
+import { normalizeToLatex } from '@/lib/normalize-latex'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -204,13 +206,13 @@ export function FactoringDiagram({
               {language === 'he' ? '\u05E4\u05E8\u05E7:' : 'Factor:'}
             </div>
             <motion.div
-              className="text-2xl font-mono font-bold text-center"
+              className="text-2xl font-bold text-center"
               style={{ color: diagram.colors.primary }}
               initial="hidden"
               animate="visible"
               variants={labelAppearVariants}
             >
-              {expression}
+              <MathText>{`$${normalizeToLatex(expression)}$`}</MathText>
             </motion.div>
             {/* Coefficients */}
             <div className="flex justify-center gap-4 mt-3">
@@ -256,7 +258,7 @@ export function FactoringDiagram({
                 </motion.p>
                 {step.calculation && (
                   <motion.div
-                    className="mt-2 font-mono text-sm px-3 py-1.5 rounded-lg inline-block"
+                    className="mt-2 text-sm px-3 py-1.5 rounded-lg inline-block"
                     style={{
                       backgroundColor: `${diagram.colors.primary}15`,
                       color: diagram.colors.primary,
@@ -265,7 +267,7 @@ export function FactoringDiagram({
                     animate="visible"
                     variants={labelAppearVariants}
                   >
-                    {step.calculation}
+                    <MathText>{`$${normalizeToLatex(step.calculation)}$`}</MathText>
                   </motion.div>
                 )}
                 {step.factorPairs && step.factorPairs.length > 0 && (
@@ -279,7 +281,9 @@ export function FactoringDiagram({
                             : 'text-gray-600 dark:text-gray-400'
                         }`}
                       >
-                        {pair.a} x {pair.b} = {pair.product}, {pair.a} + {pair.b} = {pair.sum}
+                        <MathText>{`$${pair.a} \\times ${pair.b} = ${pair.product}$`}</MathText>
+                        {', '}
+                        <MathText>{`$${pair.a} + ${pair.b} = ${pair.sum}$`}</MathText>
                         {pair.isCorrect && ' \u2713'}
                       </div>
                     ))}
@@ -309,13 +313,13 @@ export function FactoringDiagram({
               {language === 'he' ? '\u05E6\u05D5\u05E8\u05D4 \u05DE\u05E4\u05D5\u05E8\u05E7\u05EA:' : 'Factored Form:'}
             </div>
             <motion.div
-              className="text-xl font-mono font-bold"
+              className="text-xl font-bold"
               style={{ color: diagram.colors.primary }}
               initial="hidden"
               animate="visible"
               variants={labelAppearVariants}
             >
-              {factoredForm}
+              <MathText>{`$${normalizeToLatex(factoredForm)}$`}</MathText>
             </motion.div>
           </motion.div>
         )}

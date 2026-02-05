@@ -11,6 +11,8 @@ import {
   lineDrawVariants,
   labelAppearVariants,
 } from '@/lib/diagram-animations'
+import { InlineMath } from '@/components/ui/MathRenderer'
+import { normalizeToLatex } from '@/lib/normalize-latex'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -210,8 +212,10 @@ export function InequalityDiagram({
 
       {/* Solution label */}
       {isVisible('boundaries') && (
-        <div className="text-center mb-1 text-sm font-mono" style={{ color: diagram.colors.primary }}>
-          {solution} &nbsp; {intervalNotation}
+        <div className="text-center mb-1 text-sm" style={{ color: diagram.colors.primary }}>
+          <InlineMath>{normalizeToLatex(solution)}</InlineMath>
+          {' \u00A0 '}
+          <InlineMath>{normalizeToLatex(intervalNotation)}</InlineMath>
         </div>
       )}
 

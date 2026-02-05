@@ -34,8 +34,8 @@ describe('Rhombus', () => {
   it('renders SVG with correct dimensions', () => {
     const { container } = render(<Rhombus data={baseData} width={400} height={400} />)
     const svg = container.querySelector('svg')
-    expect(svg).toHaveAttribute('width', '400')
-    expect(svg).toHaveAttribute('height', '400')
+    expect(svg).toHaveAttribute('width', '100%')
+    expect(svg).toHaveAttribute('viewBox', '0 0 400 400')
   })
 
   it('renders step-by-step when enabled', () => {

@@ -967,3 +967,5 @@ export * from './exam'
 export * from './past-exam'
 
 export * from './prepare'
+
+export * from './interactivity'

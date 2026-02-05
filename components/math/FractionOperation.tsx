@@ -11,6 +11,8 @@ import {
   createSpotlightVariants,
   labelAppearVariants,
 } from '@/lib/diagram-animations'
+import { MathText } from '@/components/ui/MathRenderer'
+import { normalizeToLatex } from '@/lib/normalize-latex'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -264,14 +266,14 @@ export function FractionOperation({
 
               {/* Show intermediate calculation if available */}
               {intermediateStep?.calculation && (
-                <motion.p
-                  className="text-center font-mono text-sm text-gray-600 dark:text-gray-400 mt-1"
+                <motion.div
+                  className="text-center text-sm text-gray-600 dark:text-gray-400 mt-1"
                   initial="hidden"
                   animate="visible"
                   variants={labelAppearVariants}
                 >
-                  {intermediateStep.calculation}
-                </motion.p>
+                  <MathText>{`$${normalizeToLatex(intermediateStep.calculation)}$`}</MathText>
+                </motion.div>
               )}
 
               {/* Show LCD if available */}

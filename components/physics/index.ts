@@ -10,6 +10,14 @@ export { CircularMotion } from './CircularMotion'
 export { CollisionDiagram } from './CollisionDiagram'
 export { PhysicsDiagramRenderer } from './PhysicsDiagramRenderer'
 
+// Interactive versions with What-If Mode
+export { InteractiveInclinedPlane } from './InteractiveInclinedPlane'
+export { InteractiveFreeBodyDiagram } from './InteractiveFreeBodyDiagram'
+export { InteractiveProjectileMotion } from './InteractiveProjectileMotion'
+export { InteractiveCircularMotion } from './InteractiveCircularMotion'
+export { InteractivePulleySystem } from './InteractivePulleySystem'
+export { InteractiveCollisionDiagram } from './InteractiveCollisionDiagram'
+
 // Re-export types for convenience
 export type {
   Force,
@@ -24,6 +32,9 @@ export type {
   CircuitDiagramData,
   WaveDiagramData,
   OpticsRayData,
+  CircularMotionData,
+  CollisionDiagramData,
+  CollisionObject,
   DiagramStepConfig,
   DiagramState,
   PhysicsDiagramType,

@@ -1,440 +1,423 @@
 'use client'
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ParameterSliderGroup, type ParameterDef } from './ParameterSlider'
+import { ParameterSliderGroup } from './ParameterSlider'
+import type {
+  WhatIfModeProps,
+  CalculationResult,
+  ExplorationSuggestion,
+  ParameterDefinition,
+} from '@/types/interactivity'
 
-/**
- * Physics calculation functions
- */
-const PHYSICS_CALCULATORS = {
-  /**
-   * Inclined plane calculations
-   */
-  inclined_plane: (params: Record<string, number>) => {
-    const m = params.mass ?? 5
-    const g = 9.8
-    const theta = (params.angle ?? 30) * Math.PI / 180
-    const mu = params.friction ?? 0.3
+// =============================================================================
+// Subject Colors
+// =============================================================================
 
-    const W = m * g
-    const W_parallel = W * Math.sin(theta)
-    const W_perpendicular = W * Math.cos(theta)
-    const N = W_perpendicular
-    const f_max = mu * N
-
-    // Determine motion state
-    const netParallel = W_parallel - f_max
-    const isSliding = netParallel > 0
-    const acceleration = isSliding ? netParallel / m : 0
-
-    return {
-      weight: W,
-      weightParallel: W_parallel,
-      weightPerpendicular: W_perpendicular,
-      normal: N,
-      frictionMax: f_max,
-      friction: Math.min(f_max, W_parallel),
-      isSliding,
-      acceleration,
-      forces: [
-        { name: 'weight', type: 'weight', magnitude: W, angle: -90, symbol: 'W' },
-        { name: 'normal', type: 'normal', magnitude: N, angle: 90 - (params.angle ?? 30), symbol: 'N' },
-        { name: 'friction', type: 'friction', magnitude: Math.min(f_max, W_parallel), angle: 180 - (params.angle ?? 30), symbol: 'f' },
-      ],
-    }
+const SUBJECT_COLORS = {
+  physics: {
+    primary: '#3b82f6',    // blue
+    secondary: '#60a5fa',
+    background: 'bg-blue-50 dark:bg-blue-900/20',
+    border: 'border-blue-200 dark:border-blue-800',
+    accent: 'text-blue-600 dark:text-blue-400',
   },
-
-  /**
-   * Free body diagram calculations
-   */
-  fbd: (params: Record<string, number>) => {
-    const m = params.mass ?? 5
-    const g = 9.8
-    const appliedForce = params.appliedForce ?? 0
-    const appliedAngle = params.appliedAngle ?? 0
-    const mu = params.friction ?? 0
-
-    const W = m * g
-    const F_x = appliedForce * Math.cos(appliedAngle * Math.PI / 180)
-    const F_y = appliedForce * Math.sin(appliedAngle * Math.PI / 180)
-    const N = W - F_y
-    const f_max = mu * Math.abs(N)
-    const f = Math.min(f_max, Math.abs(F_x)) * Math.sign(F_x) * -1
-
-    const netForce_x = F_x + f
-    const netForce_y = N + F_y - W
-    const acceleration = netForce_x / m
-
-    return {
-      weight: W,
-      normal: N,
-      frictionMax: f_max,
-      friction: Math.abs(f),
-      netForce: Math.sqrt(netForce_x ** 2 + netForce_y ** 2),
-      acceleration,
-      forces: [
-        { name: 'weight', type: 'weight', magnitude: W, angle: -90, symbol: 'W' },
-        { name: 'normal', type: 'normal', magnitude: N, angle: 90, symbol: 'N' },
-        ...(appliedForce > 0 ? [{ name: 'applied', type: 'applied', magnitude: appliedForce, angle: appliedAngle, symbol: 'F' }] : []),
-        ...(Math.abs(f) > 0.1 ? [{ name: 'friction', type: 'friction', magnitude: Math.abs(f), angle: f > 0 ? 0 : 180, symbol: 'f' }] : []),
-      ],
-    }
+  math: {
+    primary: '#8b5cf6',    // purple
+    secondary: '#a78bfa',
+    background: 'bg-purple-50 dark:bg-purple-900/20',
+    border: 'border-purple-200 dark:border-purple-800',
+    accent: 'text-purple-600 dark:text-purple-400',
   },
-
-  /**
-   * Projectile motion calculations
-   */
-  projectile: (params: Record<string, number>) => {
-    const v0 = params.initialVelocity ?? 20
-    const theta = (params.launchAngle ?? 45) * Math.PI / 180
-    const g = 9.8
-
-    const v0x = v0 * Math.cos(theta)
-    const v0y = v0 * Math.sin(theta)
-    const timeOfFlight = 2 * v0y / g
-    const maxHeight = (v0y ** 2) / (2 * g)
-    const range = v0x * timeOfFlight
-
-    return {
-      v0x,
-      v0y,
-      timeOfFlight,
-      maxHeight,
-      range,
-    }
+  chemistry: {
+    primary: '#10b981',    // green
+    secondary: '#34d399',
+    background: 'bg-emerald-50 dark:bg-emerald-900/20',
+    border: 'border-emerald-200 dark:border-emerald-800',
+    accent: 'text-emerald-600 dark:text-emerald-400',
+  },
+  biology: {
+    primary: '#f59e0b',    // amber
+    secondary: '#fbbf24',
+    background: 'bg-amber-50 dark:bg-amber-900/20',
+    border: 'border-amber-200 dark:border-amber-800',
+    accent: 'text-amber-600 dark:text-amber-400',
+  },
+  geometry: {
+    primary: '#ec4899',    // pink
+    secondary: '#f472b6',
+    background: 'bg-pink-50 dark:bg-pink-900/20',
+    border: 'border-pink-200 dark:border-pink-800',
+    accent: 'text-pink-600 dark:text-pink-400',
   },
 }
 
-/**
- * Default parameters for different diagram types
- */
-const DEFAULT_PARAMETERS: Record<string, ParameterDef[]> = {
-  inclined_plane: [
-    {
-      id: 'mass',
-      name: 'Mass',
-      symbol: 'm',
-      unit: 'kg',
-      min: 0.5,
-      max: 20,
-      step: 0.5,
-      defaultValue: 5,
-      description: 'Mass of the object on the incline',
-      color: '#3b82f6',
-      affectsPhysics: true,
-    },
-    {
-      id: 'angle',
-      name: 'Incline Angle',
-      symbol: 'θ',
-      unit: '°',
-      min: 0,
-      max: 60,
-      step: 1,
-      defaultValue: 30,
-      description: 'Angle of the inclined plane',
-      color: '#10b981',
-      affectsPhysics: true,
-    },
-    {
-      id: 'friction',
-      name: 'Friction Coefficient',
-      symbol: 'μ',
-      unit: '',
-      min: 0,
-      max: 1,
-      step: 0.05,
-      defaultValue: 0.3,
-      description: 'Coefficient of friction between object and surface',
-      color: '#f59e0b',
-      affectsPhysics: true,
-    },
-  ],
-  fbd: [
-    {
-      id: 'mass',
-      name: 'Mass',
-      symbol: 'm',
-      unit: 'kg',
-      min: 0.5,
-      max: 50,
-      step: 0.5,
-      defaultValue: 5,
-      color: '#3b82f6',
-      affectsPhysics: true,
-    },
-    {
-      id: 'appliedForce',
-      name: 'Applied Force',
-      symbol: 'F',
-      unit: 'N',
-      min: 0,
-      max: 100,
-      step: 1,
-      defaultValue: 20,
-      color: '#ef4444',
-      affectsPhysics: true,
-    },
-    {
-      id: 'appliedAngle',
-      name: 'Force Angle',
-      symbol: 'θ',
-      unit: '°',
-      min: -45,
-      max: 45,
-      step: 5,
-      defaultValue: 0,
-      color: '#10b981',
-      affectsPhysics: true,
-    },
-    {
-      id: 'friction',
-      name: 'Friction Coefficient',
-      symbol: 'μ',
-      unit: '',
-      min: 0,
-      max: 1,
-      step: 0.05,
-      defaultValue: 0.2,
-      color: '#f59e0b',
-      affectsPhysics: true,
-    },
-  ],
-  projectile: [
-    {
-      id: 'initialVelocity',
-      name: 'Initial Velocity',
-      symbol: 'v₀',
-      unit: 'm/s',
-      min: 5,
-      max: 50,
-      step: 1,
-      defaultValue: 20,
-      color: '#3b82f6',
-      affectsPhysics: true,
-    },
-    {
-      id: 'launchAngle',
-      name: 'Launch Angle',
-      symbol: 'θ',
-      unit: '°',
-      min: 15,
-      max: 75,
-      step: 5,
-      defaultValue: 45,
-      color: '#10b981',
-      affectsPhysics: true,
-    },
-  ],
+// =============================================================================
+// i18n Labels
+// =============================================================================
+
+const LABELS = {
+  en: {
+    title: 'What If?',
+    subtitle: 'Adjust parameters to explore',
+    parameters: 'Parameters',
+    results: 'Results',
+    suggestions: 'Try These',
+    reset: 'Reset',
+    expand: 'Expand',
+    collapse: 'Collapse',
+  },
+  he: {
+    title: 'מה אם?',
+    subtitle: 'התאם פרמטרים לחקירה',
+    parameters: 'פרמטרים',
+    results: 'תוצאות',
+    suggestions: 'נסה את אלה',
+    reset: 'איפוס',
+    expand: 'הרחב',
+    collapse: 'צמצם',
+  },
 }
 
-interface WhatIfModeProps {
-  /** Type of diagram */
-  diagramType: 'inclined_plane' | 'fbd' | 'projectile' | string
-  /** Initial parameter values */
-  initialParams?: Record<string, number>
-  /** Custom parameters (overrides defaults) */
-  customParameters?: ParameterDef[]
-  /** Callback when parameters change */
-  onParamsChange?: (params: Record<string, number>, calculated: Record<string, unknown>) => void
-  /** Render function for the diagram */
-  renderDiagram: (params: Record<string, number>, calculated: Record<string, unknown>) => React.ReactNode
-  /** Language for labels */
-  language?: 'en' | 'he'
-  /** Whether what-if mode is enabled */
-  enabled?: boolean
-  /** Toggle callback */
-  onToggle?: (enabled: boolean) => void
+// =============================================================================
+// Sub-components
+// =============================================================================
+
+interface ResultDisplayProps {
+  result: CalculationResult
+  subject: keyof typeof SUBJECT_COLORS
+  language: 'en' | 'he'
 }
 
-/**
- * WhatIfMode - Interactive parameter exploration wrapper
- *
- * Allows students to adjust parameters and see real-time changes
- * in physics diagrams and calculations.
- */
-export function WhatIfMode({
-  diagramType,
-  initialParams,
-  customParameters,
-  onParamsChange,
-  renderDiagram,
-  language = 'en',
-  enabled = false,
-  onToggle,
-}: WhatIfModeProps) {
-  const isRTL = language === 'he'
-
-  // Get parameters for this diagram type
-  const parameters = useMemo(() => {
-    return customParameters || DEFAULT_PARAMETERS[diagramType] || []
-  }, [diagramType, customParameters])
-
-  // Initialize parameter values
-  const [paramValues, setParamValues] = useState<Record<string, number>>(() => {
-    const defaults: Record<string, number> = {}
-    parameters.forEach(p => {
-      defaults[p.id] = initialParams?.[p.id] ?? p.defaultValue
-    })
-    return defaults
-  })
-
-  // Calculate derived values
-  const calculated = useMemo(() => {
-    const calculator = PHYSICS_CALCULATORS[diagramType as keyof typeof PHYSICS_CALCULATORS]
-    if (calculator) {
-      return calculator(paramValues)
-    }
-    return {}
-  }, [diagramType, paramValues])
-
-  // Handle parameter change
-  const handleParamChange = useCallback((id: string, value: number) => {
-    setParamValues(prev => {
-      const next = { ...prev, [id]: value }
-      return next
-    })
-  }, [])
-
-  // Notify parent of changes
-  useEffect(() => {
-    onParamsChange?.(paramValues, calculated)
-  }, [paramValues, calculated, onParamsChange])
-
-  // Reset to defaults
-  const handleReset = useCallback(() => {
-    const defaults: Record<string, number> = {}
-    parameters.forEach(p => {
-      defaults[p.id] = initialParams?.[p.id] ?? p.defaultValue
-    })
-    setParamValues(defaults)
-  }, [parameters, initialParams])
-
-  // Labels
-  const labels = {
-    whatIfMode: language === 'he' ? 'מצב "מה אם"' : 'What-If Mode',
-    parameters: language === 'he' ? 'פרמטרים' : 'Parameters',
-    reset: language === 'he' ? 'איפוס' : 'Reset',
-    results: language === 'he' ? 'תוצאות' : 'Results',
-    tryIt: language === 'he' ? 'נסה לשנות ערכים!' : 'Try changing values!',
-  }
+function ResultDisplay({ result, subject, language }: ResultDisplayProps) {
+  const colors = SUBJECT_COLORS[subject]
+  const label = language === 'he' && result.labelHe ? result.labelHe : result.label
 
   return (
-    <div className="relative" dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Toggle button */}
-      <div className="flex items-center justify-between mb-3">
-        <button
-          onClick={() => onToggle?.(!enabled)}
-          className={`
-            flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium
-            transition-all duration-200
-            ${enabled
-              ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-            }
-          `}
-        >
-          <span className={`
-            w-2 h-2 rounded-full transition-colors
-            ${enabled ? 'bg-blue-500 animate-pulse' : 'bg-gray-400'}
-          `} />
-          {labels.whatIfMode}
-        </button>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`
+        flex items-center justify-between p-2 rounded-lg
+        ${result.isPrimary ? colors.background : 'bg-gray-50 dark:bg-gray-800/50'}
+        ${result.isPrimary ? colors.border : 'border-gray-200 dark:border-gray-700'}
+        border
+      `}
+    >
+      <span className="text-sm text-gray-700 dark:text-gray-300">
+        {label}
+      </span>
+      <span className={`
+        font-mono font-semibold
+        ${result.isPrimary ? colors.accent : 'text-gray-900 dark:text-gray-100'}
+      `}>
+        {result.formatted}
+      </span>
+    </motion.div>
+  )
+}
 
-        {enabled && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            onClick={handleReset}
-            className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          >
-            {labels.reset}
-          </motion.button>
-        )}
-      </div>
+interface SuggestionChipProps {
+  suggestion: ExplorationSuggestion
+  onClick: () => void
+  subject: keyof typeof SUBJECT_COLORS
+  language: 'en' | 'he'
+}
 
-      {/* Main content */}
-      <div className={`flex ${isRTL ? 'flex-row-reverse' : 'flex-row'} gap-4`}>
-        {/* Diagram */}
-        <div className="flex-1 min-w-0">
-          <motion.div
-            animate={{
-              scale: enabled ? 1 : 1,
-              borderColor: enabled ? 'rgb(59 130 246 / 0.5)' : 'transparent',
-            }}
-            className={`
-              rounded-lg overflow-hidden
-              ${enabled ? 'ring-2 ring-blue-500/30' : ''}
-            `}
-          >
-            {renderDiagram(paramValues, calculated)}
-          </motion.div>
+function SuggestionChip({ suggestion, onClick, subject, language }: SuggestionChipProps) {
+  const colors = SUBJECT_COLORS[subject]
+  const question = language === 'he' && suggestion.questionHe
+    ? suggestion.questionHe
+    : suggestion.question
+
+  return (
+    <motion.button
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className={`
+        flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left w-full
+        transition-colors duration-200
+        ${colors.background} ${colors.border} border
+        hover:bg-opacity-80 dark:hover:bg-opacity-80
+      `}
+    >
+      <span className={colors.accent}>
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+        </svg>
+      </span>
+      <span className="text-gray-700 dark:text-gray-300 flex-1">
+        {question}
+      </span>
+    </motion.button>
+  )
+}
+
+// =============================================================================
+// Main Component
+// =============================================================================
+
+/**
+ * WhatIfMode - Interactive panel for "What If?" exploration
+ *
+ * Features:
+ * - Parameter sliders grouped by category
+ * - Real-time calculation results
+ * - Exploration suggestions ("What if the angle was steeper?")
+ * - Collapsible panel
+ * - Reset to defaults
+ * - Subject-based theming
+ * - RTL support
+ */
+export function WhatIfMode({
+  parameters,
+  values,
+  onParameterChange,
+  onParametersChange,
+  results,
+  suggestions,
+  language = 'en',
+  subject = 'physics',
+  expanded = true,
+  onToggleExpanded,
+  onReset,
+  className = '',
+}: WhatIfModeProps) {
+  const isRTL = language === 'he'
+  const colors = SUBJECT_COLORS[subject]
+  const labels = LABELS[language]
+
+  // Group parameters by category
+  const parametersByCategory = useMemo(() => {
+    const groups: Record<string, ParameterDefinition[]> = {}
+
+    parameters.forEach((param) => {
+      const category = param.category || 'other'
+      if (!groups[category]) {
+        groups[category] = []
+      }
+      groups[category].push(param)
+    })
+
+    return groups
+  }, [parameters])
+
+  // Get primary result (if any)
+  const primaryResult = useMemo(() => {
+    return results.find((r) => r.isPrimary)
+  }, [results])
+
+  // Handle suggestion click
+  const handleSuggestionClick = useCallback((suggestion: ExplorationSuggestion) => {
+    onParametersChange(suggestion.parameterChanges)
+  }, [onParametersChange])
+
+  // Handle reset
+  const handleReset = useCallback(() => {
+    const defaults: Record<string, number> = {}
+    parameters.forEach((p) => {
+      defaults[p.name] = p.default
+    })
+    onParametersChange(defaults)
+    onReset?.()
+  }, [parameters, onParametersChange, onReset])
+
+  return (
+    <div
+      className={`
+        rounded-xl border shadow-sm overflow-hidden
+        ${colors.border}
+        bg-white dark:bg-gray-900
+        ${className}
+      `}
+      dir={isRTL ? 'rtl' : 'ltr'}
+      data-testid="what-if-mode"
+    >
+      {/* Header */}
+      <div
+        className={`
+          flex items-center justify-between px-4 py-3
+          ${colors.background}
+          border-b ${colors.border}
+        `}
+      >
+        <div className="flex items-center gap-3">
+          {/* What If icon */}
+          <div className={`
+            w-8 h-8 rounded-full flex items-center justify-center
+            bg-white dark:bg-gray-800
+            ${colors.border} border
+          `}>
+            <svg
+              className={`w-5 h-5 ${colors.accent}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+
+          <div>
+            <h3 className={`font-semibold ${colors.accent}`}>
+              {labels.title}
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {labels.subtitle}
+            </p>
+          </div>
         </div>
 
-        {/* Parameter panel */}
-        <AnimatePresence>
-          {enabled && (
-            <motion.div
-              initial={{ opacity: 0, x: isRTL ? -20 : 20, width: 0 }}
-              animate={{ opacity: 1, x: 0, width: 280 }}
-              exit={{ opacity: 0, x: isRTL ? -20 : 20, width: 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex-shrink-0"
+        {/* Controls */}
+        <div className="flex items-center gap-2">
+          {/* Reset button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleReset}
+            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            aria-label={labels.reset}
+            title={labels.reset}
+            data-testid="reset-button"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </motion.button>
+
+          {/* Expand/Collapse button */}
+          {onToggleExpanded && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onToggleExpanded}
+              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              aria-label={expanded ? labels.collapse : labels.expand}
+              title={expanded ? labels.collapse : labels.expand}
+              data-testid="toggle-button"
             >
-              <div className="space-y-4">
-                {/* Parameters */}
-                <ParameterSliderGroup
-                  parameters={parameters}
-                  values={paramValues}
-                  onChange={handleParamChange}
-                  title={labels.parameters}
-                  language={language}
+              <svg
+                className={`w-4 h-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
                 />
-
-                {/* Calculated results */}
-                {Object.keys(calculated).length > 0 && (
-                  <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      {labels.results}
-                    </h4>
-                    <div className="space-y-1 text-xs font-mono">
-                      {Object.entries(calculated)
-                        .filter(([key]) => !['forces'].includes(key))
-                        .slice(0, 6)
-                        .map(([key, value]) => (
-                          <div key={key} className="flex justify-between">
-                            <span className="text-gray-500">{formatKey(key)}:</span>
-                            <span className="text-gray-900 dark:text-gray-100">
-                              {typeof value === 'number' ? value.toFixed(2) : String(value)}
-                            </span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Hint */}
-                <p className="text-xs text-center text-gray-400 dark:text-gray-500">
-                  {labels.tryIt}
-                </p>
-              </div>
-            </motion.div>
+              </svg>
+            </motion.button>
           )}
-        </AnimatePresence>
+        </div>
       </div>
+
+      {/* Primary result (always visible) */}
+      {primaryResult && (
+        <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+          <ResultDisplay
+            result={primaryResult}
+            subject={subject}
+            language={language}
+          />
+        </div>
+      )}
+
+      {/* Expandable content */}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 py-4 space-y-4">
+              {/* Parameters */}
+              {Object.keys(parametersByCategory).length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {labels.parameters}
+                  </h4>
+                  {Object.entries(parametersByCategory).map(([category, params]) => (
+                    <ParameterSliderGroup
+                      key={category}
+                      parameters={params}
+                      values={values}
+                      onChange={onParameterChange}
+                      compact
+                      language={language}
+                      className="mb-3"
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Results (excluding primary which is shown above) */}
+              {results.filter((r) => !r.isPrimary).length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {labels.results}
+                  </h4>
+                  <div className="space-y-2">
+                    {results
+                      .filter((r) => !r.isPrimary)
+                      .map((result, index) => (
+                        <ResultDisplay
+                          key={result.label + index}
+                          result={result}
+                          subject={subject}
+                          language={language}
+                        />
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Suggestions */}
+              {suggestions && suggestions.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {labels.suggestions}
+                  </h4>
+                  <div className="space-y-2">
+                    {suggestions.map((suggestion) => (
+                      <SuggestionChip
+                        key={suggestion.id}
+                        suggestion={suggestion}
+                        onClick={() => handleSuggestionClick(suggestion)}
+                        subject={subject}
+                        language={language}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
 
-/**
- * Format a camelCase key for display
- */
-function formatKey(key: string): string {
-  return key
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, str => str.toUpperCase())
-    .trim()
-}
+// =============================================================================
+// Export
+// =============================================================================
 
+export { SUBJECT_COLORS }
 export default WhatIfMode

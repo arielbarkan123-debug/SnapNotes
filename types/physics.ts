@@ -213,6 +213,67 @@ export interface PulleySystemData {
 }
 
 /**
+ * CircularMotionData - Data for circular motion diagrams
+ */
+export interface CircularMotionData {
+  /** Radius of the circular path */
+  radius: number
+  /** Mass of the object */
+  mass?: number
+  /** Speed of the object */
+  speed?: number
+  /** Angular position in degrees (0 = right, counterclockwise positive) */
+  angularPosition?: number
+  /** Show velocity vector tangent to path */
+  showVelocity?: boolean
+  /** Show centripetal acceleration */
+  showAcceleration?: boolean
+  /** Show centripetal force */
+  showCentripetalForce?: boolean
+  /** Show angular velocity */
+  showAngularVelocity?: boolean
+  /** Forces acting on the object */
+  forces?: Force[]
+  /** Type: horizontal (turntable), vertical (ferris wheel), banked (car) */
+  type?: 'horizontal' | 'vertical' | 'banked'
+  /** Bank angle for banked curves */
+  bankAngle?: number
+  /** Title */
+  title?: string
+  /** Object label */
+  objectLabel?: string
+}
+
+/**
+ * CollisionObject - An object in a collision diagram
+ */
+export interface CollisionObject {
+  object: PhysicsObject
+  velocity: { before: number; after?: number }
+  position?: { x: number; y: number }
+}
+
+/**
+ * CollisionDiagramData - Data for collision diagrams
+ */
+export interface CollisionDiagramData {
+  /** Objects involved in collision */
+  objects: CollisionObject[]
+  /** Type of collision */
+  collisionType: 'elastic' | 'inelastic' | 'perfectly_inelastic'
+  /** Show before state */
+  showBefore?: boolean
+  /** Show after state */
+  showAfter?: boolean
+  /** Show momentum vectors */
+  showMomentum?: boolean
+  /** Show kinetic energy comparison */
+  showEnergy?: boolean
+  /** Title */
+  title?: string
+}
+
+/**
  * CircuitElement - Types of circuit elements
  */
 export type CircuitElementType =
@@ -380,6 +441,8 @@ export type PhysicsDiagramData =
   | { type: 'circuit'; data: CircuitDiagramData }
   | { type: 'wave'; data: WaveDiagramData }
   | { type: 'optics'; data: OpticsRayData }
+  | { type: 'circular'; data: CircularMotionData }
+  | { type: 'collision'; data: CollisionDiagramData }
 
 /**
  * DiagramState - Current state of a diagram in the UI
@@ -389,7 +452,8 @@ export interface DiagramState {
   type: PhysicsDiagramType
   /** Diagram data */
   data: FreeBodyDiagramData | InclinedPlaneData | ProjectileMotionData |
-        PulleySystemData | CircuitDiagramData | WaveDiagramData | OpticsRayData
+        PulleySystemData | CircuitDiagramData | WaveDiagramData | OpticsRayData |
+        CircularMotionData | CollisionDiagramData
   /** Current visible step (0 = base state) */
   visibleStep: number
   /** Step configuration array */
@@ -416,7 +480,8 @@ export interface TutorDiagramResponse {
   type: PhysicsDiagramType
   /** Diagram data */
   data: FreeBodyDiagramData | InclinedPlaneData | ProjectileMotionData |
-        PulleySystemData | CircuitDiagramData | WaveDiagramData | OpticsRayData
+        PulleySystemData | CircuitDiagramData | WaveDiagramData | OpticsRayData |
+        CircularMotionData | CollisionDiagramData
   /** Current step to display */
   currentStep: number
   /** Full step configuration */

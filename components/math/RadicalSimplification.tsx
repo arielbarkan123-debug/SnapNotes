@@ -2,10 +2,13 @@
 
 import { useMemo } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
-import { COLORS, getSubjectColor } from '@/lib/diagram-theme'
+import { COLORS } from '@/lib/diagram-theme'
 import type { SubjectKey } from '@/lib/diagram-theme'
 import type { VisualComplexityLevel } from '@/lib/visual-complexity'
+import { useDiagramBase } from '@/hooks/useDiagramBase'
 import { prefersReducedMotion } from '@/lib/diagram-animations'
+import { MathText } from '@/components/ui/MathRenderer'
+import { normalizeToLatex } from '@/lib/normalize-latex'
 
 // ============================================================================
 // Types
@@ -58,7 +61,11 @@ export interface RadicalSimplificationData {
 
 interface RadicalSimplificationProps {
   data: RadicalSimplificationData
+  /** Starting step (0-indexed) */
+  initialStep?: number
+  /** @deprecated Use initialStep instead. Ignored - step state is managed internally. */
   currentStep?: number
+  /** @deprecated Ignored - total steps derived from data.steps */
   totalSteps?: number
   animationDuration?: number
   onStepComplete?: () => void
@@ -133,8 +140,7 @@ function getPrimeColor(prime: number) {
 
 export function RadicalSimplification({
   data,
-  currentStep = 0,
-  totalSteps: totalStepsProp,
+  initialStep,
   animationDuration = 400,
   width = 420,
   className = '',
@@ -145,15 +151,22 @@ export function RadicalSimplification({
 }: RadicalSimplificationProps) {
   const { originalExpression: _originalExpression, radicand, index, primeFactors, extracted, remaining, simplifiedForm, steps, method, title } = data
   const reducedMotion = prefersReducedMotion()
-  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
   void animationDuration // reserved for future animation customization
 
-  const actualTotalSteps = totalStepsProp ?? steps.length
-  const progressPercent = ((currentStep + 1) / actualTotalSteps) * 100
-  const isComplete = currentStep >= steps.length - 1
+  // useDiagramBase -- step control, colors, lineWeight, RTL
+  const diagram = useDiagramBase({
+    totalSteps: steps.length,
+    subject,
+    complexity,
+    initialStep: initialStep ?? 0,
+    language,
+  })
 
-  const _visibleSteps = useMemo(() => steps.filter((s) => s.step <= currentStep), [steps, currentStep])
-  const currentStepInfo = steps[currentStep] || null
+  const progressPercent = ((diagram.currentStep + 1) / diagram.totalSteps) * 100
+  const isComplete = diagram.currentStep >= steps.length - 1
+
+  const _visibleSteps = useMemo(() => steps.filter((s) => s.step <= diagram.currentStep), [steps, diagram.currentStep])
+  const currentStepInfo = steps[diagram.currentStep] || null
 
   // Animation variants
   const containerVariants: Variants = {
@@ -225,7 +238,7 @@ export function RadicalSimplification({
             style={{
               background: isComplete
                 ? 'linear-gradient(90deg, #22c55e, #16a34a)'
-                : `linear-gradient(90deg, ${subjectColors.dark}, ${subjectColors.primary})`,
+                : `linear-gradient(90deg, ${diagram.colors.dark}, ${diagram.colors.primary})`,
             }}
           />
         </div>
@@ -241,7 +254,7 @@ export function RadicalSimplification({
           {language === 'he' ? 'פשט:' : 'Simplify:'}
         </div>
         <div className="text-3xl font-mono font-bold text-blue-700 dark:text-blue-300">
-          <RadicalSymbol index={index} color={subjectColors.primary}>
+          <RadicalSymbol index={index} color={diagram.colors.primary}>
             {radicand}
           </RadicalSymbol>
         </div>
@@ -255,7 +268,7 @@ export function RadicalSimplification({
         animate="visible"
       >
         {/* Prime Factorization Display */}
-        {currentStep >= 1 && (
+        {diagram.currentStep >= 1 && (
           <motion.div
             className="mb-5"
             initial={{ opacity: 0, height: 0 }}
@@ -304,7 +317,7 @@ export function RadicalSimplification({
         )}
 
         {/* Grouping & Extraction Visualization */}
-        {currentStep >= 2 && (
+        {diagram.currentStep >= 2 && (
           <motion.div
             className="mb-5 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
             initial={{ opacity: 0 }}
@@ -332,7 +345,7 @@ export function RadicalSimplification({
                     transition={{ delay: reducedMotion ? 0 : idx * 0.15 }}
                   >
                     {/* What comes out */}
-                    {canExtract && currentStep >= 3 && (
+                    {canExtract && diagram.currentStep >= 3 && (
                       <motion.div
                         className="mb-2"
                         variants={extractVariants}
@@ -400,11 +413,11 @@ export function RadicalSimplification({
         {/* Current Step Explanation */}
         {currentStepInfo && (
           <motion.div
-            key={currentStep}
+            key={diagram.currentStep}
             className="p-4 rounded-xl border-l-4"
             style={{
-              backgroundColor: isComplete ? 'rgba(34, 197, 94, 0.08)' : `${subjectColors.bg}`,
-              borderLeftColor: isComplete ? COLORS.success[500] : subjectColors.primary,
+              backgroundColor: isComplete ? 'rgba(34, 197, 94, 0.08)' : `${diagram.colors.bg}`,
+              borderLeftColor: isComplete ? COLORS.success[500] : diagram.colors.primary,
             }}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -416,22 +429,22 @@ export function RadicalSimplification({
                 : currentStepInfo.description}
             </p>
             {currentStepInfo.calculation && (
-              <div className="mt-2 font-mono text-sm bg-white dark:bg-gray-700 px-3 py-1.5 rounded-lg inline-block">
-                {currentStepInfo.calculation}
+              <div className="mt-2 text-sm bg-white dark:bg-gray-700 px-3 py-1.5 rounded-lg inline-block">
+                <MathText>{`$${normalizeToLatex(currentStepInfo.calculation)}$`}</MathText>
               </div>
             )}
           </motion.div>
         )}
 
         {/* Current Expression */}
-        {currentStepInfo?.expression && currentStep > 0 && (
+        {currentStepInfo?.expression && diagram.currentStep > 0 && (
           <motion.div
             className="mt-4 text-center p-3 bg-violet-50 dark:bg-violet-900/20 rounded-lg"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <span className="text-xl font-mono font-bold text-violet-700 dark:text-violet-300">
-              {currentStepInfo.expression}
+            <span className="text-xl font-bold text-violet-700 dark:text-violet-300">
+              <MathText>{`$${normalizeToLatex(currentStepInfo.expression)}$`}</MathText>
             </span>
           </motion.div>
         )}
@@ -462,13 +475,13 @@ export function RadicalSimplification({
               {language === 'he' ? 'צורה מפושטת:' : 'Simplified Form:'}
             </p>
             <motion.div
-              className="text-3xl font-bold font-mono"
+              className="text-3xl font-bold"
               style={{ color: COLORS.success[500] }}
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2 }}
             >
-              {simplifiedForm}
+              <MathText>{`$${normalizeToLatex(simplifiedForm)}$`}</MathText>
             </motion.div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
               {extracted > 1 && (
@@ -486,8 +499,8 @@ export function RadicalSimplification({
         <div className="mt-4 text-center">
           <span className="text-xs text-gray-400 dark:text-gray-500">
             {language === 'he'
-              ? `שלב ${currentStep + 1} מתוך ${actualTotalSteps}`
-              : `Step ${currentStep + 1} of ${actualTotalSteps}`}
+              ? `שלב ${diagram.currentStep + 1} מתוך ${diagram.totalSteps}`
+              : `Step ${diagram.currentStep + 1} of ${diagram.totalSteps}`}
           </span>
         </div>
       )}

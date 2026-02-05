@@ -11,5 +11,53 @@
   "expand": "הרחב דיאגרמה",
   "collapse": "כווץ דיאגרמה",
   "fullscreen": "מסך מלא",
-  "exitFullscreen": "יציאה ממסך מלא"
+  "exitFullscreen": "יציאה ממסך מלא",
+
+  "interactive": {
+    "whatIf": "מה אם?",
+    "whatIfSubtitle": "התאם פרמטרים לחקירה",
+    "parameters": "פרמטרים",
+    "results": "תוצאות",
+    "suggestions": "נסה את אלה",
+    "reset": "איפוס",
+    "undo": "בטל",
+    "redo": "בצע שוב",
+    "tryChangingValues": "נסה לשנות את הערכים!",
+    "enableInteractive": "הפעל מצב אינטראקטיבי",
+    "disableInteractive": "בטל מצב אינטראקטיבי",
+
+    "physics": {
+      "mass": "מסה",
+      "angle": "זווית",
+      "friction": "מקדם חיכוך",
+      "velocity": "מהירות",
+      "force": "כוח",
+      "acceleration": "תאוצה",
+      "weight": "משקל",
+      "normalForce": "כוח נורמלי",
+      "frictionForce": "כוח חיכוך",
+      "netForce": "כוח שקול",
+      "gravity": "תאוצת כבידה",
+      "radius": "רדיוס",
+      "height": "גובה",
+      "period": "מחזור",
+      "frequency": "תדירות",
+      "range": "טווח",
+      "maxHeight": "גובה מקסימלי",
+      "timeOfFlight": "זמן תעופה",
+      "parallelComponent": "רכיב מקביל",
+      "perpendicularComponent": "רכיב ניצב"
+    },
+
+    "suggestions": {
+      "steepAngle": "מה אם הזווית הייתה תלולה יותר?",
+      "noFriction": "מה אם לא היה חיכוך?",
+      "criticalAngle": "באיזו זווית העצם מתחיל להחליק?",
+      "doubleMass": "מה אם המסה הייתה כפולה?",
+      "optimalAngle": "באיזו זווית מתקבל הטווח המקסימלי?",
+      "highAngle": "מה אם נשגר כמעט אנכית?",
+      "lowAngle": "מה אם נשגר בזווית נמוכה?",
+      "doubleVelocity": "מה אם המהירות הייתה כפולה?"
+    }
+  }
 }

@@ -76,6 +76,16 @@ jest.mock('@/lib/diagram-animations', () => ({
   }),
   lineDrawVariants: { hidden: { pathLength: 0 }, visible: { pathLength: 1 } },
   labelAppearVariants: { hidden: { opacity: 0 }, visible: { opacity: 1 } },
+  prefersReducedMotion: () => false,
+}))
+
+// Mock DiagramMathLabel (uses katex + DOMPurify not available in JSDOM)
+jest.mock('@/components/diagrams/DiagramMathLabel', () => ({
+  DiagramMathLabel: ({ latex, x, y, fontSize, ...rest }: any) => (
+    <text x={x} y={y} fontSize={fontSize} data-testid="math-label">
+      {latex}
+    </text>
+  ),
 }))
 
 // =============================================================================

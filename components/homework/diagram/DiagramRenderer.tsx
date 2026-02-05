@@ -5,7 +5,8 @@ import { PhysicsDiagramRenderer } from '@/components/physics'
 import { MathDiagramRenderer } from '@/components/math'
 import { ChemistryDiagramRenderer } from '@/components/chemistry'
 import { BiologyDiagramRenderer } from '@/components/biology'
-import { type DiagramState, isPhysicsDiagram, isMathDiagram, isChemistryDiagram, isBiologyDiagram, getDiagramTypeName } from './types'
+import { GeometryDiagramRenderer } from '@/components/geometry'
+import { type DiagramState, isPhysicsDiagram, isMathDiagram, isChemistryDiagram, isBiologyDiagram, isGeometryDiagram, getDiagramTypeName } from './types'
 import type { SubjectKey } from '@/lib/diagram-theme'
 import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
@@ -158,6 +159,7 @@ export default function DiagramRenderer({
     ?? (isPhysicsDiagram(diagram) ? 'physics' : undefined)
     ?? (isChemistryDiagram(diagram) ? 'chemistry' : undefined)
     ?? (isBiologyDiagram(diagram) ? 'biology' : undefined)
+    ?? (isGeometryDiagram(diagram) ? 'geometry' : undefined)
     ?? 'math'
 
   // Wrap each renderer in an error boundary for graceful error handling
@@ -230,6 +232,25 @@ export default function DiagramRenderer({
           language={language}
           width={width}
           height={height}
+        />
+      </DiagramErrorBoundary>
+    )
+  }
+
+  if (isGeometryDiagram(diagram)) {
+    return (
+      <DiagramErrorBoundary diagramType={diagramType} onError={onRenderError}>
+        <GeometryDiagramRenderer
+          diagram={diagram}
+          currentStep={currentStep}
+          animate={animate}
+          showControls={showControls}
+          onStepAdvance={onStepAdvance}
+          language={language}
+          width={width}
+          height={height}
+          subject={detectedSubject}
+          complexity={complexity}
         />
       </DiagramErrorBoundary>
     )

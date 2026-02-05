@@ -2,9 +2,10 @@
 
 import { useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTheme } from 'next-themes'
 import type { RegularPolygonData } from '@/types/geometry'
 import { useDiagramBase } from '@/hooks/useDiagramBase'
-import type { SubjectKey } from '@/lib/diagram-theme'
+import type { SubjectKey, ColorMode } from '@/lib/diagram-theme'
 import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import { DiagramStepControls } from '@/components/diagrams/DiagramStepControls'
 import {
@@ -12,6 +13,7 @@ import {
   lineDrawVariants,
   labelAppearVariants,
 } from '@/lib/diagram-animations'
+import { DiagramMathLabel } from '@/components/diagrams/DiagramMathLabel'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -90,6 +92,10 @@ export function RegularPolygon({
     showApothem = true,
     showInteriorAngle = true,
   } = data
+
+  // Dark mode detection for SVG labels
+  const { resolvedTheme } = useTheme()
+  const colorMode: ColorMode = resolvedTheme === 'dark' ? 'dark' : 'light'
 
   // ------ Detect optional features ------
   // Diagonals: show them for polygons with 4+ sides
@@ -345,19 +351,18 @@ export function RegularPolygon({
               animate={isCurrent('measurements') ? 'spotlight' : 'visible'}
               variants={spotlight}
             >
-              {/* Side label on first side */}
+              {/* Side label on first side (KaTeX) */}
               {vertices.length >= 2 && (
-                <motion.text
+                <DiagramMathLabel
+                  latex={`${sideLabel} = ${s}`}
                   x={(vertices[0].x + vertices[1].x) / 2}
                   y={(vertices[0].y + vertices[1].y) / 2 - 12}
+                  fontSize={13}
+                  color={diagram.colors.primary}
                   textAnchor="middle"
-                  style={{ fill: diagram.colors.primary, fontSize: '13px', fontWeight: 500 }}
-                  initial="hidden"
-                  animate="visible"
-                  variants={labelAppearVariants}
-                >
-                  {sideLabel} = {s}
-                </motion.text>
+                  animate={true}
+                  colorMode={colorMode}
+                />
               )}
 
               {/* Equal side marks on all sides */}
@@ -402,13 +407,16 @@ export function RegularPolygon({
                     animate="visible"
                     variants={lineDrawVariants}
                   />
-                  <text
+                  <DiagramMathLabel
+                    latex={`a = ${apothem.toFixed(2)}`}
                     x={(cx + sideMidX) / 2 - 15}
                     y={(cy + sideMidY) / 2}
-                    style={{ fill: diagram.colors.accent, fontSize: '11px', fontWeight: 500 }}
-                  >
-                    a = {apothem.toFixed(2)}
-                  </text>
+                    fontSize={11}
+                    color={diagram.colors.accent}
+                    textAnchor="middle"
+                    animate={false}
+                    colorMode={colorMode}
+                  />
                 </motion.g>
               )}
 
@@ -435,15 +443,17 @@ export function RegularPolygon({
                           stroke={diagram.colors.accent}
                           strokeWidth={1.5}
                         />
-                        <text
+                        <DiagramMathLabel
+                          latex={`${interiorAngle.toFixed(1)}°`}
                           x={v.x + 25 * Math.cos((a1 + a2) / 2)}
                           y={v.y + 25 * Math.sin((a1 + a2) / 2)}
+                          fontSize={11}
+                          color={diagram.colors.accent}
                           textAnchor="middle"
                           dominantBaseline="middle"
-                          style={{ fill: diagram.colors.accent, fontSize: '11px', fontWeight: 500 }}
-                        >
-                          {interiorAngle.toFixed(1)}\u00B0
-                        </text>
+                          animate={false}
+                          colorMode={colorMode}
+                        />
                       </>
                     )
                   })()}

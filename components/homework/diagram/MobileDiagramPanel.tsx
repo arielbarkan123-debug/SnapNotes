@@ -21,7 +21,7 @@ export default function MobileDiagramPanel({
   title,
 }: MobileDiagramPanelProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const isAutoAdvance = diagram.evolutionMode === 'auto-advance'
+  const isAutoAdvance = 'evolutionMode' in diagram && diagram.evolutionMode === 'auto-advance'
 
   return (
     <div className="lg:hidden fixed bottom-20 right-4 z-50">

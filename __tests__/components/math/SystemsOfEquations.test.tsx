@@ -17,6 +17,14 @@ jest.mock('@/lib/diagram-animations', () => ({
   createPathDrawVariants: () => ({ hidden: {}, visible: {} }),
 }))
 
+// Mock MathRenderer (uses katex not available in JSDOM)
+jest.mock('@/components/ui/MathRenderer', () => ({
+  MathText: ({ children }: any) => <span data-testid="math-text">{children}</span>,
+  InlineMath: ({ children }: any) => <span data-testid="inline-math">{children}</span>,
+  BlockMath: ({ children }: any) => <div data-testid="block-math">{children}</div>,
+  MathRenderer: ({ latex }: any) => <span data-testid="math-renderer">{latex}</span>,
+}))
+
 describe('SystemsOfEquations', () => {
   const baseData = {
     equation1: '2x + y = 7',
