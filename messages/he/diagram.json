@@ -1,0 +1,15 @@
+{
+  "back": "חזרה",
+  "close": "סגור",
+  "previous": "הקודם",
+  "next": "הבא",
+  "pause": "השהה",
+  "autoPlay": "ניגון אוטומטי",
+  "stepOf": "שלב {current} מתוך {total}",
+  "gotIt": "הבנתי!",
+  "keyboardHint": "השתמש בחצים לניווט, רווח להפעלה/השהיה, Esc לסגירה",
+  "expand": "הרחב דיאגרמה",
+  "collapse": "כווץ דיאגרמה",
+  "fullscreen": "מסך מלא",
+  "exitFullscreen": "יציאה ממסך מלא"
+}

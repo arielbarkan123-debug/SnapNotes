@@ -1,0 +1,15 @@
+{
+  "back": "Back",
+  "close": "Close",
+  "previous": "Previous",
+  "next": "Next",
+  "pause": "Pause",
+  "autoPlay": "Auto-play",
+  "stepOf": "Step {current} of {total}",
+  "gotIt": "Got it!",
+  "keyboardHint": "Use arrow keys to navigate, Space to toggle auto-play, Esc to close",
+  "expand": "Expand diagram",
+  "collapse": "Collapse diagram",
+  "fullscreen": "View fullscreen",
+  "exitFullscreen": "Exit fullscreen"
+}

@@ -74,9 +74,9 @@ export function LongDivisionDiagram({
   const { dividend, divisor, quotient, remainder, steps: rawSteps, title, errorHighlight } = data
 
   const steps = rawSteps ?? []
-  const dividendStr = dividend.toString()
-  const divisorStr = divisor.toString()
-  const quotientStr = quotient.toString()
+  const dividendStr = (dividend ?? 0).toString()
+  const divisorStr = (divisor ?? 0).toString()
+  const quotientStr = (quotient ?? 0).toString()
 
   // Group raw steps into logical division iterations
   const divisionIterations = useMemo(() => {
@@ -513,7 +513,7 @@ export function LongDivisionDiagram({
                 <span className="font-bold" style={{ color: diagram.colors.primary }}>
                   {quotientStr}
                 </span>
-                {remainder > 0 && (
+                {(remainder ?? 0) > 0 && (
                   <span className="text-gray-500 ml-2">
                     {language === 'he' ? `\u05E9\u05D0\u05E8\u05D9\u05EA ${remainder}` : `R ${remainder}`}
                   </span>
