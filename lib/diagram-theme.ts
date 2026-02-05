@@ -952,11 +952,11 @@ export function getSubjectColor(subject: SubjectKey) {
 // Adaptive Line Weight by Grade Level
 // ============================================================================
 
-export function getAdaptiveLineWeight(complexity: 'elementary' | 'middle' | 'high' | 'advanced'): number {
+export function getAdaptiveLineWeight(complexity: 'elementary' | 'middle_school' | 'high_school' | 'advanced'): number {
   switch (complexity) {
     case 'elementary': return 4
-    case 'middle': return 3
-    case 'high':
+    case 'middle_school': return 3
+    case 'high_school':
     case 'advanced': return 2
     default: return 3
   }

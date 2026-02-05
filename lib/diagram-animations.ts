@@ -466,27 +466,45 @@ export function getAccessibleTransition(
 // ============================================================================
 
 /**
- * Spotlight animation — current step element pulses then settles.
+ * Convert hex color to rgb components for use in rgba() strings.
+ */
+function hexToRgb(hex: string): string {
+  const cleaned = hex.replace('#', '')
+  const r = parseInt(cleaned.slice(0, 2), 16)
+  const g = parseInt(cleaned.slice(2, 4), 16)
+  const b = parseInt(cleaned.slice(4, 6), 16)
+  return `${r},${g},${b}`
+}
+
+/**
+ * Create spotlight variants with a subject-specific glow color.
+ * Current step element pulses then settles.
  * Use with animate prop: animate={isActive ? 'spotlight' : 'visible'}
  */
-export const spotlightVariants: Variants = {
-  hidden: { opacity: 0, scale: 0.8 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    transition: { type: 'spring', stiffness: 300, damping: 25 },
-  },
-  spotlight: {
-    opacity: 1,
-    scale: [1, 1.15, 1],
-    filter: [
-      'drop-shadow(0 0 0px rgba(99,102,241,0))',
-      'drop-shadow(0 0 12px rgba(99,102,241,0.6))',
-      'drop-shadow(0 0 4px rgba(99,102,241,0.2))',
-    ],
-    transition: { duration: 0.8, ease: 'easeInOut' },
-  },
+export function createSpotlightVariants(color: string): Variants {
+  const rgb = hexToRgb(color)
+  return {
+    hidden: { opacity: 0, scale: 0.8 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: { type: 'spring', stiffness: 300, damping: 25 },
+    },
+    spotlight: {
+      opacity: 1,
+      scale: [1, 1.15, 1],
+      filter: [
+        `drop-shadow(0 0 0px rgba(${rgb},0))`,
+        `drop-shadow(0 0 12px rgba(${rgb},0.6))`,
+        `drop-shadow(0 0 4px rgba(${rgb},0.2))`,
+      ],
+      transition: { duration: 0.8, ease: 'easeInOut' },
+    },
+  }
 }
+
+/** Default spotlight using math indigo — prefer createSpotlightVariants(color) */
+export const spotlightVariants: Variants = createSpotlightVariants('#6366f1')
 
 /**
  * Line draws from start to end (teacher drawing on board).
@@ -543,6 +561,7 @@ const diagramAnimations = {
   getStepDelay,
   prefersReducedMotion,
   getAccessibleTransition,
+  createSpotlightVariants,
   spotlightVariants,
   lineDrawVariants,
   labelAppearVariants,

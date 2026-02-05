@@ -3,13 +3,12 @@
 import { useState, useCallback, useMemo } from 'react'
 import { SUBJECT_COLORS, getAdaptiveLineWeight, DIAGRAM_BACKGROUNDS } from '@/lib/diagram-theme'
 import type { SubjectKey } from '@/lib/diagram-theme'
-
-type DiagramComplexity = 'elementary' | 'middle' | 'high' | 'advanced'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface UseDiagramBaseOptions {
   totalSteps: number
   subject: SubjectKey
-  complexity?: DiagramComplexity
+  complexity?: VisualComplexityLevel
   initialStep?: number
   stepSpotlights?: string[]
   language?: 'en' | 'he'
@@ -19,7 +18,7 @@ interface UseDiagramBaseOptions {
 export function useDiagramBase({
   totalSteps,
   subject,
-  complexity = 'middle',
+  complexity = 'middle_school',
   initialStep = 0,
   stepSpotlights = [],
   language = 'en',

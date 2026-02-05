@@ -34,11 +34,11 @@ describe('Adaptive Line Weight', () => {
   it('returns 4px for elementary', () => {
     expect(getAdaptiveLineWeight('elementary')).toBe(4)
   })
-  it('returns 3px for middle', () => {
-    expect(getAdaptiveLineWeight('middle')).toBe(3)
+  it('returns 3px for middle_school', () => {
+    expect(getAdaptiveLineWeight('middle_school')).toBe(3)
   })
-  it('returns 2px for high school', () => {
-    expect(getAdaptiveLineWeight('high')).toBe(2)
+  it('returns 2px for high_school', () => {
+    expect(getAdaptiveLineWeight('high_school')).toBe(2)
   })
   it('returns 2px for advanced', () => {
     expect(getAdaptiveLineWeight('advanced')).toBe(2)
