@@ -92,7 +92,7 @@ describe('NumberLine', () => {
     const data = {
       ...baseData,
       points: [{ value: 3, label: '3', style: 'hollow' as const }],
-    }
+    } as any
     const { container } = render(<NumberLine data={data} />)
     const circles = container.querySelectorAll('circle')
     const hollowCircle = Array.from(circles).find(
@@ -107,7 +107,7 @@ describe('NumberLine', () => {
       max: 10,
       points: [],
       intervals: [{ start: 2, end: 5, startInclusive: true, endInclusive: false }],
-    }
+    } as any
     const { container } = render(
       <NumberLine data={data} subject="geometry" />
     )

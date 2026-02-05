@@ -8,7 +8,11 @@ import {
   COLORS,
   SHADOWS,
   hexToRgba,
+  getSubjectColor,
+  getAdaptiveLineWeight,
 } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import { createPathDrawVariants, prefersReducedMotion } from '@/lib/diagram-animations'
 
 interface CoordinatePlaneDataWithErrors extends CoordinatePlaneData {
@@ -24,6 +28,10 @@ interface CoordinatePlaneProps {
   animateCurves?: boolean
   /** Animation duration for curve drawing in ms */
   animationDuration?: number
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
 }
 
 /**
@@ -54,6 +62,8 @@ export function CoordinatePlane({
   height = 400,
   animateCurves = true,
   animationDuration = 800,
+  subject = 'math',
+  complexity = 'middle_school',
 }: CoordinatePlaneProps) {
   const {
     xMin,
@@ -71,6 +81,10 @@ export function CoordinatePlane({
   } = data
 
   const reducedMotion = prefersReducedMotion()
+
+  // Subject-coded colors and adaptive line weight
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   // Padding and dimensions
   const padding = { left: 50, right: 30, top: 40, bottom: 50 }
@@ -282,8 +296,8 @@ export function CoordinatePlane({
             x2="100%"
             y2="0%"
           >
-            <stop offset="0%" stopColor={curve.color || COLORS.primary[400]} />
-            <stop offset="100%" stopColor={curve.color || COLORS.primary[600]} />
+            <stop offset="0%" stopColor={curve.color || subjectColors.light} />
+            <stop offset="100%" stopColor={curve.color || subjectColors.dark} />
           </linearGradient>
         ))}
 
@@ -389,7 +403,7 @@ export function CoordinatePlane({
         x2={width - padding.right}
         y2={showXAxis ? originY : height - padding.bottom}
         stroke={COLORS.gray[700]}
-        strokeWidth={2}
+        strokeWidth={adaptiveLineWeight}
       />
       {/* X axis arrow */}
       <polygon
@@ -415,7 +429,7 @@ export function CoordinatePlane({
         x2={showYAxis ? originX : padding.left}
         y2={height - padding.bottom}
         stroke={COLORS.gray[700]}
-        strokeWidth={2}
+        strokeWidth={adaptiveLineWeight}
       />
       {/* Y axis arrow */}
       <polygon
@@ -569,7 +583,7 @@ export function CoordinatePlane({
       {points.map((point, index) => {
         const svgX = xToSvg(point.x)
         const svgY = yToSvg(point.y)
-        const color = point.color || COLORS.primary[500]
+        const color = point.color || subjectColors.primary
 
         return (
           <motion.g
