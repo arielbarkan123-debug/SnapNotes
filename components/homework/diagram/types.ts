@@ -33,6 +33,12 @@ export const MATH_DIAGRAM_TYPES = [
   'circle',
   'bar_model',
   'area_model',
+  'factoring',
+  'completing_square',
+  'polynomial',
+  'radical',
+  'systems',
+  'inequality',
 ]
 
 // Chemistry diagram types
@@ -62,6 +68,12 @@ export const DIAGRAM_TYPE_NAMES: Record<string, string> = {
   circle: 'Circle',
   bar_model: 'Bar Model',
   area_model: 'Area Model',
+  factoring: 'Factoring',
+  completing_square: 'Completing the Square',
+  polynomial: 'Polynomial Operations',
+  radical: 'Radical Simplification',
+  systems: 'Systems of Equations',
+  inequality: 'Inequalities',
   // Chemistry diagrams
   atom: 'Atom Structure',
   molecule: 'Molecule Structure',

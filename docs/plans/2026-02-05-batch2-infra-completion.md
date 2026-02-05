@@ -319,7 +319,7 @@ git commit -m "feat: wire subject and complexity props through diagram renderer 
 
 ## Task 6: AI Diagram Schema Registry
 
-Replace the 3 hardcoded diagram schemas in the prepare chat route with a centralized registry. Start with the currently-implemented types (14 math + 2 geometry + 3 physics = 19), not all 122 — we'll expand as components are built.
+Replace the 3 hardcoded diagram schemas in the prepare chat route with a centralized registry. Start with the currently-implemented types (11 math + 1 physics = 12), not all 122 — we'll expand as components are built.
 
 **Files:**
 - Create: `lib/diagram-schemas.ts`
