@@ -3,6 +3,9 @@
 import { useMemo } from 'react'
 import type { ParallelogramData, ParallelogramCalculations, SolutionStep } from '@/types/geometry'
 import { GEOMETRY_COLORS } from '@/types/geometry'
+import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface ParallelogramProps {
   data: ParallelogramData
@@ -12,6 +15,8 @@ interface ParallelogramProps {
   currentStep?: number
   showStepByStep?: boolean
   language?: 'en' | 'he'
+  subject?: SubjectKey
+  complexity?: VisualComplexityLevel
 }
 
 /**
@@ -26,6 +31,8 @@ export function Parallelogram({
   currentStep = 0,
   showStepByStep = false,
   language = 'en',
+  subject = 'geometry',
+  complexity = 'middle_school',
 }: ParallelogramProps) {
   const {
     base,
@@ -40,6 +47,9 @@ export function Parallelogram({
     showFormulas = true,
     showCalculations = true,
   } = data
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   // Calculate all measurements
   const calculations: ParallelogramCalculations = useMemo(() => {
@@ -148,8 +158,8 @@ export function Parallelogram({
         {/* Parallelogram fill */}
         <path
           d={parallelogramPath}
-          fill={GEOMETRY_COLORS.shape.fill}
-          fillOpacity={GEOMETRY_COLORS.shape.fillOpacity}
+          fill={subjectColors.primary}
+          fillOpacity={0.1}
           stroke="none"
         />
 
@@ -158,7 +168,7 @@ export function Parallelogram({
           d={parallelogramPath}
           fill="none"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={adaptiveLineWeight}
         />
 
         {/* Parallel marks on opposite sides */}
@@ -229,7 +239,7 @@ export function Parallelogram({
               x2={vertices[0].x}
               y2={vertices[3].y}
               stroke={GEOMETRY_COLORS.auxiliary.height}
-              strokeWidth={2}
+              strokeWidth={adaptiveLineWeight}
               strokeDasharray="5,3"
             />
             {/* Right angle marker at bottom */}
@@ -295,7 +305,7 @@ export function Parallelogram({
         {/* Vertex labels */}
         {vertices.map((v, i) => (
           <g key={`vertex-${i}`}>
-            <circle cx={v.x} cy={v.y} r={3} fill="currentColor" />
+            <circle cx={v.x} cy={v.y} r={adaptiveLineWeight} fill="currentColor" />
             <text
               x={v.x + (i === 0 || i === 3 ? -12 : 12)}
               y={v.y + (i === 0 || i === 1 ? -8 : 12)}

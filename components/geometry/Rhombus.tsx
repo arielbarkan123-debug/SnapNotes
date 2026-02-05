@@ -3,6 +3,9 @@
 import { useMemo } from 'react'
 import type { RhombusData, RhombusCalculations, SolutionStep } from '@/types/geometry'
 import { GEOMETRY_COLORS } from '@/types/geometry'
+import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface RhombusProps {
   data: RhombusData
@@ -12,6 +15,8 @@ interface RhombusProps {
   currentStep?: number
   showStepByStep?: boolean
   language?: 'en' | 'he'
+  subject?: SubjectKey
+  complexity?: VisualComplexityLevel
 }
 
 /**
@@ -26,6 +31,8 @@ export function Rhombus({
   currentStep = 0,
   showStepByStep = false,
   language = 'en',
+  subject = 'geometry',
+  complexity = 'middle_school',
 }: RhombusProps) {
   const {
     side,
@@ -39,6 +46,9 @@ export function Rhombus({
     showFormulas = true,
     showCalculations = true,
   } = data
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   // Calculate all measurements
   const calculations: RhombusCalculations = useMemo(() => {
@@ -170,8 +180,8 @@ export function Rhombus({
         {/* Rhombus fill */}
         <path
           d={rhombusPath}
-          fill={GEOMETRY_COLORS.shape.fill}
-          fillOpacity={GEOMETRY_COLORS.shape.fillOpacity}
+          fill={subjectColors.primary}
+          fillOpacity={0.1}
           stroke="none"
         />
 
@@ -180,7 +190,7 @@ export function Rhombus({
           d={rhombusPath}
           fill="none"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={adaptiveLineWeight}
         />
 
         {/* Equal side marks */}
@@ -205,7 +215,7 @@ export function Rhombus({
               x2={mx + perpX * 0.3}
               y2={my + perpY * 0.3}
               stroke="currentColor"
-              strokeWidth={2}
+              strokeWidth={adaptiveLineWeight}
             />
           )
         })}
@@ -220,7 +230,7 @@ export function Rhombus({
               x2={vertices[1].x}
               y2={vertices[1].y}
               stroke={GEOMETRY_COLORS.auxiliary.diagonal}
-              strokeWidth={2}
+              strokeWidth={adaptiveLineWeight}
               strokeDasharray="5,3"
             />
             {/* Vertical diagonal (d2) */}
@@ -230,7 +240,7 @@ export function Rhombus({
               x2={vertices[2].x}
               y2={vertices[2].y}
               stroke={GEOMETRY_COLORS.highlight.secondary}
-              strokeWidth={2}
+              strokeWidth={adaptiveLineWeight}
               strokeDasharray="5,3"
             />
             {/* Right angle marker at center */}
@@ -241,7 +251,7 @@ export function Rhombus({
               strokeWidth={1.5}
             />
             {/* Center point */}
-            <circle cx={cx} cy={cy} r={3} fill="currentColor" />
+            <circle cx={cx} cy={cy} r={adaptiveLineWeight} fill="currentColor" />
 
             {/* Diagonal labels */}
             <text
@@ -292,7 +302,7 @@ export function Rhombus({
         {/* Vertex labels */}
         {vertices.map((v, i) => (
           <g key={`vertex-${i}`}>
-            <circle cx={v.x} cy={v.y} r={3} fill="currentColor" />
+            <circle cx={v.x} cy={v.y} r={adaptiveLineWeight} fill="currentColor" />
             <text
               x={v.x + (i === 1 ? 12 : i === 3 ? -12 : 0)}
               y={v.y + (i === 0 ? -10 : i === 2 ? 15 : 0)}

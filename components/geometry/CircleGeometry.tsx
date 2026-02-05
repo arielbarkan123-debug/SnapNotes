@@ -3,6 +3,9 @@
 import { useMemo } from 'react'
 import type { CircleGeometryData, CircleCalculations, SolutionStep } from '@/types/geometry'
 import { GEOMETRY_COLORS } from '@/types/geometry'
+import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface CircleGeometryProps {
   data: CircleGeometryData
@@ -12,6 +15,8 @@ interface CircleGeometryProps {
   currentStep?: number
   showStepByStep?: boolean
   language?: 'en' | 'he'
+  subject?: SubjectKey
+  complexity?: VisualComplexityLevel
 }
 
 /**
@@ -26,6 +31,8 @@ export function CircleGeometry({
   currentStep = 0,
   showStepByStep = false,
   language = 'en',
+  subject = 'geometry',
+  complexity = 'middle_school',
 }: CircleGeometryProps) {
   const {
     radius,
@@ -41,6 +48,9 @@ export function CircleGeometry({
     showFormulas = true,
     showCalculations = true,
   } = data
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   // Calculate all measurements
   const calculations: CircleCalculations = useMemo(() => {
@@ -224,8 +234,8 @@ export function CircleGeometry({
           cx={cx}
           cy={cy}
           r={scaledRadius}
-          fill={GEOMETRY_COLORS.shape.fill}
-          fillOpacity={GEOMETRY_COLORS.shape.fillOpacity}
+          fill={subjectColors.primary}
+          fillOpacity={0.1}
           stroke="none"
         />
 
@@ -236,7 +246,7 @@ export function CircleGeometry({
             fill={GEOMETRY_COLORS.highlight.tertiary}
             fillOpacity={0.45}
             stroke={GEOMETRY_COLORS.highlight.tertiary}
-            strokeWidth={2}
+            strokeWidth={adaptiveLineWeight}
           />
         )}
 
@@ -247,11 +257,11 @@ export function CircleGeometry({
           r={scaledRadius}
           fill="none"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={adaptiveLineWeight}
         />
 
         {/* Center point */}
-        <circle cx={cx} cy={cy} r={4} fill="currentColor" />
+        <circle cx={cx} cy={cy} r={adaptiveLineWeight} fill="currentColor" />
         <text
           x={cx - 15}
           y={cy + 18}
@@ -269,7 +279,7 @@ export function CircleGeometry({
               x2={cx + scaledRadius}
               y2={cy}
               stroke={GEOMETRY_COLORS.highlight.primary}
-              strokeWidth={2}
+              strokeWidth={adaptiveLineWeight}
             />
             <text
               x={cx + scaledRadius / 2}
@@ -280,7 +290,7 @@ export function CircleGeometry({
               {radiusLabel} = {radius}
             </text>
             {/* Endpoint */}
-            <circle cx={cx + scaledRadius} cy={cy} r={4} fill={GEOMETRY_COLORS.highlight.primary} />
+            <circle cx={cx + scaledRadius} cy={cy} r={adaptiveLineWeight} fill={GEOMETRY_COLORS.highlight.primary} />
           </g>
         )}
 
@@ -293,7 +303,7 @@ export function CircleGeometry({
               x2={cx + scaledRadius}
               y2={cy}
               stroke={GEOMETRY_COLORS.highlight.secondary}
-              strokeWidth={2}
+              strokeWidth={adaptiveLineWeight}
             />
             <text
               x={cx}
@@ -316,8 +326,8 @@ export function CircleGeometry({
               strokeWidth={4}
             />
             {/* Arc endpoints */}
-            <circle {...pointOnCircle(arc.startAngle)} r={4} fill={GEOMETRY_COLORS.highlight.tertiary} />
-            <circle {...pointOnCircle(arc.endAngle)} r={4} fill={GEOMETRY_COLORS.highlight.tertiary} />
+            <circle {...pointOnCircle(arc.startAngle)} r={adaptiveLineWeight} fill={GEOMETRY_COLORS.highlight.tertiary} />
+            <circle {...pointOnCircle(arc.endAngle)} r={adaptiveLineWeight} fill={GEOMETRY_COLORS.highlight.tertiary} />
             {arc.label && (
               <text
                 {...pointOnCircle((arc.startAngle + arc.endAngle) / 2, scaledRadius + 15)}
@@ -340,7 +350,7 @@ export function CircleGeometry({
               x2={pointOnCircle(sector.startAngle).x}
               y2={pointOnCircle(sector.startAngle).y}
               stroke={GEOMETRY_COLORS.highlight.tertiary}
-              strokeWidth={2}
+              strokeWidth={adaptiveLineWeight}
             />
             <line
               x1={cx}
@@ -348,7 +358,7 @@ export function CircleGeometry({
               x2={pointOnCircle(sector.endAngle).x}
               y2={pointOnCircle(sector.endAngle).y}
               stroke={GEOMETRY_COLORS.highlight.tertiary}
-              strokeWidth={2}
+              strokeWidth={adaptiveLineWeight}
             />
             {/* Central angle arc */}
             <path
@@ -390,11 +400,11 @@ export function CircleGeometry({
               x2={pointOnCircle(chord.endAngle).x}
               y2={pointOnCircle(chord.endAngle).y}
               stroke={GEOMETRY_COLORS.auxiliary.diagonal}
-              strokeWidth={2}
+              strokeWidth={adaptiveLineWeight}
             />
             {/* Chord endpoints */}
-            <circle {...pointOnCircle(chord.startAngle)} r={4} fill={GEOMETRY_COLORS.auxiliary.diagonal} />
-            <circle {...pointOnCircle(chord.endAngle)} r={4} fill={GEOMETRY_COLORS.auxiliary.diagonal} />
+            <circle {...pointOnCircle(chord.startAngle)} r={adaptiveLineWeight} fill={GEOMETRY_COLORS.auxiliary.diagonal} />
+            <circle {...pointOnCircle(chord.endAngle)} r={adaptiveLineWeight} fill={GEOMETRY_COLORS.auxiliary.diagonal} />
             {/* Chord label */}
             {chord.label && (
               <text

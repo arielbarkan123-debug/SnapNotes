@@ -3,6 +3,9 @@
 import { useMemo } from 'react'
 import type { TrapezoidData, TrapezoidCalculations, SolutionStep } from '@/types/geometry'
 import { GEOMETRY_COLORS } from '@/types/geometry'
+import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface TrapezoidProps {
   data: TrapezoidData
@@ -12,6 +15,8 @@ interface TrapezoidProps {
   currentStep?: number
   showStepByStep?: boolean
   language?: 'en' | 'he'
+  subject?: SubjectKey
+  complexity?: VisualComplexityLevel
 }
 
 /**
@@ -26,6 +31,8 @@ export function Trapezoid({
   currentStep = 0,
   showStepByStep = false,
   language = 'en',
+  subject = 'geometry',
+  complexity = 'middle_school',
 }: TrapezoidProps) {
   const {
     topBase: a,
@@ -44,6 +51,9 @@ export function Trapezoid({
     showFormulas = true,
     showCalculations = true,
   } = data
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   // Calculate all measurements
   const calculations: TrapezoidCalculations = useMemo(() => {
@@ -199,8 +209,8 @@ export function Trapezoid({
         {/* Trapezoid fill */}
         <path
           d={trapezoidPath}
-          fill={GEOMETRY_COLORS.shape.fill}
-          fillOpacity={GEOMETRY_COLORS.shape.fillOpacity}
+          fill={subjectColors.primary}
+          fillOpacity={0.1}
           stroke="none"
         />
 
@@ -209,7 +219,7 @@ export function Trapezoid({
           d={trapezoidPath}
           fill="none"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={adaptiveLineWeight}
         />
 
         {/* Parallel marks on top and bottom bases */}
@@ -244,7 +254,7 @@ export function Trapezoid({
               x2={(vertices[0].x + vertices[3].x) / 2 - 4}
               y2={(vertices[0].y + vertices[3].y) / 2 + 5}
               stroke="currentColor"
-              strokeWidth={2}
+              strokeWidth={adaptiveLineWeight}
             />
             {/* Right side mark */}
             <line
@@ -253,7 +263,7 @@ export function Trapezoid({
               x2={(vertices[1].x + vertices[2].x) / 2 + 8}
               y2={(vertices[1].y + vertices[2].y) / 2 + 5}
               stroke="currentColor"
-              strokeWidth={2}
+              strokeWidth={adaptiveLineWeight}
             />
           </>
         )}
@@ -267,7 +277,7 @@ export function Trapezoid({
               x2={vertices[0].x}
               y2={vertices[3].y}
               stroke={GEOMETRY_COLORS.auxiliary.height}
-              strokeWidth={2}
+              strokeWidth={adaptiveLineWeight}
               strokeDasharray="5,3"
             />
             {/* Right angle marker at bottom */}
@@ -300,7 +310,7 @@ export function Trapezoid({
             x2={medianRightX}
             y2={medianY}
             stroke={GEOMETRY_COLORS.highlight.tertiary}
-            strokeWidth={2}
+            strokeWidth={adaptiveLineWeight}
             strokeDasharray="8,4"
           />
           {/* Median label */}
@@ -360,7 +370,7 @@ export function Trapezoid({
         {/* Vertex labels */}
         {vertices.map((v, i) => (
           <g key={`vertex-${i}`}>
-            <circle cx={v.x} cy={v.y} r={3} fill="currentColor" />
+            <circle cx={v.x} cy={v.y} r={adaptiveLineWeight} fill="currentColor" />
             <text
               x={v.x + (i === 0 || i === 3 ? -12 : 12)}
               y={v.y + (i === 0 || i === 1 ? -8 : 12)}

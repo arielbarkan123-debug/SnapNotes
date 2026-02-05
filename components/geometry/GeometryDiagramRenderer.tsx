@@ -22,6 +22,8 @@ import { Parallelogram } from './Parallelogram'
 import { Rhombus } from './Rhombus'
 import { Trapezoid } from './Trapezoid'
 import { RegularPolygon } from './RegularPolygon'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface GeometryDiagramRendererProps {
   /** Diagram state from tutor response */
@@ -48,6 +50,10 @@ interface GeometryDiagramRendererProps {
   language?: 'en' | 'he'
   /** Show step-by-step solution */
   showStepByStep?: boolean
+  /** Subject for color theming */
+  subject?: SubjectKey
+  /** Visual complexity level */
+  complexity?: VisualComplexityLevel
 }
 
 // Shape type display names
@@ -84,6 +90,8 @@ export function GeometryDiagramRenderer({
   className = '',
   language = 'en',
   showStepByStep = false,
+  subject = 'geometry',
+  complexity = 'middle_school',
 }: GeometryDiagramRendererProps) {
   const [internalStep, setInternalStep] = useState(diagram.visibleStep)
 
@@ -136,6 +144,8 @@ export function GeometryDiagramRenderer({
     currentStep,
     showStepByStep,
     language,
+    subject,
+    complexity,
   }
 
   // Render the appropriate diagram type

@@ -3,6 +3,9 @@
 import { useMemo } from 'react'
 import type { SquareData, SquareCalculations, SolutionStep } from '@/types/geometry'
 import { GEOMETRY_COLORS } from '@/types/geometry'
+import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface SquareProps {
   data: SquareData
@@ -12,6 +15,8 @@ interface SquareProps {
   currentStep?: number
   showStepByStep?: boolean
   language?: 'en' | 'he'
+  subject?: SubjectKey
+  complexity?: VisualComplexityLevel
 }
 
 /**
@@ -26,6 +31,8 @@ export function Square({
   currentStep = 0,
   showStepByStep = false,
   language = 'en',
+  subject = 'geometry',
+  complexity = 'middle_school',
 }: SquareProps) {
   const {
     side,
@@ -37,6 +44,9 @@ export function Square({
     showCalculations = true,
     highlightSide,
   } = data
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   // Calculate all measurements
   const calculations: SquareCalculations = useMemo(() => {
@@ -161,8 +171,8 @@ export function Square({
         {/* Square fill */}
         <path
           d={squarePath}
-          fill={GEOMETRY_COLORS.shape.fill}
-          fillOpacity={GEOMETRY_COLORS.shape.fillOpacity}
+          fill={subjectColors.primary}
+          fillOpacity={0.1}
           stroke="none"
         />
 
@@ -171,7 +181,7 @@ export function Square({
           d={squarePath}
           fill="none"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={adaptiveLineWeight}
         />
 
         {/* Highlighted sides */}
@@ -246,7 +256,7 @@ export function Square({
         {/* Vertex labels */}
         {vertices.map((v, i) => (
           <g key={`vertex-${i}`}>
-            <circle cx={v.x} cy={v.y} r={3} fill="currentColor" />
+            <circle cx={v.x} cy={v.y} r={adaptiveLineWeight} fill="currentColor" />
             <text
               x={v.x + (i === 0 || i === 3 ? -12 : 12)}
               y={v.y + (i === 0 || i === 1 ? -8 : 12)}

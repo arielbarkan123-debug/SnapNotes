@@ -3,6 +3,9 @@
 import { useMemo } from 'react'
 import type { RectangleData, RectangleCalculations, SolutionStep } from '@/types/geometry'
 import { GEOMETRY_COLORS } from '@/types/geometry'
+import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface RectangleProps {
   data: RectangleData
@@ -12,6 +15,8 @@ interface RectangleProps {
   currentStep?: number
   showStepByStep?: boolean
   language?: 'en' | 'he'
+  subject?: SubjectKey
+  complexity?: VisualComplexityLevel
 }
 
 /**
@@ -26,6 +31,8 @@ export function Rectangle({
   currentStep = 0,
   showStepByStep = false,
   language = 'en',
+  subject = 'geometry',
+  complexity = 'middle_school',
 }: RectangleProps) {
   const {
     width: rectWidth,
@@ -39,6 +46,9 @@ export function Rectangle({
     showCalculations = true,
     highlightSide,
   } = data
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   // Calculate all measurements
   const calculations: RectangleCalculations = useMemo(() => {
@@ -172,8 +182,8 @@ export function Rectangle({
         {/* Rectangle fill */}
         <path
           d={rectPath}
-          fill={GEOMETRY_COLORS.shape.fill}
-          fillOpacity={GEOMETRY_COLORS.shape.fillOpacity}
+          fill={subjectColors.primary}
+          fillOpacity={0.1}
           stroke="none"
         />
 
@@ -182,7 +192,7 @@ export function Rectangle({
           d={rectPath}
           fill="none"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={adaptiveLineWeight}
         />
 
         {/* Highlighted sides */}
@@ -289,7 +299,7 @@ export function Rectangle({
         {/* Vertex labels */}
         {vertices.map((v, i) => (
           <g key={`vertex-${i}`}>
-            <circle cx={v.x} cy={v.y} r={3} fill="currentColor" />
+            <circle cx={v.x} cy={v.y} r={adaptiveLineWeight} fill="currentColor" />
             <text
               x={v.x + (i === 0 || i === 3 ? -12 : 12)}
               y={v.y + (i === 0 || i === 1 ? -8 : 12)}
