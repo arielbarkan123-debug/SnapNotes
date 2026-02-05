@@ -5,13 +5,16 @@ import {
   useState,
   useCallback,
   useEffect,
+  useMemo,
   forwardRef,
   useImperativeHandle,
   type MouseEvent,
   type TouchEvent,
 } from 'react'
 import { motion } from 'framer-motion'
-import { COLORS } from '@/lib/diagram-theme'
+import { COLORS, getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 // ============================================================================
 // Types
@@ -91,6 +94,10 @@ export interface GeometryCanvasProps {
   snapToPoints?: boolean
   /** Whether to show measurements */
   showMeasurements?: boolean
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
   /** Callback when geometry changes */
   onChange?: (state: GeometryState) => void
   /** Callback when a shape is selected */
@@ -266,9 +273,13 @@ export const GeometryCanvas = forwardRef<GeometryCanvasRef, GeometryCanvasProps>
       onChange,
       onSelect,
       className = '',
+      subject = 'geometry',
+      complexity = 'middle_school',
     },
     ref
   ) {
+    const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+    const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
     const svgRef = useRef<SVGSVGElement>(null)
     const [tool, setTool] = useState<GeometryToolType>(controlledTool || 'select')
     const [state, setState] = useState<GeometryState>({
@@ -692,7 +703,7 @@ export const GeometryCanvas = forwardRef<GeometryCanvasRef, GeometryCanvasProps>
                 cy={circle.center.y}
                 r={circle.radius}
                 fill="none"
-                stroke={circle.color || COLORS.primary[500]}
+                stroke={circle.color || subjectColors.primary}
                 strokeWidth={2}
                 className={selectedId === circle.id ? 'stroke-primary-600' : ''}
               />
@@ -707,7 +718,7 @@ export const GeometryCanvas = forwardRef<GeometryCanvasRef, GeometryCanvasProps>
                 y1={line.start.y}
                 x2={line.end.x}
                 y2={line.end.y}
-                stroke={line.color || COLORS.primary[500]}
+                stroke={line.color || subjectColors.primary}
                 strokeWidth={2}
                 strokeDasharray={line.dashed ? '5,5' : undefined}
                 className={selectedId === line.id ? 'stroke-primary-600' : ''}
@@ -761,7 +772,7 @@ export const GeometryCanvas = forwardRef<GeometryCanvasRef, GeometryCanvasProps>
                 cx={point.x}
                 cy={point.y}
                 r={POINT_RADIUS}
-                fill={point.color || COLORS.primary[500]}
+                fill={point.color || subjectColors.primary}
                 stroke="white"
                 strokeWidth={2}
                 className={`${selectedId === point.id ? 'stroke-primary-600 stroke-[3]' : ''} ${

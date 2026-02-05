@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CoordinatePlane } from './CoordinatePlane'
 import type { CoordinatePlaneData } from '@/types'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import type { DesmosExpression, DesmosGraphingRef } from './DesmosGraphing'
 
 // Lazy load Desmos component (reduces initial bundle)
@@ -75,6 +77,10 @@ export interface InteractiveGraphProps {
   showGrid?: boolean
   /** Whether to allow mode switching */
   allowModeSwitch?: boolean
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
   /** Whether to allow expression editing in interactive mode */
   allowEditing?: boolean
   /** Width */
@@ -229,6 +235,8 @@ export function InteractiveGraph({
   className = '',
   onExpressionsChange,
   desmosRef,
+  subject = 'math',
+  complexity = 'middle_school',
 }: InteractiveGraphProps) {
   const [mode, setMode] = useState<GraphMode>(initialMode)
 
@@ -317,6 +325,7 @@ export function InteractiveGraph({
               lockViewport={false}
               allowEditing={allowEditing}
               onExpressionsChange={onExpressionsChange}
+              subject={subject}
               width={width}
               height={height}
               title={title || 'Interactive Graph'}
@@ -336,6 +345,8 @@ export function InteractiveGraph({
               height={height}
               animateCurves={true}
               className="rounded-xl border border-gray-200 dark:border-gray-700"
+              subject={subject}
+              complexity={complexity}
             />
           </motion.div>
         )}
