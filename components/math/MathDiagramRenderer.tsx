@@ -21,6 +21,10 @@ import { PolynomialOperations, type PolynomialOperationsData } from './Polynomia
 import { RadicalSimplification, type RadicalSimplificationData } from './RadicalSimplification'
 import { SystemsOfEquations, type SystemsOfEquationsData } from './SystemsOfEquations'
 import { InequalityDiagram, type InequalityData } from './InequalityDiagram'
+import { Triangle } from './Triangle'
+import { Circle } from './Circle'
+import { UnitCircle } from './UnitCircle'
+import type { TriangleDataWithErrors, CircleDataWithErrors, UnitCircleDataWithErrors } from '@/types'
 
 interface MathDiagramRendererProps {
   /** Diagram state from tutor response */
@@ -266,9 +270,43 @@ export function MathDiagramRenderer({
           />
         )
 
-      // Placeholder for future diagram types
       case 'triangle':
+        return (
+          <Triangle
+            data={diagram.data as unknown as TriangleDataWithErrors}
+            width={width || 400}
+            height={height || 400}
+            className="diagram-content"
+            subject={subject}
+            complexity={complexity}
+          />
+        )
+
       case 'circle':
+        return (
+          <Circle
+            data={diagram.data as unknown as CircleDataWithErrors}
+            width={width || 400}
+            height={height || 400}
+            className="diagram-content"
+            subject={subject}
+            complexity={complexity}
+          />
+        )
+
+      case 'unit_circle':
+        return (
+          <UnitCircle
+            data={diagram.data as unknown as UnitCircleDataWithErrors}
+            width={width || 400}
+            height={height || 400}
+            className="diagram-content"
+            subject={subject}
+            complexity={complexity}
+          />
+        )
+
+      // Placeholder for future diagram types
       case 'bar_model':
       case 'area_model':
         return (
@@ -303,6 +341,7 @@ export function MathDiagramRenderer({
         coordinate_plane: 'Coordinate Plane',
         triangle: 'Triangle',
         circle: 'Circle',
+        unit_circle: 'Unit Circle',
         bar_model: 'Bar Model',
         area_model: 'Area Model',
         factoring: 'Factoring',
@@ -320,6 +359,7 @@ export function MathDiagramRenderer({
         coordinate_plane: 'מערכת צירים',
         triangle: 'משולש',
         circle: 'מעגל',
+        unit_circle: 'מעגל היחידה',
         bar_model: 'מודל עמודות',
         area_model: 'מודל שטח',
         factoring: 'פירוק לגורמים',

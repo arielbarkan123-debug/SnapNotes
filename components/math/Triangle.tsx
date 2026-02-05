@@ -1,5 +1,9 @@
 'use client'
 
+import { useMemo } from 'react'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import type { TriangleData, TriangleErrorHighlight } from '@/types'
 
 interface TriangleDataWithErrors extends TriangleData {
@@ -11,6 +15,8 @@ interface TriangleProps {
   className?: string
   width?: number
   height?: number
+  subject?: SubjectKey
+  complexity?: VisualComplexityLevel
 }
 
 /**
@@ -22,8 +28,13 @@ export function Triangle({
   className = '',
   width = 300,
   height = 280,
+  subject = 'geometry',
+  complexity = 'middle_school',
 }: TriangleProps) {
   const { vertices, sides = [], angles = [], altitude, title, errorHighlight } = data
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   // Guard against empty or insufficient vertices
   if (!vertices || vertices.length < 3) {
@@ -178,14 +189,14 @@ export function Triangle({
       )}
 
       {/* Triangle fill */}
-      <path d={trianglePath} fill="#3B82F6" fillOpacity={0.1} stroke="none" />
+      <path d={trianglePath} fill={subjectColors.primary} fillOpacity={0.1} stroke="none" />
 
       {/* Triangle outline */}
       <path
         d={trianglePath}
         fill="none"
         stroke="currentColor"
-        strokeWidth={2}
+        strokeWidth={adaptiveLineWeight}
       />
 
       {/* Highlighted sides */}
@@ -204,7 +215,7 @@ export function Triangle({
               x2={to.x}
               y2={to.y}
               stroke="#EF4444"
-              strokeWidth={3}
+              strokeWidth={adaptiveLineWeight + 1}
             />
           )
         })}
@@ -240,7 +251,7 @@ export function Triangle({
               x2={foot.x}
               y2={foot.y}
               stroke="#10B981"
-              strokeWidth={2}
+              strokeWidth={adaptiveLineWeight}
               strokeDasharray="5,5"
             />
             {/* Small right angle marker at foot */}
@@ -355,7 +366,8 @@ export function Triangle({
             y={midpoint.y + perpY * 15 * direction}
             textAnchor="middle"
             dominantBaseline="middle"
-            className="fill-blue-600 dark:fill-blue-400 text-sm font-medium"
+            style={{ fill: subjectColors.primary }}
+            className="text-sm font-medium"
           >
             {side.length}
           </text>
@@ -394,7 +406,7 @@ export function Triangle({
           key={`vertex-point-${index}`}
           cx={vertex.x}
           cy={vertex.y}
-          r={3}
+          r={adaptiveLineWeight}
           fill="currentColor"
         />
       ))}

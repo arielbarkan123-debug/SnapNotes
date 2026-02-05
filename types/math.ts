@@ -289,6 +289,7 @@ export type MathDiagramType =
   | 'coordinate_plane'
   | 'triangle'
   | 'circle'
+  | 'unit_circle'
   | 'bar_model'
   | 'area_model'
   | 'factoring'

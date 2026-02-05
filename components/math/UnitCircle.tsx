@@ -1,6 +1,10 @@
 'use client'
 
+import { useMemo } from 'react'
 import type { UnitCircleData, UnitCircleErrorHighlight } from '@/types'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface UnitCircleDataWithErrors extends UnitCircleData {
   errorHighlight?: UnitCircleErrorHighlight
@@ -11,6 +15,8 @@ interface UnitCircleProps {
   className?: string
   width?: number
   height?: number
+  subject?: SubjectKey
+  complexity?: VisualComplexityLevel
 }
 
 // Standard angles for the unit circle
@@ -42,6 +48,8 @@ export function UnitCircle({
   className = '',
   width = 400,
   height = 400,
+  subject = 'math',
+  complexity = 'middle_school',
 }: UnitCircleProps) {
   const {
     angles = [],
@@ -51,6 +59,9 @@ export function UnitCircle({
     title,
     errorHighlight,
   } = data
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   const padding = 60
   const titleHeight = title ? 30 : 0
@@ -116,7 +127,7 @@ export function UnitCircle({
       {highlightQuadrant && (
         <path
           d={quadrantPaths[highlightQuadrant]}
-          fill="#3B82F6"
+          fill={subjectColors.primary}
           fillOpacity={0.15}
         />
       )}
@@ -128,7 +139,7 @@ export function UnitCircle({
         r={radius}
         fill="none"
         stroke="currentColor"
-        strokeWidth={2}
+        strokeWidth={adaptiveLineWeight}
       />
 
       {/* X axis */}
@@ -138,7 +149,7 @@ export function UnitCircle({
         x2={center.x + radius + 20}
         y2={center.y}
         stroke="currentColor"
-        strokeWidth={1.5}
+        strokeWidth={adaptiveLineWeight - 0.5}
       />
       <polygon
         points={`${center.x + radius + 25},${center.y} ${center.x + radius + 15},${center.y - 5} ${center.x + radius + 15},${center.y + 5}`}
@@ -159,7 +170,7 @@ export function UnitCircle({
         x2={center.x}
         y2={center.y - radius - 20}
         stroke="currentColor"
-        strokeWidth={1.5}
+        strokeWidth={adaptiveLineWeight - 0.5}
       />
       <polygon
         points={`${center.x},${center.y - radius - 25} ${center.x - 5},${center.y - radius - 15} ${center.x + 5},${center.y - radius - 15}`}
@@ -204,7 +215,7 @@ export function UnitCircle({
       </text>
 
       {/* Origin */}
-      <circle cx={center.x} cy={center.y} r={3} fill="currentColor" />
+      <circle cx={center.x} cy={center.y} r={adaptiveLineWeight} fill="currentColor" />
       <text
         x={center.x - 12}
         y={center.y + 15}
@@ -251,7 +262,7 @@ export function UnitCircle({
       {displayAngles.map((angle, index) => {
         const point = angleToPoint(angle.degrees)
         const isHighlighted = angle.highlight
-        const color = isHighlighted ? '#EF4444' : '#3B82F6'
+        const color = isHighlighted ? '#EF4444' : subjectColors.primary
 
         // Position label based on quadrant
         const labelOffset = 20
@@ -275,7 +286,7 @@ export function UnitCircle({
                 x2={point.x}
                 y2={point.y}
                 stroke={color}
-                strokeWidth={2}
+                strokeWidth={adaptiveLineWeight}
               />
             )}
 
@@ -283,7 +294,7 @@ export function UnitCircle({
             <circle
               cx={point.x}
               cy={point.y}
-              r={isHighlighted ? 5 : 4}
+              r={isHighlighted ? adaptiveLineWeight + 2 : adaptiveLineWeight + 1}
               fill={color}
             />
 
@@ -293,7 +304,8 @@ export function UnitCircle({
               y={labelY}
               textAnchor={textAnchor}
               dominantBaseline={dominantBaseline}
-              className={`text-xs ${isHighlighted ? 'fill-red-600 dark:fill-red-400 font-medium' : 'fill-blue-600 dark:fill-blue-400'}`}
+              className="text-xs"
+              style={{ fill: isHighlighted ? '#EF4444' : subjectColors.primary, fontWeight: isHighlighted ? 500 : undefined }}
             >
               {angle.radians}
             </text>
@@ -318,7 +330,7 @@ export function UnitCircle({
                 d={`M ${center.x + 25} ${center.y} A 25 25 0 ${angle.degrees > 180 ? 1 : 0} 0 ${center.x + 25 * Math.cos((angle.degrees * Math.PI) / 180)} ${center.y - 25 * Math.sin((angle.degrees * Math.PI) / 180)}`}
                 fill="none"
                 stroke={color}
-                strokeWidth={2}
+                strokeWidth={adaptiveLineWeight}
               />
             )}
           </g>

@@ -1,6 +1,10 @@
 'use client'
 
+import { useMemo } from 'react'
 import type { CircleData, CircleErrorHighlight } from '@/types'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface CircleDataWithErrors extends CircleData {
   errorHighlight?: CircleErrorHighlight
@@ -11,6 +15,8 @@ interface CircleProps {
   className?: string
   width?: number
   height?: number
+  subject?: SubjectKey
+  complexity?: VisualComplexityLevel
 }
 
 /**
@@ -22,6 +28,8 @@ export function Circle({
   className = '',
   width = 300,
   height = 300,
+  subject = 'geometry',
+  complexity = 'middle_school',
 }: CircleProps) {
   const {
     centerX,
@@ -38,6 +46,9 @@ export function Circle({
     title,
     errorHighlight,
   } = data
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   // Scale and positioning
   const padding = 40
@@ -97,14 +108,14 @@ export function Circle({
         cx={center.x}
         cy={center.y}
         r={scaledRadius}
-        fill="#3B82F6"
+        fill={subjectColors.primary}
         fillOpacity={0.1}
         stroke="currentColor"
-        strokeWidth={2}
+        strokeWidth={adaptiveLineWeight}
       />
 
       {/* Center point */}
-      <circle cx={center.x} cy={center.y} r={3} fill="currentColor" />
+      <circle cx={center.x} cy={center.y} r={adaptiveLineWeight} fill="currentColor" />
       {centerLabel && (
         <text
           x={center.x - 10}
@@ -123,15 +134,16 @@ export function Circle({
             y1={center.y}
             x2={center.x + scaledRadius}
             y2={center.y}
-            stroke="#EF4444"
-            strokeWidth={2}
+            stroke={subjectColors.primary}
+            strokeWidth={adaptiveLineWeight}
           />
           {radiusLabel && (
             <text
               x={center.x + scaledRadius / 2}
               y={center.y - 8}
               textAnchor="middle"
-              className="fill-red-600 dark:fill-red-400 text-sm"
+              className="text-sm"
+              style={{ fill: subjectColors.primary }}
             >
               {radiusLabel}
             </text>
@@ -147,7 +159,7 @@ export function Circle({
           x2={center.x + scaledRadius}
           y2={center.y}
           stroke="#10B981"
-          strokeWidth={2}
+          strokeWidth={adaptiveLineWeight}
         />
       )}
 
@@ -164,11 +176,11 @@ export function Circle({
               x2={end.x}
               y2={end.y}
               stroke="#8B5CF6"
-              strokeWidth={2}
+              strokeWidth={adaptiveLineWeight}
             />
             {/* Chord endpoints */}
-            <circle cx={start.x} cy={start.y} r={4} fill="#8B5CF6" />
-            <circle cx={end.x} cy={end.y} r={4} fill="#8B5CF6" />
+            <circle cx={start.x} cy={start.y} r={adaptiveLineWeight + 1} fill="#8B5CF6" />
+            <circle cx={end.x} cy={end.y} r={adaptiveLineWeight + 1} fill="#8B5CF6" />
             {/* Labels */}
             {chord.start.label && (
               <text
@@ -260,7 +272,7 @@ export function Circle({
             d={arcPath(centralAngle.start, centralAngle.end)}
             fill="none"
             stroke="#EF4444"
-            strokeWidth={3}
+            strokeWidth={adaptiveLineWeight + 1}
           />
           {/* Radii */}
           {[centralAngle.start, centralAngle.end].map((angle, i) => {
@@ -273,7 +285,7 @@ export function Circle({
                 x2={point.x}
                 y2={point.y}
                 stroke="#EF4444"
-                strokeWidth={2}
+                strokeWidth={adaptiveLineWeight}
               />
             )
           })}
