@@ -265,7 +265,8 @@ export function RegularPolygon({
             <text
               x={(cx + midX) / 2 - 15}
               y={(cy + midY) / 2}
-              className="fill-amber-600 dark:fill-amber-400 text-xs font-medium"
+              style={{ fill: GEOMETRY_COLORS.auxiliary.apothem }}
+              className="text-xs font-medium"
             >
               {apothemLabel} ≈ {calculations.apothem.toFixed(2)}
             </text>
@@ -338,7 +339,8 @@ export function RegularPolygon({
                     y={v.y + 25 * Math.sin((angle1 + angle2) / 2)}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    className="fill-green-600 dark:fill-green-400 text-xs font-medium"
+                    style={{ fill: GEOMETRY_COLORS.highlight.secondary }}
+                    className="text-xs font-medium"
                   >
                     {calculations.interiorAngle.toFixed(1)}°
                   </text>

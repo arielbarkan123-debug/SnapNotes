@@ -356,7 +356,8 @@ export function TriangleGeometry({
               <text
                 x={(from.x + foot.x) / 2 + 10}
                 y={(from.y + foot.y) / 2}
-                className="fill-green-600 dark:fill-green-400 text-xs"
+                style={{ fill: GEOMETRY_COLORS.auxiliary.height }}
+                className="text-xs"
               >
                 h = {heightLine.value}
               </text>

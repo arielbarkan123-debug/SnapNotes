@@ -221,7 +221,8 @@ export function Square({
             <text
               x={(vertices[0].x + vertices[2].x) / 2 + 10}
               y={(vertices[0].y + vertices[2].y) / 2 - 5}
-              className="fill-purple-600 dark:fill-purple-400 text-xs"
+              style={{ fill: GEOMETRY_COLORS.auxiliary.diagonal }}
+              className="text-xs"
             >
               {diagonalLabel}
             </text>
@@ -239,7 +240,8 @@ export function Square({
           x={(vertices[0].x + vertices[1].x) / 2}
           y={vertices[0].y - 10}
           textAnchor="middle"
-          className="fill-blue-600 dark:fill-blue-400 text-sm font-medium"
+          style={{ fill: subjectColors.primary }}
+          className="text-sm font-medium"
         >
           {sideLabel} = {side}
         </text>
@@ -248,7 +250,8 @@ export function Square({
           y={(vertices[1].y + vertices[2].y) / 2}
           textAnchor="start"
           dominantBaseline="middle"
-          className="fill-blue-600 dark:fill-blue-400 text-sm font-medium"
+          style={{ fill: subjectColors.primary }}
+          className="text-sm font-medium"
         >
           {sideLabel}
         </text>

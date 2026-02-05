@@ -167,7 +167,8 @@ export function TreeDiagram({
                 y={(parentPos.y + pos.y) / 2}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                className="fill-blue-600 dark:fill-blue-400 text-xs font-medium"
+                style={{ fill: subjectColors.primary }}
+                className="text-xs font-medium"
               >
                 {pos.node.value}
               </text>

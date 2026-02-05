@@ -3,6 +3,9 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { parse, evaluate } from 'mathjs'
+import { getSubjectColor } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface Equation {
   id: string
@@ -29,6 +32,10 @@ interface EquationGrapherProps {
   language?: 'en' | 'he'
   /** Callback when equations change */
   onEquationsChange?: (equations: Equation[]) => void
+  /** Subject for theming */
+  subject?: SubjectKey
+  /** Visual complexity level */
+  complexity?: VisualComplexityLevel
 }
 
 // Predefined colors for equations
@@ -62,16 +69,19 @@ export function EquationGrapher({
   showGrid = true,
   language = 'en',
   onEquationsChange,
+  subject = 'math',
+  complexity: _complexity = 'middle_school',
 }: EquationGrapherProps) {
   const isRTL = language === 'he'
   const inputRef = useRef<HTMLInputElement>(null)
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
 
   // Initialize equations state
   const [equations, setEquations] = useState<Equation[]>(() =>
     initialEquations.map((eq, i) => ({
       id: `eq-${Date.now()}-${i}`,
       expression: eq.expression,
-      color: eq.color || EQUATION_COLORS[i % EQUATION_COLORS.length],
+      color: eq.color || (i === 0 ? getSubjectColor(subject).primary : EQUATION_COLORS[i % EQUATION_COLORS.length]),
       visible: true,
     }))
   )
@@ -165,7 +175,7 @@ export function EquationGrapher({
     const newEq: Equation = {
       id: `eq-${Date.now()}`,
       expression: newEquation,
-      color: EQUATION_COLORS[equations.length % EQUATION_COLORS.length],
+      color: equations.length === 0 ? subjectColors.primary : EQUATION_COLORS[equations.length % EQUATION_COLORS.length],
       visible: true,
     }
 

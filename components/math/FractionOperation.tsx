@@ -127,8 +127,9 @@ export function FractionOperation({
             <div className="flex items-center gap-2">
               <FractionPieChart
                 fraction={currentStepInfo.fractions[0] || fraction1}
-                color={FRACTION_COLORS[0]}
+                color={subjectColors.primary}
                 size={60}
+                strokeWidth={adaptiveLineWeight}
               />
               {currentStepInfo.fractions[1] && (
                 <>
@@ -137,6 +138,7 @@ export function FractionOperation({
                     fraction={currentStepInfo.fractions[1] || fraction2}
                     color={FRACTION_COLORS[1]}
                     size={60}
+                    strokeWidth={adaptiveLineWeight}
                   />
                 </>
               )}
@@ -147,6 +149,7 @@ export function FractionOperation({
                     fraction={currentStepInfo.result}
                     color={FRACTION_COLORS[2]}
                     size={60}
+                    strokeWidth={adaptiveLineWeight}
                   />
                 </>
               )}
@@ -157,7 +160,7 @@ export function FractionOperation({
             <div className="flex flex-col gap-2">
               <FractionBar
                 fraction={currentStepInfo.fractions[0] || fraction1}
-                color={FRACTION_COLORS[0]}
+                color={subjectColors.primary}
                 width={120}
               />
               {currentStepInfo.fractions[1] && (
@@ -178,7 +181,7 @@ export function FractionOperation({
         <FractionDisplay
           fraction={fraction1}
           highlighted={currentStep === 0}
-          color={FRACTION_COLORS[0]}
+          color={subjectColors.primary}
         />
 
         {/* Operator */}
@@ -421,10 +424,12 @@ function FractionPieChart({
   fraction,
   color,
   size = 60,
+  strokeWidth: pieStrokeWidth = 2,
 }: {
   fraction: Fraction
   color: string
   size?: number
+  strokeWidth?: number
 }) {
   const percentage = fraction.numerator / fraction.denominator
   const angle = percentage * 360
@@ -457,7 +462,7 @@ function FractionPieChart({
         r={r}
         fill="none"
         stroke="#e5e7eb"
-        strokeWidth={2}
+        strokeWidth={pieStrokeWidth}
       />
 
       {/* Filled portion */}
@@ -470,7 +475,7 @@ function FractionPieChart({
         r={r}
         fill="none"
         stroke={color}
-        strokeWidth={2}
+        strokeWidth={pieStrokeWidth}
       />
     </svg>
   )

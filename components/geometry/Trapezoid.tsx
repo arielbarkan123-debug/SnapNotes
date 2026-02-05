@@ -295,7 +295,8 @@ export function Trapezoid({
               y={(vertices[0].y + vertices[3].y) / 2}
               textAnchor="middle"
               dominantBaseline="middle"
-              className="fill-green-600 dark:fill-green-400 text-sm font-medium"
+              style={{ fill: GEOMETRY_COLORS.auxiliary.height }}
+              className="text-sm font-medium"
             >
               {heightLabel} = {h}
             </text>
@@ -318,7 +319,8 @@ export function Trapezoid({
             x={(medianLeftX + medianRightX) / 2}
             y={medianY - 8}
             textAnchor="middle"
-            className="fill-amber-600 dark:fill-amber-400 text-xs"
+            style={{ fill: GEOMETRY_COLORS.highlight.tertiary }}
+            className="text-xs"
           >
             m = {calculations.medianLength}
           </text>
@@ -330,7 +332,8 @@ export function Trapezoid({
           x={(vertices[0].x + vertices[1].x) / 2}
           y={vertices[0].y - 12}
           textAnchor="middle"
-          className="fill-blue-600 dark:fill-blue-400 text-sm font-medium"
+          style={{ fill: subjectColors.primary }}
+          className="text-sm font-medium"
         >
           {topLabel} = {a}
         </text>
@@ -340,7 +343,8 @@ export function Trapezoid({
           x={(vertices[3].x + vertices[2].x) / 2}
           y={vertices[3].y + 18}
           textAnchor="middle"
-          className="fill-blue-600 dark:fill-blue-400 text-sm font-medium"
+          style={{ fill: subjectColors.primary }}
+          className="text-sm font-medium"
         >
           {bottomLabel} = {b}
         </text>
@@ -351,7 +355,8 @@ export function Trapezoid({
           y={(vertices[0].y + vertices[3].y) / 2}
           textAnchor="middle"
           dominantBaseline="middle"
-          className="fill-blue-600 dark:fill-blue-400 text-xs"
+          style={{ fill: subjectColors.primary }}
+          className="text-xs"
         >
           {leftLabel}
         </text>
@@ -362,7 +367,8 @@ export function Trapezoid({
           y={(vertices[1].y + vertices[2].y) / 2}
           textAnchor="middle"
           dominantBaseline="middle"
-          className="fill-blue-600 dark:fill-blue-400 text-xs"
+          style={{ fill: subjectColors.primary }}
+          className="text-xs"
         >
           {rightLabel}
         </text>

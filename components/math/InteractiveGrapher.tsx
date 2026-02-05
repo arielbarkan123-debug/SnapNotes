@@ -3,6 +3,9 @@
 import { useState, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { parse, evaluate } from 'mathjs'
+import { getSubjectColor } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface Equation {
   id: string
@@ -39,6 +42,10 @@ interface InteractiveGrapherProps {
   showGrid?: boolean
   /** Language */
   language?: 'en' | 'he'
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
 }
 
 // Predefined colors for equations
@@ -72,8 +79,11 @@ export function InteractiveGrapher({
   enableZoom = true,
   showGrid = true,
   language = 'en',
+  subject = 'math',
+  complexity: _complexity = 'middle_school',
 }: InteractiveGrapherProps) {
   const isRTL = language === 'he'
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
   const svgRef = useRef<SVGSVGElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -86,7 +96,7 @@ export function InteractiveGrapher({
     initialEquations.map((eq, i) => ({
       id: `eq-${Date.now()}-${i}`,
       expression: eq.expression,
-      color: eq.color || EQUATION_COLORS[i % EQUATION_COLORS.length],
+      color: eq.color || (i === 0 ? getSubjectColor(subject).primary : EQUATION_COLORS[i % EQUATION_COLORS.length]),
       visible: true,
     }))
   )
@@ -426,14 +436,14 @@ export function InteractiveGrapher({
     const newEq: Equation = {
       id: `eq-${Date.now()}`,
       expression: newEquation,
-      color: EQUATION_COLORS[equations.length % EQUATION_COLORS.length],
+      color: equations.length === 0 ? subjectColors.primary : EQUATION_COLORS[equations.length % EQUATION_COLORS.length],
       visible: true,
     }
 
     setEquations(prev => [...prev, newEq])
     setNewEquation('')
     setInputError(null)
-  }, [newEquation, equations.length, language])
+  }, [newEquation, equations.length, language, subjectColors.primary])
 
   // Remove equation
   const handleRemoveEquation = useCallback((id: string) => {

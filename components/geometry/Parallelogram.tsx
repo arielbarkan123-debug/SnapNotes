@@ -257,7 +257,8 @@ export function Parallelogram({
               y={(vertices[0].y + vertices[3].y) / 2}
               textAnchor="middle"
               dominantBaseline="middle"
-              className="fill-green-600 dark:fill-green-400 text-sm font-medium"
+              style={{ fill: GEOMETRY_COLORS.auxiliary.height }}
+              className="text-sm font-medium"
             >
               {heightLabel} = {h}
             </text>
@@ -270,7 +271,8 @@ export function Parallelogram({
           x={(vertices[0].x + vertices[1].x) / 2}
           y={vertices[0].y - 10}
           textAnchor="middle"
-          className="fill-blue-600 dark:fill-blue-400 text-sm font-medium"
+          style={{ fill: subjectColors.primary }}
+          className="text-sm font-medium"
         >
           {baseLabel} = {base}
         </text>
@@ -281,7 +283,8 @@ export function Parallelogram({
           y={(vertices[0].y + vertices[3].y) / 2 - 15}
           textAnchor="middle"
           transform={`rotate(-${90 - angle}, ${(vertices[0].x + vertices[3].x) / 2 - 20}, ${(vertices[0].y + vertices[3].y) / 2 - 15})`}
-          className="fill-blue-600 dark:fill-blue-400 text-sm font-medium"
+          style={{ fill: subjectColors.primary }}
+          className="text-sm font-medium"
         >
           {sideLabel} = {side}
         </text>

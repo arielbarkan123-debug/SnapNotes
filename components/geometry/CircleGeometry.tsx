@@ -285,7 +285,8 @@ export function CircleGeometry({
               x={cx + scaledRadius / 2}
               y={cy - 8}
               textAnchor="middle"
-              className="fill-red-600 dark:fill-red-400 text-sm font-medium"
+              style={{ fill: GEOMETRY_COLORS.highlight.primary }}
+              className="text-sm font-medium"
             >
               {radiusLabel} = {radius}
             </text>
@@ -309,7 +310,8 @@ export function CircleGeometry({
               x={cx}
               y={cy + 20}
               textAnchor="middle"
-              className="fill-green-600 dark:fill-green-400 text-sm font-medium"
+              style={{ fill: GEOMETRY_COLORS.highlight.secondary }}
+              className="text-sm font-medium"
             >
               {diameterLabel} = {calculations.diameter}
             </text>
@@ -332,7 +334,8 @@ export function CircleGeometry({
               <text
                 {...pointOnCircle((arc.startAngle + arc.endAngle) / 2, scaledRadius + 15)}
                 textAnchor="middle"
-                className="fill-amber-600 dark:fill-amber-400 text-xs"
+                style={{ fill: GEOMETRY_COLORS.highlight.tertiary }}
+                className="text-xs"
               >
                 {arc.label}
               </text>
@@ -373,7 +376,8 @@ export function CircleGeometry({
                 {...pointOnCircle((sector.startAngle + sector.endAngle) / 2, 40)}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                className="fill-amber-600 dark:fill-amber-400 text-xs font-medium"
+                style={{ fill: GEOMETRY_COLORS.highlight.tertiary }}
+                className="text-xs font-medium"
               >
                 {sector.label}
               </text>
@@ -383,7 +387,8 @@ export function CircleGeometry({
               <text
                 {...pointOnCircle((sector.startAngle + sector.endAngle) / 2, scaledRadius + 15)}
                 textAnchor="middle"
-                className="fill-amber-600 dark:fill-amber-400 text-xs"
+                style={{ fill: GEOMETRY_COLORS.highlight.tertiary }}
+                className="text-xs"
               >
                 arc
               </text>
@@ -411,7 +416,8 @@ export function CircleGeometry({
                 x={(pointOnCircle(chord.startAngle).x + pointOnCircle(chord.endAngle).x) / 2}
                 y={(pointOnCircle(chord.startAngle).y + pointOnCircle(chord.endAngle).y) / 2 - 10}
                 textAnchor="middle"
-                className="fill-purple-600 dark:fill-purple-400 text-xs"
+                style={{ fill: GEOMETRY_COLORS.auxiliary.diagonal }}
+                className="text-xs"
               >
                 {chord.label} ≈ {calculations.chordLength?.toFixed(2)}
               </text>

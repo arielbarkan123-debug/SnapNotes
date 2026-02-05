@@ -257,14 +257,16 @@ export function Rhombus({
             <text
               x={cx + scaledD1 / 4 + 10}
               y={cy - 8}
-              className="fill-purple-600 dark:fill-purple-400 text-xs font-medium"
+              style={{ fill: GEOMETRY_COLORS.auxiliary.diagonal }}
+              className="text-xs font-medium"
             >
               {d1Label} = {d1}
             </text>
             <text
               x={cx + 10}
               y={cy - scaledD2 / 4}
-              className="fill-green-600 dark:fill-green-400 text-xs font-medium"
+              style={{ fill: GEOMETRY_COLORS.highlight.secondary }}
+              className="text-xs font-medium"
             >
               {d2Label} = {d2}
             </text>
@@ -275,7 +277,8 @@ export function Rhombus({
         <text
           x={(vertices[0].x + vertices[1].x) / 2 + 15}
           y={(vertices[0].y + vertices[1].y) / 2 - 5}
-          className="fill-blue-600 dark:fill-blue-400 text-sm font-medium"
+          style={{ fill: subjectColors.primary }}
+          className="text-sm font-medium"
         >
           {sideLabel} = {calculations.side.toFixed(2)}
         </text>
