@@ -8,6 +8,8 @@ import {
   type EquationData,
   type FractionOperationData,
 } from '@/types/math'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import { LongDivisionDiagram } from './LongDivisionDiagram'
 import { EquationSteps } from './EquationSteps'
 import { FractionOperation } from './FractionOperation'
@@ -45,6 +47,10 @@ interface MathDiagramRendererProps {
   className?: string
   /** Language for labels */
   language?: 'en' | 'he'
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
 }
 
 /**
@@ -69,6 +75,8 @@ export function MathDiagramRenderer({
   height,
   className = '',
   language = 'en',
+  subject = 'math',
+  complexity = 'middle_school',
 }: MathDiagramRendererProps) {
   const [internalStep, setInternalStep] = useState(diagram.visibleStep)
 
@@ -117,6 +125,8 @@ export function MathDiagramRenderer({
       animationDuration: animate ? animationDuration : 0,
       className: 'diagram-content',
       language,
+      subject,
+      complexity,
     }
 
     switch (diagram.type) {

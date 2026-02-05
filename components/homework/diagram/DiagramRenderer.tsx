@@ -6,6 +6,8 @@ import { MathDiagramRenderer } from '@/components/math'
 import { ChemistryDiagramRenderer } from '@/components/chemistry'
 import { BiologyDiagramRenderer } from '@/components/biology'
 import { type DiagramState, isPhysicsDiagram, isMathDiagram, isChemistryDiagram, isBiologyDiagram, getDiagramTypeName } from './types'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 // ============================================================================
 // Error Boundary for Diagram Rendering
@@ -99,6 +101,10 @@ interface DiagramRendererProps {
   language?: 'en' | 'he'
   /** Optional error handler for diagram rendering errors */
   onRenderError?: (error: Error, errorInfo: React.ErrorInfo) => void
+  /** Subject for color coding (auto-detected from diagram type if not provided) */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
 }
 
 /**
@@ -116,6 +122,8 @@ export default function DiagramRenderer({
   height,
   language = 'en',
   onRenderError,
+  subject,
+  complexity,
 }: DiagramRendererProps) {
   // Validate diagram prop
   if (!diagram) {
@@ -143,6 +151,15 @@ export default function DiagramRenderer({
   }
 
   const diagramType = diagram.type
+
+  // Auto-detect subject from diagram type if not explicitly provided
+  const detectedSubject: SubjectKey = subject
+    ?? (isMathDiagram(diagram) ? 'math' : undefined)
+    ?? (isPhysicsDiagram(diagram) ? 'physics' : undefined)
+    ?? (isChemistryDiagram(diagram) ? 'chemistry' : undefined)
+    ?? (isBiologyDiagram(diagram) ? 'biology' : undefined)
+    ?? 'math'
+
   // Wrap each renderer in an error boundary for graceful error handling
   if (isPhysicsDiagram(diagram)) {
     return (
@@ -175,6 +192,8 @@ export default function DiagramRenderer({
           language={language}
           width={width}
           height={height}
+          subject={detectedSubject}
+          complexity={complexity}
         />
       </DiagramErrorBoundary>
     )
