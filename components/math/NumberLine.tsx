@@ -6,6 +6,8 @@ import type { NumberLineData, NumberLineErrorHighlight } from '@/types'
 import { useVisualComplexity, useComplexityAnimations } from '@/hooks/useVisualComplexity'
 import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import { CONCRETE_ICONS } from '@/lib/visual-complexity'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
 import { detectCollisions, type BoundingBox, type LayoutElement } from '@/lib/visual-learning'
 
 interface NumberLineDataWithErrors extends NumberLineData {
@@ -21,6 +23,8 @@ interface NumberLineProps {
   complexity?: VisualComplexityLevel
   /** Whether to animate on mount */
   animate?: boolean
+  /** Subject for color coding */
+  subject?: SubjectKey
 }
 
 /**
@@ -39,6 +43,7 @@ export function NumberLine({
   height = 80,
   complexity: forcedComplexity,
   animate = true,
+  subject = 'math',
 }: NumberLineProps) {
   const { min, max, points = [], intervals = [], title, errorHighlight } = data
 
@@ -51,6 +56,13 @@ export function NumberLine({
   } = useVisualComplexity({ forceComplexity: forcedComplexity })
 
   const { duration, stagger, enabled: animationsEnabled } = useComplexityAnimations()
+
+  // Subject-coded colors (override visual complexity colors for diagram elements)
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(
+    () => getAdaptiveLineWeight(forcedComplexity ?? 'middle_school'),
+    [forcedComplexity]
+  )
 
   // Adjust dimensions based on complexity
   const isElementary = complexity === 'elementary'
@@ -219,7 +231,7 @@ export function NumberLine({
               y={lineY - 8}
               width={endX - startX}
               height={16}
-              fill={interval.color || '#3B82F6'}
+              fill={interval.color || subjectColors.primary}
               opacity={0.3}
             />
             {/* Interval line */}
@@ -228,21 +240,21 @@ export function NumberLine({
               y1={lineY}
               x2={endX}
               y2={lineY}
-              stroke={interval.color || '#3B82F6'}
+              stroke={interval.color || subjectColors.primary}
               strokeWidth={4}
             />
             {/* Start arrow if extending to negative infinity */}
             {interval.start === null && (
               <polygon
                 points={`${lineStartX},${lineY} ${lineStartX + 10},${lineY - 5} ${lineStartX + 10},${lineY + 5}`}
-                fill={interval.color || '#3B82F6'}
+                fill={interval.color || subjectColors.primary}
               />
             )}
             {/* End arrow if extending to positive infinity */}
             {interval.end === null && (
               <polygon
                 points={`${lineEndX},${lineY} ${lineEndX - 10},${lineY - 5} ${lineEndX - 10},${lineY + 5}`}
-                fill={interval.color || '#3B82F6'}
+                fill={interval.color || subjectColors.primary}
               />
             )}
           </g>
@@ -256,7 +268,7 @@ export function NumberLine({
         x2={lineEndX}
         y2={lineY}
         stroke="currentColor"
-        strokeWidth={2}
+        strokeWidth={adaptiveLineWeight}
       />
 
       {/* Left arrow */}
@@ -320,8 +332,8 @@ export function NumberLine({
               cx={x}
               cy={lineY}
               r={pointRadius}
-              fill={isFilled ? colors.primary : 'white'}
-              stroke={colors.primary}
+              fill={isFilled ? subjectColors.primary : 'white'}
+              stroke={subjectColors.primary}
               strokeWidth={isElementary ? 3 : 2}
               whileHover={animationsEnabled ? { scale: 1.2 } : undefined}
             />
@@ -370,8 +382,8 @@ export function NumberLine({
               cx={x}
               cy={lineY}
               r={5}
-              fill={interval.startInclusive ? (interval.color || '#3B82F6') : 'white'}
-              stroke={interval.color || '#3B82F6'}
+              fill={interval.startInclusive ? (interval.color || subjectColors.primary) : 'white'}
+              stroke={interval.color || subjectColors.primary}
               strokeWidth={2}
             />
           )
@@ -385,8 +397,8 @@ export function NumberLine({
               cx={x}
               cy={lineY}
               r={5}
-              fill={interval.endInclusive ? (interval.color || '#3B82F6') : 'white'}
-              stroke={interval.color || '#3B82F6'}
+              fill={interval.endInclusive ? (interval.color || subjectColors.primary) : 'white'}
+              stroke={interval.color || subjectColors.primary}
               strokeWidth={2}
             />
           )
