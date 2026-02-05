@@ -4,6 +4,8 @@ import { useState, useCallback, useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { CoordinatePlane } from './CoordinatePlane'
 import type { CoordinatePlaneData, CoordinatePoint } from '@/types'
+import { getSubjectColor, getAdaptiveLineWeight, type SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface InteractiveCoordinatePlaneProps {
   /** Base data for the coordinate plane */
@@ -30,6 +32,10 @@ interface InteractiveCoordinatePlaneProps {
   onPointRemove?: (index: number) => void
   /** Language */
   language?: 'en' | 'he'
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
 }
 
 /**
@@ -55,11 +61,17 @@ export function InteractiveCoordinatePlane({
   onPointAdd,
   onPointRemove,
   language = 'en',
+  subject = 'math',
+  complexity = 'middle_school',
 }: InteractiveCoordinatePlaneProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   const [localPoints, setLocalPoints] = useState<CoordinatePoint[]>(data.points || [])
+
+  // Subject-coded colors and adaptive line weight
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   const { xMin, xMax, yMin, yMax } = data
   const isRTL = language === 'he'
@@ -170,7 +182,7 @@ export function InteractiveCoordinatePlane({
       x: snappedX,
       y: snappedY,
       label: `P${localPoints.length + 1}`,
-      color: '#3b82f6',
+      color: subjectColors.primary,
     }
 
     setLocalPoints(prev => [...prev, newPoint])
@@ -240,6 +252,8 @@ export function InteractiveCoordinatePlane({
             width={width}
             height={height}
             animateCurves={!draggingIndex}
+            subject={subject}
+            complexity={complexity}
           />
         </foreignObject>
 
@@ -266,7 +280,7 @@ export function InteractiveCoordinatePlane({
                   cx={svgX}
                   cy={svgY}
                   r={16}
-                  fill={point.color || '#3b82f6'}
+                  fill={point.color || subjectColors.primary}
                   opacity={0.2}
                 />
               )}
@@ -275,10 +289,10 @@ export function InteractiveCoordinatePlane({
               <motion.circle
                 cx={svgX}
                 cy={svgY}
-                r={isActive ? 10 : isHovered ? 8 : 6}
-                fill={point.color || '#3b82f6'}
+                r={isActive ? adaptiveLineWeight + 7 : isHovered ? adaptiveLineWeight + 5 : adaptiveLineWeight}
+                fill={point.color || subjectColors.primary}
                 stroke="white"
-                strokeWidth={2}
+                strokeWidth={adaptiveLineWeight - 1}
                 animate={{
                   scale: isActive ? 1.3 : isHovered ? 1.1 : 1,
                 }}
@@ -315,7 +329,7 @@ export function InteractiveCoordinatePlane({
                   x={svgX}
                   y={svgY - 12}
                   textAnchor="middle"
-                  fill={point.color || '#3b82f6'}
+                  fill={point.color || subjectColors.primary}
                   fontSize={12}
                   fontWeight={500}
                 >
@@ -339,7 +353,7 @@ export function InteractiveCoordinatePlane({
                   y1={padding.top}
                   x2={svgX}
                   y2={padding.top + plotHeight}
-                  stroke="#3b82f6"
+                  stroke={subjectColors.light}
                   strokeWidth={1}
                   strokeDasharray="2,4"
                 />
@@ -355,7 +369,7 @@ export function InteractiveCoordinatePlane({
                   y1={svgY}
                   x2={padding.left + plotWidth}
                   y2={svgY}
-                  stroke="#3b82f6"
+                  stroke={subjectColors.light}
                   strokeWidth={1}
                   strokeDasharray="2,4"
                 />

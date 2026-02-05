@@ -3,6 +3,9 @@
 import { useMemo } from 'react'
 import type { TriangleGeometryData, TriangleCalculations, SolutionStep, TriangleType } from '@/types/geometry'
 import { GEOMETRY_COLORS } from '@/types/geometry'
+import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface TriangleGeometryProps {
   data: TriangleGeometryData
@@ -12,6 +15,8 @@ interface TriangleGeometryProps {
   currentStep?: number
   showStepByStep?: boolean
   language?: 'en' | 'he'
+  subject?: SubjectKey
+  complexity?: VisualComplexityLevel
 }
 
 /**
@@ -27,6 +32,8 @@ export function TriangleGeometry({
   currentStep = 0,
   showStepByStep = false,
   language = 'en',
+  subject = 'geometry',
+  complexity = 'middle_school',
 }: TriangleGeometryProps) {
   const {
     type,
@@ -41,6 +48,9 @@ export function TriangleGeometry({
     highlightAngles = [],
     showRightAngleMarker = true,
   } = data
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   // Get triangle type display name
   const getTypeName = (t: TriangleType): string => {
@@ -288,8 +298,8 @@ export function TriangleGeometry({
         {/* Triangle fill */}
         <path
           d={trianglePath}
-          fill={GEOMETRY_COLORS.shape.fill}
-          fillOpacity={GEOMETRY_COLORS.shape.fillOpacity}
+          fill={subjectColors.primary}
+          fillOpacity={0.1}
           stroke="none"
         />
 
@@ -298,7 +308,7 @@ export function TriangleGeometry({
           d={trianglePath}
           fill="none"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={adaptiveLineWeight}
         />
 
         {/* Highlighted sides */}
@@ -311,8 +321,8 @@ export function TriangleGeometry({
               y1={transformedVertices[i1].y}
               x2={transformedVertices[i2].x}
               y2={transformedVertices[i2].y}
-              stroke={GEOMETRY_COLORS.highlight.primary}
-              strokeWidth={3}
+              stroke={subjectColors.primary}
+              strokeWidth={adaptiveLineWeight + 1}
             />
           )
         })}
@@ -339,7 +349,7 @@ export function TriangleGeometry({
                 x2={foot.x}
                 y2={foot.y}
                 stroke={GEOMETRY_COLORS.auxiliary.height}
-                strokeWidth={2}
+                strokeWidth={adaptiveLineWeight}
                 strokeDasharray="5,3"
               />
               {/* Height label */}
@@ -408,7 +418,8 @@ export function TriangleGeometry({
               y={mid.y + offset.y}
               textAnchor="middle"
               dominantBaseline="middle"
-              className="fill-blue-600 dark:fill-blue-400 text-sm font-medium"
+              style={{ fill: subjectColors.primary }}
+              className="text-sm font-medium"
             >
               {label} = {value}
             </text>
@@ -428,7 +439,7 @@ export function TriangleGeometry({
 
           return (
             <g key={`vertex-${i}`}>
-              <circle cx={v.x} cy={v.y} r={3} fill="currentColor" />
+              <circle cx={v.x} cy={v.y} r={adaptiveLineWeight} fill="currentColor" />
               <text
                 x={v.x + (dx / dist) * labelDist}
                 y={v.y + (dy / dist) * labelDist}

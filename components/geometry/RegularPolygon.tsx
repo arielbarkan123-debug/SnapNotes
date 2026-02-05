@@ -3,6 +3,8 @@
 import { useMemo } from 'react'
 import type { RegularPolygonData, RegularPolygonCalculations, SolutionStep } from '@/types/geometry'
 import { GEOMETRY_COLORS } from '@/types/geometry'
+import { getSubjectColor, getAdaptiveLineWeight, type SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface RegularPolygonProps {
   data: RegularPolygonData
@@ -12,6 +14,8 @@ interface RegularPolygonProps {
   currentStep?: number
   showStepByStep?: boolean
   language?: 'en' | 'he'
+  subject?: SubjectKey
+  complexity?: VisualComplexityLevel
 }
 
 // Polygon names in English and Hebrew
@@ -40,6 +44,8 @@ export function RegularPolygon({
   currentStep = 0,
   showStepByStep = false,
   language = 'en',
+  subject = 'geometry',
+  complexity = 'middle_school',
 }: RegularPolygonProps) {
   const {
     sides: n,
@@ -54,6 +60,9 @@ export function RegularPolygon({
     showFormulas = true,
     showCalculations = true,
   } = data
+
+  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
+  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
 
   // Get polygon name
   const getPolygonName = (numSides: number): string => {
@@ -215,8 +224,8 @@ export function RegularPolygon({
         {/* Polygon fill */}
         <path
           d={polygonPath}
-          fill={GEOMETRY_COLORS.shape.fill}
-          fillOpacity={GEOMETRY_COLORS.shape.fillOpacity}
+          fill={subjectColors.primary}
+          fillOpacity={0.1}
           stroke="none"
         />
 
@@ -225,11 +234,11 @@ export function RegularPolygon({
           d={polygonPath}
           fill="none"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={adaptiveLineWeight}
         />
 
         {/* Center point */}
-        <circle cx={cx} cy={cy} r={3} fill="currentColor" />
+        <circle cx={cx} cy={cy} r={adaptiveLineWeight} fill="currentColor" />
         <text x={cx + 10} y={cy + 5} className="fill-current text-xs">O</text>
 
         {/* Apothem line (from center to midpoint of first side) */}
@@ -241,7 +250,7 @@ export function RegularPolygon({
               x2={midX}
               y2={midY}
               stroke={GEOMETRY_COLORS.auxiliary.apothem}
-              strokeWidth={2}
+              strokeWidth={adaptiveLineWeight}
               strokeDasharray="5,3"
             />
             {/* Right angle marker at midpoint */}
@@ -318,11 +327,11 @@ export function RegularPolygon({
               return (
                 <>
                   <path
-                    d={`M ${v.x + radius * Math.cos(angle1)} ${v.y + radius * Math.sin(angle1)} 
+                    d={`M ${v.x + radius * Math.cos(angle1)} ${v.y + radius * Math.sin(angle1)}
                         A ${radius} ${radius} 0 0 1 ${v.x + radius * Math.cos(angle2)} ${v.y + radius * Math.sin(angle2)}`}
                     fill="none"
                     stroke={GEOMETRY_COLORS.highlight.secondary}
-                    strokeWidth={2}
+                    strokeWidth={adaptiveLineWeight}
                   />
                   <text
                     x={v.x + 25 * Math.cos((angle1 + angle2) / 2)}
@@ -344,7 +353,8 @@ export function RegularPolygon({
           x={(vertices[0].x + vertices[1].x) / 2}
           y={(vertices[0].y + vertices[1].y) / 2 - 12}
           textAnchor="middle"
-          className="fill-blue-600 dark:fill-blue-400 text-sm font-medium"
+          style={{ fill: subjectColors.primary }}
+          className="text-sm font-medium"
         >
           {sideLabel} = {s}
         </text>
@@ -382,7 +392,7 @@ export function RegularPolygon({
 
           return (
             <g key={`vertex-${i}`}>
-              <circle cx={v.x} cy={v.y} r={3} fill="currentColor" />
+              <circle cx={v.x} cy={v.y} r={adaptiveLineWeight} fill="currentColor" />
               <text
                 x={v.x + (dx / dist) * labelDist}
                 y={v.y + (dy / dist) * labelDist}
