@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { InteractiveCoordinatePlane } from '@/components/math/InteractiveCoordinatePlane'
+import { InteractiveGrapher } from '@/components/math/InteractiveGrapher'
 
 // Mutable step state controlled per-test
 let mockCurrentStep = 0
@@ -19,6 +19,21 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => children,
 }))
 
+// Mock mathjs
+jest.mock('mathjs', () => ({
+  parse: (expr: string) => ({
+    compile: () => ({
+      evaluate: ({ x }: { x: number }) => {
+        if (expr === 'x^2') return x * x
+        if (expr === 'x') return x
+        if (expr === 'sin(x)') return Math.sin(x)
+        return 0
+      },
+    }),
+  }),
+  evaluate: (val: any) => val,
+}))
+
 // Mock useDiagramBase — returns subject-coded colors and controlled step
 jest.mock('@/hooks/useDiagramBase', () => ({
   useDiagramBase: (opts: any) => {
@@ -26,7 +41,6 @@ jest.mock('@/hooks/useDiagramBase', () => ({
       math: { primary: '#6366f1', accent: '#8b5cf6', light: '#c7d2fe', dark: '#4338ca', bg: '#eef2ff', bgDark: '#1e1b4b', curve: '#818cf8', point: '#6366f1', highlight: '#a5b4fc' },
       physics: { primary: '#f97316', accent: '#ef4444', light: '#fed7aa', dark: '#c2410c', bg: '#fff7ed', bgDark: '#431407', curve: '#fb923c', point: '#f97316', highlight: '#fdba74' },
       geometry: { primary: '#ec4899', accent: '#d946ef', light: '#fbcfe8', dark: '#be185d', bg: '#fdf2f8', bgDark: '#500724', curve: '#f472b6', point: '#ec4899', highlight: '#f9a8d4' },
-      chemistry: { primary: '#10b981', accent: '#14b8a6', light: '#a7f3d0', dark: '#047857', bg: '#ecfdf5', bgDark: '#022c22', curve: '#34d399', point: '#10b981', highlight: '#6ee7b7' },
     }
     const mockLineWeights: Record<string, number> = { elementary: 4, middle_school: 3, high_school: 2, advanced: 2 }
     const colors = mockSubjectColors[opts.subject] || mockSubjectColors.math
@@ -82,15 +96,7 @@ jest.mock('@/lib/diagram-animations', () => ({
 // Tests
 // =============================================================================
 
-describe('InteractiveCoordinatePlane', () => {
-  const baseData = {
-    xMin: -5,
-    xMax: 5,
-    yMin: -5,
-    yMax: 5,
-    showGrid: true,
-  }
-
+describe('InteractiveGrapher', () => {
   beforeEach(() => {
     mockCurrentStep = 0
   })
@@ -100,29 +106,28 @@ describe('InteractiveCoordinatePlane', () => {
   // ---------------------------------------------------------------------------
 
   describe('container and structure', () => {
-    it('renders with data-testid="interactive-coord-plane"', () => {
-      render(<InteractiveCoordinatePlane data={baseData} />)
-      expect(screen.getByTestId('interactive-coord-plane')).toBeInTheDocument()
+    it('renders with data-testid="interactive-grapher"', () => {
+      render(<InteractiveGrapher />)
+      expect(screen.getByTestId('interactive-grapher')).toBeInTheDocument()
     })
 
     it('renders background rect', () => {
-      render(<InteractiveCoordinatePlane data={baseData} />)
-      expect(screen.getByTestId('icp-background')).toBeInTheDocument()
+      render(<InteractiveGrapher />)
+      expect(screen.getByTestId('ig-background')).toBeInTheDocument()
     })
 
     it('has responsive width container', () => {
-      render(<InteractiveCoordinatePlane data={baseData} width={600} />)
-      const container = screen.getByTestId('interactive-coord-plane')
+      render(<InteractiveGrapher width={800} />)
+      const container = screen.getByTestId('interactive-grapher')
       expect(container.style.width).toBe('100%')
-      expect(container.style.maxWidth).toBe('600px')
+      expect(container.style.maxWidth).toBe('800px')
     })
 
     it('has accessible SVG with role and aria-label', () => {
-      const { container } = render(<InteractiveCoordinatePlane data={baseData} />)
+      const { container } = render(<InteractiveGrapher />)
       const svg = container.querySelector('svg')
       expect(svg?.getAttribute('role')).toBe('img')
-      expect(svg?.getAttribute('aria-label')).toContain('-5')
-      expect(svg?.getAttribute('aria-label')).toContain('5')
+      expect(svg?.getAttribute('aria-label')).toContain('Interactive graph')
     })
   })
 
@@ -133,40 +138,53 @@ describe('InteractiveCoordinatePlane', () => {
   describe('progressive reveal', () => {
     it('shows grid at step 0', () => {
       mockCurrentStep = 0
-      render(<InteractiveCoordinatePlane data={baseData} />)
-      expect(screen.getByTestId('icp-grid')).toBeInTheDocument()
+      render(<InteractiveGrapher />)
+      expect(screen.getByTestId('ig-grid')).toBeInTheDocument()
     })
 
     it('hides axes at step 0', () => {
       mockCurrentStep = 0
-      render(<InteractiveCoordinatePlane data={baseData} />)
-      expect(screen.queryByTestId('icp-axes')).not.toBeInTheDocument()
+      render(<InteractiveGrapher />)
+      expect(screen.queryByTestId('ig-axes')).not.toBeInTheDocument()
     })
 
     it('shows axes at step 1', () => {
       mockCurrentStep = 1
-      render(<InteractiveCoordinatePlane data={baseData} />)
-      expect(screen.getByTestId('icp-axes')).toBeInTheDocument()
+      render(<InteractiveGrapher />)
+      expect(screen.getByTestId('ig-axes')).toBeInTheDocument()
     })
 
-    it('hides interactive at step 1', () => {
+    it('hides equations at step 1', () => {
       mockCurrentStep = 1
-      render(<InteractiveCoordinatePlane data={baseData} />)
-      expect(screen.queryByTestId('icp-interactive')).not.toBeInTheDocument()
+      render(<InteractiveGrapher initialEquations={[{ expression: 'x^2' }]} />)
+      expect(screen.queryByTestId('ig-equations')).not.toBeInTheDocument()
     })
 
-    it('shows interactive at step 2', () => {
+    it('shows equations at step 2', () => {
       mockCurrentStep = 2
-      render(<InteractiveCoordinatePlane data={baseData} />)
-      expect(screen.getByTestId('icp-interactive')).toBeInTheDocument()
+      render(<InteractiveGrapher initialEquations={[{ expression: 'x^2' }]} />)
+      expect(screen.getByTestId('ig-equations')).toBeInTheDocument()
+    })
+
+    it('hides controls at step 2', () => {
+      mockCurrentStep = 2
+      render(<InteractiveGrapher />)
+      expect(screen.queryByTestId('ig-controls')).not.toBeInTheDocument()
+    })
+
+    it('shows controls at step 3', () => {
+      mockCurrentStep = 3
+      render(<InteractiveGrapher />)
+      expect(screen.getByTestId('ig-controls')).toBeInTheDocument()
     })
 
     it('accumulates all previous steps', () => {
-      mockCurrentStep = 2
-      render(<InteractiveCoordinatePlane data={baseData} />)
-      expect(screen.getByTestId('icp-grid')).toBeInTheDocument()
-      expect(screen.getByTestId('icp-axes')).toBeInTheDocument()
-      expect(screen.getByTestId('icp-interactive')).toBeInTheDocument()
+      mockCurrentStep = 3
+      render(<InteractiveGrapher initialEquations={[{ expression: 'x^2' }]} />)
+      expect(screen.getByTestId('ig-grid')).toBeInTheDocument()
+      expect(screen.getByTestId('ig-axes')).toBeInTheDocument()
+      expect(screen.getByTestId('ig-equations')).toBeInTheDocument()
+      expect(screen.getByTestId('ig-controls')).toBeInTheDocument()
     })
   })
 
@@ -176,18 +194,18 @@ describe('InteractiveCoordinatePlane', () => {
 
   describe('DiagramStepControls', () => {
     it('renders step controls', () => {
-      render(<InteractiveCoordinatePlane data={baseData} />)
+      render(<InteractiveGrapher />)
       expect(screen.getByTestId('diagram-step-controls')).toBeInTheDocument()
     })
 
-    it('passes correct total steps (grid + axes + interactive = 3)', () => {
-      render(<InteractiveCoordinatePlane data={baseData} />)
+    it('passes correct total steps (grid + axes + equations + controls = 4)', () => {
+      render(<InteractiveGrapher />)
       const controls = screen.getByTestId('diagram-step-controls')
-      expect(controls.getAttribute('data-total')).toBe('3')
+      expect(controls.getAttribute('data-total')).toBe('4')
     })
 
     it('passes subject color to controls', () => {
-      render(<InteractiveCoordinatePlane data={baseData} subject="physics" />)
+      render(<InteractiveGrapher subject="physics" />)
       const controls = screen.getByTestId('diagram-step-controls')
       expect(controls.getAttribute('data-color')).toBe('#f97316')
     })
@@ -198,65 +216,48 @@ describe('InteractiveCoordinatePlane', () => {
   // ---------------------------------------------------------------------------
 
   describe('subject colors', () => {
-    const dataWithPoints = {
-      ...baseData,
-      points: [{ x: 1, y: 1, label: 'A' }],
-    }
-
-    it('uses math colors by default', () => {
-      mockCurrentStep = 2
-      render(<InteractiveCoordinatePlane data={dataWithPoints} />)
-      const point = screen.getByTestId('icp-point-0')
-      expect(point.getAttribute('fill')).toBe('#6366f1')
+    it('uses math colors by default for add button', () => {
+      mockCurrentStep = 3
+      render(<InteractiveGrapher />)
+      const btn = screen.getByTestId('ig-add-btn')
+      expect(btn.style.backgroundColor).toBe('rgb(99, 102, 241)')
     })
 
-    it('uses physics colors when subject="physics"', () => {
-      mockCurrentStep = 2
-      render(<InteractiveCoordinatePlane data={dataWithPoints} subject="physics" />)
-      const point = screen.getByTestId('icp-point-0')
-      expect(point.getAttribute('fill')).toBe('#f97316')
-    })
-
-    it('uses geometry colors when subject="geometry"', () => {
-      mockCurrentStep = 2
-      render(<InteractiveCoordinatePlane data={dataWithPoints} subject="geometry" />)
-      const point = screen.getByTestId('icp-point-0')
-      expect(point.getAttribute('fill')).toBe('#ec4899')
-    })
-
-    it('uses chemistry colors for point labels', () => {
-      mockCurrentStep = 2
-      const { container } = render(
-        <InteractiveCoordinatePlane data={dataWithPoints} subject="chemistry" />
-      )
-      const texts = container.querySelectorAll('text')
-      const chemLabel = Array.from(texts).find(
-        (t) => t.getAttribute('fill') === '#10b981' && t.textContent === 'A'
-      )
-      expect(chemLabel).toBeTruthy()
+    it('uses physics colors when subject="physics" for add button', () => {
+      mockCurrentStep = 3
+      render(<InteractiveGrapher subject="physics" />)
+      const btn = screen.getByTestId('ig-add-btn')
+      expect(btn.style.backgroundColor).toBe('rgb(249, 115, 22)')
     })
   })
 
   // ---------------------------------------------------------------------------
-  // Interactive points visibility
+  // Equation rendering
   // ---------------------------------------------------------------------------
 
-  describe('interactive points', () => {
-    const dataWithPoints = {
-      ...baseData,
-      points: [{ x: 2, y: 3, label: 'P1' }],
-    }
-
-    it('shows points only at interactive step', () => {
+  describe('equations', () => {
+    it('renders equation paths at step 2', () => {
       mockCurrentStep = 2
-      render(<InteractiveCoordinatePlane data={dataWithPoints} />)
-      expect(screen.getByTestId('icp-point-0')).toBeInTheDocument()
+      render(<InteractiveGrapher initialEquations={[{ expression: 'x^2' }]} />)
+      expect(screen.getByTestId('ig-eq-eq-0')).toBeInTheDocument()
     })
 
-    it('hides points before interactive step', () => {
+    it('hides equation paths before step 2', () => {
       mockCurrentStep = 1
-      render(<InteractiveCoordinatePlane data={dataWithPoints} />)
-      expect(screen.queryByTestId('icp-point-0')).not.toBeInTheDocument()
+      render(<InteractiveGrapher initialEquations={[{ expression: 'x^2' }]} />)
+      expect(screen.queryByTestId('ig-eq-eq-0')).not.toBeInTheDocument()
+    })
+
+    it('shows equation input only at controls step', () => {
+      mockCurrentStep = 2
+      render(<InteractiveGrapher />)
+      expect(screen.queryByTestId('ig-equation-input')).not.toBeInTheDocument()
+
+      mockCurrentStep = 3
+      const { rerender } = render(<InteractiveGrapher />)
+      // Re-render needed since mockCurrentStep changed before render
+      rerender(<InteractiveGrapher />)
+      expect(screen.getByTestId('ig-equation-input')).toBeInTheDocument()
     })
   })
 })

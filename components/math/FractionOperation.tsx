@@ -1,519 +1,400 @@
 'use client'
 
 import { useMemo } from 'react'
-import {
-  type FractionOperationData,
-  type FractionStep,
-  type Fraction,
-  type MathDiagramStepConfig,
-  MATH_COLORS,
-  FRACTION_COLORS,
-} from '@/types/math'
-import { getSubjectColor, getAdaptiveLineWeight } from '@/lib/diagram-theme'
+import { motion, AnimatePresence } from 'framer-motion'
+import type { FractionOperationData, Fraction } from '@/types/math'
+import { useDiagramBase } from '@/hooks/useDiagramBase'
 import type { SubjectKey } from '@/lib/diagram-theme'
 import type { VisualComplexityLevel } from '@/lib/visual-complexity'
+import { DiagramStepControls } from '@/components/diagrams/DiagramStepControls'
+import {
+  createSpotlightVariants,
+  labelAppearVariants,
+} from '@/lib/diagram-animations'
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface FractionErrorHighlight {
+  message?: string
+  messageHe?: string
+  wrongResult?: Fraction
+  correctResult?: Fraction
+}
+
+interface FractionOperationDataWithErrors extends FractionOperationData {
+  errorHighlight?: FractionErrorHighlight
+}
 
 interface FractionOperationProps {
-  data: FractionOperationData
-  /** Current step to display */
-  currentStep?: number
-  /** Total number of steps (for step counter display) */
-  totalSteps?: number
-  /** Step configuration */
-  stepConfig?: MathDiagramStepConfig[]
-  /** Animation duration in ms */
-  animationDuration?: number
-  /** Callback when step animation completes */
-  onStepComplete?: () => void
-  /** Width of the component */
-  width?: number
-  /** Height of the component */
-  height?: number
-  /** Additional className */
+  data: FractionOperationDataWithErrors
   className?: string
-  /** Language for labels */
-  language?: 'en' | 'he'
-  /** Whether to show the step counter (default: true) */
-  showStepCounter?: boolean
-  /** Subject for color coding */
-  subject?: SubjectKey
-  /** Complexity level for adaptive styling */
+  width?: number
+  height?: number
   complexity?: VisualComplexityLevel
+  subject?: SubjectKey
+  language?: 'en' | 'he'
+  initialStep?: number
+  /** Legacy props for MathDiagramRenderer compatibility */
+  currentStep?: number
+  totalSteps?: number
+  showStepCounter?: boolean
+  animationDuration?: number
+  onStepComplete?: () => void
+  stepConfig?: unknown
 }
 
-/**
- * FractionOperation - Step-synced visualization of fraction operations
- *
- * Shows fraction operations progressively:
- * 1. Initial fractions
- * 2. Find LCD (for add/subtract)
- * 3. Convert fractions
- * 4. Perform operation
- * 5. Simplify result
- */
-export function FractionOperation({
-  data,
-  currentStep = 0,
-  totalSteps: totalStepsProp,
-  stepConfig: _stepConfig,
-  animationDuration = 400,
-  onStepComplete: _onStepComplete,
-  width = 400,
-  height: _height,
-  className = '',
-  language = 'en',
-  showStepCounter = true,
-  subject = 'math',
-  complexity = 'middle_school',
-}: FractionOperationProps) {
-  const {
-    operationType,
-    fraction1,
-    fraction2,
-    result,
-    steps,
-    title,
-    showPieChart,
-    showBarModel,
-  } = data
+// ---------------------------------------------------------------------------
+// Step label translations
+// ---------------------------------------------------------------------------
 
-  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
-  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
-
-  // Get visible steps
-  const visibleSteps = useMemo(() => {
-    return steps.filter((s) => s.step <= currentStep)
-  }, [steps, currentStep])
-
-  // Current step info
-  const currentStepInfo = useMemo(() => {
-    return steps[currentStep] || null
-  }, [steps, currentStep])
-
-  // Get operator symbol
-  const getOperatorSymbol = (): string => {
-    switch (operationType) {
-      case 'add':
-        return '+'
-      case 'subtract':
-        return '−'
-      case 'multiply':
-        return '×'
-      case 'divide':
-        return '÷'
-    }
-  }
-
-  // Animation style
-  const fadeInStyle = {
-    animation: `fadeIn ${animationDuration}ms ease-out`,
-  }
-
-  return (
-    <div className={`fraction-operation ${className}`} style={{ width }}>
-      {/* Title */}
-      {title && (
-        <div className="text-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-            {title}
-          </h3>
-        </div>
-      )}
-
-      {/* Visual representations */}
-      {(showPieChart || showBarModel) && currentStepInfo && (
-        <div className="mb-4 flex justify-center gap-4">
-          {showPieChart && (
-            <div className="flex items-center gap-2">
-              <FractionPieChart
-                fraction={currentStepInfo.fractions[0] || fraction1}
-                color={subjectColors.primary}
-                size={60}
-                strokeWidth={adaptiveLineWeight}
-              />
-              {currentStepInfo.fractions[1] && (
-                <>
-                  <span className="text-xl text-gray-500">{getOperatorSymbol()}</span>
-                  <FractionPieChart
-                    fraction={currentStepInfo.fractions[1] || fraction2}
-                    color={FRACTION_COLORS[1]}
-                    size={60}
-                    strokeWidth={adaptiveLineWeight}
-                  />
-                </>
-              )}
-              {currentStepInfo.result && (
-                <>
-                  <span className="text-xl text-gray-500">=</span>
-                  <FractionPieChart
-                    fraction={currentStepInfo.result}
-                    color={FRACTION_COLORS[2]}
-                    size={60}
-                    strokeWidth={adaptiveLineWeight}
-                  />
-                </>
-              )}
-            </div>
-          )}
-
-          {showBarModel && (
-            <div className="flex flex-col gap-2">
-              <FractionBar
-                fraction={currentStepInfo.fractions[0] || fraction1}
-                color={subjectColors.primary}
-                width={120}
-              />
-              {currentStepInfo.fractions[1] && (
-                <FractionBar
-                  fraction={currentStepInfo.fractions[1] || fraction2}
-                  color={FRACTION_COLORS[1]}
-                  width={120}
-                />
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Fraction expression */}
-      <div className="flex items-center justify-center gap-3 text-2xl mb-4">
-        {/* First fraction - always visible */}
-        <FractionDisplay
-          fraction={fraction1}
-          highlighted={currentStep === 0}
-          color={subjectColors.primary}
-        />
-
-        {/* Operator */}
-        <span className="text-gray-500 font-medium">{getOperatorSymbol()}</span>
-
-        {/* Second fraction */}
-        <FractionDisplay
-          fraction={fraction2}
-          highlighted={currentStep === 0}
-          color={FRACTION_COLORS[1]}
-        />
-
-        {/* Equals and result (shown progressively) */}
-        {currentStep >= steps.length - 1 && (
-          <>
-            <span className="text-gray-500">=</span>
-            <FractionDisplay
-              fraction={result}
-              highlighted={true}
-              color={MATH_COLORS.success}
-              style={fadeInStyle}
-            />
-          </>
-        )}
-      </div>
-
-      {/* Steps explanation */}
-      <div className="space-y-2">
-        {visibleSteps.map((step, index) => {
-          const isCurrentStep = step.step === currentStep
-          const stepInfo = step as FractionStep
-
-          return (
-            <div
-              key={index}
-              className={`
-                p-3 rounded-lg transition-all duration-300
-                ${isCurrentStep
-                  ? 'bg-violet-50 dark:bg-violet-900/30 border-l-4 border-violet-500'
-                  : 'bg-gray-50 dark:bg-gray-800/50'
-                }
-              `}
-              style={isCurrentStep ? fadeInStyle : undefined}
-            >
-              {/* Step type badge */}
-              <div className="flex items-center gap-2 mb-1">
-                <span
-                  className={`
-                    text-xs font-medium px-2 py-0.5 rounded-full
-                    ${isCurrentStep
-                      ? 'bg-violet-100 dark:bg-violet-800 text-violet-700 dark:text-violet-300'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                    }
-                  `}
-                >
-                  {getStepTypeName(stepInfo.type, language)}
-                </span>
-              </div>
-
-              {/* Fractions at this step */}
-              {stepInfo.fractions.length > 0 && (
-                <div className="flex items-center justify-center gap-2 my-2">
-                  {stepInfo.fractions.map((f, fIndex) => (
-                    <div key={fIndex} className="flex items-center gap-2">
-                      {fIndex > 0 && (
-                        <span className="text-gray-400">{stepInfo.operator || getOperatorSymbol()}</span>
-                      )}
-                      <FractionDisplay
-                        fraction={f}
-                        size="small"
-                        color={FRACTION_COLORS[fIndex % FRACTION_COLORS.length]}
-                      />
-                    </div>
-                  ))}
-                  {stepInfo.result && (
-                    <>
-                      <span className="text-gray-400">=</span>
-                      <FractionDisplay
-                        fraction={stepInfo.result}
-                        size="small"
-                        color={MATH_COLORS.success}
-                      />
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* LCD display */}
-              {stepInfo.lcd && (
-                <p className="text-center text-sm text-violet-600 dark:text-violet-400 font-medium">
-                  LCD = {stepInfo.lcd}
-                </p>
-              )}
-
-              {/* Calculation */}
-              {stepInfo.calculation && (
-                <p className="text-center text-sm font-mono text-gray-600 dark:text-gray-400">
-                  {stepInfo.calculation}
-                </p>
-              )}
-
-              {/* Description */}
-              {(stepInfo.description || stepInfo.descriptionHe) && (
-                <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-1 italic">
-                  {language === 'he'
-                    ? stepInfo.descriptionHe || stepInfo.description
-                    : stepInfo.description}
-                </p>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Final result highlight */}
-      {currentStep >= steps.length - 1 && (
-        <div
-          className="mt-4 p-4 bg-green-50 dark:bg-green-900/30 rounded-lg text-center border-2 border-green-300 dark:border-green-700"
-          style={fadeInStyle}
-        >
-          <p className="text-sm text-green-600 dark:text-green-400 mb-2">
-            {language === 'he' ? 'תשובה:' : 'Answer:'}
-          </p>
-          <div className="flex justify-center">
-            <FractionDisplay
-              fraction={result}
-              color={MATH_COLORS.success}
-              size="large"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Step counter - only show if not rendered by parent */}
-      {showStepCounter && (
-        <div className="mt-3 text-center">
-          <span className="text-xs text-gray-400">
-            {language === 'he'
-              ? `שלב ${currentStep + 1} מתוך ${totalStepsProp ?? steps.length}`
-              : `Step ${currentStep + 1} of ${totalStepsProp ?? steps.length}`}
-          </span>
-        </div>
-      )}
-
-      {/* Animation keyframes */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(-5px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
-    </div>
-  )
+const STEP_LABELS: Record<string, { en: string; he: string }> = {
+  operands: { en: 'Show the fractions', he: 'הצגת השברים' },
+  operation: { en: 'Apply the operation', he: 'ביצוע הפעולה' },
+  result: { en: 'Show the result', he: 'הצגת התוצאה' },
+  errors: { en: 'Show corrections', he: 'הצגת תיקונים' },
 }
 
-/**
- * Get step type display name
- */
-function getStepTypeName(type: FractionStep['type'], language: 'en' | 'he'): string {
-  const names = {
-    en: {
-      initial: 'Original',
-      find_lcd: 'Find LCD',
-      convert: 'Convert',
-      operate: 'Calculate',
-      simplify: 'Simplify',
-      result: 'Result',
-    },
-    he: {
-      initial: 'מקורי',
-      find_lcd: 'מצא מכנה משותף',
-      convert: 'המר',
-      operate: 'חשב',
-      simplify: 'צמצם',
-      result: 'תוצאה',
-    },
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function getOperatorSymbol(operationType: FractionOperationData['operationType']): string {
+  switch (operationType) {
+    case 'add': return '+'
+    case 'subtract': return '\u2212'
+    case 'multiply': return '\u00D7'
+    case 'divide': return '\u00F7'
   }
-  return names[language][type] || type
 }
 
-/**
- * Fraction Display Component
- */
+function getOperationName(operationType: FractionOperationData['operationType'], language: 'en' | 'he'): string {
+  const names: Record<string, { en: string; he: string }> = {
+    add: { en: 'Addition', he: 'חיבור' },
+    subtract: { en: 'Subtraction', he: 'חיסור' },
+    multiply: { en: 'Multiplication', he: 'כפל' },
+    divide: { en: 'Division', he: 'חילוק' },
+  }
+  return names[operationType][language]
+}
+
+// ---------------------------------------------------------------------------
+// FractionDisplay sub-component
+// ---------------------------------------------------------------------------
+
 function FractionDisplay({
   fraction,
-  highlighted = false,
-  color = MATH_COLORS.primary,
+  color,
+  lineWeight,
   size = 'normal',
-  style,
 }: {
   fraction: Fraction
-  highlighted?: boolean
-  color?: string
+  color: string
+  lineWeight: number
   size?: 'small' | 'normal' | 'large'
-  style?: React.CSSProperties
 }) {
-  const fontSize = size === 'small' ? 'text-base' : size === 'large' ? 'text-3xl' : 'text-xl'
+  const textSize = size === 'small' ? 'text-base' : size === 'large' ? 'text-3xl' : 'text-xl'
 
-  return (
-    <div
-      className={`inline-flex flex-col items-center ${fontSize}`}
-      style={{
-        color: highlighted ? color : undefined,
-        fontWeight: highlighted ? 'bold' : 'normal',
-        ...style,
-      }}
-    >
-      {/* Whole number (for mixed fractions) */}
-      {fraction.wholeNumber !== undefined && fraction.wholeNumber !== 0 && (
-        <div className="flex items-center gap-1">
-          <span>{fraction.wholeNumber}</span>
-          <div className="flex flex-col items-center">
-            <span className="border-b border-current px-1">{fraction.numerator}</span>
-            <span>{fraction.denominator}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Regular fraction */}
-      {(fraction.wholeNumber === undefined || fraction.wholeNumber === 0) && (
+  if (fraction.wholeNumber !== undefined && fraction.wholeNumber !== 0) {
+    return (
+      <div className={`inline-flex items-center gap-1 ${textSize} font-semibold`} style={{ color }}>
+        <span>{fraction.wholeNumber}</span>
         <div className="flex flex-col items-center">
-          <span className="border-b-2 border-current px-2">{fraction.numerator}</span>
+          <span
+            className="px-1"
+            style={{ borderBottom: `${lineWeight}px solid ${color}` }}
+          >
+            {fraction.numerator}
+          </span>
           <span>{fraction.denominator}</span>
         </div>
-      )}
+      </div>
+    )
+  }
+
+  return (
+    <div className={`inline-flex flex-col items-center ${textSize} font-semibold`} style={{ color }}>
+      <span
+        className="px-2"
+        style={{ borderBottom: `${lineWeight}px solid ${color}` }}
+      >
+        {fraction.numerator}
+      </span>
+      <span>{fraction.denominator}</span>
     </div>
   )
 }
 
-/**
- * Fraction Pie Chart Component
- */
-function FractionPieChart({
-  fraction,
-  color,
-  size = 60,
-  strokeWidth: pieStrokeWidth = 2,
-}: {
-  fraction: Fraction
-  color: string
-  size?: number
-  strokeWidth?: number
-}) {
-  const percentage = fraction.numerator / fraction.denominator
-  const angle = percentage * 360
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
-  // SVG arc path
-  const x = size / 2
-  const y = size / 2
-  const r = (size - 4) / 2
+export function FractionOperation({
+  data,
+  className = '',
+  width = 400,
+  complexity: forcedComplexity,
+  subject = 'math',
+  language = 'en',
+  initialStep,
+}: FractionOperationProps) {
+  const { operationType, fraction1, fraction2, result, steps, title, errorHighlight } = data
 
-  const startX = x
-  const startY = y - r
-
-  const radians = (angle * Math.PI) / 180
-  const endX = x + r * Math.sin(radians)
-  const endY = y - r * Math.cos(radians)
-
-  const largeArc = angle > 180 ? 1 : 0
-
-  const pathD =
-    angle >= 360
-      ? `M ${x} ${y - r} A ${r} ${r} 0 1 1 ${x - 0.001} ${y - r} Z`
-      : `M ${x} ${y} L ${startX} ${startY} A ${r} ${r} 0 ${largeArc} 1 ${endX} ${endY} Z`
-
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      {/* Background circle */}
-      <circle
-        cx={x}
-        cy={y}
-        r={r}
-        fill="none"
-        stroke="#e5e7eb"
-        strokeWidth={pieStrokeWidth}
-      />
-
-      {/* Filled portion */}
-      <path d={pathD} fill={color} opacity={0.7} />
-
-      {/* Border */}
-      <circle
-        cx={x}
-        cy={y}
-        r={r}
-        fill="none"
-        stroke={color}
-        strokeWidth={pieStrokeWidth}
-      />
-    </svg>
+  const hasErrors = !!(
+    errorHighlight?.message ||
+    errorHighlight?.wrongResult
   )
-}
 
-/**
- * Fraction Bar Model Component
- */
-function FractionBar({
-  fraction,
-  color,
-  width = 120,
-}: {
-  fraction: Fraction
-  color: string
-  width?: number
-}) {
-  const segments = fraction.denominator
-  const filled = fraction.numerator
-  const segmentWidth = width / segments
+  // Build step definitions
+  const stepDefs = useMemo(() => {
+    const defs: Array<{ id: string; label: string; labelHe: string }> = [
+      { id: 'operands', label: STEP_LABELS.operands.en, labelHe: STEP_LABELS.operands.he },
+      { id: 'operation', label: STEP_LABELS.operation.en, labelHe: STEP_LABELS.operation.he },
+      { id: 'result', label: STEP_LABELS.result.en, labelHe: STEP_LABELS.result.he },
+    ]
+    if (hasErrors) {
+      defs.push({ id: 'errors', label: STEP_LABELS.errors.en, labelHe: STEP_LABELS.errors.he })
+    }
+    return defs
+  }, [hasErrors])
+
+  // useDiagramBase
+  const diagram = useDiagramBase({
+    totalSteps: stepDefs.length,
+    subject,
+    complexity: forcedComplexity ?? 'middle_school',
+    initialStep: initialStep ?? 0,
+    stepSpotlights: stepDefs.map((s) => s.id),
+    language,
+  })
+
+  // Step visibility helpers
+  const stepIndexOf = (id: string) => stepDefs.findIndex((s) => s.id === id)
+  const isVisible = (id: string) => {
+    const idx = stepIndexOf(id)
+    return idx !== -1 && diagram.currentStep >= idx
+  }
+  const isCurrent = (id: string) => stepIndexOf(id) === diagram.currentStep
+
+  // Extract colors for use in JSX (avoids TS narrowing issue with `as const` literal unions)
+  const primaryColor = diagram.colors.primary
+  const accentColor = diagram.colors.accent
+
+  // Spotlight
+  const spotlight = useMemo(
+    () => createSpotlightVariants(primaryColor),
+    [primaryColor]
+  )
+
+  // Current step label
+  const currentStepDef = stepDefs[diagram.currentStep]
+  const stepLabel = language === 'he' ? currentStepDef?.labelHe : currentStepDef?.label
+
+  const operatorSymbol = getOperatorSymbol(operationType)
+
+  // Get the intermediate step info from the steps array
+  const intermediateStep = steps.find((s) => s.type === 'operate' || s.type === 'convert' || s.type === 'find_lcd')
 
   return (
     <div
-      className="flex border-2 rounded overflow-hidden"
-      style={{ width, borderColor: color }}
+      data-testid="fraction-operation"
+      className={`bg-white dark:bg-gray-900 rounded-lg p-4 ${className}`}
+      style={{ width: '100%', maxWidth: width }}
     >
-      {Array.from({ length: segments }).map((_, i) => (
+      {/* Title */}
+      {title && (
         <div
-          key={i}
-          className={`h-6 border-r last:border-r-0`}
-          style={{
-            width: segmentWidth,
-            backgroundColor: i < filled ? color : 'transparent',
-            opacity: i < filled ? 0.7 : 1,
-            borderColor: color,
-          }}
+          data-testid="fo-title"
+          className="text-lg font-semibold text-gray-800 dark:text-gray-200 text-center mb-3"
+        >
+          {title}
+        </div>
+      )}
+
+      {/* ── Step 0: Show the fractions ─────────────────────── */}
+      <AnimatePresence>
+        {isVisible('operands') && (
+          <motion.div
+            data-testid="fo-operands"
+            initial="hidden"
+            animate={isCurrent('operands') ? 'spotlight' : 'visible'}
+            variants={spotlight}
+          >
+            <div className="flex items-center justify-center gap-4 py-4">
+              <FractionDisplay
+                fraction={fraction1}
+                color={primaryColor}
+                lineWeight={diagram.lineWeight}
+              />
+              <span className="text-2xl text-gray-500 font-medium">{operatorSymbol}</span>
+              <FractionDisplay
+                fraction={fraction2}
+                color={accentColor}
+                lineWeight={diagram.lineWeight}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Step 1: Apply the operation ────────────────────── */}
+      <AnimatePresence>
+        {isVisible('operation') && (
+          <motion.div
+            data-testid="fo-operation"
+            initial="hidden"
+            animate={isCurrent('operation') ? 'spotlight' : 'visible'}
+            variants={spotlight}
+          >
+            <div className="mt-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+              <motion.div
+                className="text-center"
+                initial="hidden"
+                animate="visible"
+                variants={labelAppearVariants}
+              >
+                <span
+                  className="inline-block px-3 py-1 rounded-full text-sm font-medium text-white mb-2"
+                  style={{ backgroundColor: diagram.colors.primary }}
+                >
+                  {getOperationName(operationType, language)}
+                </span>
+              </motion.div>
+
+              {/* Show intermediate calculation if available */}
+              {intermediateStep?.calculation && (
+                <motion.p
+                  className="text-center font-mono text-sm text-gray-600 dark:text-gray-400 mt-1"
+                  initial="hidden"
+                  animate="visible"
+                  variants={labelAppearVariants}
+                >
+                  {intermediateStep.calculation}
+                </motion.p>
+              )}
+
+              {/* Show LCD if available */}
+              {intermediateStep?.lcd && (
+                <motion.p
+                  className="text-center text-sm font-medium mt-1"
+                  style={{ color: diagram.colors.primary }}
+                  initial="hidden"
+                  animate="visible"
+                  variants={labelAppearVariants}
+                >
+                  LCD = {intermediateStep.lcd}
+                </motion.p>
+              )}
+
+              {/* Show description */}
+              {intermediateStep?.description && (
+                <motion.p
+                  className="text-center text-sm text-gray-600 dark:text-gray-400 mt-1 italic"
+                  initial="hidden"
+                  animate="visible"
+                  variants={labelAppearVariants}
+                >
+                  {language === 'he'
+                    ? intermediateStep.descriptionHe || intermediateStep.description
+                    : intermediateStep.description}
+                </motion.p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Step 2: Show the result ──────────────────────── */}
+      <AnimatePresence>
+        {isVisible('result') && (
+          <motion.div
+            data-testid="fo-result"
+            initial="hidden"
+            animate={isCurrent('result') ? 'spotlight' : 'visible'}
+            variants={spotlight}
+          >
+            <div className="mt-4 p-4 rounded-xl text-center bg-green-50 dark:bg-green-900/20 border-2 border-green-300 dark:border-green-700">
+              <p className="text-sm text-green-600 dark:text-green-400 mb-2 font-medium">
+                {language === 'he' ? '\u05EA\u05E9\u05D5\u05D1\u05D4:' : 'Answer:'}
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <FractionDisplay
+                  fraction={fraction1}
+                  color={primaryColor}
+                  lineWeight={diagram.lineWeight}
+                  size="small"
+                />
+                <span className="text-lg text-gray-500">{operatorSymbol}</span>
+                <FractionDisplay
+                  fraction={fraction2}
+                  color={accentColor}
+                  lineWeight={diagram.lineWeight}
+                  size="small"
+                />
+                <span className="text-lg text-gray-500">=</span>
+                <FractionDisplay
+                  fraction={result}
+                  color="#22c55e"
+                  lineWeight={diagram.lineWeight}
+                  size="large"
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Errors Step ──────────────────────────────────── */}
+      <AnimatePresence>
+        {hasErrors && isVisible('errors') && (
+          <motion.div
+            data-testid="fo-errors"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+          >
+            <div className="mt-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700">
+              {errorHighlight?.message && (
+                <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                  {language === 'he' ? (errorHighlight.messageHe || errorHighlight.message) : errorHighlight.message}
+                </p>
+              )}
+              {errorHighlight?.wrongResult && errorHighlight?.correctResult && (
+                <div className="flex items-center justify-center gap-3 mt-2">
+                  <FractionDisplay
+                    fraction={errorHighlight.wrongResult}
+                    color="#ef4444"
+                    lineWeight={diagram.lineWeight}
+                    size="small"
+                  />
+                  <span className="text-gray-400">{'\u2192'}</span>
+                  <FractionDisplay
+                    fraction={errorHighlight.correctResult}
+                    color="#22c55e"
+                    lineWeight={diagram.lineWeight}
+                    size="small"
+                  />
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Step Controls */}
+      {stepDefs.length > 1 && (
+        <DiagramStepControls
+          currentStep={diagram.currentStep}
+          totalSteps={diagram.totalSteps}
+          onNext={diagram.next}
+          onPrev={diagram.prev}
+          stepLabel={stepLabel}
+          language={language}
+          subjectColor={primaryColor}
+          className="mt-2"
         />
-      ))}
+      )}
     </div>
   )
 }

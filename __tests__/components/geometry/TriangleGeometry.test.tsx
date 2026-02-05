@@ -1,10 +1,11 @@
 import { render, screen } from '@testing-library/react'
-import { Triangle } from '@/components/math/Triangle'
+import { TriangleGeometry } from '@/components/geometry/TriangleGeometry'
+import type { TriangleGeometryData } from '@/types/geometry'
 
 // Mutable step state controlled per-test
 let mockCurrentStep = 0
 
-// Mock framer-motion — all SVG motion elements render as plain SVG
+// Mock framer-motion -- all SVG motion elements render as plain SVG
 jest.mock('framer-motion', () => ({
   motion: {
     svg: ({ children, ...props }: any) => <svg {...props}>{children}</svg>,
@@ -19,7 +20,7 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => children,
 }))
 
-// Mock useDiagramBase — returns subject-coded colors and controlled step
+// Mock useDiagramBase -- returns subject-coded colors and controlled step
 jest.mock('@/hooks/useDiagramBase', () => ({
   useDiagramBase: (opts: any) => {
     const mockSubjectColors: Record<string, any> = {
@@ -28,7 +29,7 @@ jest.mock('@/hooks/useDiagramBase', () => ({
       geometry: { primary: '#ec4899', accent: '#d946ef', light: '#fbcfe8', dark: '#be185d', bg: '#fdf2f8', bgDark: '#500724', curve: '#f472b6', point: '#ec4899', highlight: '#f9a8d4' },
     }
     const mockLineWeights: Record<string, number> = { elementary: 4, middle_school: 3, high_school: 2, advanced: 2 }
-    const colors = mockSubjectColors[opts.subject] || mockSubjectColors.math
+    const colors = mockSubjectColors[opts.subject] || mockSubjectColors.geometry
     return {
       currentStep: mockCurrentStep,
       totalSteps: opts.totalSteps,
@@ -81,19 +82,15 @@ jest.mock('@/lib/diagram-animations', () => ({
 // Tests
 // =============================================================================
 
-describe('Triangle', () => {
-  const baseData = {
+describe('TriangleGeometry', () => {
+  const baseData: TriangleGeometryData = {
+    type: 'scalene',
     vertices: [
       { x: 0, y: 0, label: 'A' },
-      { x: 4, y: 0, label: 'B' },
-      { x: 2, y: 3, label: 'C' },
+      { x: 6, y: 0, label: 'B' },
+      { x: 3, y: 5, label: 'C' },
     ] as [any, any, any],
-    sides: [
-      { from: 'A', to: 'B', length: '4' },
-    ],
-    angles: [
-      { vertex: 'A', measure: '60\u00B0' },
-    ],
+    sides: { a: 5, b: 5.83, c: 6 },
   }
 
   beforeEach(() => {
@@ -105,41 +102,28 @@ describe('Triangle', () => {
   // ---------------------------------------------------------------------------
 
   describe('container and structure', () => {
-    it('renders with data-testid="triangle-diagram"', () => {
-      render(<Triangle data={baseData} />)
-      expect(screen.getByTestId('triangle-diagram')).toBeInTheDocument()
+    it('renders with data-testid="triangle-geometry"', () => {
+      render(<TriangleGeometry data={baseData} />)
+      expect(screen.getByTestId('triangle-geometry')).toBeInTheDocument()
     })
 
     it('renders background rect', () => {
-      render(<Triangle data={baseData} />)
-      expect(screen.getByTestId('tri-background')).toBeInTheDocument()
+      render(<TriangleGeometry data={baseData} />)
+      expect(screen.getByTestId('tg-background')).toBeInTheDocument()
     })
 
     it('has responsive width container', () => {
-      render(<Triangle data={baseData} width={400} />)
-      const container = screen.getByTestId('triangle-diagram')
+      render(<TriangleGeometry data={baseData} width={500} />)
+      const container = screen.getByTestId('triangle-geometry')
       expect(container.style.width).toBe('100%')
-      expect(container.style.maxWidth).toBe('400px')
+      expect(container.style.maxWidth).toBe('500px')
     })
 
     it('has accessible SVG with role and aria-label', () => {
-      const { container } = render(<Triangle data={baseData} />)
+      const { container } = render(<TriangleGeometry data={baseData} />)
       const svg = container.querySelector('svg')
       expect(svg?.getAttribute('role')).toBe('img')
-      expect(svg?.getAttribute('aria-label')).toContain('A')
-      expect(svg?.getAttribute('aria-label')).toContain('B')
-      expect(svg?.getAttribute('aria-label')).toContain('C')
-    })
-
-    it('renders title when provided', () => {
-      render(<Triangle data={{ ...baseData, title: 'Triangle ABC' }} />)
-      expect(screen.getByText('Triangle ABC')).toBeInTheDocument()
-    })
-
-    it('handles insufficient vertex data gracefully', () => {
-      render(<Triangle data={{ vertices: [{ x: 0, y: 0, label: 'A' }] as any }} />)
-      expect(screen.getByTestId('triangle-diagram')).toBeInTheDocument()
-      expect(screen.getByText('Insufficient vertex data')).toBeInTheDocument()
+      expect(svg?.getAttribute('aria-label')).toContain('5')
     })
   })
 
@@ -150,40 +134,40 @@ describe('Triangle', () => {
   describe('progressive reveal', () => {
     it('shows outline at step 0', () => {
       mockCurrentStep = 0
-      render(<Triangle data={baseData} />)
-      expect(screen.getByTestId('tri-outline')).toBeInTheDocument()
+      render(<TriangleGeometry data={baseData} />)
+      expect(screen.getByTestId('tg-outline')).toBeInTheDocument()
     })
 
-    it('hides sides at step 0', () => {
+    it('hides vertices at step 0', () => {
       mockCurrentStep = 0
-      render(<Triangle data={baseData} />)
-      expect(screen.queryByTestId('tri-sides')).not.toBeInTheDocument()
+      render(<TriangleGeometry data={baseData} />)
+      expect(screen.queryByTestId('tg-vertices')).not.toBeInTheDocument()
     })
 
-    it('shows sides at step 1', () => {
+    it('shows vertices at step 1', () => {
       mockCurrentStep = 1
-      render(<Triangle data={baseData} />)
-      expect(screen.getByTestId('tri-sides')).toBeInTheDocument()
+      render(<TriangleGeometry data={baseData} />)
+      expect(screen.getByTestId('tg-vertices')).toBeInTheDocument()
     })
 
-    it('hides angles at step 1', () => {
+    it('hides measurements at step 1', () => {
       mockCurrentStep = 1
-      render(<Triangle data={baseData} />)
-      expect(screen.queryByTestId('tri-angles')).not.toBeInTheDocument()
+      render(<TriangleGeometry data={baseData} />)
+      expect(screen.queryByTestId('tg-measurements')).not.toBeInTheDocument()
     })
 
-    it('shows angles at step 2', () => {
+    it('shows measurements at step 2', () => {
       mockCurrentStep = 2
-      render(<Triangle data={baseData} />)
-      expect(screen.getByTestId('tri-angles')).toBeInTheDocument()
+      render(<TriangleGeometry data={baseData} />)
+      expect(screen.getByTestId('tg-measurements')).toBeInTheDocument()
     })
 
     it('accumulates all previous steps', () => {
       mockCurrentStep = 2
-      render(<Triangle data={baseData} />)
-      expect(screen.getByTestId('tri-outline')).toBeInTheDocument()
-      expect(screen.getByTestId('tri-sides')).toBeInTheDocument()
-      expect(screen.getByTestId('tri-angles')).toBeInTheDocument()
+      render(<TriangleGeometry data={baseData} />)
+      expect(screen.getByTestId('tg-outline')).toBeInTheDocument()
+      expect(screen.getByTestId('tg-vertices')).toBeInTheDocument()
+      expect(screen.getByTestId('tg-measurements')).toBeInTheDocument()
     })
   })
 
@@ -193,43 +177,30 @@ describe('Triangle', () => {
 
   describe('DiagramStepControls', () => {
     it('renders step controls', () => {
-      render(<Triangle data={baseData} />)
+      render(<TriangleGeometry data={baseData} />)
       expect(screen.getByTestId('diagram-step-controls')).toBeInTheDocument()
     })
 
-    it('passes correct total steps (outline + sides + angles = 3)', () => {
-      render(<Triangle data={baseData} />)
+    it('passes correct total steps (outline + vertices + measurements = 3)', () => {
+      render(<TriangleGeometry data={baseData} />)
       const controls = screen.getByTestId('diagram-step-controls')
       expect(controls.getAttribute('data-total')).toBe('3')
     })
 
     it('passes subject color to controls', () => {
-      render(<Triangle data={baseData} subject="physics" />)
+      render(<TriangleGeometry data={baseData} subject="physics" />)
       const controls = screen.getByTestId('diagram-step-controls')
       expect(controls.getAttribute('data-color')).toBe('#f97316')
     })
 
-    it('includes special step when altitude present', () => {
-      const data = {
+    it('includes constructions step when altitude is present', () => {
+      const dataWithAltitude: TriangleGeometryData = {
         ...baseData,
-        altitude: { from: 'C', to: 'B' },
+        height: { value: 5, from: 'C', showLine: true },
       }
-      render(<Triangle data={data} />)
+      render(<TriangleGeometry data={dataWithAltitude} />)
       const controls = screen.getByTestId('diagram-step-controls')
-      // outline + sides + angles + special = 4
-      expect(controls.getAttribute('data-total')).toBe('4')
-    })
-
-    it('includes error step when errors present', () => {
-      const data = {
-        ...baseData,
-        errorHighlight: {
-          wrongSides: ['AB'],
-        },
-      }
-      render(<Triangle data={data} />)
-      const controls = screen.getByTestId('diagram-step-controls')
-      // outline + sides + angles + errors = 4
+      // outline + vertices + measurements + constructions = 4
       expect(controls.getAttribute('data-total')).toBe('4')
     })
   })
@@ -240,58 +211,59 @@ describe('Triangle', () => {
 
   describe('subject colors', () => {
     it('uses geometry colors by default', () => {
-      mockCurrentStep = 0
-      const { container } = render(<Triangle data={baseData} />)
-      // Geometry primary #ec4899 used in triangle fill
-      const paths = container.querySelectorAll('path')
-      const fillPath = Array.from(paths).find(
-        (p) => p.getAttribute('fill') === '#ec4899'
+      mockCurrentStep = 1
+      render(<TriangleGeometry data={baseData} />)
+      const { container } = render(<TriangleGeometry data={baseData} />)
+      // Vertex circles should use geometry primary
+      const circles = container.querySelectorAll('circle')
+      const primaryCircle = Array.from(circles).find(
+        (c) => c.getAttribute('fill') === '#ec4899'
       )
-      expect(fillPath).toBeTruthy()
+      expect(primaryCircle).toBeTruthy()
     })
 
     it('uses physics colors when subject="physics"', () => {
-      mockCurrentStep = 0
-      const { container } = render(<Triangle data={baseData} subject="physics" />)
-      const paths = container.querySelectorAll('path')
-      const fillPath = Array.from(paths).find(
-        (p) => p.getAttribute('fill') === '#f97316'
+      mockCurrentStep = 1
+      const { container } = render(<TriangleGeometry data={baseData} subject="physics" />)
+      const circles = container.querySelectorAll('circle')
+      const primaryCircle = Array.from(circles).find(
+        (c) => c.getAttribute('fill') === '#f97316'
       )
-      expect(fillPath).toBeTruthy()
+      expect(primaryCircle).toBeTruthy()
     })
 
     it('uses math colors when subject="math"', () => {
-      mockCurrentStep = 0
-      const { container } = render(<Triangle data={baseData} subject="math" />)
-      const paths = container.querySelectorAll('path')
-      const fillPath = Array.from(paths).find(
-        (p) => p.getAttribute('fill') === '#6366f1'
+      mockCurrentStep = 1
+      const { container } = render(<TriangleGeometry data={baseData} subject="math" />)
+      const circles = container.querySelectorAll('circle')
+      const primaryCircle = Array.from(circles).find(
+        (c) => c.getAttribute('fill') === '#6366f1'
       )
-      expect(fillPath).toBeTruthy()
+      expect(primaryCircle).toBeTruthy()
     })
   })
 
   // ---------------------------------------------------------------------------
-  // Special lines
+  // Constructions
   // ---------------------------------------------------------------------------
 
-  describe('special lines', () => {
-    const specialData = {
+  describe('constructions', () => {
+    const dataWithAltitude: TriangleGeometryData = {
       ...baseData,
-      altitude: { from: 'C', to: 'B' },
+      height: { value: 5, from: 'C', showLine: true },
     }
 
-    it('renders special group at correct step', () => {
-      // outline(0), sides(1), angles(2), special(3)
+    it('shows constructions at correct step', () => {
+      // outline(0), vertices(1), measurements(2), constructions(3)
       mockCurrentStep = 3
-      render(<Triangle data={specialData} />)
-      expect(screen.getByTestId('tri-special')).toBeInTheDocument()
+      render(<TriangleGeometry data={dataWithAltitude} />)
+      expect(screen.getByTestId('tg-constructions')).toBeInTheDocument()
     })
 
-    it('hides special before its step', () => {
+    it('hides constructions before their step', () => {
       mockCurrentStep = 2
-      render(<Triangle data={specialData} />)
-      expect(screen.queryByTestId('tri-special')).not.toBeInTheDocument()
+      render(<TriangleGeometry data={dataWithAltitude} />)
+      expect(screen.queryByTestId('tg-constructions')).not.toBeInTheDocument()
     })
   })
 
@@ -300,58 +272,48 @@ describe('Triangle', () => {
   // ---------------------------------------------------------------------------
 
   describe('error highlights', () => {
-    const errorData = {
+    const errorData: TriangleGeometryData = {
       ...baseData,
-      errorHighlight: {
-        wrongSides: ['AB'],
-        wrongAngles: ['A'],
-      },
+      angles: { A: 60, B: 60, C: 60 },
+      highlightAngles: ['A'],
     }
 
-    it('renders error group at correct step', () => {
-      // outline(0), sides(1), angles(2), errors(3)
+    it('shows errors at correct step', () => {
+      // outline(0), vertices(1), measurements(2), errors(3)
       mockCurrentStep = 3
-      render(<Triangle data={errorData} />)
-      expect(screen.getByTestId('tri-errors')).toBeInTheDocument()
-    })
-
-    it('renders wrong side marker', () => {
-      mockCurrentStep = 3
-      render(<Triangle data={errorData} />)
-      expect(screen.getByTestId('tri-wrong-side-AB')).toBeInTheDocument()
-    })
-
-    it('renders wrong angle marker', () => {
-      mockCurrentStep = 3
-      render(<Triangle data={errorData} />)
-      expect(screen.getByTestId('tri-wrong-angle-A')).toBeInTheDocument()
+      render(<TriangleGeometry data={errorData} />)
+      expect(screen.getByTestId('tg-errors')).toBeInTheDocument()
     })
 
     it('hides errors before their step', () => {
       mockCurrentStep = 2
-      render(<Triangle data={errorData} />)
-      expect(screen.queryByTestId('tri-errors')).not.toBeInTheDocument()
+      render(<TriangleGeometry data={errorData} />)
+      expect(screen.queryByTestId('tg-errors')).not.toBeInTheDocument()
     })
   })
 
   // ---------------------------------------------------------------------------
-  // data-testid coverage
+  // data-testid
   // ---------------------------------------------------------------------------
 
-  describe('data-testid attributes', () => {
-    it('has all required testids at full reveal', () => {
-      mockCurrentStep = 3
-      const data = {
+  describe('data-testid', () => {
+    it('has all required test ids when fully revealed', () => {
+      const fullData: TriangleGeometryData = {
         ...baseData,
-        errorHighlight: { wrongSides: ['AB'] },
+        height: { value: 5, from: 'C', showLine: true },
+        angles: { A: 60, B: 60, C: 60 },
+        highlightAngles: ['A'],
       }
-      render(<Triangle data={data} />)
-      expect(screen.getByTestId('triangle-diagram')).toBeInTheDocument()
-      expect(screen.getByTestId('tri-background')).toBeInTheDocument()
-      expect(screen.getByTestId('tri-outline')).toBeInTheDocument()
-      expect(screen.getByTestId('tri-sides')).toBeInTheDocument()
-      expect(screen.getByTestId('tri-angles')).toBeInTheDocument()
-      expect(screen.getByTestId('tri-errors')).toBeInTheDocument()
+      // Set to last step (outline + vertices + measurements + constructions + errors = 5)
+      mockCurrentStep = 4
+      render(<TriangleGeometry data={fullData} />)
+      expect(screen.getByTestId('triangle-geometry')).toBeInTheDocument()
+      expect(screen.getByTestId('tg-background')).toBeInTheDocument()
+      expect(screen.getByTestId('tg-outline')).toBeInTheDocument()
+      expect(screen.getByTestId('tg-vertices')).toBeInTheDocument()
+      expect(screen.getByTestId('tg-measurements')).toBeInTheDocument()
+      expect(screen.getByTestId('tg-constructions')).toBeInTheDocument()
+      expect(screen.getByTestId('tg-errors')).toBeInTheDocument()
     })
   })
 })

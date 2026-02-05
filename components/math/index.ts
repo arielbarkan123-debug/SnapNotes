@@ -14,7 +14,7 @@ export { FractionOperation } from './FractionOperation'
 // Algebra - Equations
 export { EquationSteps } from './EquationSteps'
 export { SystemsOfEquations, type SystemsOfEquationsData, type SystemStep, type SystemEquation } from './SystemsOfEquations'
-export { InequalityDiagram, type InequalityData, type InequalityStep, type InequalityOperator } from './InequalityDiagram'
+export { InequalityDiagram, type InequalityData, type InequalityOperator } from './InequalityDiagram'
 
 // Algebra - Expressions
 export { FactoringDiagram, type FactoringData, type FactoringStep, type FactorPair } from './FactoringDiagram'

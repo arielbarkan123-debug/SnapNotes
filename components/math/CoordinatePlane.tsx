@@ -1,19 +1,22 @@
 'use client'
 
 import { useMemo, useCallback } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { parse } from 'mathjs'
 import type { CoordinatePlaneData, CoordinatePlaneErrorHighlight } from '@/types'
-import {
-  COLORS,
-  SHADOWS,
-  hexToRgba,
-  getSubjectColor,
-  getAdaptiveLineWeight,
-} from '@/lib/diagram-theme'
+import { useDiagramBase } from '@/hooks/useDiagramBase'
 import type { SubjectKey } from '@/lib/diagram-theme'
 import type { VisualComplexityLevel } from '@/lib/visual-complexity'
-import { createPathDrawVariants, prefersReducedMotion } from '@/lib/diagram-animations'
+import { DiagramStepControls } from '@/components/diagrams/DiagramStepControls'
+import {
+  createSpotlightVariants,
+  lineDrawVariants,
+  labelAppearVariants,
+} from '@/lib/diagram-animations'
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface CoordinatePlaneDataWithErrors extends CoordinatePlaneData {
   errorHighlight?: CoordinatePlaneErrorHighlight
@@ -22,48 +25,58 @@ interface CoordinatePlaneDataWithErrors extends CoordinatePlaneData {
 interface CoordinatePlaneProps {
   data: CoordinatePlaneDataWithErrors
   className?: string
+  /** ViewBox width — SVG scales responsively to container */
   width?: number
   height?: number
-  /** Enable curve draw animation */
-  animateCurves?: boolean
-  /** Animation duration for curve drawing in ms */
-  animationDuration?: number
-  /** Subject for color coding */
-  subject?: SubjectKey
-  /** Complexity level for adaptive styling */
   complexity?: VisualComplexityLevel
+  subject?: SubjectKey
+  language?: 'en' | 'he'
+  /** Override the starting step (defaults to 0 for progressive reveal) */
+  initialStep?: number
 }
 
+// ---------------------------------------------------------------------------
+// Step label translations
+// ---------------------------------------------------------------------------
+
+const STEP_LABELS: Record<string, { en: string; he: string }> = {
+  grid: { en: 'Draw the grid', he: 'ציור הרשת' },
+  axes: { en: 'Draw the axes', he: 'ציור הצירים' },
+  curves: { en: 'Plot the curves', he: 'שרטוט הגרפים' },
+  points: { en: 'Mark the points', he: 'סימון הנקודות' },
+  labels: { en: 'Show labels', he: 'הצגת תוויות' },
+  errors: { en: 'Show corrections', he: 'הצגת תיקונים' },
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 /**
- * CoordinatePlane - Enhanced SVG component for 2D coordinate graphs
+ * CoordinatePlane — Phase 2 Visual Learning Overhaul.
  *
- * Features:
- * - mathjs-powered expression parser for full math support
- * - Desmos-style grid with major/minor distinction
- * - Framer Motion curve drawing animations
- * - Professional visual design with gradients
- * - Error highlighting for wrong/correct answers
- *
- * Supported expressions:
- * - Basic: x, 2x+3, -x+5
- * - Quadratic: x^2, 2x^2+3x-1
- * - Trigonometric: sin(x), cos(x), tan(x), sec(x), csc(x), cot(x)
- * - Inverse trig: asin(x), acos(x), atan(x)
- * - Exponential: exp(x), e^x, 2^x
- * - Logarithmic: log(x), ln(x), log10(x)
- * - Roots: sqrt(x), nthRoot(x, n)
- * - Special: abs(x), floor(x), ceil(x), sign(x)
- * - Complex: sin(x)*cos(x), x^2*exp(-x)
+ * Quality standard checklist:
+ * - [x] useDiagramBase hook
+ * - [x] DiagramStepControls
+ * - [x] pathLength draw animation
+ * - [x] Spotlight on current step
+ * - [x] Dark/light mode
+ * - [x] Responsive width
+ * - [x] data-testid attributes
+ * - [x] RTL support
+ * - [x] Subject-coded colors
+ * - [x] Adaptive line weight
+ * - [x] Step-by-step progressive reveal with AnimatePresence
  */
 export function CoordinatePlane({
   data,
   className = '',
   width = 400,
   height = 400,
-  animateCurves = true,
-  animationDuration = 800,
+  complexity: forcedComplexity,
   subject = 'math',
-  complexity = 'middle_school',
+  language = 'en',
+  initialStep,
 }: CoordinatePlaneProps) {
   const {
     xMin,
@@ -80,52 +93,90 @@ export function CoordinatePlane({
     errorHighlight,
   } = data
 
-  const reducedMotion = prefersReducedMotion()
+  // Determine which step groups exist based on data
+  const hasCurves = curves.length > 0 || lines.length > 0
+  const hasPoints = points.length > 0
+  const hasLabels = !!(
+    title ||
+    points.some((p) => p.label) ||
+    xLabel ||
+    yLabel
+  )
+  const hasErrors = !!(
+    errorHighlight?.wrongPoints?.length ||
+    errorHighlight?.correctPoints?.length ||
+    errorHighlight?.wrongCurves?.length ||
+    errorHighlight?.correctCurves?.length
+  )
 
-  // Subject-coded colors and adaptive line weight
-  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
-  const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
+  const stepDefs = useMemo(() => {
+    const defs: Array<{ id: string; label: string; labelHe: string }> = [
+      { id: 'grid', label: STEP_LABELS.grid.en, labelHe: STEP_LABELS.grid.he },
+      { id: 'axes', label: STEP_LABELS.axes.en, labelHe: STEP_LABELS.axes.he },
+    ]
+    if (hasCurves) defs.push({ id: 'curves', label: STEP_LABELS.curves.en, labelHe: STEP_LABELS.curves.he })
+    if (hasPoints) defs.push({ id: 'points', label: STEP_LABELS.points.en, labelHe: STEP_LABELS.points.he })
+    if (hasLabels) defs.push({ id: 'labels', label: STEP_LABELS.labels.en, labelHe: STEP_LABELS.labels.he })
+    if (hasErrors) defs.push({ id: 'errors', label: STEP_LABELS.errors.en, labelHe: STEP_LABELS.errors.he })
+    return defs
+  }, [hasCurves, hasPoints, hasLabels, hasErrors])
 
-  // Padding and dimensions
+  // useDiagramBase — step control, colors, lineWeight, RTL
+  const diagram = useDiagramBase({
+    totalSteps: stepDefs.length,
+    subject,
+    complexity: forcedComplexity ?? 'middle_school',
+    initialStep: initialStep ?? 0,
+    stepSpotlights: stepDefs.map((s) => s.id),
+    language,
+  })
+
+  // Convenience: step visibility helpers
+  const stepIndexOf = (id: string) => stepDefs.findIndex((s) => s.id === id)
+  const isVisible = (id: string) => {
+    const idx = stepIndexOf(id)
+    return idx !== -1 && diagram.currentStep >= idx
+  }
+  const isCurrent = (id: string) => stepIndexOf(id) === diagram.currentStep
+
+  // Subject-coded spotlight
+  const spotlight = useMemo(
+    () => createSpotlightVariants(diagram.colors.primary),
+    [diagram.colors.primary]
+  )
+
+  // ---------------------------------------------------------------------------
+  // Geometry calculations
+  // ---------------------------------------------------------------------------
+
   const padding = { left: 50, right: 30, top: 40, bottom: 50 }
   const plotWidth = width - padding.left - padding.right
   const plotHeight = height - padding.top - padding.bottom
 
-  // Guard against degenerate ranges (division by zero)
-  const xRange = xMax - xMin
-  const yRange = yMax - yMin
-  const safeXRange = Math.abs(xRange) < 1e-10 ? 1 : xRange
-  const safeYRange = Math.abs(yRange) < 1e-10 ? 1 : yRange
+  const safeXRange = Math.abs(xMax - xMin) < 1e-10 ? 1 : xMax - xMin
+  const safeYRange = Math.abs(yMax - yMin) < 1e-10 ? 1 : yMax - yMin
 
-  // Convert coordinates to SVG coordinates
   const xToSvg = useCallback(
-    (x: number): number => {
-      const ratio = (x - xMin) / safeXRange
-      return padding.left + ratio * plotWidth
-    },
+    (x: number): number => padding.left + ((x - xMin) / safeXRange) * plotWidth,
     [xMin, safeXRange, plotWidth]
   )
 
   const yToSvg = useCallback(
-    (y: number): number => {
-      const ratio = (y - yMin) / safeYRange
-      return padding.top + plotHeight - ratio * plotHeight
-    },
+    (y: number): number => padding.top + plotHeight - ((y - yMin) / safeYRange) * plotHeight,
     [yMin, safeYRange, plotHeight]
   )
 
-  // Find origin position (if visible)
+  // Origin position (if visible)
   const originX = xToSvg(0)
   const originY = yToSvg(0)
   const showXAxis = yMin <= 0 && yMax >= 0
   const showYAxis = xMin <= 0 && xMax >= 0
 
-  // Generate grid lines with major/minor distinction (Desmos-style)
+  // Generate grid lines with major/minor distinction
   const gridData = useMemo(() => {
     const xRange = xMax - xMin
     const yRange = yMax - yMin
 
-    // Calculate appropriate tick intervals
     const getTickInterval = (range: number): { major: number; minor: number } => {
       if (range <= 5) return { major: 1, minor: 0.5 }
       if (range <= 10) return { major: 2, minor: 1 }
@@ -143,9 +194,8 @@ export function CoordinatePlane({
     const yMajorTicks: number[] = []
     const yMinorTicks: number[] = []
 
-    // Generate X ticks
     for (let x = Math.ceil(xMin / xIntervals.minor) * xIntervals.minor; x <= xMax; x += xIntervals.minor) {
-      const rounded = Math.round(x * 1000) / 1000 // Avoid floating point issues
+      const rounded = Math.round(x * 1000) / 1000
       if (Math.abs(rounded % xIntervals.major) < 0.001) {
         xMajorTicks.push(rounded)
       } else {
@@ -153,7 +203,6 @@ export function CoordinatePlane({
       }
     }
 
-    // Generate Y ticks
     for (let y = Math.ceil(yMin / yIntervals.minor) * yIntervals.minor; y <= yMax; y += yIntervals.minor) {
       const rounded = Math.round(y * 1000) / 1000
       if (Math.abs(rounded % yIntervals.major) < 0.001) {
@@ -163,61 +212,45 @@ export function CoordinatePlane({
       }
     }
 
-    return { xMajorTicks, xMinorTicks, yMajorTicks, yMinorTicks, xIntervals, yIntervals }
+    return { xMajorTicks, xMinorTicks, yMajorTicks, yMinorTicks }
   }, [xMin, xMax, yMin, yMax])
 
-  /**
-   * Evaluate a mathematical expression using mathjs
-   * Falls back to basic parsing if mathjs fails
-   */
+  // ---------------------------------------------------------------------------
+  // Expression evaluation
+  // ---------------------------------------------------------------------------
+
   const evaluateExpression = useCallback((expression: string, x: number): number | null => {
     try {
-      // Pre-process expression for common notation
       let expr = expression
-        .replace(/\^/g, '^') // Ensure proper exponent
-        .replace(/²/g, '^2')
-        .replace(/³/g, '^3')
-        .replace(/√/g, 'sqrt')
-        .replace(/π/g, 'pi')
-        .replace(/e\^/g, 'exp(') // Convert e^x to exp(x)
+        .replace(/\^/g, '^')
+        .replace(/\u00b2/g, '^2')
+        .replace(/\u00b3/g, '^3')
+        .replace(/\u221a/g, 'sqrt')
+        .replace(/\u03c0/g, 'pi')
+        .replace(/e\^/g, 'exp(')
 
-      // Handle e^(...) by adding closing paren
       if (expr.includes('exp(') && !expr.includes('exp(x)')) {
-        // Count parens and add if needed
         const expIndex = expr.indexOf('exp(')
         if (expIndex !== -1 && !expr.substring(expIndex).includes(')')) {
           expr = expr + ')'
         }
       }
 
-      // Parse and evaluate using mathjs
       const node = parse(expr)
       const result = node.evaluate({ x })
 
-      // Handle complex numbers or invalid results
       if (typeof result === 'object' && 'im' in result) {
-        return null // Complex number
+        return null
       }
 
       return typeof result === 'number' && isFinite(result) ? result : null
     } catch {
-      // Fallback to simple evaluation for basic cases
       try {
         const simpleExpr = expression.toLowerCase().replace(/\s/g, '')
-
-        if (simpleExpr.includes('sin')) {
-          return Math.sin(x)
-        }
-        if (simpleExpr.includes('cos')) {
-          return Math.cos(x)
-        }
-        if (simpleExpr === 'x') {
-          return x
-        }
-        if (!simpleExpr.includes('x')) {
-          return parseFloat(expression)
-        }
-
+        if (simpleExpr.includes('sin')) return Math.sin(x)
+        if (simpleExpr.includes('cos')) return Math.cos(x)
+        if (simpleExpr === 'x') return x
+        if (!simpleExpr.includes('x')) return parseFloat(expression)
         return null
       } catch {
         return null
@@ -225,14 +258,11 @@ export function CoordinatePlane({
     }
   }, [])
 
-  /**
-   * Generate SVG path for a curve expression
-   */
-  const generateCurvePoints = useCallback(
+  const generateCurvePath = useCallback(
     (expression: string, domain?: { min: number; max: number }): string => {
       const domainMin = domain?.min ?? xMin
       const domainMax = domain?.max ?? xMax
-      const numPoints = 200 // Higher resolution for smooth curves
+      const numPoints = 200
       const step = (domainMax - domainMin) / numPoints
       const pathPoints: string[] = []
       let isFirst = true
@@ -244,14 +274,10 @@ export function CoordinatePlane({
         if (y !== null && y >= yMin - (yMax - yMin) * 0.5 && y <= yMax + (yMax - yMin) * 0.5) {
           const svgX = xToSvg(x)
           const svgY = yToSvg(y)
-
-          // Clamp to visible area with some margin
           const clampedY = Math.max(padding.top - 20, Math.min(height - padding.bottom + 20, svgY))
-
           pathPoints.push(`${isFirst ? 'M' : 'L'} ${svgX.toFixed(2)} ${clampedY.toFixed(2)}`)
           isFirst = false
         } else {
-          // Break the path for discontinuities
           isFirst = true
         }
       }
@@ -261,480 +287,534 @@ export function CoordinatePlane({
     [xMin, xMax, yMin, yMax, xToSvg, yToSvg, evaluateExpression, height]
   )
 
-  // Animation variants for curves
-  const curveDrawVariants = useMemo(
-    () =>
-      createPathDrawVariants(reducedMotion ? 0 : animationDuration / 1000, 0),
-    [animationDuration, reducedMotion]
-  )
+  // Current step label
+  const currentStepDef = stepDefs[diagram.currentStep]
+  const stepLabel = language === 'he' ? currentStepDef?.labelHe : currentStepDef?.label
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
   return (
-    <svg
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      className={`coordinate-plane ${className}`}
-      style={{ borderRadius: '12px', overflow: 'hidden' }}
-      role="img"
-      aria-label={`Coordinate plane${title ? `: ${title}` : ''} with x from ${xMin} to ${xMax} and y from ${yMin} to ${yMax}`}
+    <div
+      data-testid="coordinate-plane"
+      className={className}
+      style={{ width: '100%', maxWidth: width }}
     >
-      {/* Definitions */}
-      <defs>
-        {/* Background gradient */}
-        <linearGradient id="coord-bg-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="100%" stopColor={COLORS.gray[50]} />
-        </linearGradient>
-
-        {/* Curve gradients */}
-        {curves.map((curve, index) => (
-          <linearGradient
-            key={`curve-gradient-${index}`}
-            id={`curve-gradient-${index}`}
-            x1="0%"
-            y1="0%"
-            x2="100%"
-            y2="0%"
-          >
-            <stop offset="0%" stopColor={curve.color || subjectColors.light} />
-            <stop offset="100%" stopColor={curve.color || subjectColors.dark} />
-          </linearGradient>
-        ))}
-
-        {/* Point glow filter */}
-        <filter id="coord-point-glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-          <feMerge>
-            <feMergeNode in="coloredBlur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-
-      {/* Background */}
-      <rect width={width} height={height} fill="url(#coord-bg-gradient)" rx={12} />
-
-      {/* Title */}
-      {title && (
-        <motion.text
-          x={width / 2}
-          y={24}
-          textAnchor="middle"
-          fontSize={15}
-          fontWeight="600"
-          fontFamily="'Inter', system-ui, sans-serif"
-          fill={COLORS.gray[800]}
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          {title}
-        </motion.text>
-      )}
-
-      {/* Minor grid lines (Desmos-style) */}
-      {showGrid && (
-        <g opacity={0.45}>
-          {/* Vertical minor grid lines */}
-          {gridData.xMinorTicks.map((x) => (
-            <line
-              key={`grid-v-minor-${x}`}
-              x1={xToSvg(x)}
-              y1={padding.top}
-              x2={xToSvg(x)}
-              y2={height - padding.bottom}
-              stroke={COLORS.gray[300]}
-              strokeWidth={0.75}
-            />
-          ))}
-          {/* Horizontal minor grid lines */}
-          {gridData.yMinorTicks.map((y) => (
-            <line
-              key={`grid-h-minor-${y}`}
-              x1={padding.left}
-              y1={yToSvg(y)}
-              x2={width - padding.right}
-              y2={yToSvg(y)}
-              stroke={COLORS.gray[300]}
-              strokeWidth={0.75}
-            />
-          ))}
-        </g>
-      )}
-
-      {/* Major grid lines (more visible) */}
-      {showGrid && (
-        <g opacity={0.65}>
-          {/* Vertical major grid lines */}
-          {gridData.xMajorTicks.map((x) =>
-            x === 0 ? null : (
-              <line
-                key={`grid-v-major-${x}`}
-                x1={xToSvg(x)}
-                y1={padding.top}
-                x2={xToSvg(x)}
-                y2={height - padding.bottom}
-                stroke={COLORS.gray[300]}
-                strokeWidth={1}
-              />
-            )
-          )}
-          {/* Horizontal major grid lines */}
-          {gridData.yMajorTicks.map((y) =>
-            y === 0 ? null : (
-              <line
-                key={`grid-h-major-${y}`}
-                x1={padding.left}
-                y1={yToSvg(y)}
-                x2={width - padding.right}
-                y2={yToSvg(y)}
-                stroke={COLORS.gray[300]}
-                strokeWidth={1}
-              />
-            )
-          )}
-        </g>
-      )}
-
-      {/* X Axis (prominent) */}
-      <line
-        x1={padding.left}
-        y1={showXAxis ? originY : height - padding.bottom}
-        x2={width - padding.right}
-        y2={showXAxis ? originY : height - padding.bottom}
-        stroke={COLORS.gray[700]}
-        strokeWidth={adaptiveLineWeight}
-      />
-      {/* X axis arrow */}
-      <polygon
-        points={`${width - padding.right + 10},${showXAxis ? originY : height - padding.bottom} ${width - padding.right},${(showXAxis ? originY : height - padding.bottom) - 5} ${width - padding.right},${(showXAxis ? originY : height - padding.bottom) + 5}`}
-        fill={COLORS.gray[700]}
-      />
-      {/* X label */}
-      <text
-        x={width - padding.right + 18}
-        y={(showXAxis ? originY : height - padding.bottom) + 5}
-        fontSize={14}
-        fontFamily="'Inter', system-ui, sans-serif"
-        fontWeight={500}
-        fill={COLORS.gray[600]}
+      {/* SVG Diagram */}
+      <svg
+        width="100%"
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        className="text-gray-800 dark:text-gray-200"
+        role="img"
+        aria-label={`Coordinate plane${title ? `: ${title}` : ''} with x from ${xMin} to ${xMax} and y from ${yMin} to ${yMax}`}
       >
-        {xLabel}
-      </text>
+        {/* Background */}
+        <rect
+          data-testid="cp-background"
+          width={width}
+          height={height}
+          rx={4}
+          className="fill-white dark:fill-gray-900"
+        />
 
-      {/* Y Axis (prominent) */}
-      <line
-        x1={showYAxis ? originX : padding.left}
-        y1={padding.top}
-        x2={showYAxis ? originX : padding.left}
-        y2={height - padding.bottom}
-        stroke={COLORS.gray[700]}
-        strokeWidth={adaptiveLineWeight}
-      />
-      {/* Y axis arrow */}
-      <polygon
-        points={`${showYAxis ? originX : padding.left},${padding.top - 10} ${(showYAxis ? originX : padding.left) - 5},${padding.top} ${(showYAxis ? originX : padding.left) + 5},${padding.top}`}
-        fill={COLORS.gray[700]}
-      />
-      {/* Y label */}
-      <text
-        x={(showYAxis ? originX : padding.left) - 5}
-        y={padding.top - 18}
-        textAnchor="middle"
-        fontSize={14}
-        fontFamily="'Inter', system-ui, sans-serif"
-        fontWeight={500}
-        fill={COLORS.gray[600]}
-      >
-        {yLabel}
-      </text>
-
-      {/* X axis ticks and labels (major only) */}
-      {gridData.xMajorTicks.map((x) => {
-        if (x === 0 && showYAxis) return null
-        const svgX = xToSvg(x)
-        const tickY = showXAxis ? originY : height - padding.bottom
-        return (
-          <g key={`x-tick-${x}`}>
-            <line
-              x1={svgX}
-              y1={tickY - 4}
-              x2={svgX}
-              y2={tickY + 4}
-              stroke={COLORS.gray[600]}
-              strokeWidth={1.5}
-            />
-            <text
-              x={svgX}
-              y={tickY + 18}
-              textAnchor="middle"
-              fontSize={11}
-              fontFamily="'JetBrains Mono', monospace"
-              fill={COLORS.gray[500]}
+        {/* ── Step 0: Grid ──────────────────────────────────────── */}
+        <AnimatePresence>
+          {showGrid && isVisible('grid') && (
+            <motion.g
+              data-testid="cp-grid"
+              initial="hidden"
+              animate={isCurrent('grid') ? 'spotlight' : 'visible'}
+              variants={spotlight}
             >
-              {Number.isInteger(x) ? x : x.toFixed(1)}
-            </text>
-          </g>
-        )
-      })}
+              {/* Minor grid lines */}
+              <g opacity={0.45}>
+                {gridData.xMinorTicks.map((x) => (
+                  <line
+                    key={`grid-v-minor-${x}`}
+                    x1={xToSvg(x)}
+                    y1={padding.top}
+                    x2={xToSvg(x)}
+                    y2={height - padding.bottom}
+                    stroke="currentColor"
+                    strokeWidth={0.5}
+                    opacity={0.3}
+                  />
+                ))}
+                {gridData.yMinorTicks.map((y) => (
+                  <line
+                    key={`grid-h-minor-${y}`}
+                    x1={padding.left}
+                    y1={yToSvg(y)}
+                    x2={width - padding.right}
+                    y2={yToSvg(y)}
+                    stroke="currentColor"
+                    strokeWidth={0.5}
+                    opacity={0.3}
+                  />
+                ))}
+              </g>
 
-      {/* Y axis ticks and labels (major only) */}
-      {gridData.yMajorTicks.map((y) => {
-        if (y === 0 && showXAxis) return null
-        const svgY = yToSvg(y)
-        const tickX = showYAxis ? originX : padding.left
-        return (
-          <g key={`y-tick-${y}`}>
-            <line
-              x1={tickX - 4}
-              y1={svgY}
-              x2={tickX + 4}
-              y2={svgY}
-              stroke={COLORS.gray[600]}
-              strokeWidth={1.5}
-            />
-            <text
-              x={tickX - 10}
-              y={svgY + 4}
-              textAnchor="end"
-              fontSize={11}
-              fontFamily="'JetBrains Mono', monospace"
-              fill={COLORS.gray[500]}
+              {/* Major grid lines */}
+              <g opacity={0.65}>
+                {gridData.xMajorTicks.map((x) =>
+                  x === 0 ? null : (
+                    <line
+                      key={`grid-v-major-${x}`}
+                      x1={xToSvg(x)}
+                      y1={padding.top}
+                      x2={xToSvg(x)}
+                      y2={height - padding.bottom}
+                      stroke="currentColor"
+                      strokeWidth={0.75}
+                      opacity={0.5}
+                    />
+                  )
+                )}
+                {gridData.yMajorTicks.map((y) =>
+                  y === 0 ? null : (
+                    <line
+                      key={`grid-h-major-${y}`}
+                      x1={padding.left}
+                      y1={yToSvg(y)}
+                      x2={width - padding.right}
+                      y2={yToSvg(y)}
+                      stroke="currentColor"
+                      strokeWidth={0.75}
+                      opacity={0.5}
+                    />
+                  )
+                )}
+              </g>
+            </motion.g>
+          )}
+        </AnimatePresence>
+
+        {/* ── Step 1: Axes ──────────────────────────────────────── */}
+        <AnimatePresence>
+          {isVisible('axes') && (
+            <motion.g
+              data-testid="cp-axes"
+              initial="hidden"
+              animate={isCurrent('axes') ? 'spotlight' : 'visible'}
+              variants={spotlight}
             >
-              {Number.isInteger(y) ? y : y.toFixed(1)}
-            </text>
-          </g>
-        )
-      })}
+              {/* X axis line */}
+              <motion.path
+                d={`M ${padding.left} ${showXAxis ? originY : height - padding.bottom} L ${width - padding.right} ${showXAxis ? originY : height - padding.bottom}`}
+                stroke="currentColor"
+                strokeWidth={diagram.lineWeight}
+                fill="none"
+                initial="hidden"
+                animate="visible"
+                variants={lineDrawVariants}
+              />
 
-      {/* Origin marker */}
-      {showXAxis && showYAxis && (
-        <>
-          <circle cx={originX} cy={originY} r={4} fill={COLORS.gray[400]} />
-          <text
-            x={originX - 12}
-            y={originY + 18}
-            textAnchor="end"
-            fontSize={11}
-            fontFamily="'JetBrains Mono', monospace"
-            fill={COLORS.gray[500]}
-          >
-            0
-          </text>
-        </>
+              {/* X axis arrow */}
+              <motion.polygon
+                points={`${width - padding.right + 10},${showXAxis ? originY : height - padding.bottom} ${width - padding.right},${(showXAxis ? originY : height - padding.bottom) - 5} ${width - padding.right},${(showXAxis ? originY : height - padding.bottom) + 5}`}
+                fill="currentColor"
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 20 }}
+              />
+
+              {/* X axis label */}
+              <motion.text
+                x={width - padding.right + 18}
+                y={(showXAxis ? originY : height - padding.bottom) + 5}
+                className="fill-current"
+                style={{ fontSize: 14 }}
+                initial="hidden"
+                animate="visible"
+                variants={labelAppearVariants}
+              >
+                {xLabel}
+              </motion.text>
+
+              {/* Y axis line */}
+              <motion.path
+                d={`M ${showYAxis ? originX : padding.left} ${height - padding.bottom} L ${showYAxis ? originX : padding.left} ${padding.top}`}
+                stroke="currentColor"
+                strokeWidth={diagram.lineWeight}
+                fill="none"
+                initial="hidden"
+                animate="visible"
+                variants={lineDrawVariants}
+              />
+
+              {/* Y axis arrow */}
+              <motion.polygon
+                points={`${showYAxis ? originX : padding.left},${padding.top - 10} ${(showYAxis ? originX : padding.left) - 5},${padding.top} ${(showYAxis ? originX : padding.left) + 5},${padding.top}`}
+                fill="currentColor"
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.6, type: 'spring', stiffness: 300, damping: 20 }}
+              />
+
+              {/* Y axis label */}
+              <motion.text
+                x={(showYAxis ? originX : padding.left) - 5}
+                y={padding.top - 18}
+                textAnchor="middle"
+                className="fill-current"
+                style={{ fontSize: 14 }}
+                initial="hidden"
+                animate="visible"
+                variants={labelAppearVariants}
+              >
+                {yLabel}
+              </motion.text>
+
+              {/* X axis tick marks and labels */}
+              {gridData.xMajorTicks.map((x, index) => {
+                if (x === 0 && showYAxis) return null
+                const svgX = xToSvg(x)
+                const tickY = showXAxis ? originY : height - padding.bottom
+                return (
+                  <motion.g
+                    key={`x-tick-${x}`}
+                    initial="hidden"
+                    animate="visible"
+                    variants={labelAppearVariants}
+                    transition={{ delay: index * 0.02 }}
+                  >
+                    <line
+                      x1={svgX}
+                      y1={tickY - 4}
+                      x2={svgX}
+                      y2={tickY + 4}
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                    />
+                    <text
+                      x={svgX}
+                      y={tickY + 18}
+                      textAnchor="middle"
+                      className="fill-current"
+                      style={{ fontSize: 11 }}
+                    >
+                      {Number.isInteger(x) ? x : x.toFixed(1)}
+                    </text>
+                  </motion.g>
+                )
+              })}
+
+              {/* Y axis tick marks and labels */}
+              {gridData.yMajorTicks.map((y, index) => {
+                if (y === 0 && showXAxis) return null
+                const svgY = yToSvg(y)
+                const tickX = showYAxis ? originX : padding.left
+                return (
+                  <motion.g
+                    key={`y-tick-${y}`}
+                    initial="hidden"
+                    animate="visible"
+                    variants={labelAppearVariants}
+                    transition={{ delay: index * 0.02 }}
+                  >
+                    <line
+                      x1={tickX - 4}
+                      y1={svgY}
+                      x2={tickX + 4}
+                      y2={svgY}
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                    />
+                    <text
+                      x={tickX - 10}
+                      y={svgY + 4}
+                      textAnchor="end"
+                      className="fill-current"
+                      style={{ fontSize: 11 }}
+                    >
+                      {Number.isInteger(y) ? y : y.toFixed(1)}
+                    </text>
+                  </motion.g>
+                )
+              })}
+
+              {/* Origin marker */}
+              {showXAxis && showYAxis && (
+                <motion.g
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <circle cx={originX} cy={originY} r={3} fill="currentColor" />
+                  <text
+                    x={originX - 12}
+                    y={originY + 18}
+                    textAnchor="end"
+                    className="fill-current"
+                    style={{ fontSize: 11 }}
+                  >
+                    0
+                  </text>
+                </motion.g>
+              )}
+            </motion.g>
+          )}
+        </AnimatePresence>
+
+        {/* ── Step 2: Curves / Lines ────────────────────────────── */}
+        <AnimatePresence>
+          {hasCurves && isVisible('curves') && (
+            <motion.g
+              data-testid="cp-curves"
+              initial="hidden"
+              animate={isCurrent('curves') ? 'spotlight' : 'visible'}
+              variants={spotlight}
+            >
+              {/* Equation curves */}
+              {curves.map((curve, index) => {
+                const pathD = generateCurvePath(curve.expression, curve.domain)
+                return (
+                  <motion.path
+                    key={`curve-${index}`}
+                    data-testid={`cp-curve-${index}`}
+                    d={pathD}
+                    fill="none"
+                    stroke={curve.color || diagram.colors.primary}
+                    strokeWidth={diagram.lineWeight}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    initial="hidden"
+                    animate="visible"
+                    variants={lineDrawVariants}
+                  />
+                )
+              })}
+
+              {/* Lines */}
+              {lines.map((line, index) => {
+                const [p1, p2] = line.points
+                let x1 = xToSvg(p1.x)
+                let y1 = yToSvg(p1.y)
+                let x2 = xToSvg(p2.x)
+                let y2 = yToSvg(p2.y)
+
+                if (line.type === 'line' && x1 !== x2) {
+                  const slope = (y2 - y1) / (x2 - x1)
+                  const refX = xToSvg(p1.x)
+                  const refY = yToSvg(p1.y)
+                  x1 = padding.left
+                  y1 = slope * (x1 - refX) + refY
+                  x2 = width - padding.right
+                  y2 = slope * (x2 - refX) + refY
+                }
+
+                return (
+                  <motion.path
+                    key={`line-${index}`}
+                    data-testid={`cp-line-${index}`}
+                    d={`M ${x1} ${y1} L ${x2} ${y2}`}
+                    fill="none"
+                    stroke={line.color || diagram.colors.primary}
+                    strokeWidth={diagram.lineWeight}
+                    strokeDasharray={line.dashed ? '6,4' : undefined}
+                    strokeLinecap="round"
+                    initial="hidden"
+                    animate="visible"
+                    variants={lineDrawVariants}
+                  />
+                )
+              })}
+            </motion.g>
+          )}
+        </AnimatePresence>
+
+        {/* ── Step 3: Points ────────────────────────────────────── */}
+        <AnimatePresence>
+          {hasPoints && isVisible('points') && (
+            <motion.g
+              data-testid="cp-points"
+              initial="hidden"
+              animate={isCurrent('points') ? 'spotlight' : 'visible'}
+              variants={spotlight}
+            >
+              {points.map((point, index) => {
+                const svgX = xToSvg(point.x)
+                const svgY = yToSvg(point.y)
+                const color = point.color || diagram.colors.primary
+
+                return (
+                  <motion.g
+                    key={`point-${index}`}
+                    data-testid={`cp-point-${(point as any).id || index}`}
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 300,
+                      damping: 25,
+                      delay: index * 0.1,
+                    }}
+                  >
+                    {/* Point outer glow */}
+                    <circle cx={svgX} cy={svgY} r={10} fill={color} opacity={0.15} />
+                    {/* Point fill */}
+                    <circle
+                      data-testid={`cp-point-circle-${(point as any).id || index}`}
+                      cx={svgX}
+                      cy={svgY}
+                      r={6}
+                      fill={color}
+                      stroke={color}
+                      strokeWidth={2}
+                    />
+                    {/* Inner highlight */}
+                    <circle cx={svgX - 1.5} cy={svgY - 1.5} r={2} fill="rgba(255,255,255,0.5)" />
+
+                    {/* Point label */}
+                    {point.label && (
+                      <motion.text
+                        x={svgX + 12}
+                        y={svgY - 10}
+                        className="font-medium"
+                        style={{ fontSize: 12, fill: color }}
+                        initial="hidden"
+                        animate="visible"
+                        variants={labelAppearVariants}
+                        transition={{ delay: index * 0.1 + 0.2 }}
+                      >
+                        {point.label}
+                      </motion.text>
+                    )}
+                  </motion.g>
+                )
+              })}
+            </motion.g>
+          )}
+        </AnimatePresence>
+
+        {/* ── Step 4: Labels / Annotations ──────────────────────── */}
+        <AnimatePresence>
+          {hasLabels && isVisible('labels') && (
+            <motion.g
+              data-testid="cp-labels"
+              initial="hidden"
+              animate={isCurrent('labels') ? 'spotlight' : 'visible'}
+              variants={spotlight}
+            >
+              {/* Title */}
+              {title && (
+                <motion.text
+                  data-testid="cp-title"
+                  x={width / 2}
+                  y={24}
+                  textAnchor="middle"
+                  className="fill-current font-medium"
+                  style={{ fontSize: 15 }}
+                  initial="hidden"
+                  animate="visible"
+                  variants={labelAppearVariants}
+                >
+                  {title}
+                </motion.text>
+              )}
+            </motion.g>
+          )}
+        </AnimatePresence>
+
+        {/* ── Step 5: Error highlights ──────────────────────────── */}
+        <AnimatePresence>
+          {hasErrors && isVisible('errors') && (
+            <motion.g
+              data-testid="cp-errors"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4 }}
+            >
+              {/* Wrong points */}
+              {errorHighlight?.wrongPoints?.map((point, index) => {
+                const svgX = xToSvg(point.x)
+                const svgY = yToSvg(point.y)
+                return (
+                  <g key={`wrong-point-${index}`} data-testid={`cp-wrong-${index}`}>
+                    <circle cx={svgX} cy={svgY} r={14} fill="#EF4444" opacity={0.15} />
+                    <circle cx={svgX} cy={svgY} r={8} fill="#EF4444" opacity={0.3} />
+                    <line x1={svgX - 5} y1={svgY - 5} x2={svgX + 5} y2={svgY + 5} stroke="#EF4444" strokeWidth={3} strokeLinecap="round" />
+                    <line x1={svgX + 5} y1={svgY - 5} x2={svgX - 5} y2={svgY + 5} stroke="#EF4444" strokeWidth={3} strokeLinecap="round" />
+                    {point.errorLabel && (
+                      <text x={svgX} y={svgY - 20} textAnchor="middle" style={{ fill: '#EF4444', fontSize: '11px', fontWeight: 500 }}>
+                        {point.errorLabel}
+                      </text>
+                    )}
+                  </g>
+                )
+              })}
+
+              {/* Correct points */}
+              {errorHighlight?.correctPoints?.map((point, index) => {
+                const svgX = xToSvg(point.x)
+                const svgY = yToSvg(point.y)
+                return (
+                  <g key={`correct-point-${index}`} data-testid={`cp-correct-${index}`}>
+                    <circle cx={svgX} cy={svgY} r={14} fill="#22C55E" opacity={0.15} />
+                    <circle cx={svgX} cy={svgY} r={8} fill="#22C55E" />
+                    <path
+                      d={`M ${svgX - 3} ${svgY} L ${svgX - 0.5} ${svgY + 3} L ${svgX + 4} ${svgY - 3}`}
+                      stroke="white" strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round"
+                    />
+                    {point.correctLabel && (
+                      <text x={svgX} y={svgY - 20} textAnchor="middle" style={{ fill: '#22C55E', fontSize: '11px', fontWeight: 500 }}>
+                        {point.correctLabel}
+                      </text>
+                    )}
+                  </g>
+                )
+              })}
+
+              {/* Wrong curves */}
+              {errorHighlight?.wrongCurves?.map((curve, index) => (
+                <motion.path
+                  key={`wrong-curve-${index}`}
+                  d={generateCurvePath(curve.expression, curve.domain)}
+                  fill="none"
+                  stroke="#EF4444"
+                  strokeWidth={2.5}
+                  strokeDasharray="6,4"
+                  opacity={0.8}
+                  initial="hidden"
+                  animate="visible"
+                  variants={lineDrawVariants}
+                />
+              ))}
+
+              {/* Correct curves */}
+              {errorHighlight?.correctCurves?.map((curve, index) => (
+                <motion.path
+                  key={`correct-curve-${index}`}
+                  d={generateCurvePath(curve.expression, curve.domain)}
+                  fill="none"
+                  stroke="#22C55E"
+                  strokeWidth={3}
+                  initial="hidden"
+                  animate="visible"
+                  variants={lineDrawVariants}
+                />
+              ))}
+            </motion.g>
+          )}
+        </AnimatePresence>
+      </svg>
+
+      {/* Step Controls */}
+      {stepDefs.length > 1 && (
+        <DiagramStepControls
+          currentStep={diagram.currentStep}
+          totalSteps={diagram.totalSteps}
+          onNext={diagram.next}
+          onPrev={diagram.prev}
+          stepLabel={stepLabel}
+          language={language}
+          subjectColor={diagram.colors.primary}
+          className="mt-2"
+        />
       )}
-
-      {/* Curves with draw animation */}
-      {curves.map((curve, index) => {
-        const pathD = generateCurvePoints(curve.expression, curve.domain)
-        return (
-          <motion.path
-            key={`curve-${index}`}
-            d={pathD}
-            fill="none"
-            stroke={`url(#curve-gradient-${index})`}
-            strokeWidth={adaptiveLineWeight - 0.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            initial={animateCurves && !reducedMotion ? 'hidden' : 'visible'}
-            animate="visible"
-            variants={curveDrawVariants}
-            style={{ filter: SHADOWS.soft }}
-          />
-        )
-      })}
-
-      {/* Lines */}
-      {lines.map((line, index) => {
-        const [p1, p2] = line.points
-        let x1 = xToSvg(p1.x)
-        let y1 = yToSvg(p1.y)
-        let x2 = xToSvg(p2.x)
-        let y2 = yToSvg(p2.y)
-
-        // Extend line to edges if it's a full line
-        if (line.type === 'line' && x1 !== x2) {
-          const slope = (y2 - y1) / (x2 - x1)
-          x1 = padding.left
-          y1 = slope * (x1 - xToSvg(p1.x)) + yToSvg(p1.y)
-          x2 = width - padding.right
-          y2 = slope * (x2 - xToSvg(p1.x)) + yToSvg(p1.y)
-        }
-
-        return (
-          <motion.line
-            key={`line-${index}`}
-            x1={x1}
-            y1={y1}
-            x2={x2}
-            y2={y2}
-            stroke={line.color || subjectColors.primary}
-            strokeWidth={2}
-            strokeDasharray={line.dashed ? '6,4' : undefined}
-            strokeLinecap="round"
-            initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 1 }}
-            transition={{ duration: reducedMotion ? 0 : 0.5 }}
-          />
-        )
-      })}
-
-      {/* Points */}
-      {points.map((point, index) => {
-        const svgX = xToSvg(point.x)
-        const svgY = yToSvg(point.y)
-        const color = point.color || subjectColors.primary
-
-        return (
-          <motion.g
-            key={`point-${index}`}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{
-              type: 'spring',
-              stiffness: 400,
-              damping: 20,
-              delay: reducedMotion ? 0 : index * 0.1,
-            }}
-          >
-            {/* Outer glow */}
-            <circle cx={svgX} cy={svgY} r={10} fill={hexToRgba(color, 0.2)} />
-            {/* Point */}
-            <circle cx={svgX} cy={svgY} r={6} fill={color} filter="url(#coord-point-glow)" />
-            {/* Inner highlight */}
-            <circle cx={svgX - 1.5} cy={svgY - 1.5} r={2} fill="rgba(255,255,255,0.5)" />
-            {point.label && (
-              <text
-                x={svgX + 12}
-                y={svgY - 10}
-                fontSize={12}
-                fontFamily="'Inter', system-ui, sans-serif"
-                fontWeight={500}
-                fill={color}
-              >
-                {point.label}
-              </text>
-            )}
-          </motion.g>
-        )
-      })}
-
-      {/* Error highlighting - Wrong points (shown with X) */}
-      {errorHighlight?.wrongPoints?.map((point, index) => {
-        const svgX = xToSvg(point.x)
-        const svgY = yToSvg(point.y)
-        return (
-          <motion.g
-            key={`wrong-point-${index}`}
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          >
-            <circle cx={svgX} cy={svgY} r={14} fill={hexToRgba(COLORS.error[500], 0.15)} />
-            <circle cx={svgX} cy={svgY} r={8} fill={hexToRgba(COLORS.error[500], 0.3)} />
-            <line
-              x1={svgX - 5}
-              y1={svgY - 5}
-              x2={svgX + 5}
-              y2={svgY + 5}
-              stroke={COLORS.error[500]}
-              strokeWidth={3}
-              strokeLinecap="round"
-            />
-            <line
-              x1={svgX + 5}
-              y1={svgY - 5}
-              x2={svgX - 5}
-              y2={svgY + 5}
-              stroke={COLORS.error[500]}
-              strokeWidth={3}
-              strokeLinecap="round"
-            />
-            {point.errorLabel && (
-              <text
-                x={svgX}
-                y={svgY - 20}
-                textAnchor="middle"
-                fontSize={11}
-                fontFamily="'Inter', system-ui, sans-serif"
-                fontWeight={500}
-                fill={COLORS.error[600]}
-              >
-                {point.errorLabel}
-              </text>
-            )}
-          </motion.g>
-        )
-      })}
-
-      {/* Error highlighting - Correct points (shown with checkmark) */}
-      {errorHighlight?.correctPoints?.map((point, index) => {
-        const svgX = xToSvg(point.x)
-        const svgY = yToSvg(point.y)
-        return (
-          <motion.g
-            key={`correct-point-${index}`}
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          >
-            <circle cx={svgX} cy={svgY} r={14} fill={hexToRgba(COLORS.success[500], 0.15)} />
-            <circle cx={svgX} cy={svgY} r={8} fill={COLORS.success[500]} />
-            <path
-              d={`M ${svgX - 3} ${svgY} L ${svgX - 0.5} ${svgY + 3} L ${svgX + 4} ${svgY - 3}`}
-              stroke="white"
-              strokeWidth={2.5}
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            {point.correctLabel && (
-              <text
-                x={svgX}
-                y={svgY - 20}
-                textAnchor="middle"
-                fontSize={11}
-                fontFamily="'Inter', system-ui, sans-serif"
-                fontWeight={500}
-                fill={COLORS.success[600]}
-              >
-                {point.correctLabel}
-              </text>
-            )}
-          </motion.g>
-        )
-      })}
-
-      {/* Error highlighting - Wrong curves (dashed red) */}
-      {errorHighlight?.wrongCurves?.map((curve, index) => (
-        <motion.path
-          key={`wrong-curve-${index}`}
-          d={generateCurvePoints(curve.expression, curve.domain)}
-          fill="none"
-          stroke={COLORS.error[500]}
-          strokeWidth={2.5}
-          strokeDasharray="6,4"
-          opacity={0.8}
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: reducedMotion ? 0 : 0.6 }}
-        />
-      ))}
-
-      {/* Error highlighting - Correct curves (solid green) */}
-      {errorHighlight?.correctCurves?.map((curve, index) => (
-        <motion.path
-          key={`correct-curve-${index}`}
-          d={generateCurvePoints(curve.expression, curve.domain)}
-          fill="none"
-          stroke={COLORS.success[500]}
-          strokeWidth={3}
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: reducedMotion ? 0 : 0.6 }}
-        />
-      ))}
-    </svg>
+    </div>
   )
 }
 

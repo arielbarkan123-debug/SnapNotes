@@ -1,32 +1,82 @@
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { EquationSteps } from '@/components/math/EquationSteps'
-import type { EquationData } from '@/types/math'
 
-// Mock framer-motion to avoid animation issues in tests
+// Mutable step state controlled per-test
+let mockCurrentStep = 0
+
+// Mock framer-motion — all motion elements render as plain HTML
 jest.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     span: ({ children, ...props }: any) => <span {...props}>{children}</span>,
     p: ({ children, ...props }: any) => <p {...props}>{children}</p>,
-    svg: ({ children, ...props }: any) => <svg {...props}>{children}</svg>,
-    g: ({ children, ...props }: any) => <g {...props}>{children}</g>,
-    circle: (props: any) => <circle {...props} />,
-    line: (props: any) => <line {...props} />,
-    path: (props: any) => <path {...props} />,
-    text: ({ children, ...props }: any) => <text {...props}>{children}</text>,
-    rect: (props: any) => <rect {...props} />,
   },
   AnimatePresence: ({ children }: any) => children,
-  useAnimation: () => ({ start: () => Promise.resolve() }),
 }))
 
-jest.mock('@/lib/diagram-animations', () => ({
-  prefersReducedMotion: () => true,
-  createPathDrawVariants: () => ({ hidden: {}, visible: {} }),
+// Mock useDiagramBase — returns subject-coded colors and controlled step
+jest.mock('@/hooks/useDiagramBase', () => ({
+  useDiagramBase: (opts: any) => {
+    const mockSubjectColors: Record<string, any> = {
+      math: { primary: '#6366f1', accent: '#8b5cf6', light: '#c7d2fe', dark: '#4338ca', bg: '#eef2ff', bgDark: '#1e1b4b', curve: '#818cf8', point: '#6366f1', highlight: '#a5b4fc' },
+      physics: { primary: '#f97316', accent: '#ef4444', light: '#fed7aa', dark: '#c2410c', bg: '#fff7ed', bgDark: '#431407', curve: '#fb923c', point: '#f97316', highlight: '#fdba74' },
+      geometry: { primary: '#ec4899', accent: '#d946ef', light: '#fbcfe8', dark: '#be185d', bg: '#fdf2f8', bgDark: '#500724', curve: '#f472b6', point: '#ec4899', highlight: '#f9a8d4' },
+    }
+    const mockLineWeights: Record<string, number> = { elementary: 4, middle_school: 3, high_school: 2, advanced: 2 }
+    const colors = mockSubjectColors[opts.subject] || mockSubjectColors.math
+    return {
+      currentStep: mockCurrentStep,
+      totalSteps: opts.totalSteps,
+      next: jest.fn(),
+      prev: jest.fn(),
+      goToStep: jest.fn(),
+      colors,
+      lineWeight: mockLineWeights[opts.complexity] || 3,
+      isRTL: opts.language === 'he',
+      isFirstStep: mockCurrentStep === 0,
+      isLastStep: mockCurrentStep === opts.totalSteps - 1,
+      spotlightElement: opts.stepSpotlights?.[mockCurrentStep] ?? null,
+      progress: opts.totalSteps > 1 ? mockCurrentStep / (opts.totalSteps - 1) : 1,
+      subject: opts.subject || 'math',
+      complexity: opts.complexity || 'middle_school',
+      backgrounds: {
+        light: { fill: '#ffffff', grid: '#e5e7eb' },
+        dark: { fill: '#1a1a2e', grid: '#2d2d44' },
+      },
+    }
+  },
 }))
+
+// Mock DiagramStepControls
+jest.mock('@/components/diagrams/DiagramStepControls', () => ({
+  DiagramStepControls: (props: any) => (
+    <div
+      data-testid="diagram-step-controls"
+      data-step={props.currentStep}
+      data-total={props.totalSteps}
+      data-color={props.subjectColor}
+    >
+      Step {props.currentStep + 1} / {props.totalSteps}
+    </div>
+  ),
+}))
+
+// Mock diagram-animations
+jest.mock('@/lib/diagram-animations', () => ({
+  createSpotlightVariants: () => ({
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 },
+    spotlight: { opacity: 1 },
+  }),
+  labelAppearVariants: { hidden: { opacity: 0 }, visible: { opacity: 1 } },
+}))
+
+// =============================================================================
+// Tests
+// =============================================================================
 
 describe('EquationSteps', () => {
-  const baseData: EquationData = {
+  const baseData = {
     originalEquation: '2x + 3 = 7',
     variable: 'x',
     solution: '2',
@@ -34,7 +84,7 @@ describe('EquationSteps', () => {
       {
         step: 0,
         equation: '2x + 3 = 7',
-        operation: 'initial',
+        operation: 'initial' as const,
         leftSide: '2x + 3',
         rightSide: '7',
         description: 'Start with the equation',
@@ -42,7 +92,7 @@ describe('EquationSteps', () => {
       {
         step: 1,
         equation: '2x = 4',
-        operation: 'subtract',
+        operation: 'subtract' as const,
         leftSide: '2x',
         rightSide: '4',
         description: 'Subtract 3 from both sides',
@@ -51,72 +101,193 @@ describe('EquationSteps', () => {
       {
         step: 2,
         equation: 'x = 2',
-        operation: 'divide',
+        operation: 'divide' as const,
         leftSide: 'x',
         rightSide: '2',
         description: 'Divide both sides by 2',
-        calculation: '÷2',
+        calculation: '\u00F72',
       },
     ],
     title: 'Solve for x',
   }
 
-  it('renders without crashing', () => {
-    const { container } = render(<EquationSteps data={baseData} />)
-    expect(container.querySelector('.equation-steps')).toBeInTheDocument()
+  beforeEach(() => {
+    mockCurrentStep = 0
   })
 
-  it('accepts subject prop', () => {
-    const { container } = render(
-      <EquationSteps data={baseData} subject="physics" />
-    )
-    expect(container.querySelector('.equation-steps')).toBeInTheDocument()
+  // ---------------------------------------------------------------------------
+  // Container & Structure
+  // ---------------------------------------------------------------------------
+
+  describe('container and structure', () => {
+    it('renders with data-testid="equation-steps"', () => {
+      render(<EquationSteps data={baseData} />)
+      expect(screen.getByTestId('equation-steps')).toBeInTheDocument()
+    })
+
+    it('has responsive width container', () => {
+      render(<EquationSteps data={baseData} width={600} />)
+      const container = screen.getByTestId('equation-steps')
+      expect(container.style.width).toBe('100%')
+      expect(container.style.maxWidth).toBe('600px')
+    })
+
+    it('has dark/light mode wrapper classes', () => {
+      render(<EquationSteps data={baseData} />)
+      const container = screen.getByTestId('equation-steps')
+      expect(container.className).toContain('bg-white')
+      expect(container.className).toContain('dark:bg-gray-900')
+    })
+
+    it('renders title when provided', () => {
+      render(<EquationSteps data={baseData} />)
+      expect(screen.getByTestId('es-title')).toBeInTheDocument()
+      expect(screen.getByTestId('es-title').textContent).toBe('Solve for x')
+    })
+
+    it('does not render title when not provided', () => {
+      const { title: _, ...noTitle } = baseData
+      render(<EquationSteps data={noTitle} />)
+      expect(screen.queryByTestId('es-title')).not.toBeInTheDocument()
+    })
   })
 
-  it('accepts complexity prop without errors', () => {
-    // EquationSteps accepts complexity for interface compatibility but does not use it for rendering
-    const { container } = render(
-      <EquationSteps data={baseData} complexity="elementary" />
-    )
-    expect(container.querySelector('.equation-steps')).toBeInTheDocument()
+  // ---------------------------------------------------------------------------
+  // Step-based Progressive Reveal
+  // ---------------------------------------------------------------------------
+
+  describe('progressive reveal', () => {
+    it('shows first equation step at step 0', () => {
+      mockCurrentStep = 0
+      render(<EquationSteps data={baseData} />)
+      expect(screen.getByTestId('es-step-0')).toBeInTheDocument()
+    })
+
+    it('hides second step at step 0', () => {
+      mockCurrentStep = 0
+      render(<EquationSteps data={baseData} />)
+      expect(screen.queryByTestId('es-step-1')).not.toBeInTheDocument()
+    })
+
+    it('shows second step at step 1', () => {
+      mockCurrentStep = 1
+      render(<EquationSteps data={baseData} />)
+      expect(screen.getByTestId('es-step-1')).toBeInTheDocument()
+    })
+
+    it('shows all steps at final step', () => {
+      mockCurrentStep = 2
+      render(<EquationSteps data={baseData} />)
+      expect(screen.getByTestId('es-step-0')).toBeInTheDocument()
+      expect(screen.getByTestId('es-step-1')).toBeInTheDocument()
+      expect(screen.getByTestId('es-step-2')).toBeInTheDocument()
+    })
+
+    it('accumulates previous steps', () => {
+      mockCurrentStep = 1
+      render(<EquationSteps data={baseData} />)
+      expect(screen.getByTestId('es-step-0')).toBeInTheDocument()
+      expect(screen.getByTestId('es-step-1')).toBeInTheDocument()
+      expect(screen.queryByTestId('es-step-2')).not.toBeInTheDocument()
+    })
+
+    it('displays equation content in visible step', () => {
+      mockCurrentStep = 0
+      render(<EquationSteps data={baseData} />)
+      const step = screen.getByTestId('es-step-0')
+      expect(step.textContent).toContain('2x + 3')
+      expect(step.textContent).toContain('7')
+    })
   })
 
-  it('uses subject color in progress bar when subject is physics', () => {
-    const { container } = render(
-      <EquationSteps data={baseData} subject="physics" />
-    )
-    // Physics primary is #f97316 — should appear in progress gradient inline style
-    const styledElements = container.querySelectorAll('[style]')
-    const hasPhysicsColor = Array.from(styledElements).some(
-      (el) => (el as HTMLElement).style.cssText.includes('#f97316')
-    )
-    expect(hasPhysicsColor).toBe(true)
+  // ---------------------------------------------------------------------------
+  // DiagramStepControls
+  // ---------------------------------------------------------------------------
+
+  describe('DiagramStepControls', () => {
+    it('renders step controls', () => {
+      render(<EquationSteps data={baseData} />)
+      expect(screen.getByTestId('diagram-step-controls')).toBeInTheDocument()
+    })
+
+    it('passes correct total steps (3 equation steps)', () => {
+      render(<EquationSteps data={baseData} />)
+      const controls = screen.getByTestId('diagram-step-controls')
+      expect(controls.getAttribute('data-total')).toBe('3')
+    })
+
+    it('passes subject color to controls', () => {
+      render(<EquationSteps data={baseData} subject="physics" />)
+      const controls = screen.getByTestId('diagram-step-controls')
+      expect(controls.getAttribute('data-color')).toBe('#f97316')
+    })
+
+    it('includes error step when errors present', () => {
+      const errorData = {
+        ...baseData,
+        errorHighlight: { message: 'Step 2 is wrong' },
+      }
+      render(<EquationSteps data={errorData} />)
+      const controls = screen.getByTestId('diagram-step-controls')
+      // 3 equation steps + 1 error = 4
+      expect(controls.getAttribute('data-total')).toBe('4')
+    })
   })
 
-  it('uses default math subject color in progress bar', () => {
-    const { container } = render(<EquationSteps data={baseData} />)
-    // Math primary is #6366f1 — default subject color
-    const styledElements = container.querySelectorAll('[style]')
-    const hasMathColor = Array.from(styledElements).some(
-      (el) => (el as HTMLElement).style.cssText.includes('#6366f1')
-    )
-    expect(hasMathColor).toBe(true)
+  // ---------------------------------------------------------------------------
+  // Subject Colors
+  // ---------------------------------------------------------------------------
+
+  describe('subject colors', () => {
+    it('uses math colors by default', () => {
+      render(<EquationSteps data={baseData} />)
+      const controls = screen.getByTestId('diagram-step-controls')
+      expect(controls.getAttribute('data-color')).toBe('#6366f1')
+    })
+
+    it('uses physics colors when subject="physics"', () => {
+      render(<EquationSteps data={baseData} subject="physics" />)
+      const controls = screen.getByTestId('diagram-step-controls')
+      expect(controls.getAttribute('data-color')).toBe('#f97316')
+    })
+
+    it('uses geometry colors when subject="geometry"', () => {
+      render(<EquationSteps data={baseData} subject="geometry" />)
+      const controls = screen.getByTestId('diagram-step-controls')
+      expect(controls.getAttribute('data-color')).toBe('#ec4899')
+    })
   })
 
-  it('renders title when provided', () => {
-    const { container } = render(<EquationSteps data={baseData} />)
-    expect(container.textContent).toContain('Solve for x')
-  })
+  // ---------------------------------------------------------------------------
+  // Error Highlights
+  // ---------------------------------------------------------------------------
 
-  it('renders step counter by default', () => {
-    const { container } = render(<EquationSteps data={baseData} />)
-    expect(container.textContent).toContain('Step 1 of 3')
-  })
+  describe('error highlights', () => {
+    const errorData = {
+      ...baseData,
+      errorHighlight: {
+        message: 'Step 2 has an error',
+        correctEquation: 'x = 2',
+      },
+    }
 
-  it('hides step counter when showStepCounter is false', () => {
-    const { container } = render(
-      <EquationSteps data={baseData} showStepCounter={false} />
-    )
-    expect(container.textContent).not.toContain('Step 1 of 3')
+    it('renders error group at correct step', () => {
+      // 3 equation steps + errors(3)
+      mockCurrentStep = 3
+      render(<EquationSteps data={errorData} />)
+      expect(screen.getByTestId('es-errors')).toBeInTheDocument()
+    })
+
+    it('hides errors before their step', () => {
+      mockCurrentStep = 2
+      render(<EquationSteps data={errorData} />)
+      expect(screen.queryByTestId('es-errors')).not.toBeInTheDocument()
+    })
+
+    it('displays error message', () => {
+      mockCurrentStep = 3
+      render(<EquationSteps data={errorData} />)
+      expect(screen.getByTestId('es-errors').textContent).toContain('Step 2 has an error')
+    })
   })
 })

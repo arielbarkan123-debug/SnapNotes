@@ -343,7 +343,6 @@ export function InteractiveGraph({
               data={coordinatePlaneData}
               width={typeof width === 'number' ? width : 400}
               height={height}
-              animateCurves={true}
               className="rounded-xl border border-gray-200 dark:border-gray-700"
               subject={subject}
               complexity={complexity}

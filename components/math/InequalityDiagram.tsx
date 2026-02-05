@@ -1,39 +1,22 @@
 'use client'
 
 import { useMemo } from 'react'
-import { motion, AnimatePresence, type Variants } from 'framer-motion'
-import { COLORS, getSubjectColor } from '@/lib/diagram-theme'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useDiagramBase } from '@/hooks/useDiagramBase'
 import type { SubjectKey } from '@/lib/diagram-theme'
 import type { VisualComplexityLevel } from '@/lib/visual-complexity'
-import { prefersReducedMotion } from '@/lib/diagram-animations'
+import { DiagramStepControls } from '@/components/diagrams/DiagramStepControls'
+import {
+  createSpotlightVariants,
+  lineDrawVariants,
+  labelAppearVariants,
+} from '@/lib/diagram-animations'
 
-// ============================================================================
+// ---------------------------------------------------------------------------
 // Types
-// ============================================================================
+// ---------------------------------------------------------------------------
 
 export type InequalityOperator = '<' | '>' | '<=' | '>=' | '!='
-
-export interface InequalityStep {
-  step: number
-  type: 'setup' | 'isolate' | 'divide_flip' | 'simplify' | 'graph' | 'interval' | 'complete'
-  description: string
-  descriptionHe?: string
-  /** Left side of inequality */
-  leftSide: string
-  /** Operator */
-  operator: InequalityOperator
-  /** Right side */
-  rightSide: string
-  /** Operation performed */
-  operation?: 'add' | 'subtract' | 'multiply' | 'divide' | 'flip'
-  /** Value used in operation */
-  operationValue?: string
-  /** Whether sign flipped in this step */
-  signFlipped?: boolean
-  /** Calculation to show */
-  calculation?: string
-  highlighted?: boolean
-}
 
 export interface InequalityData {
   /** Original inequality (e.g., "2x + 3 < 7") */
@@ -46,648 +29,447 @@ export interface InequalityData {
   boundaryValue: number
   /** Final operator */
   finalOperator: InequalityOperator
-  /** Interval notation (e.g., "(-∞, 2)" or "[3, ∞)") */
+  /** Interval notation (e.g., "(-inf, 2)" or "[3, inf)") */
   intervalNotation: string
-  /** Set builder notation (e.g., "{x | x < 2}") */
-  setBuilderNotation?: string
-  /** All steps */
-  steps: InequalityStep[]
-  /** Whether this is a compound inequality */
-  isCompound?: boolean
   /** Number line bounds for visualization */
   numberLineBounds?: { min: number; max: number }
   /** Title */
   title?: string
+  /** Error highlights for corrections */
+  errors?: Array<{ message: string; messageHe?: string }>
 }
 
-interface InequalityDiagramProps {
+export interface InequalityDiagramProps {
   data: InequalityData
-  currentStep?: number
-  totalSteps?: number
-  animationDuration?: number
-  onStepComplete?: () => void
+  className?: string
+  /** ViewBox width -- SVG scales responsively to container */
   width?: number
   height?: number
-  className?: string
-  language?: 'en' | 'he'
-  showStepCounter?: boolean
-  /** Subject for color coding */
   subject?: SubjectKey
-  /** Complexity level for adaptive styling */
   complexity?: VisualComplexityLevel
+  language?: 'en' | 'he'
+  initialStep?: number
+  /** Legacy props for MathDiagramRenderer compatibility */
+  currentStep?: number
+  totalSteps?: number
+  showStepCounter?: boolean
+  animationDuration?: number
+  onStepComplete?: () => void
+  stepConfig?: unknown
 }
 
-// ============================================================================
-// Helper Components
-// ============================================================================
+// ---------------------------------------------------------------------------
+// Step label translations
+// ---------------------------------------------------------------------------
 
-interface NumberLineProps {
-  min: number
-  max: number
-  boundaryValue: number
-  operator: InequalityOperator
-  showSolution: boolean
-  width: number
-  language: 'en' | 'he'
-  subjectColors: ReturnType<typeof getSubjectColor>
+const STEP_LABELS: Record<string, { en: string; he: string }> = {
+  axis: { en: 'Draw the number line', he: '\u05E6\u05D9\u05D5\u05E8 \u05E6\u05D9\u05E8 \u05D4\u05DE\u05E1\u05E4\u05E8\u05D9\u05DD' },
+  ticks: { en: 'Add tick marks', he: '\u05D4\u05D5\u05E1\u05E4\u05EA \u05E1\u05D9\u05DE\u05E0\u05D9 \u05E1\u05D5\u05DC\u05DD' },
+  region: { en: 'Show the inequality', he: '\u05D4\u05E6\u05D2\u05EA \u05D0\u05D9-\u05E9\u05D5\u05D5\u05D9\u05D5\u05DF' },
+  boundaries: { en: 'Mark boundary points', he: '\u05E1\u05D9\u05DE\u05D5\u05DF \u05E0\u05E7\u05D5\u05D3\u05D5\u05EA \u05D2\u05D1\u05D5\u05DC' },
+  errors: { en: 'Show corrections', he: '\u05D4\u05E6\u05D2\u05EA \u05EA\u05D9\u05E7\u05D5\u05E0\u05D9\u05DD' },
 }
 
-function InequalityNumberLine({
-  min,
-  max,
-  boundaryValue,
-  operator,
-  showSolution,
-  width,
-  language: _language,
-  subjectColors,
-}: NumberLineProps) {
-  const padding = 40
-  const lineWidth = width - padding * 2
-  const reducedMotion = prefersReducedMotion()
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
-  // Calculate position on the number line
-  const valueToX = (value: number): number => {
-    const ratio = (value - min) / (max - min)
-    return padding + ratio * lineWidth
+/**
+ * InequalityDiagram -- Phase 2 rebuild (SVG-based, similar to NumberLine).
+ *
+ * Quality standard checklist:
+ * - [x] useDiagramBase hook
+ * - [x] DiagramStepControls
+ * - [x] lineDrawVariants for SVG paths
+ * - [x] labelAppearVariants for text elements
+ * - [x] Spotlight on current step
+ * - [x] Dark/light mode
+ * - [x] Responsive width
+ * - [x] data-testid attributes
+ * - [x] RTL support
+ * - [x] Subject-coded colors
+ * - [x] Adaptive line weight
+ * - [x] Progressive reveal with AnimatePresence + isVisible()
+ */
+export function InequalityDiagram({
+  data,
+  className = '',
+  width = 500,
+  height = 120,
+  subject = 'math',
+  complexity: forcedComplexity,
+  language = 'en',
+  initialStep,
+}: InequalityDiagramProps) {
+  const {
+    boundaryValue,
+    finalOperator,
+    solution,
+    intervalNotation,
+    title,
+    errors,
+  } = data
+
+  const bounds = data.numberLineBounds || {
+    min: Math.min(-5, boundaryValue - 5),
+    max: Math.max(5, boundaryValue + 5),
   }
 
-  const boundaryX = valueToX(boundaryValue)
+  const hasErrors = !!(errors && errors.length > 0)
 
-  // Determine which side to shade
-  const shadeLeft = operator === '<' || operator === '<='
-  const inclusive = operator === '<=' || operator === '>='
+  // Build step definitions
+  const stepDefs = useMemo(() => {
+    const defs: Array<{ id: string; label: string; labelHe: string }> = [
+      { id: 'axis', label: STEP_LABELS.axis.en, labelHe: STEP_LABELS.axis.he },
+      { id: 'ticks', label: STEP_LABELS.ticks.en, labelHe: STEP_LABELS.ticks.he },
+      { id: 'region', label: STEP_LABELS.region.en, labelHe: STEP_LABELS.region.he },
+      { id: 'boundaries', label: STEP_LABELS.boundaries.en, labelHe: STEP_LABELS.boundaries.he },
+    ]
+    if (hasErrors) {
+      defs.push({ id: 'errors', label: STEP_LABELS.errors.en, labelHe: STEP_LABELS.errors.he })
+    }
+    return defs
+  }, [hasErrors])
 
-  // Generate tick marks
+  // useDiagramBase -- step control, colors, lineWeight, RTL
+  const diagram = useDiagramBase({
+    totalSteps: stepDefs.length,
+    subject,
+    complexity: forcedComplexity ?? 'middle_school',
+    initialStep: initialStep ?? 0,
+    stepSpotlights: stepDefs.map((s) => s.id),
+    language,
+  })
+
+  // Convenience: step visibility helpers
+  const stepIndexOf = (id: string) => stepDefs.findIndex((s) => s.id === id)
+  const isVisible = (id: string) => {
+    const idx = stepIndexOf(id)
+    return idx !== -1 && diagram.currentStep >= idx
+  }
+  const isCurrent = (id: string) => stepIndexOf(id) === diagram.currentStep
+
+  // Subject-coded spotlight
+  const spotlight = useMemo(
+    () => createSpotlightVariants(diagram.colors.primary),
+    [diagram.colors.primary]
+  )
+
+  // ---------------------------------------------------------------------------
+  // Geometry calculations
+  // ---------------------------------------------------------------------------
+
+  const padding = { left: 40, right: 40, top: 25, bottom: 25 }
+  const lineY = height - padding.bottom - 10
+  const lineStartX = padding.left
+  const lineEndX = width - padding.right
+  const lineLength = lineEndX - lineStartX
+
+  const safeRange = Math.abs(bounds.max - bounds.min) < 1e-10 ? 1 : bounds.max - bounds.min
+  const valueToX = (value: number): number =>
+    lineStartX + ((value - bounds.min) / safeRange) * lineLength
+
+  // Tick marks
+  const range = bounds.max - bounds.min
+  const tickInterval = range <= 10 ? 1 : range <= 20 ? 2 : range <= 50 ? 5 : 10
   const ticks: number[] = []
-  const step = Math.ceil((max - min) / 10)
-  for (let v = Math.ceil(min); v <= Math.floor(max); v += step) {
+  for (let v = Math.ceil(bounds.min / tickInterval) * tickInterval; v <= bounds.max; v += tickInterval) {
     ticks.push(v)
   }
-  // Always include the boundary value
+  // Always include boundary value
   if (!ticks.includes(boundaryValue)) {
     ticks.push(boundaryValue)
     ticks.sort((a, b) => a - b)
   }
 
+  // Determine shading direction
+  const shadeLeft = finalOperator === '<' || finalOperator === '<='
+  const inclusive = finalOperator === '<=' || finalOperator === '>='
+  const boundaryX = valueToX(boundaryValue)
+
+  // Current step label
+  const currentStepDef = stepDefs[diagram.currentStep]
+  const stepLabel = language === 'he' ? currentStepDef?.labelHe : currentStepDef?.label
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
   return (
-    <svg width={width} height={80} viewBox={`0 0 ${width} 80`} className="overflow-visible">
-      <defs>
-        {/* Gradient for the shaded region */}
-        <linearGradient id="solutionGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor={COLORS.success[400]} stopOpacity={shadeLeft ? 0.3 : 0} />
-          <stop offset="100%" stopColor={COLORS.success[400]} stopOpacity={shadeLeft ? 0 : 0.3} />
-        </linearGradient>
-
-        {/* Arrow marker */}
-        <marker
-          id="arrowhead"
-          markerWidth="10"
-          markerHeight="7"
-          refX="9"
-          refY="3.5"
-          orient="auto"
-        >
-          <polygon points="0 0, 10 3.5, 0 7" fill={COLORS.gray[500]} />
-        </marker>
-      </defs>
-
-      {/* Number line */}
-      <line
-        x1={padding - 10}
-        y1={40}
-        x2={width - padding + 10}
-        y2={40}
-        stroke={COLORS.gray[400]}
-        strokeWidth={2}
-        markerEnd="url(#arrowhead)"
-      />
-      <line
-        x1={padding - 10}
-        y1={40}
-        x2={padding - 20}
-        y2={40}
-        stroke={COLORS.gray[400]}
-        strokeWidth={2}
-      />
-
-      {/* Solution shading */}
-      {showSolution && (
-        <motion.g
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: reducedMotion ? 0 : 0.5 }}
-        >
-          {/* Shaded region */}
-          <motion.rect
-            x={shadeLeft ? padding - 10 : boundaryX}
-            y={32}
-            width={shadeLeft ? boundaryX - padding + 10 : width - padding - boundaryX + 10}
-            height={16}
-            fill={COLORS.success[400]}
-            opacity={0.3}
-            rx={2}
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ duration: reducedMotion ? 0 : 0.6, delay: 0.2 }}
-            style={{ transformOrigin: shadeLeft ? 'right' : 'left' }}
-          />
-
-          {/* Arrow showing direction of solution */}
-          <motion.path
-            d={shadeLeft
-              ? `M ${boundaryX - 5} 40 L ${padding + 20} 40`
-              : `M ${boundaryX + 5} 40 L ${width - padding - 20} 40`
-            }
-            stroke={COLORS.success[500]}
-            strokeWidth={4}
-            strokeLinecap="round"
-            fill="none"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: reducedMotion ? 0 : 0.5, delay: 0.3 }}
-          />
-
-          {/* Infinity arrow */}
-          <motion.polygon
-            points={shadeLeft
-              ? `${padding + 10},36 ${padding + 10},44 ${padding},40`
-              : `${width - padding - 10},36 ${width - padding - 10},44 ${width - padding},40`
-            }
-            fill={COLORS.success[500]}
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: reducedMotion ? 0 : 0.5 }}
-          />
-        </motion.g>
+    <div
+      data-testid="inequality-diagram"
+      className={className}
+      style={{ width: '100%', maxWidth: width }}
+    >
+      {/* Title */}
+      {title && (
+        <div className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center mb-2">
+          {title}
+        </div>
       )}
 
-      {/* Tick marks and labels */}
-      {ticks.map((value) => {
-        const x = valueToX(value)
-        const isBoundary = value === boundaryValue
+      {/* Solution label */}
+      {isVisible('boundaries') && (
+        <div className="text-center mb-1 text-sm font-mono" style={{ color: diagram.colors.primary }}>
+          {solution} &nbsp; {intervalNotation}
+        </div>
+      )}
 
-        return (
-          <g key={value}>
-            <line
-              x1={x}
-              y1={isBoundary ? 32 : 36}
-              x2={x}
-              y2={isBoundary ? 48 : 44}
-              stroke={isBoundary ? subjectColors.primary : COLORS.gray[400]}
-              strokeWidth={isBoundary ? 2 : 1}
-            />
-            <text
-              x={x}
-              y={60}
-              textAnchor="middle"
-              fontSize={isBoundary ? 14 : 11}
-              fontWeight={isBoundary ? 600 : 400}
-              fontFamily="'JetBrains Mono', monospace"
-              fill={isBoundary ? subjectColors.dark : COLORS.gray[500]}
+      {/* SVG Diagram */}
+      <svg
+        width="100%"
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        className="text-gray-800 dark:text-gray-200"
+        role="img"
+        aria-label={`Inequality diagram: ${solution}`}
+      >
+        {/* Background */}
+        <rect
+          data-testid="ineq-background"
+          width={width}
+          height={height}
+          rx={4}
+          className="fill-white dark:fill-gray-900"
+        />
+
+        {/* -- Step 0: Axis ------------------------------------------------ */}
+        <AnimatePresence>
+          {isVisible('axis') && (
+            <motion.g
+              data-testid="ineq-axis"
+              initial="hidden"
+              animate={isCurrent('axis') ? 'spotlight' : 'visible'}
+              variants={spotlight}
             >
-              {value}
-            </text>
-          </g>
-        )
-      })}
+              {/* Main line */}
+              <motion.path
+                d={`M ${lineStartX} ${lineY} L ${lineEndX} ${lineY}`}
+                stroke="currentColor"
+                strokeWidth={diagram.lineWeight}
+                fill="none"
+                initial="hidden"
+                animate="visible"
+                variants={lineDrawVariants}
+              />
 
-      {/* Boundary point */}
-      {showSolution && (
-        <motion.g
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.1 }}
-        >
-          {inclusive ? (
-            // Filled circle for ≤ or ≥
-            <circle
-              cx={boundaryX}
-              cy={40}
-              r={8}
-              fill={COLORS.success[500]}
-              stroke="white"
-              strokeWidth={2}
-            />
-          ) : (
-            // Open circle for < or >
-            <>
-              <circle
-                cx={boundaryX}
-                cy={40}
-                r={8}
-                fill="white"
-                stroke={COLORS.success[500]}
-                strokeWidth={3}
+              {/* Left arrow */}
+              <motion.polygon
+                points={`${lineStartX - 8},${lineY} ${lineStartX},${lineY - 4} ${lineStartX},${lineY + 4}`}
+                fill="currentColor"
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 20 }}
               />
-              <circle
-                cx={boundaryX}
-                cy={40}
-                r={4}
-                fill="white"
+
+              {/* Right arrow */}
+              <motion.polygon
+                points={`${lineEndX + 8},${lineY} ${lineEndX},${lineY - 4} ${lineEndX},${lineY + 4}`}
+                fill="currentColor"
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.6, type: 'spring', stiffness: 300, damping: 20 }}
               />
-            </>
+            </motion.g>
           )}
-        </motion.g>
-      )}
+        </AnimatePresence>
 
-      {/* Labels */}
-      <text
-        x={padding - 15}
-        y={70}
-        textAnchor="middle"
-        fontSize={10}
-        fill={COLORS.gray[400]}
-      >
-        −∞
-      </text>
-      <text
-        x={width - padding + 15}
-        y={70}
-        textAnchor="middle"
-        fontSize={10}
-        fill={COLORS.gray[400]}
-      >
-        +∞
-      </text>
-    </svg>
-  )
-}
-
-// ============================================================================
-// Component
-// ============================================================================
-
-export function InequalityDiagram({
-  data,
-  currentStep = 0,
-  totalSteps: totalStepsProp,
-  animationDuration = 400,
-  width = 440,
-  className = '',
-  language = 'en',
-  showStepCounter = true,
-  subject = 'math',
-  complexity = 'middle_school',
-}: InequalityDiagramProps) {
-  const { originalInequality, variable: _variable, solution, boundaryValue, finalOperator, intervalNotation, setBuilderNotation, steps, numberLineBounds, title } = data
-  const reducedMotion = prefersReducedMotion()
-  const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
-  void animationDuration // reserved for future animation customization
-
-  const actualTotalSteps = totalStepsProp ?? steps.length
-  const progressPercent = ((currentStep + 1) / actualTotalSteps) * 100
-  const isComplete = currentStep >= steps.length - 1
-
-  const visibleSteps = useMemo(() => steps.filter((s) => s.step <= currentStep), [steps, currentStep])
-  const currentStepInfo = steps[currentStep] || null
-
-  // Determine number line bounds
-  const bounds = numberLineBounds || {
-    min: Math.min(-5, boundaryValue - 5),
-    max: Math.max(5, boundaryValue + 5),
-  }
-
-  // Show number line after certain step
-  const showNumberLine = currentStep >= steps.findIndex(s => s.type === 'graph') || isComplete
-
-  // Animation variants
-  const stepVariants: Variants = {
-    hidden: { opacity: 0, y: -10, scale: 0.95 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: { type: 'spring', stiffness: 300, damping: 25 },
-    },
-    exit: { opacity: 0, y: 10 },
-  }
-
-  // Get operator display
-  const getOperatorDisplay = (op: InequalityOperator): string => {
-    switch (op) {
-      case '<': return '<'
-      case '>': return '>'
-      case '<=': return '≤'
-      case '>=': return '≥'
-      case '!=': return '≠'
-    }
-  }
-
-  // Get step icon
-  const getStepIcon = (type: InequalityStep['type']): string => {
-    const icons: Record<InequalityStep['type'], string> = {
-      setup: '📝',
-      isolate: '🎯',
-      divide_flip: '🔄',
-      simplify: '✨',
-      graph: '📊',
-      interval: '📐',
-      complete: '✅',
-    }
-    return icons[type] || '📐'
-  }
-
-  // Get step label
-  const getStepLabel = (type: InequalityStep['type']): { en: string; he: string } => {
-    const labels: Record<InequalityStep['type'], { en: string; he: string }> = {
-      setup: { en: 'Setup', he: 'התחלה' },
-      isolate: { en: 'Isolate variable', he: 'בידוד משתנה' },
-      divide_flip: { en: 'Divide (flip sign!)', he: 'חלוקה (הפיכת סימן!)' },
-      simplify: { en: 'Simplify', he: 'פישוט' },
-      graph: { en: 'Graph solution', he: 'גרף הפתרון' },
-      interval: { en: 'Interval notation', he: 'סימון קטע' },
-      complete: { en: 'Complete!', he: 'הושלם!' },
-    }
-    return labels[type] || { en: 'Step', he: 'שלב' }
-  }
-
-  return (
-    <div className={`inequality-diagram ${className}`} style={{ width }}>
-      {/* Header */}
-      <motion.div
-        className="mb-4"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: reducedMotion ? 0 : 0.3 }}
-      >
-        {title && (
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 text-center mb-2">
-            {title}
-          </h3>
-        )}
-        <div className="text-center text-sm text-orange-600 dark:text-orange-400 font-medium mb-3">
-          {language === 'he' ? 'פתרון אי-שוויון' : 'Solving Inequalities'}
-        </div>
-
-        {/* Progress bar */}
-        <div className="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-          <motion.div
-            className="absolute inset-y-0 left-0 rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: `${progressPercent}%` }}
-            transition={{ duration: reducedMotion ? 0 : 0.5 }}
-            style={{
-              background: isComplete
-                ? 'linear-gradient(90deg, #22c55e, #16a34a)'
-                : `linear-gradient(90deg, ${subjectColors.dark}, ${subjectColors.primary})`,
-            }}
-          />
-        </div>
-      </motion.div>
-
-      {/* Original Inequality */}
-      <motion.div
-        className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/30 dark:to-amber-900/30 rounded-xl p-4 mb-4 text-center"
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-      >
-        <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">
-          {language === 'he' ? 'פתור:' : 'Solve:'}
-        </div>
-        <div className="text-2xl font-mono font-bold text-orange-700 dark:text-orange-300">
-          {originalInequality}
-        </div>
-      </motion.div>
-
-      {/* Important Note about flipping */}
-      {currentStepInfo?.signFlipped && (
-        <motion.div
-          className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-        >
-          <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
-            <span className="text-xl">⚠️</span>
-            <p className="text-sm font-medium">
-              {language === 'he'
-                ? 'כאשר מכפילים או מחלקים במספר שלילי, הופכים את הסימן!'
-                : 'When multiplying or dividing by a negative number, flip the inequality sign!'}
-            </p>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Steps Card */}
-      <motion.div
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 p-4"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <div className="space-y-3">
-          <AnimatePresence mode="sync">
-            {visibleSteps.map((step, index) => {
-              const isCurrentStep = step.step === currentStep
-              const stepLabel = getStepLabel(step.type)
-
-              return (
-                <motion.div
-                  key={`step-${index}`}
-                  variants={stepVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  layout
-                  className={`
-                    relative p-4 rounded-xl transition-all duration-300
-                    ${isCurrentStep
-                      ? 'bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/30 dark:to-amber-900/30 border-2 border-orange-300 dark:border-orange-700 shadow-md'
-                      : 'bg-gray-50 dark:bg-gray-800/50'
-                    }
-                    ${step.signFlipped ? 'ring-2 ring-red-400 ring-offset-2' : ''}
-                  `}
-                >
-                  {/* Step badge */}
-                  <motion.div
-                    className="absolute -left-2 -top-2 w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-md"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 400, delay: reducedMotion ? 0 : index * 0.05 }}
-                    style={{
-                      backgroundColor: step.signFlipped ? '#ef4444' : isCurrentStep ? '#f97316' : COLORS.gray[200],
-                      color: isCurrentStep || step.signFlipped ? 'white' : COLORS.gray[500],
-                    }}
-                  >
-                    {getStepIcon(step.type)}
-                  </motion.div>
-
-                  {/* Step label */}
-                  {isCurrentStep && (
-                    <motion.div
-                      className="text-xs font-semibold mb-2 ml-4"
-                      style={{ color: step.signFlipped ? '#dc2626' : '#ea580c' }}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                    >
-                      {language === 'he' ? stepLabel.he : stepLabel.en}
-                      {step.signFlipped && (
-                        <span className="ml-2 px-2 py-0.5 bg-red-100 dark:bg-red-900/30 rounded text-red-600 dark:text-red-400">
-                          {language === 'he' ? 'סימן התהפך!' : 'Sign flipped!'}
-                        </span>
-                      )}
-                    </motion.div>
-                  )}
-
-                  {/* Inequality display */}
-                  <motion.div
-                    className="flex items-center justify-center gap-3 font-mono text-lg mt-2"
-                    layout
-                  >
-                    <span
-                      className={`px-3 py-1.5 rounded-lg ${
-                        isCurrentStep
-                          ? 'font-bold text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-800/50'
-                          : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      {step.leftSide}
-                    </span>
-                    <motion.span
-                      className={`text-xl font-bold ${
-                        step.signFlipped ? 'text-red-500' : 'text-gray-500'
-                      }`}
-                      animate={step.signFlipped && isCurrentStep ? { scale: [1, 1.3, 1], rotate: [0, 180, 360] } : {}}
-                      transition={{ duration: 0.5 }}
-                    >
-                      {getOperatorDisplay(step.operator)}
-                    </motion.span>
-                    <span
-                      className={`px-3 py-1.5 rounded-lg ${
-                        isCurrentStep
-                          ? 'font-bold text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-800/50'
-                          : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      {step.rightSide}
-                    </span>
-                  </motion.div>
-
-                  {/* Operation indicator */}
-                  {step.calculation && isCurrentStep && (
-                    <motion.div
-                      className="flex justify-center mt-3"
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                    >
-                      <span className="px-3 py-1.5 rounded-lg text-sm font-mono bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
-                        {step.calculation}
-                      </span>
-                    </motion.div>
-                  )}
-
-                  {/* Description */}
-                  {isCurrentStep && (
-                    <motion.p
-                      className="text-center text-sm text-gray-600 dark:text-gray-400 mt-3"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.3 }}
-                    >
-                      {language === 'he'
-                        ? step.descriptionHe || step.description
-                        : step.description}
-                    </motion.p>
-                  )}
-                </motion.div>
-              )
-            })}
-          </AnimatePresence>
-        </div>
-      </motion.div>
-
-      {/* Number Line Visualization */}
-      {showNumberLine && (
-        <motion.div
-          className="mt-4 bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700 p-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <div className="text-sm font-medium text-gray-600 dark:text-gray-400 text-center mb-2">
-            {language === 'he' ? 'גרף על ציר המספרים:' : 'Graph on Number Line:'}
-          </div>
-          <InequalityNumberLine
-            min={bounds.min}
-            max={bounds.max}
-            boundaryValue={boundaryValue}
-            operator={finalOperator}
-            showSolution={true}
-            width={width - 32}
-            language={language}
-            subjectColors={subjectColors}
-          />
-        </motion.div>
-      )}
-
-      {/* Final Solution */}
-      <AnimatePresence>
-        {isComplete && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-            className="mt-4 p-5 rounded-xl text-center"
-            style={{
-              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.1))',
-              border: '2px solid rgba(34, 197, 94, 0.3)',
-            }}
-          >
-            <motion.div
-              className="text-2xl mb-2"
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 0.5 }}
+        {/* -- Step 1: Tick marks ------------------------------------------ */}
+        <AnimatePresence>
+          {isVisible('ticks') && (
+            <motion.g
+              data-testid="ineq-ticks"
+              initial="hidden"
+              animate={isCurrent('ticks') ? 'spotlight' : 'visible'}
+              variants={spotlight}
             >
-              🎉
-            </motion.div>
-            <p className="text-sm text-green-600 dark:text-green-400 mb-2 font-medium">
-              {language === 'he' ? 'פתרון:' : 'Solution:'}
-            </p>
-            <motion.div
-              className="text-2xl font-bold font-mono mb-3"
-              style={{ color: COLORS.success[500] }}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              {solution}
-            </motion.div>
+              {ticks.map((tick, index) => {
+                const x = valueToX(tick)
+                const isBoundary = tick === boundaryValue
+                return (
+                  <motion.g
+                    key={`tick-${tick}`}
+                    initial="hidden"
+                    animate="visible"
+                    variants={labelAppearVariants}
+                    transition={{ delay: index * 0.03 }}
+                  >
+                    <line
+                      x1={x}
+                      y1={lineY - (isBoundary ? 7 : 5)}
+                      x2={x}
+                      y2={lineY + (isBoundary ? 7 : 5)}
+                      stroke="currentColor"
+                      strokeWidth={isBoundary ? 2 : 1}
+                    />
+                    <text
+                      x={x}
+                      y={lineY + 20}
+                      textAnchor="middle"
+                      className="fill-current"
+                      style={{
+                        fontSize: isBoundary ? 13 : 11,
+                        fontWeight: isBoundary ? 600 : 400,
+                      }}
+                    >
+                      {tick}
+                    </text>
+                  </motion.g>
+                )
+              })}
+            </motion.g>
+          )}
+        </AnimatePresence>
 
-            <div className="flex justify-center gap-6 text-sm">
-              <div className="text-center">
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                  {language === 'he' ? 'סימון קטע:' : 'Interval:'}
-                </div>
-                <div className="font-mono font-semibold text-violet-600 dark:text-violet-400">
-                  {intervalNotation}
-                </div>
-              </div>
-              {setBuilderNotation && (
-                <div className="text-center">
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    {language === 'he' ? 'סימון קבוצה:' : 'Set Builder:'}
-                  </div>
-                  <div className="font-mono font-semibold text-purple-600 dark:text-purple-400">
-                    {setBuilderNotation}
-                  </div>
-                </div>
+        {/* -- Step 2: Inequality / solution region ------------------------ */}
+        <AnimatePresence>
+          {isVisible('region') && (
+            <motion.g
+              data-testid="ineq-region"
+              initial="hidden"
+              animate={isCurrent('region') ? 'spotlight' : 'visible'}
+              variants={spotlight}
+            >
+              {/* Shaded region */}
+              <rect
+                x={shadeLeft ? lineStartX : boundaryX}
+                y={lineY - 8}
+                width={shadeLeft ? boundaryX - lineStartX : lineEndX - boundaryX}
+                height={16}
+                fill={diagram.colors.primary}
+                opacity={0.25}
+              />
+
+              {/* Solution line */}
+              <motion.path
+                d={
+                  shadeLeft
+                    ? `M ${boundaryX} ${lineY} L ${lineStartX} ${lineY}`
+                    : `M ${boundaryX} ${lineY} L ${lineEndX} ${lineY}`
+                }
+                stroke={diagram.colors.primary}
+                strokeWidth={4}
+                fill="none"
+                initial="hidden"
+                animate="visible"
+                variants={lineDrawVariants}
+              />
+
+              {/* Direction arrow */}
+              {shadeLeft ? (
+                <motion.polygon
+                  points={`${lineStartX},${lineY} ${lineStartX + 10},${lineY - 5} ${lineStartX + 10},${lineY + 5}`}
+                  fill={diagram.colors.primary}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                />
+              ) : (
+                <motion.polygon
+                  points={`${lineEndX},${lineY} ${lineEndX - 10},${lineY - 5} ${lineEndX - 10},${lineY + 5}`}
+                  fill={diagram.colors.primary}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                />
               )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.g>
+          )}
+        </AnimatePresence>
 
-      {/* Step Counter */}
-      {showStepCounter && (
-        <div className="mt-4 text-center">
-          <span className="text-xs text-gray-400 dark:text-gray-500">
-            {language === 'he'
-              ? `שלב ${currentStep + 1} מתוך ${actualTotalSteps}`
-              : `Step ${currentStep + 1} of ${actualTotalSteps}`}
-          </span>
-        </div>
+        {/* -- Step 3: Boundary points ------------------------------------ */}
+        <AnimatePresence>
+          {isVisible('boundaries') && (
+            <motion.g
+              data-testid="ineq-boundaries"
+              initial="hidden"
+              animate={isCurrent('boundaries') ? 'spotlight' : 'visible'}
+              variants={spotlight}
+            >
+              <motion.circle
+                cx={boundaryX}
+                cy={lineY}
+                r={7}
+                fill={inclusive ? diagram.colors.primary : 'white'}
+                stroke={diagram.colors.primary}
+                strokeWidth={diagram.lineWeight}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              />
+              {/* Label above boundary */}
+              <motion.text
+                x={boundaryX}
+                y={lineY - 16}
+                textAnchor="middle"
+                className="font-medium"
+                style={{ fontSize: 12, fill: diagram.colors.primary }}
+                initial="hidden"
+                animate="visible"
+                variants={labelAppearVariants}
+              >
+                {boundaryValue}
+              </motion.text>
+            </motion.g>
+          )}
+        </AnimatePresence>
+
+        {/* -- Step 4: Error highlights ----------------------------------- */}
+        <AnimatePresence>
+          {hasErrors && isVisible('errors') && (
+            <motion.g
+              data-testid="ineq-errors"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4 }}
+            >
+              {/* Red X at boundary */}
+              <line
+                x1={boundaryX - 6}
+                y1={lineY - 6}
+                x2={boundaryX + 6}
+                y2={lineY + 6}
+                stroke="#EF4444"
+                strokeWidth={3}
+                strokeLinecap="round"
+              />
+              <line
+                x1={boundaryX + 6}
+                y1={lineY - 6}
+                x2={boundaryX - 6}
+                y2={lineY + 6}
+                stroke="#EF4444"
+                strokeWidth={3}
+                strokeLinecap="round"
+              />
+              {errors!.map((err, i) => (
+                <text
+                  key={`err-${i}`}
+                  x={width / 2}
+                  y={15 + i * 14}
+                  textAnchor="middle"
+                  style={{ fill: '#EF4444', fontSize: 11 }}
+                >
+                  {language === 'he' ? err.messageHe || err.message : err.message}
+                </text>
+              ))}
+            </motion.g>
+          )}
+        </AnimatePresence>
+      </svg>
+
+      {/* Step Controls */}
+      {stepDefs.length > 1 && (
+        <DiagramStepControls
+          currentStep={diagram.currentStep}
+          totalSteps={diagram.totalSteps}
+          onNext={diagram.next}
+          onPrev={diagram.prev}
+          stepLabel={stepLabel}
+          language={language}
+          subjectColor={diagram.colors.primary}
+          className="mt-2"
+        />
       )}
     </div>
   )
