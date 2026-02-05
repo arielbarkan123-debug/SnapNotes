@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { ErrorCodes, createErrorResponse } from '@/lib/api/errors'
+import { getDiagramSchemaPrompt } from '@/lib/diagram-schemas'
 
 export const maxDuration = 60
 
@@ -57,17 +58,7 @@ ${guideContent.slice(0, 15000)}
 - "Explain More": Explain the referenced section in simpler terms with an analogy
 - "Draw Diagram": Generate a visual diagram. You MUST use one of these exact schemas:
 
-### Diagram Schema: coordinate_plane
-{"type":"coordinate_plane","visibleStep":0,"totalSteps":3,"data":{"xMin":-5,"xMax":5,"yMin":-5,"yMax":10,"showGrid":true,"title":"y = x² - 2x - 3","curves":[{"id":"f","expression":"x^2 - 2*x - 3","color":"#6366f1"}],"points":[{"id":"v","x":1,"y":-4,"label":"Vertex (1,-4)","color":"#ef4444"}],"lines":[{"id":"sym","points":[{"x":1,"y":-100},{"x":1,"y":100}],"color":"#9ca3af","dashed":true,"type":"line"}]}}
-Expressions support: x^2, sin(x), cos(x), sqrt(x), abs(x), exp(x), log(x).
-
-### Diagram Schema: number_line
-{"type":"number_line","visibleStep":0,"totalSteps":1,"data":{"min":-5,"max":10,"title":"-2 ≤ x < 5","points":[{"value":-2,"label":"-2","style":"filled","color":"#3b82f6"},{"value":5,"label":"5","style":"hollow","color":"#3b82f6"}],"intervals":[{"start":-2,"end":5,"startInclusive":true,"endInclusive":false,"color":"#3b82f6"}]}}
-style: "filled" for ≤/≥, "hollow" for </>.
-
-### Diagram Schema: fbd (Free Body Diagram)
-{"type":"fbd","visibleStep":0,"totalSteps":3,"data":{"object":{"type":"block","position":{"x":150,"y":150},"mass":5,"label":"m","color":"#e0e7ff"},"forces":[{"name":"weight","type":"weight","magnitude":50,"angle":-90,"symbol":"W","color":"#22c55e"},{"name":"normal","type":"normal","magnitude":50,"angle":90,"symbol":"N","color":"#3b82f6"},{"name":"friction","type":"friction","magnitude":15,"angle":180,"symbol":"f","subscript":"k","color":"#ef4444"}],"title":"Forces on block","showForceMagnitudes":true},"stepConfig":[{"step":0,"visibleForces":[],"stepLabel":"Object"},{"step":1,"visibleForces":["weight"],"highlightForces":["weight"],"stepLabel":"Weight = 50N"},{"step":2,"visibleForces":["weight","normal","friction"],"stepLabel":"All forces"}]}
-Object types: block, sphere, wedge, particle, car, person. Force angles: 0=right, 90=up, -90=down, 180=left.
+${getDiagramSchemaPrompt()}
 
 ## Response Format
 Return ONLY valid JSON:
