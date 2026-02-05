@@ -14,8 +14,21 @@ jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(),
 }))
 
+// Mock Anthropic SDK - the route creates the client at module scope.
+// We use a mutable function that beforeEach can replace.
+let mockExamsMessagesCreate: jest.Mock = jest.fn().mockResolvedValue({
+  content: [{ type: 'text', text: '{"questions":[]}' }],
+})
+
 jest.mock('@anthropic-ai/sdk', () => ({
-  default: jest.fn(),
+  __esModule: true,
+  default: jest.fn(() => ({
+    messages: {
+      get create() {
+        return mockExamsMessagesCreate
+      },
+    },
+  })),
 }))
 
 jest.mock('@/lib/curriculum', () => ({
@@ -101,83 +114,84 @@ describe('Exams API - POST (Generate Exam)', () => {
       }),
     }
 
-    // Create mock Anthropic client
+    // Replace the shared mock to capture prompts
+    // Since the route creates the client at module scope, we can't use mockImplementation
+    mockExamsMessagesCreate = jest.fn().mockImplementation(async (params: any) => {
+      // Capture the prompt for assertions
+      capturedPrompt = params.messages[0]?.content || ''
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              questions: [
+                {
+                  lesson_index: 0,
+                  lesson_title: 'Introduction to Cells',
+                  question_type: 'multiple_choice',
+                  question_text: 'What is the function of mitochondria?',
+                  options: ['A) Energy production', 'B) Protein synthesis', 'C) Cell division', 'D) Waste removal'],
+                  correct_answer: 'A) Energy production',
+                  explanation: 'Mitochondria produce ATP.',
+                },
+                {
+                  lesson_index: 0,
+                  lesson_title: 'Introduction to Cells',
+                  question_type: 'true_false',
+                  question_text: 'DNA is found in the nucleus of eukaryotic cells.',
+                  options: ['True', 'False'],
+                  correct_answer: 'True',
+                  explanation: 'The nucleus contains genetic material.',
+                },
+                {
+                  lesson_index: 1,
+                  lesson_title: 'Cell Organelles',
+                  question_type: 'fill_blank',
+                  question_text: 'The _____ is responsible for protein synthesis.',
+                  options: [],
+                  correct_answer: 'ribosome',
+                  acceptable_answers: ['ribosomes', 'the ribosome'],
+                  explanation: 'Ribosomes synthesize proteins.',
+                },
+                {
+                  lesson_index: 1,
+                  lesson_title: 'Cell Organelles',
+                  question_type: 'short_answer',
+                  question_text: 'What organelle is called the powerhouse of the cell?',
+                  options: [],
+                  correct_answer: 'mitochondria',
+                  acceptable_answers: ['mitochondrion', 'the mitochondria'],
+                  explanation: 'Mitochondria produce ATP energy.',
+                },
+                {
+                  lesson_index: 2,
+                  lesson_title: 'Cell Membrane',
+                  question_type: 'multiple_choice',
+                  question_text: 'What is the main component of the cell membrane?',
+                  options: ['A) Proteins', 'B) Phospholipids', 'C) Carbohydrates', 'D) Nucleic acids'],
+                  correct_answer: 'B) Phospholipids',
+                  explanation: 'Phospholipids form the bilayer.',
+                },
+              ],
+            }),
+          },
+        ],
+        model: 'claude-sonnet-4-5-20250929',
+        usage: { input_tokens: 500, output_tokens: 1000 },
+      }
+    })
+
+    // Keep mockAnthropic for backwards compatibility
     mockAnthropic = {
       messages: {
-        create: jest.fn().mockImplementation(async (params: any) => {
-          // Capture the prompt for assertions
-          capturedPrompt = params.messages[0]?.content || ''
-
-          return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify({
-                  questions: [
-                    {
-                      lesson_index: 0,
-                      lesson_title: 'Introduction to Cells',
-                      question_type: 'multiple_choice',
-                      question_text: 'What is the function of mitochondria?',
-                      options: ['A) Energy production', 'B) Protein synthesis', 'C) Cell division', 'D) Waste removal'],
-                      correct_answer: 'A) Energy production',
-                      explanation: 'Mitochondria produce ATP.',
-                    },
-                    {
-                      lesson_index: 0,
-                      lesson_title: 'Introduction to Cells',
-                      question_type: 'true_false',
-                      question_text: 'DNA is found in the nucleus of eukaryotic cells.',
-                      options: ['True', 'False'],
-                      correct_answer: 'True',
-                      explanation: 'The nucleus contains genetic material.',
-                    },
-                    {
-                      lesson_index: 1,
-                      lesson_title: 'Cell Organelles',
-                      question_type: 'fill_blank',
-                      question_text: 'The _____ is responsible for protein synthesis.',
-                      options: [],
-                      correct_answer: 'ribosome',
-                      acceptable_answers: ['ribosomes', 'the ribosome'],
-                      explanation: 'Ribosomes synthesize proteins.',
-                    },
-                    {
-                      lesson_index: 1,
-                      lesson_title: 'Cell Organelles',
-                      question_type: 'short_answer',
-                      question_text: 'What organelle is called the powerhouse of the cell?',
-                      options: [],
-                      correct_answer: 'mitochondria',
-                      acceptable_answers: ['mitochondrion', 'the mitochondria'],
-                      explanation: 'Mitochondria produce ATP energy.',
-                    },
-                    {
-                      lesson_index: 2,
-                      lesson_title: 'Cell Membrane',
-                      question_type: 'multiple_choice',
-                      question_text: 'What is the main component of the cell membrane?',
-                      options: ['A) Proteins', 'B) Phospholipids', 'C) Carbohydrates', 'D) Nucleic acids'],
-                      correct_answer: 'B) Phospholipids',
-                      explanation: 'Phospholipids form the bilayer.',
-                    },
-                  ],
-                }),
-              },
-            ],
-            model: 'claude-sonnet-4-5-20250929',
-            usage: { input_tokens: 500, output_tokens: 1000 },
-          }
-        }),
+        create: mockExamsMessagesCreate,
       },
     }
 
     // Set up mocks
     const { createClient } = require('@/lib/supabase/server')
     createClient.mockResolvedValue(mockSupabase)
-
-    const Anthropic = require('@anthropic-ai/sdk').default
-    Anthropic.mockImplementation(() => mockAnthropic)
   })
 
   describe('User Profile Integration', () => {
@@ -532,7 +546,8 @@ describe('Exams API - POST (Generate Exam)', () => {
       const data = await response.json()
 
       expect(response.status).toBe(401)
-      expect(data.error).toContain('authenticated')
+      // Error response shape: { success: false, error: { code, message, retryable } }
+      expect(data.error.message).toContain('log in')
     })
   })
 
@@ -547,7 +562,7 @@ describe('Exams API - POST (Generate Exam)', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('required')
+      expect(data.error.message).toContain('required')
     })
 
     it('returns 400 for invalid question count', async () => {
@@ -564,7 +579,7 @@ describe('Exams API - POST (Generate Exam)', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('5-50')
+      expect(data.error.message).toContain('5-50')
     })
   })
 
@@ -586,7 +601,7 @@ describe('Exams API - POST (Generate Exam)', () => {
       const data = await response.json()
 
       expect(response.status).toBe(429)
-      expect(data.error).toContain('Too many requests')
+      expect(data.error.message).toContain('Too many requests')
     })
   })
 })
@@ -654,6 +669,7 @@ describe('Exams API - GET (List Exams)', () => {
     const data = await response.json()
 
     expect(response.status).toBe(401)
-    expect(data.error).toContain('authenticated')
+    // Actual message is "Please log in to continue."
+    expect(data.error.message).toContain('log in')
   })
 })
