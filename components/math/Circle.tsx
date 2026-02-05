@@ -188,7 +188,8 @@ export function Circle({
                 y={start.y}
                 textAnchor="end"
                 dominantBaseline="middle"
-                className="fill-purple-600 dark:fill-purple-400 text-sm"
+                style={{ fill: '#8B5CF6' }}
+                className="text-sm"
               >
                 {chord.start.label}
               </text>
@@ -199,7 +200,8 @@ export function Circle({
                 y={end.y}
                 textAnchor="start"
                 dominantBaseline="middle"
-                className="fill-purple-600 dark:fill-purple-400 text-sm"
+                style={{ fill: '#8B5CF6' }}
+                className="text-sm"
               >
                 {chord.end.label}
               </text>
@@ -255,7 +257,8 @@ export function Circle({
               <text
                 x={point.x + 10}
                 y={point.y - 10}
-                className="fill-amber-600 dark:fill-amber-400 text-sm"
+                style={{ fill: '#F59E0B' }}
+                className="text-sm"
               >
                 {tangentPoint.label}
               </text>
@@ -303,7 +306,8 @@ export function Circle({
               y={center.y - 35 * Math.sin(((centralAngle.start + centralAngle.end) / 2 * Math.PI) / 180)}
               textAnchor="middle"
               dominantBaseline="middle"
-              className="fill-red-600 dark:fill-red-400 text-xs"
+              style={{ fill: '#EF4444' }}
+              className="text-xs"
             >
               {centralAngle.label}
             </text>
@@ -353,7 +357,8 @@ export function Circle({
               <text
                 x={vertex.x - 15}
                 y={vertex.y + 15}
-                className="fill-green-600 dark:fill-green-400 text-xs"
+                style={{ fill: '#10B981' }}
+                className="text-xs"
               >
                 {inscribedAngle.label}
               </text>

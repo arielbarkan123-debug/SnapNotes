@@ -359,7 +359,8 @@ export function UnitCircle({
                 x={point.x}
                 y={center.y + (point.y < center.y ? 15 : -8)}
                 textAnchor="middle"
-                className="fill-green-600 dark:fill-green-400 text-xs font-medium"
+                style={{ fill: '#10B981' }}
+                className="text-xs font-medium"
               >
                 sin
               </text>
@@ -379,7 +380,8 @@ export function UnitCircle({
                 y={point.y}
                 textAnchor={point.x < center.x ? 'end' : 'start'}
                 dominantBaseline="middle"
-                className="fill-amber-600 dark:fill-amber-400 text-xs font-medium"
+                style={{ fill: '#F59E0B' }}
+                className="text-xs font-medium"
               >
                 cos
               </text>
