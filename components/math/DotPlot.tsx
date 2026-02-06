@@ -202,7 +202,7 @@ export function DotPlot({
                       x={x}
                       y={lineY + 18}
                       textAnchor="middle"
-                      fill="#374151"
+                      className="fill-gray-700 dark:fill-gray-300"
                       fontSize={11}
                       initial="hidden"
                       animate="visible"

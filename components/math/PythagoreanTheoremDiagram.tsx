@@ -206,7 +206,7 @@ export function PythagoreanTheoremDiagram({
                 x={triAx - 14}
                 y={(triAy + triCy) / 2 + 4}
                 textAnchor="end"
-                fill="#374151"
+                className="fill-gray-700 dark:fill-gray-300"
                 fontSize={14}
                 fontWeight={700}
                 variants={labelAppearVariants}
@@ -218,7 +218,7 @@ export function PythagoreanTheoremDiagram({
                 x={(triAx + triBx) / 2}
                 y={triAy + 20}
                 textAnchor="middle"
-                fill="#374151"
+                className="fill-gray-700 dark:fill-gray-300"
                 fontSize={14}
                 fontWeight={700}
                 variants={labelAppearVariants}
@@ -230,7 +230,7 @@ export function PythagoreanTheoremDiagram({
                 x={(triCx + triBx) / 2 + 10}
                 y={(triCy + triBy) / 2 - 8}
                 textAnchor="start"
-                fill="#374151"
+                className="fill-gray-700 dark:fill-gray-300"
                 fontSize={14}
                 fontWeight={700}
                 variants={labelAppearVariants}

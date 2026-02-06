@@ -258,12 +258,12 @@ export function ScatterPlotTrendLine({
 
               {/* Axis labels */}
               {xLabel && (
-                <text x={PADDING + plotW / 2} y={height - 6} textAnchor="middle" fontSize={12} fill="#374151" fontWeight={600}>
+                <text x={PADDING + plotW / 2} y={height - 6} textAnchor="middle" fontSize={12} className="fill-gray-700 dark:fill-gray-300" fontWeight={600}>
                   {xLabel}
                 </text>
               )}
               {yLabel && (
-                <text x={12} y={PADDING + plotH / 2} textAnchor="middle" fontSize={12} fill="#374151" fontWeight={600} transform={`rotate(-90, 12, ${PADDING + plotH / 2})`}>
+                <text x={12} y={PADDING + plotH / 2} textAnchor="middle" fontSize={12} className="fill-gray-700 dark:fill-gray-300" fontWeight={600} transform={`rotate(-90, 12, ${PADDING + plotH / 2})`}>
                   {yLabel}
                 </text>
               )}

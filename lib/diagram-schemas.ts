@@ -1623,6 +1623,49 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     }),
   },
 
+  sequence_diagram: {
+    type: 'sequence_diagram',
+    subject: 'math',
+    gradeRange: '9-12',
+    description: 'Arithmetic or geometric sequence with terms, common difference/ratio, pattern arrows, and optional explicit formula',
+    jsonExample: JSON.stringify({
+      type: 'sequence_diagram',
+      visibleStep: 0,
+      totalSteps: 4,
+      data: {
+        type: 'arithmetic',
+        terms: [3, 7, 11, 15, 19],
+        firstTerm: 3,
+        commonDifferenceOrRatio: 4,
+        formula: 'a\u2099 = 3 + (n-1)\u00b74',
+        showFormula: true,
+        showDifferences: true,
+        title: 'Arithmetic sequence: d = 4',
+      },
+    }),
+  },
+
+  sampling_distribution: {
+    type: 'sampling_distribution',
+    subject: 'math',
+    gradeRange: '11-12',
+    description: 'Sampling distribution visualization showing population curve, sampling process, histogram of sample means, and optional CLT normal overlay',
+    jsonExample: JSON.stringify({
+      type: 'sampling_distribution',
+      visibleStep: 0,
+      totalSteps: 4,
+      data: {
+        populationMean: 100,
+        populationStd: 15,
+        sampleSize: 30,
+        numSamples: 500,
+        sampleMeans: [99.2, 101.5, 98.7, 100.3, 102.1],
+        showCLT: true,
+        title: 'Sampling Distribution of x\u0304 (n=30)',
+      },
+    }),
+  },
+
   // ---- GEOMETRY: New Schemas ----
 
   angle_types: {

@@ -63,3 +63,83 @@ The diagram system (100+ components) was built in Feb 2026. Below are known conc
 14. **Print support.** If students print homework results, SVG diagrams need print-friendly styles (no animations, high contrast).
 15. **Diagram caching.** Each diagram re-renders on every chat message update. For complex diagrams (100+ SVG elements), consider memoization.
 16. **Teacher/parent view.** Diagrams show student-facing labels. Consider a "teacher mode" that shows the underlying math/data alongside the visual.
+
+## Visual Learning — Plan Execution Gaps (Fix Before Post-Plan Concerns)
+
+These are deviations from the original plan that were discovered in audit. Fix ALL of these FIRST, before tackling the post-plan concerns above.
+
+### GAP 1: SVG Primitives Library Never Built (CRITICAL)
+
+Plan Task 1 specified building `components/math/shared/` with 13 reusable SVG primitives:
+- `SVGGrid.tsx` — configurable grid background
+- `SVGAxes.tsx` — X/Y axes with tick marks and labels
+- `SVGPoint.tsx` — animated point with label
+- `SVGLine.tsx` — line/segment/ray with animation
+- `SVGCurve.tsx` — function curve rendering
+- `SVGBar.tsx` — animated bar for bar graphs/histograms
+- `SVGFractionBar.tsx` — colored fraction strip
+- `SVGFractionCircle.tsx` — colored pie sector
+- `SVGArrow.tsx` — arrow head with direction
+- `SVGLabel.tsx` — positioned text label with background
+- `SVGShading.tsx` — region fill/shading with animation
+- `SVGStepReveal.tsx` — wrapper for step-synced fade-in/draw animations
+- `index.ts` — barrel export
+
+**Impact:** All 107 components duplicate grid, axes, label, and point rendering code instead of sharing primitives. This makes bugs harder to fix globally and increases bundle size.
+
+**Fix:** Extract common SVG patterns from existing working components into the shared primitives library. Then refactor the most-used components (CoordinatePlane, NumberLine, BoxPlot, Histogram) to use them.
+
+### GAP 2: No Component Tests Created (CRITICAL)
+
+Plan specified TDD approach for each batch. Zero test files exist for any of the 80+ new components. Only infrastructure tests (`diagram-schemas.test.ts`, `diagram-theme.test.ts`, `diagram-animations.test.ts`) and a few pre-existing component tests exist.
+
+**Fix:** Write at minimum render tests for 15 representative components across grade bands:
+- Elementary: TenFrame, CountingObjectsArray, BarModel, FractionCircle, Base10Blocks
+- Middle: BoxPlot, Histogram, VennDiagram, ProbabilityTree, SlopeTriangle
+- High School: QuadraticGraph, ConicSections, LimitVisualization, ParametricCurve, BinomialDistribution
+
+### GAP 3: Grade-Level Directory Structure Not Followed
+
+Plan specified:
+```
+components/math/elementary/   (Grade 1-5)
+components/math/middle/       (Grade 6-8)
+components/math/highschool/   (Grade 9-12)
+```
+
+**Actual:** All 80 components are flat in `components/math/`. This is a deviation from the plan but reorganizing now would require updating 100+ import paths. **Decision: Accept this deviation. Document it as intentional simplification.** The flat structure works with the renderer switch pattern.
+
+### GAP 4: Hardcoded Colors in Several Components (Dark Mode Bug)
+
+Multiple components use hardcoded `fill="#374151"` for text instead of theme-aware colors. Known affected files:
+- `components/math/VennDiagram.tsx` — gray text won't show on dark backgrounds
+- `components/math/ProbabilityTree.tsx` — same issue
+- Likely others (needs grep audit)
+
+**Fix:** Grep for `fill="#374151"` and `fill="#` across all new components and replace with `diagram.colors.text` or the themed color from `useDiagramBase`.
+
+### GAP 5: Hebrew Translations Hardcoded, Not in i18n Files
+
+All 107 components have inline Hebrew strings in `STEP_LABELS` objects instead of using the i18n system (`messages/he/diagram.json`). The i18n files exist (`messages/en/diagram.json`, `messages/he/diagram.json`) but are untracked and not integrated.
+
+**Fix:** Commit the diagram.json translation files. For the inline `STEP_LABELS` pattern — this is acceptable for now since step labels are diagram-specific and the i18n system would need schema changes to support dynamic keys. **Decision: Accept inline Hebrew for step labels. Move general UI strings (like "Step X of Y") to i18n.**
+
+### GAP 6: Batch 8 "Polish Existing Components" Not Done
+
+Plan Task 16 specified refactoring NumberLine, CoordinatePlane, and Triangle to use the shared SVG primitives and add proper step-sync animations. Since the SVG primitives library was never built, these refactors didn't happen.
+
+**Fix:** After building the SVG primitives library (Gap 1), refactor these 3 key components as the plan specified.
+
+### GAP 7: Missing Schemas for SequenceDiagram and SamplingDistribution
+
+Two components have renderer cases but no entries in `lib/diagram-schemas.ts`:
+- `SequenceDiagram.tsx` → type: `sequence_diagram`
+- `SamplingDistribution.tsx` → type: `sampling_distribution`
+
+**Fix:** Add schemas for both to `lib/diagram-schemas.ts`.
+
+### GAP 8: `messages/en/diagram.json` and `messages/he/diagram.json` Not Committed
+
+These i18n files exist in the working directory but were never staged/committed.
+
+**Fix:** Review contents and commit them.

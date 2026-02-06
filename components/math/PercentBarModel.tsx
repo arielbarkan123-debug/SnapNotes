@@ -293,7 +293,7 @@ export function PercentBarModel({
                     textAnchor="middle"
                     fontSize={12}
                     fontWeight={500}
-                    fill="#374151"
+                    className="fill-gray-700 dark:fill-gray-300"
                   >
                     {part.value}
                   </text>

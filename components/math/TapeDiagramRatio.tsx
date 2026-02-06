@@ -316,7 +316,7 @@ export function TapeDiagramRatio({
                 x={padding.left + totalUnits * unitWidth + 18}
                 y={(tape1Y + tape2Y + tapeHeight) / 2 + 4}
                 textAnchor="start"
-                fill="#374151"
+                className="fill-gray-700 dark:fill-gray-300"
                 fontSize={14}
                 fontWeight={700}
                 initial="hidden"

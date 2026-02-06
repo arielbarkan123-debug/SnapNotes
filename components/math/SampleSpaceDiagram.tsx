@@ -256,7 +256,7 @@ export function SampleSpaceDiagram({
                     y={gridY + i * cellHeight + cellHeight / 2 + 4}
                     textAnchor="middle"
                     fontSize={11}
-                    fill="#374151"
+                    className="fill-gray-700 dark:fill-gray-300"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: (i * cols + j) * 0.05 }}

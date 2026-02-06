@@ -218,8 +218,8 @@ export function TransformationDiagram({
               {/* Y axis */}
               <motion.line x1={toSvgX(0)} y1={PADDING} x2={toSvgX(0)} y2={PADDING + plotH} stroke="#374151" strokeWidth={diagram.lineWeight} variants={lineDrawVariants} />
               {/* Axis labels */}
-              <text x={PADDING + plotW - 5} y={toSvgY(0) - 8} textAnchor="end" fontSize={12} fill="#374151" fontWeight={600}>x</text>
-              <text x={toSvgX(0) + 10} y={PADDING + 12} textAnchor="start" fontSize={12} fill="#374151" fontWeight={600}>y</text>
+              <text x={PADDING + plotW - 5} y={toSvgY(0) - 8} textAnchor="end" fontSize={12} className="fill-gray-700 dark:fill-gray-300" fontWeight={600}>x</text>
+              <text x={toSvgX(0) + 10} y={PADDING + 12} textAnchor="start" fontSize={12} className="fill-gray-700 dark:fill-gray-300" fontWeight={600}>y</text>
             </motion.g>
           )}
         </AnimatePresence>

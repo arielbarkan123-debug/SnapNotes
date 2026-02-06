@@ -227,7 +227,7 @@ export function TwoWayFrequencyTable({
                     y={offsetY + HEADER_HEIGHT + 4}
                     textAnchor="middle"
                     fontSize={12}
-                    fill="#374151"
+                    className="fill-gray-700 dark:fill-gray-300"
                     fontWeight={600}
                   >
                     {ch}
@@ -277,7 +277,7 @@ export function TwoWayFrequencyTable({
                     y={offsetY + HEADER_HEIGHT * 2 + r * CELL_HEIGHT + CELL_HEIGHT / 2 + 4}
                     textAnchor="middle"
                     fontSize={12}
-                    fill="#374151"
+                    className="fill-gray-700 dark:fill-gray-300"
                     fontWeight={600}
                   >
                     {rh}
@@ -344,7 +344,8 @@ export function TwoWayFrequencyTable({
                         y={cellY + CELL_HEIGHT / 2 + 4}
                         textAnchor="middle"
                         fontSize={13}
-                        fill={isHighlighted ? primaryColor : '#374151'}
+                        fill={isHighlighted ? primaryColor : undefined}
+                        className={isHighlighted ? undefined : 'fill-gray-700 dark:fill-gray-300'}
                         fontWeight={isHighlighted ? 700 : 500}
                         variants={labelAppearVariants}
                       >

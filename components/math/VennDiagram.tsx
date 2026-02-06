@@ -283,7 +283,7 @@ export function VennDiagram({
                     y={pos.cy + offsetY + (j - (exclusiveElements.length - 1) / 2) * 18}
                     textAnchor="middle"
                     fontSize={12}
-                    fill="#374151"
+                    className="fill-gray-700 dark:fill-gray-300"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: j * 0.08 }}

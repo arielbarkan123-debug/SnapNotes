@@ -384,7 +384,7 @@ export function CrossSectionDiagram({
                 textAnchor="middle"
                 fontSize={13}
                 fontWeight={600}
-                fill="#374151"
+                className="fill-gray-700 dark:fill-gray-300"
               >
                 {solidName}
               </text>

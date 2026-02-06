@@ -209,7 +209,7 @@ export function ProbabilityTree({
                 textAnchor="middle"
                 fontSize={12}
                 fontWeight={600}
-                fill="#374151"
+                className="fill-gray-700 dark:fill-gray-300"
               >
                 {language === 'he' ? 'התחלה' : 'Start'}
               </text>
@@ -272,7 +272,7 @@ export function ProbabilityTree({
                       textAnchor="start"
                       fontSize={12}
                       fontWeight={500}
-                      fill="#374151"
+                      className="fill-gray-700 dark:fill-gray-300"
                       initial="hidden"
                       animate="visible"
                       variants={labelAppearVariants}
@@ -341,7 +341,7 @@ export function ProbabilityTree({
                           y={pos.y + 4}
                           textAnchor="start"
                           fontSize={11}
-                          fill="#374151"
+                          className="fill-gray-700 dark:fill-gray-300"
                         >
                           {branchData.label}
                         </text>

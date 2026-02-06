@@ -317,7 +317,7 @@ export function Histogram({
                       x={x}
                       y={originY + 15}
                       textAnchor="middle"
-                      fill="#374151"
+                      className="fill-gray-700 dark:fill-gray-300"
                       fontSize={9}
                       initial="hidden"
                       animate="visible"
