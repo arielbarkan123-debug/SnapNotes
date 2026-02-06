@@ -289,6 +289,7 @@ export type MathDiagramType =
   | 'coordinate_plane'
   | 'triangle'
   | 'circle'
+  | 'unit_circle'
   | 'bar_model'
   | 'area_model'
   | 'factoring'
@@ -297,6 +298,9 @@ export type MathDiagramType =
   | 'radical'
   | 'systems'
   | 'inequality'
+  | 'tree_diagram'
+  | 'interactive_coordinate_plane'
+  | 'equation_grapher'
 
 // Base MathDiagramData - new diagram types use 'unknown' casting in renderer
 // to avoid circular dependencies

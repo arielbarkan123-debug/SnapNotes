@@ -388,6 +388,8 @@ export interface TutorDiagramState {
     stepLabel?: string
     stepLabelHe?: string
   }>
+  /** Enable interactive "What If?" mode for exploration (physics diagrams only) */
+  enableInteractive?: boolean
 }
 
 export interface HintResponse {

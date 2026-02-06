@@ -1,45 +1,77 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { motion, type Variants } from 'framer-motion'
-import { type ProjectileMotionData, type DiagramStepConfig } from '@/types/physics'
+import { useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import type { ProjectileMotionData } from '@/types/physics'
+import { useDiagramBase } from '@/hooks/useDiagramBase'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
+import { DiagramStepControls } from '@/components/diagrams/DiagramStepControls'
+import {
+  createSpotlightVariants,
+  lineDrawVariants,
+  labelAppearVariants,
+  prefersReducedMotion,
+} from '@/lib/diagram-animations'
 import { ForceVector } from './ForceVector'
-import { COLORS, hexToRgba as _hexToRgba } from '@/lib/diagram-theme'
-import { prefersReducedMotion } from '@/lib/diagram-animations'
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface ProjectileMotionProps {
   data: ProjectileMotionData
-  currentStep?: number
-  stepConfig?: DiagramStepConfig[]
-  onStepComplete?: () => void
-  animationDuration?: number
   width?: number
   height?: number
   className?: string
+  subject?: SubjectKey
+  complexity?: VisualComplexityLevel
   language?: 'en' | 'he'
+  initialStep?: number
 }
 
+// ---------------------------------------------------------------------------
+// Step label translations
+// ---------------------------------------------------------------------------
+
+const STEP_LABELS: Record<string, { en: string; he: string }> = {
+  setup: { en: 'Show initial position', he: '\u05D4\u05E6\u05D2\u05EA \u05DE\u05D9\u05E7\u05D5\u05DD \u05D4\u05EA\u05D7\u05DC\u05EA\u05D9' },
+  trajectory: { en: 'Draw trajectory', he: '\u05E6\u05D9\u05D5\u05E8 \u05DE\u05E1\u05DC\u05D5\u05DC' },
+  maxHeight: { en: 'Show max height', he: '\u05D4\u05E6\u05D2\u05EA \u05D2\u05D5\u05D1\u05D4 \u05DE\u05E7\u05E1\u05D9\u05DE\u05DC\u05D9' },
+  velocityVectors: { en: 'Show velocity vectors', he: '\u05D4\u05E6\u05D2\u05EA \u05D5\u05E7\u05D8\u05D5\u05E8\u05D9 \u05DE\u05D4\u05D9\u05E8\u05D5\u05EA' },
+  components: { en: 'Show components', he: '\u05D4\u05E6\u05D2\u05EA \u05E8\u05DB\u05D9\u05D1\u05D9\u05DD' },
+  gravity: { en: 'Show gravity', he: '\u05D4\u05E6\u05D2\u05EA \u05DB\u05D5\u05D7 \u05D4\u05DB\u05D1\u05D9\u05D3\u05D4' },
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 /**
- * ProjectileMotion - SVG component for projectile motion diagrams
- * 
- * Features:
- * - Parabolic trajectory path
- * - Velocity vectors at different time points
- * - Component decomposition (vx, vy)
- * - Time markers along path
- * - Ground level indication
- * - Maximum height and range markers
+ * ProjectileMotion -- Phase 2 rebuild with useDiagramBase infrastructure.
+ *
+ * Quality checklist:
+ * - [x] useDiagramBase hook
+ * - [x] DiagramStepControls
+ * - [x] pathLength draw animation
+ * - [x] Spotlight on current step
+ * - [x] Dark/light mode
+ * - [x] Responsive width
+ * - [x] data-testid attributes
+ * - [x] RTL support
+ * - [x] Subject-coded colors
+ * - [x] Adaptive line weight
+ * - [x] Progressive reveal with AnimatePresence + isVisible()
  */
 export function ProjectileMotion({
   data,
-  currentStep = 0,
-  stepConfig,
-  onStepComplete: _onStepComplete,
-  animationDuration = 500,
   width = 500,
   height = 350,
   className = '',
+  subject = 'physics',
+  complexity = 'middle_school',
   language = 'en',
+  initialStep,
 }: ProjectileMotionProps) {
   const {
     initial,
@@ -54,17 +86,61 @@ export function ProjectileMotion({
   } = data
 
   const reducedMotion = prefersReducedMotion()
-  const [isVisible, setIsVisible] = useState(currentStep > 0)
 
   // Physics constants
-  const g = 9.8 // gravity (m/s²)
+  const g = 9.8 // gravity (m/s^2)
   const scale = 8 // pixels per meter
 
-  useEffect(() => {
-    if (currentStep > 0 && !isVisible) {
-      setIsVisible(true)
+  // ------ Detect optional features ------
+  const hasComponents = showComponents
+  const hasGravity = showAcceleration
+
+  // Build dynamic step definitions
+  const stepDefs = useMemo(() => {
+    const defs: Array<{ id: string; label: string; labelHe: string }> = [
+      { id: 'setup', label: STEP_LABELS.setup.en, labelHe: STEP_LABELS.setup.he },
+      { id: 'trajectory', label: STEP_LABELS.trajectory.en, labelHe: STEP_LABELS.trajectory.he },
+      { id: 'maxHeight', label: STEP_LABELS.maxHeight.en, labelHe: STEP_LABELS.maxHeight.he },
+    ]
+    if (showVelocityVectors) {
+      defs.push({ id: 'velocityVectors', label: STEP_LABELS.velocityVectors.en, labelHe: STEP_LABELS.velocityVectors.he })
     }
-  }, [currentStep, isVisible])
+    if (hasComponents) {
+      defs.push({ id: 'components', label: STEP_LABELS.components.en, labelHe: STEP_LABELS.components.he })
+    }
+    if (hasGravity) {
+      defs.push({ id: 'gravity', label: STEP_LABELS.gravity.en, labelHe: STEP_LABELS.gravity.he })
+    }
+    return defs
+  }, [showVelocityVectors, hasComponents, hasGravity])
+
+  // useDiagramBase -- step control, colors, lineWeight, RTL
+  const diagram = useDiagramBase({
+    totalSteps: stepDefs.length,
+    subject,
+    complexity,
+    initialStep: initialStep ?? 0,
+    stepSpotlights: stepDefs.map((s) => s.id),
+    language,
+  })
+
+  // Step visibility helpers
+  const stepIndexOf = (id: string) => stepDefs.findIndex((s) => s.id === id)
+  const isVisible = (id: string) => {
+    const idx = stepIndexOf(id)
+    return idx !== -1 && diagram.currentStep >= idx
+  }
+  const isCurrent = (id: string) => stepIndexOf(id) === diagram.currentStep
+
+  // Spotlight variants
+  const spotlight = useMemo(
+    () => createSpotlightVariants(diagram.colors.primary),
+    [diagram.colors.primary],
+  )
+
+  // ---------------------------------------------------------------------------
+  // Physics calculations
+  // ---------------------------------------------------------------------------
 
   // Calculate trajectory points
   const trajectoryPoints = useMemo(() => {
@@ -73,11 +149,7 @@ export function ProjectileMotion({
     const v0x = v0 * Math.cos(theta)
     const v0y = v0 * Math.sin(theta)
 
-    // Time of flight (until ground level)
-    const _y0 = initial.y
-    const _yGround = groundLevel
-    // Solving: y0 + v0y*t - 0.5*g*t² = yGround
-    // Simplified: find when projectile returns to initial height
+    // Time of flight (until projectile returns to initial height)
     const tFlight = (2 * v0y) / g
 
     const points: Array<{ x: number; y: number; t: number; vx: number; vy: number }> = []
@@ -96,7 +168,7 @@ export function ProjectileMotion({
     }
 
     return points
-  }, [initial, initialVelocity, groundLevel, scale])
+  }, [initial, initialVelocity, groundLevel, scale, g])
 
   // Calculate positions at specific time intervals
   const markerPositions = useMemo(() => {
@@ -112,7 +184,7 @@ export function ProjectileMotion({
       vx: v0x,
       vy: v0y - g * t,
     }))
-  }, [initial, initialVelocity, timeIntervals, scale])
+  }, [initial, initialVelocity, timeIntervals, scale, g])
 
   // Max height point
   const maxHeightPoint = useMemo(() => {
@@ -127,22 +199,7 @@ export function ProjectileMotion({
       y: initial.y - (v0y * tMax - 0.5 * g * tMax * tMax) * scale,
       maxHeight: (v0y * v0y) / (2 * g),
     }
-  }, [initial, initialVelocity, scale])
-
-  // Animation variants
-  const objectVariants: Variants = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: {
-        type: 'spring',
-        stiffness: 300,
-        damping: 25,
-        duration: reducedMotion ? 0 : 0.4,
-      },
-    },
-  }
+  }, [initial, initialVelocity, scale, g])
 
   // Generate SVG path for trajectory
   const trajectoryPath = useMemo(() => {
@@ -153,314 +210,422 @@ export function ProjectileMotion({
     }, '')
   }, [trajectoryPoints])
 
-  // Current step config
-  const _currentStepConfig = useMemo(() => {
-    if (stepConfig && stepConfig.length > currentStep) {
-      return stepConfig[currentStep]
-    }
-    return { step: currentStep }
-  }, [currentStep, stepConfig])
+  // Current step label
+  const currentStepDef = stepDefs[diagram.currentStep]
+  const stepLabel = language === 'he' ? currentStepDef?.labelHe : currentStepDef?.label
 
-  // Render velocity vector at a point
-  const renderVelocityVector = (
-    point: { x: number; y: number; vx: number; vy: number; t: number },
-    index: number
-  ) => {
-    const vMag = Math.sqrt(point.vx * point.vx + point.vy * point.vy)
-    const vAngle = (Math.atan2(point.vy, point.vx) * 180) / Math.PI
-
-    if (point.y > groundLevel) return null
-
-    return (
-      <g key={`velocity-${index}`}>
-        {/* Velocity vector */}
-        <ForceVector
-          force={{
-            name: `v${index}`,
-            type: 'applied',
-            magnitude: vMag * 3,
-            angle: vAngle,
-            symbol: 'v',
-            color: '#8b5cf6',
-          }}
-          origin={point}
-          scale={1}
-          highlighted={index === currentStep - 1}
-          showLabel={true}
-          showMagnitude={false}
-          animation={currentStep > index ? 'draw' : 'none'}
-          animationDuration={reducedMotion ? 0 : animationDuration}
-          animationDelay={reducedMotion ? 0 : 200 + index * 150}
-          useGradient={true}
-        />
-
-        {/* Component vectors if enabled */}
-        {showComponents && index === currentStep - 1 && (
-          <>
-            {/* vx component */}
-            <motion.line
-              x1={point.x}
-              y1={point.y}
-              x2={point.x + point.vx * 3}
-              y2={point.y}
-              stroke="#3b82f6"
-              strokeWidth={2}
-              strokeDasharray="4 2"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 0.3, delay: 0.5 }}
-            />
-            <text
-              x={point.x + point.vx * 1.5}
-              y={point.y + 15}
-              textAnchor="middle"
-              fontSize={11}
-              fill="#3b82f6"
-              fontFamily="'Inter', system-ui, sans-serif"
-            >
-              v<tspan fontSize={8} dy={2}>x</tspan>
-            </text>
-
-            {/* vy component */}
-            <motion.line
-              x1={point.x}
-              y1={point.y}
-              x2={point.x}
-              y2={point.y - point.vy * 3}
-              stroke="#22c55e"
-              strokeWidth={2}
-              strokeDasharray="4 2"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 0.3, delay: 0.6 }}
-            />
-            <text
-              x={point.x - 15}
-              y={point.y - point.vy * 1.5}
-              textAnchor="middle"
-              fontSize={11}
-              fill="#22c55e"
-              fontFamily="'Inter', system-ui, sans-serif"
-            >
-              v<tspan fontSize={8} dy={2}>y</tspan>
-            </text>
-          </>
-        )}
-
-        {/* Time label */}
-        <text
-          x={point.x}
-          y={point.y + 25}
-          textAnchor="middle"
-          fontSize={10}
-          fill={COLORS.gray[500]}
-          fontFamily="'JetBrains Mono', monospace"
-        >
-          t = {point.t}s
-        </text>
-      </g>
-    )
-  }
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
   return (
-    <svg
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      className={`projectile-motion ${className}`}
-      style={{ borderRadius: '12px', overflow: 'hidden' }}
+    <div
+      data-testid="projectile-motion"
+      className={className}
+      style={{ width: '100%', maxWidth: width }}
     >
-      {/* Definitions */}
-      <defs>
-        <linearGradient id="bg-gradient-proj" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#f0f9ff" />
-          <stop offset="100%" stopColor="#e0f2fe" />
-        </linearGradient>
-
-        <pattern id="grid-pattern-proj" width="20" height="20" patternUnits="userSpaceOnUse">
-          <path d="M 20 0 L 0 0 0 20" fill="none" stroke={COLORS.gray[100]} strokeWidth="0.5" />
-        </pattern>
-
-        <linearGradient id="ground-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#86efac" />
-          <stop offset="100%" stopColor="#4ade80" />
-        </linearGradient>
-      </defs>
-
-      {/* Sky background */}
-      <rect width={width} height={height} fill="url(#bg-gradient-proj)" rx={12} />
-      <rect width={width} height={height} fill="url(#grid-pattern-proj)" opacity={0.3} rx={12} />
-
-      {/* Ground */}
-      <rect
-        x={0}
-        y={groundLevel}
-        width={width}
-        height={height - groundLevel}
-        fill="url(#ground-gradient)"
-      />
-      <line
-        x1={0}
-        y1={groundLevel}
-        x2={width}
-        y2={groundLevel}
-        stroke="#22c55e"
-        strokeWidth={3}
-      />
-
-      {/* Title */}
-      {title && (
-        <motion.text
-          x={width / 2}
-          y={28}
-          textAnchor="middle"
-          fontSize={16}
-          fontWeight="600"
-          fontFamily="'Inter', system-ui, sans-serif"
-          fill={COLORS.gray[800]}
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          {title}
-        </motion.text>
-      )}
-
-      {/* Trajectory path */}
-      {showTrajectory && (
-        <motion.path
-          d={trajectoryPath}
-          fill="none"
-          stroke={COLORS.gray[400]}
-          strokeWidth={2}
-          strokeDasharray="6 3"
-          initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ pathLength: 1, opacity: 0.7 }}
-          transition={{ duration: reducedMotion ? 0 : 1, delay: 0.2 }}
-        />
-      )}
-
-      {/* Max height indicator */}
-      {currentStep > 1 && (
-        <motion.g
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-        >
-          <line
-            x1={maxHeightPoint.x}
-            y1={maxHeightPoint.y}
-            x2={maxHeightPoint.x}
-            y2={groundLevel}
-            stroke={COLORS.primary[300]}
-            strokeWidth={1}
-            strokeDasharray="4 4"
-          />
-          <text
-            x={maxHeightPoint.x + 8}
-            y={(maxHeightPoint.y + groundLevel) / 2}
-            fontSize={10}
-            fill={COLORS.primary[600]}
-            fontFamily="'JetBrains Mono', monospace"
-          >
-            h<tspan fontSize={7} dy={2}>max</tspan> = {maxHeightPoint.maxHeight.toFixed(1)}m
-          </text>
-        </motion.g>
-      )}
-
-      {/* Launch point */}
-      <motion.g
-        initial="hidden"
-        animate={isVisible ? 'visible' : 'hidden'}
-        variants={objectVariants}
+      <svg
+        width="100%"
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        className="text-gray-800 dark:text-gray-200"
+        role="img"
+        aria-label={`Projectile motion with initial velocity ${initialVelocity.magnitude} at ${initialVelocity.angle} degrees`}
       >
-        <circle
-          cx={initial.x}
-          cy={initial.y}
-          r={8}
-          fill={COLORS.primary[500]}
-          stroke={COLORS.primary[600]}
-          strokeWidth={2}
-        />
-        <text
-          x={initial.x - 15}
-          y={initial.y + 20}
-          fontSize={11}
-          fill={COLORS.gray[600]}
-          fontFamily="'Inter', system-ui, sans-serif"
-        >
-          {language === 'he' ? 'התחלה' : 'Start'}
-        </text>
-      </motion.g>
+        {/* Definitions */}
+        <defs>
+          <linearGradient id="bg-gradient-proj" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" className="[stop-color:theme(colors.sky.50)] dark:[stop-color:theme(colors.gray.900)]" />
+            <stop offset="100%" className="[stop-color:theme(colors.sky.100)] dark:[stop-color:theme(colors.gray.800)]" />
+          </linearGradient>
 
-      {/* Velocity vectors at time intervals */}
-      {showVelocityVectors && markerPositions.map((point, index) => 
-        currentStep > index && renderVelocityVector(point, index)
-      )}
+          <pattern id="grid-pattern-proj" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path
+              d="M 20 0 L 0 0 0 20"
+              fill="none"
+              className="stroke-gray-200 dark:stroke-gray-700"
+              strokeWidth="0.5"
+            />
+          </pattern>
 
-      {/* Position markers */}
-      {markerPositions.map((point, index) => (
-        currentStep > index && point.y <= groundLevel && (
-          <motion.circle
-            key={`marker-${index}`}
-            cx={point.x}
-            cy={point.y}
-            r={5}
-            fill={index === currentStep - 1 ? COLORS.primary[500] : COLORS.gray[400]}
-            stroke="white"
-            strokeWidth={2}
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 300, delay: index * 0.1 }}
-          />
-        )
-      ))}
+          <linearGradient id="ground-gradient-proj" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#86efac" />
+            <stop offset="100%" stopColor="#4ade80" />
+          </linearGradient>
+        </defs>
 
-      {/* Acceleration vector (gravity) if shown */}
-      {showAcceleration && currentStep > 0 && (
-        <ForceVector
-          force={{
-            name: 'g',
-            type: 'weight',
-            magnitude: 30,
-            angle: -90,
-            symbol: 'g',
-          }}
-          origin={{ x: width - 60, y: 80 }}
-          scale={1}
-          highlighted={true}
-          showLabel={true}
-          animation="draw"
-          animationDuration={reducedMotion ? 0 : animationDuration}
-          useGradient={true}
-        />
-      )}
-
-      {/* Step indicator */}
-      <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+        {/* Background */}
         <rect
-          x={8}
-          y={height - 28}
-          width={80}
-          height={20}
-          fill="white"
-          stroke={COLORS.gray[200]}
-          strokeWidth={1}
+          data-testid="pm-background"
+          width={width}
+          height={height}
+          rx={4}
+          fill="url(#bg-gradient-proj)"
+        />
+        <rect
+          width={width}
+          height={height}
+          fill="url(#grid-pattern-proj)"
+          opacity={0.3}
           rx={4}
         />
-        <text
-          x={48}
-          y={height - 15}
-          textAnchor="middle"
-          fontSize={11}
-          fontFamily="'Inter', system-ui, sans-serif"
-          fontWeight={500}
-          fill={COLORS.gray[500]}
-        >
-          {language === 'he' ? `שלב ${currentStep}` : `Step ${currentStep}`}
-        </text>
-      </motion.g>
-    </svg>
+
+        {/* Ground */}
+        <rect
+          data-testid="pm-ground"
+          x={0}
+          y={groundLevel}
+          width={width}
+          height={height - groundLevel}
+          fill="url(#ground-gradient-proj)"
+        />
+        <line
+          x1={0}
+          y1={groundLevel}
+          x2={width}
+          y2={groundLevel}
+          stroke="#22c55e"
+          strokeWidth={diagram.lineWeight}
+        />
+
+        {/* Title */}
+        {title && (
+          <motion.text
+            x={width / 2}
+            y={28}
+            textAnchor="middle"
+            fontSize={16}
+            fontWeight="600"
+            fontFamily="'Inter', system-ui, sans-serif"
+            className="fill-gray-800 dark:fill-gray-100"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: reducedMotion ? 0 : 0.3 }}
+          >
+            {title}
+          </motion.text>
+        )}
+
+        {/* ---- Step 0: Setup (initial position / launch point) ---- */}
+        <AnimatePresence>
+          {isVisible('setup') && (
+            <motion.g
+              data-testid="pm-setup"
+              initial="hidden"
+              animate={isCurrent('setup') ? 'spotlight' : 'visible'}
+              variants={spotlight}
+            >
+              <circle
+                cx={initial.x}
+                cy={initial.y}
+                r={8}
+                fill={diagram.colors.primary}
+                stroke={diagram.colors.dark}
+                strokeWidth={2}
+              />
+              <motion.text
+                x={initial.x - 15}
+                y={initial.y + 20}
+                fontSize={11}
+                className="fill-gray-600 dark:fill-gray-400"
+                fontFamily="'Inter', system-ui, sans-serif"
+                initial="hidden"
+                animate="visible"
+                variants={labelAppearVariants}
+              >
+                {language === 'he' ? '\u05D4\u05EA\u05D7\u05DC\u05D4' : 'Start'}
+              </motion.text>
+            </motion.g>
+          )}
+        </AnimatePresence>
+
+        {/* ---- Step 1: Trajectory path ---- */}
+        <AnimatePresence>
+          {isVisible('trajectory') && showTrajectory && (
+            <motion.g
+              data-testid="pm-trajectory"
+              initial="hidden"
+              animate={isCurrent('trajectory') ? 'spotlight' : 'visible'}
+              variants={spotlight}
+            >
+              <motion.path
+                d={trajectoryPath}
+                fill="none"
+                stroke={diagram.colors.curve}
+                strokeWidth={diagram.lineWeight}
+                strokeDasharray="6 3"
+                initial="hidden"
+                animate="visible"
+                variants={lineDrawVariants}
+              />
+              {/* Position markers along trajectory */}
+              {markerPositions.map((point, index) =>
+                point.y <= groundLevel && (
+                  <motion.g
+                    key={`marker-${index}`}
+                    initial="hidden"
+                    animate="visible"
+                    variants={labelAppearVariants}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <circle
+                      cx={point.x}
+                      cy={point.y}
+                      r={5}
+                      fill={diagram.colors.point}
+                      stroke="white"
+                      strokeWidth={2}
+                    />
+                    <text
+                      x={point.x}
+                      y={point.y + 25}
+                      textAnchor="middle"
+                      fontSize={10}
+                      className="fill-gray-500 dark:fill-gray-400"
+                      fontFamily="'JetBrains Mono', monospace"
+                    >
+                      t = {point.t}s
+                    </text>
+                  </motion.g>
+                )
+              )}
+            </motion.g>
+          )}
+        </AnimatePresence>
+
+        {/* ---- Step 2: Max height indicator ---- */}
+        <AnimatePresence>
+          {isVisible('maxHeight') && (
+            <motion.g
+              data-testid="pm-max-height"
+              initial="hidden"
+              animate={isCurrent('maxHeight') ? 'spotlight' : 'visible'}
+              variants={spotlight}
+            >
+              <motion.line
+                x1={maxHeightPoint.x}
+                y1={maxHeightPoint.y}
+                x2={maxHeightPoint.x}
+                y2={groundLevel}
+                stroke={diagram.colors.accent}
+                strokeWidth={1}
+                strokeDasharray="4 4"
+                initial="hidden"
+                animate="visible"
+                variants={lineDrawVariants}
+              />
+              <motion.text
+                x={maxHeightPoint.x + 8}
+                y={(maxHeightPoint.y + groundLevel) / 2}
+                fontSize={10}
+                fill={diagram.colors.primary}
+                fontFamily="'JetBrains Mono', monospace"
+                initial="hidden"
+                animate="visible"
+                variants={labelAppearVariants}
+                transition={{ delay: 0.3 }}
+              >
+                h<tspan fontSize={7} dy={2}>max</tspan> = {maxHeightPoint.maxHeight.toFixed(1)}m
+              </motion.text>
+              {/* Horizontal line at max height */}
+              <motion.line
+                x1={initial.x}
+                y1={maxHeightPoint.y}
+                x2={maxHeightPoint.x}
+                y2={maxHeightPoint.y}
+                stroke={diagram.colors.accent}
+                strokeWidth={1}
+                strokeDasharray="4 4"
+                opacity={0.5}
+                initial="hidden"
+                animate="visible"
+                variants={lineDrawVariants}
+              />
+            </motion.g>
+          )}
+        </AnimatePresence>
+
+        {/* ---- Step 3: Velocity vectors ---- */}
+        <AnimatePresence>
+          {isVisible('velocityVectors') && showVelocityVectors && (
+            <motion.g
+              data-testid="pm-velocity-vectors"
+              initial="hidden"
+              animate={isCurrent('velocityVectors') ? 'spotlight' : 'visible'}
+              variants={spotlight}
+            >
+              {markerPositions.map((point, index) => {
+                if (point.y > groundLevel) return null
+
+                const vMag = Math.sqrt(point.vx * point.vx + point.vy * point.vy)
+                const vAngle = (Math.atan2(point.vy, point.vx) * 180) / Math.PI
+
+                return (
+                  <motion.g
+                    key={`velocity-${index}`}
+                    initial="hidden"
+                    animate="visible"
+                    variants={labelAppearVariants}
+                    transition={{ delay: index * 0.15 }}
+                  >
+                    <ForceVector
+                      force={{
+                        name: `v${index}`,
+                        type: 'applied',
+                        magnitude: vMag * 3,
+                        angle: vAngle,
+                        symbol: 'v',
+                        color: diagram.colors.primary,
+                      }}
+                      origin={point}
+                      scale={1}
+                      highlighted={isCurrent('velocityVectors')}
+                      showLabel={true}
+                      showMagnitude={false}
+                      animation="draw"
+                      animationDuration={reducedMotion ? 0 : 400}
+                      animationDelay={reducedMotion ? 0 : 200 + index * 150}
+                      useGradient={true}
+                    />
+                  </motion.g>
+                )
+              })}
+            </motion.g>
+          )}
+        </AnimatePresence>
+
+        {/* ---- Step 4: Component vectors ---- */}
+        <AnimatePresence>
+          {isVisible('components') && hasComponents && (
+            <motion.g
+              data-testid="pm-components"
+              initial="hidden"
+              animate={isCurrent('components') ? 'spotlight' : 'visible'}
+              variants={spotlight}
+            >
+              {markerPositions.map((point, index) => {
+                if (point.y > groundLevel) return null
+
+                return (
+                  <motion.g
+                    key={`components-${index}`}
+                    initial="hidden"
+                    animate="visible"
+                    variants={labelAppearVariants}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    {/* vx component */}
+                    <motion.line
+                      x1={point.x}
+                      y1={point.y}
+                      x2={point.x + point.vx * 3}
+                      y2={point.y}
+                      stroke="#3b82f6"
+                      strokeWidth={diagram.lineWeight - 1}
+                      strokeDasharray="4 2"
+                      initial="hidden"
+                      animate="visible"
+                      variants={lineDrawVariants}
+                    />
+                    <text
+                      x={point.x + point.vx * 1.5}
+                      y={point.y + 15}
+                      textAnchor="middle"
+                      fontSize={11}
+                      fill="#3b82f6"
+                      fontFamily="'Inter', system-ui, sans-serif"
+                    >
+                      v<tspan fontSize={8} dy={2}>x</tspan>
+                    </text>
+
+                    {/* vy component */}
+                    <motion.line
+                      x1={point.x}
+                      y1={point.y}
+                      x2={point.x}
+                      y2={point.y - point.vy * 3}
+                      stroke="#22c55e"
+                      strokeWidth={diagram.lineWeight - 1}
+                      strokeDasharray="4 2"
+                      initial="hidden"
+                      animate="visible"
+                      variants={lineDrawVariants}
+                    />
+                    <text
+                      x={point.x - 15}
+                      y={point.y - point.vy * 1.5}
+                      textAnchor="middle"
+                      fontSize={11}
+                      fill="#22c55e"
+                      fontFamily="'Inter', system-ui, sans-serif"
+                    >
+                      v<tspan fontSize={8} dy={2}>y</tspan>
+                    </text>
+                  </motion.g>
+                )
+              })}
+            </motion.g>
+          )}
+        </AnimatePresence>
+
+        {/* ---- Step 5: Gravity / acceleration vector ---- */}
+        <AnimatePresence>
+          {isVisible('gravity') && hasGravity && (
+            <motion.g
+              data-testid="pm-gravity"
+              initial="hidden"
+              animate={isCurrent('gravity') ? 'spotlight' : 'visible'}
+              variants={spotlight}
+            >
+              <ForceVector
+                force={{
+                  name: 'g',
+                  type: 'weight',
+                  magnitude: 30,
+                  angle: -90,
+                  symbol: 'g',
+                }}
+                origin={{ x: width - 60, y: 80 }}
+                scale={1}
+                highlighted={isCurrent('gravity')}
+                showLabel={true}
+                animation="draw"
+                animationDuration={reducedMotion ? 0 : 400}
+                useGradient={true}
+              />
+              <motion.text
+                x={width - 60}
+                y={120}
+                textAnchor="middle"
+                fontSize={10}
+                className="fill-gray-600 dark:fill-gray-400"
+                fontFamily="'JetBrains Mono', monospace"
+                initial="hidden"
+                animate="visible"
+                variants={labelAppearVariants}
+                transition={{ delay: 0.3 }}
+              >
+                g = 9.8 m/s²
+              </motion.text>
+            </motion.g>
+          )}
+        </AnimatePresence>
+      </svg>
+
+      {/* Step Controls */}
+      {stepDefs.length > 1 && (
+        <DiagramStepControls
+          currentStep={diagram.currentStep}
+          totalSteps={diagram.totalSteps}
+          onNext={diagram.next}
+          onPrev={diagram.prev}
+          stepLabel={stepLabel}
+          language={language}
+          subjectColor={diagram.colors.primary}
+          className="mt-2"
+        />
+      )}
+    </div>
   )
 }
 

@@ -95,3 +95,10 @@ export {
   STUDY_PLAN_CACHE_KEY,
   type UseStudyPlanReturn,
 } from './useStudyPlan'
+
+// Interactive Parameters
+export {
+  useInteractiveParameters,
+  type UseInteractiveParametersOptions,
+  type UseInteractiveParametersReturn,
+} from './useInteractiveParameters'

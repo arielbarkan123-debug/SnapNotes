@@ -1,11 +1,23 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { motion, type Variants } from 'framer-motion'
+import { useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { type DiagramStepConfig, type Force } from '@/types/physics'
 import { ForceVector } from './ForceVector'
-import { COLORS, hexToRgba as _hexToRgba } from '@/lib/diagram-theme'
-import { prefersReducedMotion } from '@/lib/diagram-animations'
+import { useDiagramBase } from '@/hooks/useDiagramBase'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
+import { DiagramStepControls } from '@/components/diagrams/DiagramStepControls'
+import {
+  createSpotlightVariants,
+  lineDrawVariants,
+  labelAppearVariants,
+  prefersReducedMotion,
+} from '@/lib/diagram-animations'
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface CircularMotionData {
   /** Radius of the circular path */
@@ -38,36 +50,62 @@ interface CircularMotionData {
 
 interface CircularMotionProps {
   data: CircularMotionData
-  currentStep?: number
+  initialStep?: number
   stepConfig?: DiagramStepConfig[]
   onStepComplete?: () => void
   animationDuration?: number
   width?: number
   height?: number
   className?: string
+  subject?: SubjectKey
+  complexity?: VisualComplexityLevel
   language?: 'en' | 'he'
 }
 
+// ---------------------------------------------------------------------------
+// Step label translations
+// ---------------------------------------------------------------------------
+
+const STEP_LABELS: Record<string, { en: string; he: string }> = {
+  path: { en: 'Draw the path', he: '\u05E6\u05D9\u05D5\u05E8 \u05D4\u05DE\u05E1\u05DC\u05D5\u05DC' },
+  object: { en: 'Place the object', he: '\u05DE\u05D9\u05E7\u05D5\u05DD \u05D4\u05E2\u05E6\u05DD' },
+  velocity: { en: 'Show velocity', he: '\u05D4\u05E6\u05D2\u05EA \u05DE\u05D4\u05D9\u05E8\u05D5\u05EA' },
+  centripetal: { en: 'Centripetal force', he: '\u05DB\u05D5\u05D7 \u05E6\u05E0\u05D8\u05E8\u05D9\u05E4\u05D8\u05DC\u05D9' },
+  angular: { en: 'Angular velocity', he: '\u05DE\u05D4\u05D9\u05E8\u05D5\u05EA \u05D6\u05D5\u05D5\u05D9\u05EA\u05D9\u05EA' },
+  forces: { en: 'Additional forces', he: '\u05DB\u05D5\u05D7\u05D5\u05EA \u05E0\u05D5\u05E1\u05E4\u05D9\u05DD' },
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 /**
  * CircularMotion - SVG component for circular motion diagrams
- * 
- * Features:
- * - Circular path visualization
- * - Object moving on path (optional animation)
- * - Velocity vector (tangent to path)
- * - Centripetal acceleration/force vector (toward center)
- * - Angular velocity indicator
- * - Different views: horizontal, vertical, banked curve
+ *
+ * Quality checklist:
+ * - [x] useDiagramBase hook
+ * - [x] DiagramStepControls
+ * - [x] pathLength draw animation
+ * - [x] Spotlight on current step
+ * - [x] Dark/light mode
+ * - [x] Responsive width
+ * - [x] data-testid attributes
+ * - [x] RTL support
+ * - [x] Subject-coded colors
+ * - [x] Adaptive line weight
+ * - [x] Progressive reveal with AnimatePresence + isVisible()
  */
 export function CircularMotion({
   data,
-  currentStep = 0,
+  initialStep = 0,
   stepConfig,
   onStepComplete: _onStepComplete,
   animationDuration = 500,
   width = 400,
   height = 400,
   className = '',
+  subject = 'physics',
+  complexity = 'middle_school',
   language = 'en',
 }: CircularMotionProps) {
   const {
@@ -87,17 +125,61 @@ export function CircularMotion({
   } = data
 
   const reducedMotion = prefersReducedMotion()
-  const [isVisible, setIsVisible] = useState(currentStep > 0)
 
   const centerX = width / 2
   const centerY = height / 2
   const displayRadius = Math.min(width, height) * 0.35 // Scale to fit
 
-  useEffect(() => {
-    if (currentStep > 0 && !isVisible) {
-      setIsVisible(true)
+  // ------ Detect optional features ------
+  const hasVelocity = showVelocity
+  const hasCentripetal = showAcceleration || showCentripetalForce
+  const hasAngular = showAngularVelocity
+  const hasForces = forces.length > 0
+
+  // Build dynamic step definitions
+  const stepDefs = useMemo(() => {
+    const defs: Array<{ id: string; label: string; labelHe: string }> = [
+      { id: 'path', label: STEP_LABELS.path.en, labelHe: STEP_LABELS.path.he },
+      { id: 'object', label: STEP_LABELS.object.en, labelHe: STEP_LABELS.object.he },
+    ]
+    if (hasVelocity) {
+      defs.push({ id: 'velocity', label: STEP_LABELS.velocity.en, labelHe: STEP_LABELS.velocity.he })
     }
-  }, [currentStep, isVisible])
+    if (hasCentripetal) {
+      defs.push({ id: 'centripetal', label: STEP_LABELS.centripetal.en, labelHe: STEP_LABELS.centripetal.he })
+    }
+    if (hasAngular) {
+      defs.push({ id: 'angular', label: STEP_LABELS.angular.en, labelHe: STEP_LABELS.angular.he })
+    }
+    if (hasForces) {
+      defs.push({ id: 'forces', label: STEP_LABELS.forces.en, labelHe: STEP_LABELS.forces.he })
+    }
+    return defs
+  }, [hasVelocity, hasCentripetal, hasAngular, hasForces])
+
+  // useDiagramBase -- step control, colors, lineWeight, RTL
+  const diagram = useDiagramBase({
+    totalSteps: stepDefs.length,
+    subject,
+    complexity,
+    initialStep: initialStep,
+    stepSpotlights: stepDefs.map((s) => s.id),
+    language,
+  })
+
+  // Step visibility helpers
+  const stepIndexOf = (id: string) => stepDefs.findIndex((s) => s.id === id)
+  const isVisible = (id: string) => {
+    const idx = stepIndexOf(id)
+    return idx !== -1 && diagram.currentStep >= idx
+  }
+  const isCurrent = (id: string) => stepIndexOf(id) === diagram.currentStep
+
+  // Spotlight variants
+  const spotlight = useMemo(
+    () => createSpotlightVariants(diagram.colors.primary),
+    [diagram.colors.primary],
+  )
 
   // Calculate object position on circle
   const objectPos = useMemo(() => {
@@ -113,246 +195,316 @@ export function CircularMotion({
 
   // Current step config
   const currentStepConfig = useMemo(() => {
-    if (stepConfig && stepConfig.length > currentStep) {
-      return stepConfig[currentStep]
+    if (stepConfig && stepConfig.length > diagram.currentStep) {
+      return stepConfig[diagram.currentStep]
     }
-    return { step: currentStep }
-  }, [currentStep, stepConfig])
+    return { step: diagram.currentStep }
+  }, [diagram.currentStep, stepConfig])
 
   // Visible forces based on step
   const visibleForces = useMemo(() => {
     if (currentStepConfig.visibleForces) {
       return forces.filter(f => currentStepConfig.visibleForces?.includes(f.name))
     }
-    return forces.slice(0, currentStep)
-  }, [forces, currentStep, currentStepConfig])
+    // When forces step is visible, show all forces
+    if (isVisible('forces')) {
+      return forces
+    }
+    return []
+  }, [forces, currentStepConfig, isVisible])
 
-  // Animation variants
-  const objectVariants: Variants = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: {
-        type: 'spring',
-        stiffness: 300,
-        damping: 25,
-        duration: reducedMotion ? 0 : 0.4,
-      },
-    },
-  }
+  // Current step label
+  const currentStepDef = stepDefs[diagram.currentStep]
+  const stepLabel = language === 'he' ? currentStepDef?.labelHe : currentStepDef?.label
+
+  // ---------------------------------------------------------------------------
+  // Render helpers
+  // ---------------------------------------------------------------------------
 
   // Render circular path
   const renderPath = () => (
-    <motion.g
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-    >
-      {/* Dashed circle path */}
-      <circle
-        cx={centerX}
-        cy={centerY}
-        r={displayRadius}
-        fill="none"
-        stroke={COLORS.gray[300]}
-        strokeWidth={2}
-        strokeDasharray="8 4"
-      />
-      
-      {/* Center point */}
-      <circle
-        cx={centerX}
-        cy={centerY}
-        r={4}
-        fill={COLORS.gray[500]}
-      />
-      
-      {/* Radius line to object */}
-      <motion.line
-        x1={centerX}
-        y1={centerY}
-        x2={objectPos.x}
-        y2={objectPos.y}
-        stroke={COLORS.gray[400]}
-        strokeWidth={1.5}
-        strokeDasharray="4 3"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: reducedMotion ? 0 : 0.5 }}
-      />
-      
-      {/* Radius label */}
-      <text
-        x={(centerX + objectPos.x) / 2 + 10}
-        y={(centerY + objectPos.y) / 2}
-        fontSize={12}
-        fill={COLORS.gray[500]}
-        fontFamily="'Inter', system-ui, sans-serif"
-      >
-        r = {radius}m
-      </text>
-    </motion.g>
+    <AnimatePresence>
+      {isVisible('path') && (
+        <motion.g
+          data-testid="cm-path"
+          initial="hidden"
+          animate={isCurrent('path') ? 'spotlight' : 'visible'}
+          variants={spotlight}
+        >
+          {/* Dashed circle path */}
+          <motion.circle
+            cx={centerX}
+            cy={centerY}
+            r={displayRadius}
+            fill="none"
+            stroke={diagram.colors.light}
+            strokeWidth={diagram.lineWeight}
+            strokeDasharray="8 4"
+            initial="hidden"
+            animate="visible"
+            variants={lineDrawVariants}
+          />
+
+          {/* Center point */}
+          <motion.circle
+            cx={centerX}
+            cy={centerY}
+            r={4}
+            fill={diagram.colors.primary}
+            initial="hidden"
+            animate="visible"
+            variants={labelAppearVariants}
+          />
+
+          {/* Radius line to object position */}
+          <motion.line
+            x1={centerX}
+            y1={centerY}
+            x2={objectPos.x}
+            y2={objectPos.y}
+            stroke={diagram.colors.accent}
+            strokeWidth={1.5}
+            strokeDasharray="4 3"
+            initial="hidden"
+            animate="visible"
+            variants={lineDrawVariants}
+          />
+
+          {/* Radius label */}
+          <motion.text
+            x={(centerX + objectPos.x) / 2 + 10}
+            y={(centerY + objectPos.y) / 2}
+            fontSize={12}
+            fill={diagram.colors.accent}
+            fontFamily="'Inter', system-ui, sans-serif"
+            initial="hidden"
+            animate="visible"
+            variants={labelAppearVariants}
+            transition={{ delay: 0.3 }}
+          >
+            r = {radius}m
+          </motion.text>
+        </motion.g>
+      )}
+    </AnimatePresence>
   )
 
   // Render the moving object
   const renderObject = () => (
-    <motion.g
-      initial="hidden"
-      animate={isVisible ? 'visible' : 'hidden'}
-      variants={objectVariants}
-    >
-      {/* Shadow */}
-      <ellipse
-        cx={objectPos.x + 2}
-        cy={objectPos.y + 3}
-        rx={15}
-        ry={5}
-        fill="rgba(0,0,0,0.1)"
-      />
-      
-      {/* Object (sphere/particle) */}
-      <circle
-        cx={objectPos.x}
-        cy={objectPos.y}
-        r={18}
-        fill="url(#object-grad-circular)"
-        stroke={COLORS.gray[500]}
-        strokeWidth={2}
-      />
-      
-      {/* Highlight */}
-      <ellipse
-        cx={objectPos.x - 5}
-        cy={objectPos.y - 5}
-        rx={5}
-        ry={4}
-        fill="rgba(255,255,255,0.5)"
-      />
-      
-      {/* Label */}
-      {(objectLabel || mass) && (
-        <text
-          x={objectPos.x}
-          y={objectPos.y + 35}
-          textAnchor="middle"
-          fontSize={11}
-          fill={COLORS.gray[600]}
-          fontFamily="'Inter', system-ui, sans-serif"
+    <AnimatePresence>
+      {isVisible('object') && (
+        <motion.g
+          data-testid="cm-object"
+          initial="hidden"
+          animate={isCurrent('object') ? 'spotlight' : 'visible'}
+          variants={spotlight}
         >
-          {objectLabel || (mass ? `m = ${mass} kg` : '')}
-        </text>
+          {/* Shadow */}
+          <ellipse
+            cx={objectPos.x + 2}
+            cy={objectPos.y + 3}
+            rx={15}
+            ry={5}
+            fill="rgba(0,0,0,0.1)"
+          />
+
+          {/* Object (sphere/particle) */}
+          <circle
+            cx={objectPos.x}
+            cy={objectPos.y}
+            r={18}
+            fill="url(#object-grad-circular)"
+            stroke={diagram.colors.primary}
+            strokeWidth={diagram.lineWeight}
+          />
+
+          {/* Highlight */}
+          <ellipse
+            cx={objectPos.x - 5}
+            cy={objectPos.y - 5}
+            rx={5}
+            ry={4}
+            fill="rgba(255,255,255,0.5)"
+          />
+
+          {/* Label */}
+          {(objectLabel || mass) && (
+            <motion.text
+              x={objectPos.x}
+              y={objectPos.y + 35}
+              textAnchor="middle"
+              fontSize={11}
+              className="fill-current text-gray-600 dark:text-gray-400"
+              fontFamily="'Inter', system-ui, sans-serif"
+              initial="hidden"
+              animate="visible"
+              variants={labelAppearVariants}
+              transition={{ delay: 0.2 }}
+            >
+              {objectLabel || (mass ? `m = ${mass} kg` : '')}
+            </motion.text>
+          )}
+        </motion.g>
       )}
-    </motion.g>
+    </AnimatePresence>
   )
 
   // Render velocity vector
   const renderVelocity = () => {
-    if (!showVelocity || currentStep < 1) return null
+    if (!hasVelocity) return null
 
     return (
-      <ForceVector
-        force={{
-          name: 'velocity',
-          type: 'applied',
-          magnitude: speed ? speed * 5 : 40,
-          angle: velocityAngle,
-          symbol: 'v',
-          color: '#8b5cf6',
-        }}
-        origin={objectPos}
-        scale={1}
-        highlighted={currentStepConfig.highlightForces?.includes('velocity')}
-        showLabel={true}
-        showMagnitude={speed !== undefined}
-        animation="draw"
-        animationDuration={reducedMotion ? 0 : animationDuration}
-        animationDelay={200}
-        useGradient={true}
-      />
+      <AnimatePresence>
+        {isVisible('velocity') && (
+          <motion.g
+            data-testid="cm-velocity"
+            initial="hidden"
+            animate={isCurrent('velocity') ? 'spotlight' : 'visible'}
+            variants={spotlight}
+          >
+            <ForceVector
+              force={{
+                name: 'velocity',
+                type: 'applied',
+                magnitude: speed ? speed * 5 : 40,
+                angle: velocityAngle,
+                symbol: 'v',
+                color: '#8b5cf6',
+              }}
+              origin={objectPos}
+              scale={1}
+              highlighted={currentStepConfig.highlightForces?.includes('velocity')}
+              showLabel={true}
+              showMagnitude={speed !== undefined}
+              animation="draw"
+              animationDuration={reducedMotion ? 0 : animationDuration}
+              animationDelay={200}
+              useGradient={true}
+            />
+          </motion.g>
+        )}
+      </AnimatePresence>
     )
   }
 
   // Render centripetal acceleration/force
   const renderCentripetal = () => {
-    if ((!showAcceleration && !showCentripetalForce) || currentStep < 2) return null
+    if (!hasCentripetal) return null
 
     const centripetalAngle = angularPosition + 180 // Points toward center
 
     return (
-      <ForceVector
-        force={{
-          name: showCentripetalForce ? 'Fc' : 'ac',
-          type: 'centripetal',
-          magnitude: 35,
-          angle: centripetalAngle,
-          symbol: showCentripetalForce ? 'F' : 'a',
-          subscript: 'c',
-          color: '#f97316',
-        }}
-        origin={objectPos}
-        scale={1}
-        highlighted={true}
-        showLabel={true}
-        showMagnitude={false}
-        animation="draw"
-        animationDuration={reducedMotion ? 0 : animationDuration}
-        animationDelay={400}
-        useGradient={true}
-      />
+      <AnimatePresence>
+        {isVisible('centripetal') && (
+          <motion.g
+            data-testid="cm-centripetal"
+            initial="hidden"
+            animate={isCurrent('centripetal') ? 'spotlight' : 'visible'}
+            variants={spotlight}
+          >
+            <ForceVector
+              force={{
+                name: showCentripetalForce ? 'Fc' : 'ac',
+                type: 'centripetal',
+                magnitude: 35,
+                angle: centripetalAngle,
+                symbol: showCentripetalForce ? 'F' : 'a',
+                subscript: 'c',
+                color: diagram.colors.primary,
+              }}
+              origin={objectPos}
+              scale={1}
+              highlighted={true}
+              showLabel={true}
+              showMagnitude={false}
+              animation="draw"
+              animationDuration={reducedMotion ? 0 : animationDuration}
+              animationDelay={400}
+              useGradient={true}
+            />
+          </motion.g>
+        )}
+      </AnimatePresence>
     )
   }
 
   // Render angular velocity indicator
   const renderAngularVelocity = () => {
-    if (!showAngularVelocity || currentStep < 3) return null
+    if (!hasAngular) return null
 
     return (
-      <motion.g
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6 }}
-      >
-        {/* Curved arrow around center */}
-        <path
-          d={`M ${centerX + 25} ${centerY} 
-              A 25 25 0 0 0 ${centerX} ${centerY - 25}`}
-          fill="none"
-          stroke={COLORS.primary[500]}
-          strokeWidth={2}
-          markerEnd="url(#omega-arrow)"
-        />
-        <text
-          x={centerX + 35}
-          y={centerY - 15}
-          fontSize={14}
-          fill={COLORS.primary[600]}
-          fontFamily="'Inter', system-ui, sans-serif"
-          fontWeight="500"
-        >
-          ω
-        </text>
-      </motion.g>
+      <AnimatePresence>
+        {isVisible('angular') && (
+          <motion.g
+            data-testid="cm-angular"
+            initial="hidden"
+            animate={isCurrent('angular') ? 'spotlight' : 'visible'}
+            variants={spotlight}
+          >
+            {/* Curved arrow around center */}
+            <motion.path
+              d={`M ${centerX + 25} ${centerY}
+                  A 25 25 0 0 0 ${centerX} ${centerY - 25}`}
+              fill="none"
+              stroke={diagram.colors.accent}
+              strokeWidth={diagram.lineWeight}
+              markerEnd="url(#omega-arrow)"
+              initial="hidden"
+              animate="visible"
+              variants={lineDrawVariants}
+            />
+            <motion.text
+              x={centerX + 35}
+              y={centerY - 15}
+              fontSize={14}
+              fill={diagram.colors.primary}
+              fontFamily="'Inter', system-ui, sans-serif"
+              fontWeight="500"
+              initial="hidden"
+              animate="visible"
+              variants={labelAppearVariants}
+              transition={{ delay: 0.3 }}
+            >
+              {'\u03C9'}
+            </motion.text>
+          </motion.g>
+        )}
+      </AnimatePresence>
     )
   }
 
   // Render additional forces
   const renderForces = () => {
-    return visibleForces.map((force, index) => (
-      <ForceVector
-        key={force.name}
-        force={force}
-        origin={force.origin ? { x: centerX + force.origin.x, y: centerY + force.origin.y } : objectPos}
-        scale={2}
-        highlighted={currentStepConfig.highlightForces?.includes(force.name)}
-        showLabel={true}
-        showMagnitude={currentStepConfig.highlightForces?.includes(force.name)}
-        animation="draw"
-        animationDuration={reducedMotion ? 0 : animationDuration}
-        animationDelay={200 + index * 150}
-        useGradient={true}
-      />
-    ))
+    if (!hasForces) return null
+
+    return (
+      <AnimatePresence>
+        {isVisible('forces') && (
+          <motion.g
+            data-testid="cm-forces"
+            initial="hidden"
+            animate={isCurrent('forces') ? 'spotlight' : 'visible'}
+            variants={spotlight}
+          >
+            {visibleForces.map((force, index) => (
+              <ForceVector
+                key={force.name}
+                force={force}
+                origin={force.origin ? { x: centerX + force.origin.x, y: centerY + force.origin.y } : objectPos}
+                scale={2}
+                highlighted={currentStepConfig.highlightForces?.includes(force.name)}
+                showLabel={true}
+                showMagnitude={currentStepConfig.highlightForces?.includes(force.name)}
+                animation="draw"
+                animationDuration={reducedMotion ? 0 : animationDuration}
+                animationDelay={200 + index * 150}
+                useGradient={true}
+              />
+            ))}
+          </motion.g>
+        )}
+      </AnimatePresence>
+    )
   }
 
   // Render diagram based on type
@@ -360,14 +512,18 @@ export function CircularMotion({
     if (type === 'vertical') {
       // Add ground line for vertical circle (like ferris wheel)
       return (
-        <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <motion.g
+          data-testid="cm-ground"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
           <line
             x1={0}
             y1={centerY + displayRadius + 30}
             x2={width}
             y2={centerY + displayRadius + 30}
-            stroke={COLORS.gray[400]}
-            strokeWidth={3}
+            stroke={diagram.colors.light}
+            strokeWidth={diagram.lineWeight}
           />
           {/* Hatching */}
           {Array.from({ length: 20 }).map((_, i) => (
@@ -377,7 +533,7 @@ export function CircularMotion({
               y1={centerY + displayRadius + 30}
               x2={i * 25 + 15}
               y2={centerY + displayRadius + 40}
-              stroke={COLORS.gray[300]}
+              stroke={diagram.colors.light}
               strokeWidth={1}
             />
           ))}
@@ -389,32 +545,36 @@ export function CircularMotion({
       // Show banked curve cross-section
       const bankRad = (bankAngle * Math.PI) / 180
       return (
-        <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <motion.g
+          data-testid="cm-banked"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
           {/* Banked surface */}
           <line
             x1={centerX - 80}
             y1={centerY + displayRadius + 20}
             x2={centerX + 80}
             y2={centerY + displayRadius + 20 - 160 * Math.tan(bankRad)}
-            stroke={COLORS.gray[500]}
-            strokeWidth={4}
+            stroke={diagram.colors.accent}
+            strokeWidth={diagram.lineWeight + 1}
           />
           {/* Bank angle arc */}
           <path
             d={`M ${centerX + 50} ${centerY + displayRadius + 20}
                 A 30 30 0 0 0 ${centerX + 50 + 30 * Math.cos(bankRad)} ${centerY + displayRadius + 20 - 30 * Math.sin(bankRad)}`}
             fill="none"
-            stroke={COLORS.primary[400]}
+            stroke={diagram.colors.primary}
             strokeWidth={2}
           />
           <text
             x={centerX + 90}
             y={centerY + displayRadius + 10}
             fontSize={12}
-            fill={COLORS.primary[600]}
+            fill={diagram.colors.primary}
             fontFamily="'Inter', system-ui, sans-serif"
           >
-            θ = {bankAngle}°
+            {'\u03B8'} = {bankAngle}{'\u00B0'}
           </text>
         </motion.g>
       )
@@ -423,103 +583,109 @@ export function CircularMotion({
     return null
   }
 
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
   return (
-    <svg
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      className={`circular-motion ${className}`}
-      style={{ borderRadius: '12px', overflow: 'hidden' }}
+    <div
+      data-testid="circular-motion"
+      className={className}
+      style={{ width: '100%', maxWidth: width }}
     >
-      {/* Definitions */}
-      <defs>
-        <linearGradient id="bg-gradient-circular" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="100%" stopColor={COLORS.gray[50]} />
-        </linearGradient>
+      <svg
+        width="100%"
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        className="text-gray-800 dark:text-gray-200"
+        role="img"
+        aria-label={`Circular motion diagram with radius ${radius}m`}
+      >
+        {/* Definitions */}
+        <defs>
+          <linearGradient id="bg-gradient-circular" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" className="stop-color-white dark:stop-color-gray-900" stopColor="currentColor" />
+            <stop offset="100%" stopColor={diagram.backgrounds.light.fill} />
+          </linearGradient>
 
-        <radialGradient id="object-grad-circular" cx="30%" cy="30%">
-          <stop offset="0%" stopColor={COLORS.gray[200]} />
-          <stop offset="100%" stopColor={COLORS.gray[400]} />
-        </radialGradient>
+          <radialGradient id="object-grad-circular" cx="30%" cy="30%">
+            <stop offset="0%" stopColor={diagram.colors.light} />
+            <stop offset="100%" stopColor={diagram.colors.primary} stopOpacity={0.6} />
+          </radialGradient>
 
-        <pattern id="grid-pattern-circular" width="20" height="20" patternUnits="userSpaceOnUse">
-          <path d="M 20 0 L 0 0 0 20" fill="none" stroke={COLORS.gray[100]} strokeWidth="0.5" />
-        </pattern>
+          <pattern id="grid-pattern-circular" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke={diagram.backgrounds.light.grid} strokeWidth="0.5" />
+          </pattern>
 
-        <marker id="omega-arrow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill={COLORS.primary[500]} />
-        </marker>
-      </defs>
+          <marker id="omega-arrow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill={diagram.colors.accent} />
+          </marker>
+        </defs>
 
-      {/* Background */}
-      <rect width={width} height={height} fill="url(#bg-gradient-circular)" rx={12} />
-      <rect width={width} height={height} fill="url(#grid-pattern-circular)" opacity={0.5} rx={12} />
-
-      {/* Title */}
-      {title && (
-        <motion.text
-          x={width / 2}
-          y={28}
-          textAnchor="middle"
-          fontSize={16}
-          fontWeight="600"
-          fontFamily="'Inter', system-ui, sans-serif"
-          fill={COLORS.gray[800]}
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          {title}
-        </motion.text>
-      )}
-
-      {/* Type-specific elements */}
-      {renderTypeSpecific()}
-
-      {/* Circular path */}
-      {renderPath()}
-
-      {/* Moving object */}
-      {renderObject()}
-
-      {/* Velocity vector */}
-      {renderVelocity()}
-
-      {/* Centripetal acceleration/force */}
-      {renderCentripetal()}
-
-      {/* Angular velocity */}
-      {renderAngularVelocity()}
-
-      {/* Additional forces */}
-      {renderForces()}
-
-      {/* Step indicator */}
-      <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+        {/* Background */}
         <rect
-          x={8}
-          y={height - 28}
-          width={80}
-          height={20}
-          fill="white"
-          stroke={COLORS.gray[200]}
-          strokeWidth={1}
-          rx={4}
+          data-testid="cm-background"
+          width={width}
+          height={height}
+          rx={12}
+          className="fill-white dark:fill-gray-900"
         />
-        <text
-          x={48}
-          y={height - 15}
-          textAnchor="middle"
-          fontSize={11}
-          fontFamily="'Inter', system-ui, sans-serif"
-          fontWeight={500}
-          fill={COLORS.gray[500]}
-        >
-          {language === 'he' ? `שלב ${currentStep}` : `Step ${currentStep}`}
-        </text>
-      </motion.g>
-    </svg>
+        <rect width={width} height={height} fill="url(#grid-pattern-circular)" opacity={0.5} rx={12} />
+
+        {/* Title */}
+        {title && (
+          <motion.text
+            x={width / 2}
+            y={28}
+            textAnchor="middle"
+            fontSize={16}
+            fontWeight="600"
+            fontFamily="'Inter', system-ui, sans-serif"
+            className="fill-current"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {title}
+          </motion.text>
+        )}
+
+        {/* Type-specific elements */}
+        {renderTypeSpecific()}
+
+        {/* Circular path */}
+        {renderPath()}
+
+        {/* Moving object */}
+        {renderObject()}
+
+        {/* Velocity vector */}
+        {renderVelocity()}
+
+        {/* Centripetal acceleration/force */}
+        {renderCentripetal()}
+
+        {/* Angular velocity */}
+        {renderAngularVelocity()}
+
+        {/* Additional forces */}
+        {renderForces()}
+      </svg>
+
+      {/* Step Controls */}
+      {stepDefs.length > 1 && (
+        <DiagramStepControls
+          currentStep={diagram.currentStep}
+          totalSteps={diagram.totalSteps}
+          onNext={diagram.next}
+          onPrev={diagram.prev}
+          stepLabel={stepLabel}
+          language={language}
+          subjectColor={diagram.colors.primary}
+          className="mt-2"
+        />
+      )}
+    </div>
   )
 }
 

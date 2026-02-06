@@ -1,8 +1,9 @@
 'use client'
 
-import { useRef, useEffect, useState, useCallback, useImperativeHandle, forwardRef } from 'react'
+import { useRef, useEffect, useState, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react'
 import { motion } from 'framer-motion'
-import { COLORS } from '@/lib/diagram-theme'
+import { COLORS, getSubjectColor } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
 
 // ============================================================================
 // Types
@@ -81,6 +82,8 @@ export interface DesmosGraphingProps {
   showSettings?: boolean
   /** Whether to show zoom buttons */
   showZoomButtons?: boolean
+  /** Subject for color coding */
+  subject?: SubjectKey
   /** Whether to show the interactive keypad */
   showKeypad?: boolean
   /** Whether to show grid lines */
@@ -213,9 +216,11 @@ export const DesmosGraphing = forwardRef<DesmosGraphingRef, DesmosGraphingProps>
       height = 400,
       className = '',
       title = 'Interactive Graph',
+      subject = 'math',
     },
     ref
   ) {
+    const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
     const containerRef = useRef<HTMLDivElement>(null)
     const calculatorRef = useRef<DesmosCalculator | null>(null)
     const [isLoading, setIsLoading] = useState(true)
@@ -267,7 +272,7 @@ export const DesmosGraphing = forwardRef<DesmosGraphingRef, DesmosGraphingProps>
             calculator.setExpression({
               id: expr.id,
               latex: expr.latex,
-              color: expr.color || COLORS.primary[500],
+              color: expr.color || subjectColors.primary,
               hidden: expr.hidden,
             })
           }
@@ -322,7 +327,7 @@ export const DesmosGraphing = forwardRef<DesmosGraphingRef, DesmosGraphingProps>
         calculator.setExpression({
           id: expr.id,
           latex: expr.latex,
-          color: expr.color || COLORS.primary[500],
+          color: expr.color || subjectColors.primary,
           hidden: expr.hidden,
         })
       }
@@ -334,7 +339,7 @@ export const DesmosGraphing = forwardRef<DesmosGraphingRef, DesmosGraphingProps>
       calculatorRef.current.setExpression({
         id: expression.id,
         latex: expression.latex,
-        color: expression.color || COLORS.primary[500],
+        color: expression.color || subjectColors.primary,
         hidden: expression.hidden,
       })
     }, [])
@@ -352,7 +357,7 @@ export const DesmosGraphing = forwardRef<DesmosGraphingRef, DesmosGraphingProps>
         calculatorRef.current.setExpression({
           id,
           latex: updates.latex ?? existing.latex ?? '',
-          color: updates.color ?? existing.color ?? COLORS.primary[500],
+          color: updates.color ?? existing.color ?? subjectColors.primary,
           hidden: updates.hidden,
         })
       }
@@ -386,7 +391,7 @@ export const DesmosGraphing = forwardRef<DesmosGraphingRef, DesmosGraphingProps>
         calculatorRef.current.setExpression({
           id: expr.id,
           latex: expr.latex,
-          color: expr.color || COLORS.primary[500],
+          color: expr.color || subjectColors.primary,
           hidden: expr.hidden,
         })
       }

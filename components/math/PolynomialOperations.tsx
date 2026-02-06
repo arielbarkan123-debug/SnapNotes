@@ -3,7 +3,12 @@
 import { useMemo } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import { COLORS } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
+import { useDiagramBase } from '@/hooks/useDiagramBase'
 import { prefersReducedMotion } from '@/lib/diagram-animations'
+import { MathText } from '@/components/ui/MathRenderer'
+import { normalizeToLatex } from '@/lib/normalize-latex'
 
 // ============================================================================
 // Types
@@ -58,7 +63,11 @@ export interface PolynomialOperationsData {
 
 interface PolynomialOperationsProps {
   data: PolynomialOperationsData
+  /** Starting step (0-indexed) */
+  initialStep?: number
+  /** @deprecated Use initialStep instead. Ignored - step state is managed internally. */
   currentStep?: number
+  /** @deprecated Ignored - total steps derived from data.steps */
   totalSteps?: number
   animationDuration?: number
   onStepComplete?: () => void
@@ -67,6 +76,10 @@ interface PolynomialOperationsProps {
   className?: string
   language?: 'en' | 'he'
   showStepCounter?: boolean
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
 }
 
 // ============================================================================
@@ -130,24 +143,33 @@ function getExponentColor(exp: number) {
 
 export function PolynomialOperations({
   data,
-  currentStep = 0,
-  totalSteps: totalStepsProp,
+  initialStep,
   animationDuration = 400,
   width = 480,
   className = '',
   language = 'en',
   showStepCounter = true,
+  subject = 'math',
+  complexity = 'middle_school',
 }: PolynomialOperationsProps) {
   const { polynomial1: _polynomial1, polynomial2: _polynomial2, operation, result, terms1, terms2, resultTerms, variable = 'x', steps, title } = data
   const reducedMotion = prefersReducedMotion()
   void animationDuration // reserved for future animation customization
 
-  const actualTotalSteps = totalStepsProp ?? steps.length
-  const progressPercent = ((currentStep + 1) / actualTotalSteps) * 100
-  const isComplete = currentStep >= steps.length - 1
+  // useDiagramBase -- step control, colors, lineWeight, RTL
+  const diagram = useDiagramBase({
+    totalSteps: steps.length,
+    subject,
+    complexity,
+    initialStep: initialStep ?? 0,
+    language,
+  })
 
-  const _visibleSteps = useMemo(() => steps.filter((s) => s.step <= currentStep), [steps, currentStep])
-  const currentStepInfo = steps[currentStep] || null
+  const progressPercent = ((diagram.currentStep + 1) / diagram.totalSteps) * 100
+  const isComplete = diagram.currentStep >= steps.length - 1
+
+  const _visibleSteps = useMemo(() => steps.filter((s) => s.step <= diagram.currentStep), [steps, diagram.currentStep])
+  const currentStepInfo = steps[diagram.currentStep] || null
 
   // Get operation symbol
   const getOperationSymbol = (): string => {
@@ -222,7 +244,7 @@ export function PolynomialOperations({
             style={{
               background: isComplete
                 ? 'linear-gradient(90deg, #22c55e, #16a34a)'
-                : 'linear-gradient(90deg, #4f46e5, #6366f1)',
+                : `linear-gradient(90deg, ${diagram.colors.dark}, ${diagram.colors.primary})`,
             }}
           />
         </div>
@@ -322,7 +344,7 @@ export function PolynomialOperations({
         transition={{ delay: 0.2 }}
       >
         {/* Aligned terms visualization (for add/subtract) */}
-        {(operation === 'add' || operation === 'subtract') && currentStep >= 1 && (
+        {(operation === 'add' || operation === 'subtract') && diagram.currentStep >= 1 && (
           <motion.div
             className="mb-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
             initial={{ opacity: 0, height: 0 }}
@@ -407,7 +429,7 @@ export function PolynomialOperations({
             </div>
 
             {/* Result row */}
-            {currentStep >= 2 && (
+            {diagram.currentStep >= 2 && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -444,7 +466,7 @@ export function PolynomialOperations({
         )}
 
         {/* FOIL/Distribution for multiplication */}
-        {operation === 'multiply' && currentStep >= 1 && currentStep < steps.length - 1 && (
+        {operation === 'multiply' && diagram.currentStep >= 1 && diagram.currentStep < steps.length - 1 && (
           <motion.div
             className="mb-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg"
             initial={{ opacity: 0 }}
@@ -453,8 +475,8 @@ export function PolynomialOperations({
             <div className="text-xs text-purple-600 dark:text-purple-400 text-center mb-2 font-medium">
               {language === 'he' ? 'הפצה:' : 'Distribution:'}
             </div>
-            <div className="text-sm font-mono text-center text-gray-700 dark:text-gray-300">
-              {currentStepInfo?.calculation || 'Multiply each term...'}
+            <div className="text-sm text-center text-gray-700 dark:text-gray-300">
+              <MathText>{`$${normalizeToLatex(currentStepInfo?.calculation || 'Multiply each term...')}$`}</MathText>
             </div>
           </motion.div>
         )}
@@ -462,11 +484,11 @@ export function PolynomialOperations({
         {/* Current Step Explanation */}
         {currentStepInfo && (
           <motion.div
-            key={currentStep}
+            key={diagram.currentStep}
             className="p-4 rounded-xl border-l-4"
             style={{
-              backgroundColor: isComplete ? 'rgba(34, 197, 94, 0.08)' : 'rgba(79, 70, 229, 0.08)',
-              borderLeftColor: isComplete ? COLORS.success[500] : COLORS.primary[500],
+              backgroundColor: isComplete ? 'rgba(34, 197, 94, 0.08)' : `${diagram.colors.light}33`,
+              borderLeftColor: isComplete ? COLORS.success[500] : diagram.colors.primary,
             }}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -478,8 +500,8 @@ export function PolynomialOperations({
                 : currentStepInfo.description}
             </p>
             {currentStepInfo.calculation && !['multiply'].includes(operation) && (
-              <div className="mt-2 font-mono text-sm bg-white dark:bg-gray-700 px-3 py-1.5 rounded-lg inline-block">
-                {currentStepInfo.calculation}
+              <div className="mt-2 text-sm bg-white dark:bg-gray-700 px-3 py-1.5 rounded-lg inline-block">
+                <MathText>{`$${normalizeToLatex(currentStepInfo.calculation)}$`}</MathText>
               </div>
             )}
           </motion.div>
@@ -511,12 +533,12 @@ export function PolynomialOperations({
               {language === 'he' ? 'תוצאה:' : 'Result:'}
             </p>
             <motion.div
-              className="text-2xl font-bold font-mono text-green-600 dark:text-green-400"
+              className="text-2xl font-bold text-green-600 dark:text-green-400"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2 }}
             >
-              {result}
+              <MathText>{`$${normalizeToLatex(result)}$`}</MathText>
             </motion.div>
           </motion.div>
         )}
@@ -527,8 +549,8 @@ export function PolynomialOperations({
         <div className="mt-4 text-center">
           <span className="text-xs text-gray-400 dark:text-gray-500">
             {language === 'he'
-              ? `שלב ${currentStep + 1} מתוך ${actualTotalSteps}`
-              : `Step ${currentStep + 1} of ${actualTotalSteps}`}
+              ? `שלב ${diagram.currentStep + 1} מתוך ${diagram.totalSteps}`
+              : `Step ${diagram.currentStep + 1} of ${diagram.totalSteps}`}
           </span>
         </div>
       )}

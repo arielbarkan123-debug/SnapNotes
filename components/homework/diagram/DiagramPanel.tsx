@@ -1,7 +1,17 @@
 'use client'
 
-import { type DiagramState, getDiagramTypeName } from './types'
+import { useState } from 'react'
+import { type DiagramState, getDiagramTypeName, isPhysicsDiagram } from './types'
 import DiagramRenderer from './DiagramRenderer'
+import {
+  InteractiveInclinedPlane,
+  InteractiveFreeBodyDiagram,
+  InteractiveProjectileMotion,
+  InteractivePulleySystem,
+  InteractiveCircularMotion,
+  InteractiveCollisionDiagram,
+} from '@/components/physics'
+import type { PhysicsDiagramData } from '@/types/physics'
 
 interface DiagramPanelProps {
   diagram: DiagramState
@@ -10,10 +20,18 @@ interface DiagramPanelProps {
   title?: string
   autoAdvanceText?: string
   manualControlsText?: string
+  /** Enable interactive "What If?" mode for physics diagrams */
+  enableInteractive?: boolean
+  /** Language for interactive mode */
+  language?: 'en' | 'he'
 }
 
 /**
  * Desktop diagram panel for side-by-side display with chat
+ *
+ * Supports two modes:
+ * 1. Standard mode: Step-synced diagram with auto-advance or manual controls
+ * 2. Interactive mode: "What If?" exploration with parameter sliders (physics only)
  */
 export default function DiagramPanel({
   diagram,
@@ -22,8 +40,77 @@ export default function DiagramPanel({
   title = 'Diagram',
   autoAdvanceText = 'The diagram reveals more as the tutor explains each concept.',
   manualControlsText = 'Use the controls above to step through the diagram as you follow along with the explanation.',
+  enableInteractive = false,
+  language = 'en',
 }: DiagramPanelProps) {
-  const isAutoAdvance = diagram.evolutionMode === 'auto-advance'
+  const isAutoAdvance = 'evolutionMode' in diagram && diagram.evolutionMode === 'auto-advance'
+  const [whatIfEnabled, setWhatIfEnabled] = useState(false)
+
+  // Check if diagram supports interactive mode
+  const supportsInteractive = enableInteractive && isPhysicsDiagram(diagram)
+
+  // Render interactive physics diagram
+  const renderInteractiveDiagram = () => {
+    if (!isPhysicsDiagram(diagram)) return null
+
+    const physicsDiagram = diagram as PhysicsDiagramData
+    const diagramType = physicsDiagram.type
+
+    const commonProps = {
+      initialStep: diagramStep,
+      language,
+      whatIfEnabled,
+      onWhatIfToggle: setWhatIfEnabled,
+    }
+
+    switch (diagramType) {
+      case 'inclined_plane':
+        return (
+          <InteractiveInclinedPlane
+            initialData={physicsDiagram.data}
+            {...commonProps}
+          />
+        )
+      case 'fbd':
+        return (
+          <InteractiveFreeBodyDiagram
+            initialData={physicsDiagram.data}
+            {...commonProps}
+          />
+        )
+      case 'projectile':
+        return (
+          <InteractiveProjectileMotion
+            initialData={physicsDiagram.data}
+            {...commonProps}
+          />
+        )
+      case 'pulley':
+        return (
+          <InteractivePulleySystem
+            initialData={physicsDiagram.data}
+            {...commonProps}
+          />
+        )
+      case 'circular':
+        return (
+          <InteractiveCircularMotion
+            initialData={physicsDiagram.data}
+            {...commonProps}
+          />
+        )
+      case 'collision':
+        return (
+          <InteractiveCollisionDiagram
+            initialData={physicsDiagram.data}
+            {...commonProps}
+          />
+        )
+      default:
+        // Fall back to standard renderer for unsupported types
+        return null
+    }
+  }
 
   return (
     <div className="hidden lg:flex lg:w-1/2 flex-col border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
@@ -47,29 +134,55 @@ export default function DiagramPanel({
           </div>
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{title}</span>
         </div>
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-          {getDiagramTypeName(diagram.type)}
-        </span>
+        <div className="flex items-center gap-2">
+          {/* Interactive mode indicator */}
+          {supportsInteractive && whatIfEnabled && (
+            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
+              {language === 'he' ? 'אינטראקטיבי' : 'Interactive'}
+            </span>
+          )}
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {getDiagramTypeName(diagram.type)}
+          </span>
+        </div>
       </div>
 
       {/* Diagram Content */}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="sticky top-0">
-          <DiagramRenderer
-            diagram={diagram}
-            currentStep={diagramStep}
-            animate={true}
-            showControls={!isAutoAdvance}
-            onStepAdvance={onStepAdvance}
-            language="en"
-          />
+          {supportsInteractive ? (
+            renderInteractiveDiagram() || (
+              <DiagramRenderer
+                diagram={diagram}
+                currentStep={diagramStep}
+                animate={true}
+                showControls={!isAutoAdvance}
+                onStepAdvance={onStepAdvance}
+                language={language}
+              />
+            )
+          ) : (
+            <DiagramRenderer
+              diagram={diagram}
+              currentStep={diagramStep}
+              animate={true}
+              showControls={!isAutoAdvance}
+              onStepAdvance={onStepAdvance}
+              language={language}
+            />
+          )}
         </div>
       </div>
 
       {/* Diagram Instructions */}
       <div className="px-4 py-3 bg-violet-50 dark:bg-violet-900/20 border-t border-gray-200 dark:border-gray-700">
         <p className="text-xs text-violet-700 dark:text-violet-300">
-          {isAutoAdvance ? autoAdvanceText : manualControlsText}
+          {whatIfEnabled
+            ? (language === 'he'
+              ? 'השתמש בבקרי הפרמטרים כדי לחקור שינויים.'
+              : 'Use the parameter controls to explore changes.')
+            : (isAutoAdvance ? autoAdvanceText : manualControlsText)
+          }
         </p>
       </div>
     </div>

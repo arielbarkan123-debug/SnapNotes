@@ -8,6 +8,8 @@ import {
   type EquationData,
   type FractionOperationData,
 } from '@/types/math'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import { LongDivisionDiagram } from './LongDivisionDiagram'
 import { EquationSteps } from './EquationSteps'
 import { FractionOperation } from './FractionOperation'
@@ -19,6 +21,13 @@ import { PolynomialOperations, type PolynomialOperationsData } from './Polynomia
 import { RadicalSimplification, type RadicalSimplificationData } from './RadicalSimplification'
 import { SystemsOfEquations, type SystemsOfEquationsData } from './SystemsOfEquations'
 import { InequalityDiagram, type InequalityData } from './InequalityDiagram'
+import { TreeDiagram } from './TreeDiagram'
+import { Triangle } from './Triangle'
+import { Circle } from './Circle'
+import { UnitCircle } from './UnitCircle'
+import { InteractiveCoordinatePlane } from './InteractiveCoordinatePlane'
+import { EquationGrapher } from './EquationGrapher'
+import type { TriangleDataWithErrors, CircleDataWithErrors, UnitCircleDataWithErrors, TreeDiagramDataWithErrors, CoordinatePlaneData } from '@/types'
 
 interface MathDiagramRendererProps {
   /** Diagram state from tutor response */
@@ -45,6 +54,10 @@ interface MathDiagramRendererProps {
   className?: string
   /** Language for labels */
   language?: 'en' | 'he'
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
 }
 
 /**
@@ -69,6 +82,8 @@ export function MathDiagramRenderer({
   height,
   className = '',
   language = 'en',
+  subject = 'math',
+  complexity = 'middle_school',
 }: MathDiagramRendererProps) {
   const [internalStep, setInternalStep] = useState(diagram.visibleStep)
 
@@ -117,6 +132,8 @@ export function MathDiagramRenderer({
       animationDuration: animate ? animationDuration : 0,
       className: 'diagram-content',
       language,
+      subject,
+      complexity,
     }
 
     switch (diagram.type) {
@@ -165,6 +182,8 @@ export function MathDiagramRenderer({
             width={width || 400}
             height={height || 100}
             className="diagram-content"
+            subject={subject}
+            complexity={complexity}
           />
         )
 
@@ -177,6 +196,8 @@ export function MathDiagramRenderer({
             width={width || 400}
             height={height || 400}
             className="diagram-content"
+            subject={subject}
+            complexity={complexity}
           />
         )
 
@@ -252,9 +273,84 @@ export function MathDiagramRenderer({
           />
         )
 
-      // Placeholder for future diagram types
       case 'triangle':
+        return (
+          <Triangle
+            data={diagram.data as unknown as TriangleDataWithErrors}
+            width={width || 400}
+            height={height || 400}
+            className="diagram-content"
+            subject={subject}
+            complexity={complexity}
+          />
+        )
+
       case 'circle':
+        return (
+          <Circle
+            data={diagram.data as unknown as CircleDataWithErrors}
+            width={width || 400}
+            height={height || 400}
+            className="diagram-content"
+            subject={subject}
+            complexity={complexity}
+          />
+        )
+
+      case 'unit_circle':
+        return (
+          <UnitCircle
+            data={diagram.data as unknown as UnitCircleDataWithErrors}
+            width={width || 400}
+            height={height || 400}
+            className="diagram-content"
+            subject={subject}
+            complexity={complexity}
+          />
+        )
+
+      case 'tree_diagram':
+        return (
+          <TreeDiagram
+            data={diagram.data as unknown as TreeDiagramDataWithErrors}
+            width={width || 500}
+            height={height || 400}
+            className="diagram-content"
+            subject={subject}
+            complexity={complexity}
+          />
+        )
+
+      case 'interactive_coordinate_plane':
+        return (
+          <InteractiveCoordinatePlane
+            data={diagram.data as unknown as CoordinatePlaneData}
+            width={width || 400}
+            height={height || 400}
+            className="diagram-content"
+            subject={subject}
+            complexity={complexity}
+            language={language}
+          />
+        )
+
+      case 'equation_grapher':
+        return (
+          <EquationGrapher
+            initialEquations={(diagram.data as { equations?: Array<{ expression: string; color?: string }> })?.equations}
+            width={width || 500}
+            height={height || 400}
+            xRange={(diagram.data as { xRange?: [number, number] })?.xRange}
+            yRange={(diagram.data as { yRange?: [number, number] })?.yRange}
+            showGrid={true}
+            className="diagram-content"
+            subject={subject}
+            complexity={complexity}
+            language={language}
+          />
+        )
+
+      // Placeholder for future diagram types
       case 'bar_model':
       case 'area_model':
         return (
@@ -289,6 +385,7 @@ export function MathDiagramRenderer({
         coordinate_plane: 'Coordinate Plane',
         triangle: 'Triangle',
         circle: 'Circle',
+        unit_circle: 'Unit Circle',
         bar_model: 'Bar Model',
         area_model: 'Area Model',
         factoring: 'Factoring',
@@ -297,6 +394,9 @@ export function MathDiagramRenderer({
         radical: 'Radical Simplification',
         systems: 'Systems of Equations',
         inequality: 'Inequalities',
+        tree_diagram: 'Tree Diagram',
+        interactive_coordinate_plane: 'Interactive Graph',
+        equation_grapher: 'Equation Grapher',
       },
       he: {
         long_division: 'חילוק ארוך',
@@ -306,6 +406,7 @@ export function MathDiagramRenderer({
         coordinate_plane: 'מערכת צירים',
         triangle: 'משולש',
         circle: 'מעגל',
+        unit_circle: 'מעגל היחידה',
         bar_model: 'מודל עמודות',
         area_model: 'מודל שטח',
         factoring: 'פירוק לגורמים',
@@ -314,6 +415,9 @@ export function MathDiagramRenderer({
         radical: 'פישוט שורשים',
         systems: 'מערכת משוואות',
         inequality: 'אי-שוויונות',
+        tree_diagram: 'תרשים עץ',
+        interactive_coordinate_plane: 'גרף אינטראקטיבי',
+        equation_grapher: 'שרטוט משוואות',
       },
     }
     return names[language][diagram.type] || diagram.type

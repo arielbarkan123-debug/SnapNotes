@@ -111,11 +111,11 @@ export default function InlineDiagram({
         onClose={() => setIsFullscreen(false)}
         initialStep={fullscreenStep}
         language={lang}
-        stepConfig={diagram.stepConfig?.map(s => ({
-          step: s.step,
-          stepLabel: s.stepLabel || `Step ${s.step + 1}`,
+        stepConfig={diagram.stepConfig?.map((s, idx) => ({
+          step: 'step' in s ? (s as { step: number }).step : idx,
+          stepLabel: s.stepLabel || `Step ${idx + 1}`,
           stepLabelHe: s.stepLabelHe,
-          showCalculation: s.showCalculation,
+          showCalculation: typeof s.showCalculation === 'string' ? s.showCalculation : undefined,
         }))}
       />
     </>

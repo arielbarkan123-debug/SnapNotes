@@ -3,7 +3,12 @@
 import { useMemo } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import { COLORS } from '@/lib/diagram-theme'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
+import { useDiagramBase } from '@/hooks/useDiagramBase'
 import { prefersReducedMotion } from '@/lib/diagram-animations'
+import { MathText } from '@/components/ui/MathRenderer'
+import { normalizeToLatex } from '@/lib/normalize-latex'
 
 // ============================================================================
 // Types
@@ -52,7 +57,11 @@ export interface SystemsOfEquationsData {
 
 interface SystemsOfEquationsProps {
   data: SystemsOfEquationsData
+  /** Starting step (0-indexed) */
+  initialStep?: number
+  /** @deprecated Use initialStep instead. Ignored - step state is managed internally. */
   currentStep?: number
+  /** @deprecated Ignored - total steps derived from data.steps */
   totalSteps?: number
   animationDuration?: number
   onStepComplete?: () => void
@@ -61,6 +70,10 @@ interface SystemsOfEquationsProps {
   className?: string
   language?: 'en' | 'he'
   showStepCounter?: boolean
+  /** Subject for color coding */
+  subject?: SubjectKey
+  /** Complexity level for adaptive styling */
+  complexity?: VisualComplexityLevel
 }
 
 // ============================================================================
@@ -69,25 +82,34 @@ interface SystemsOfEquationsProps {
 
 export function SystemsOfEquations({
   data,
-  currentStep = 0,
-  totalSteps: totalStepsProp,
+  initialStep,
   animationDuration = 400,
   width = 460,
   className = '',
   language = 'en',
   showStepCounter = true,
+  subject = 'math',
+  complexity = 'middle_school',
 }: SystemsOfEquationsProps) {
   const { equation1, equation2, variables, method, solutions, steps, title } = data
   const reducedMotion = prefersReducedMotion()
   void animationDuration // reserved for future animation customization
 
-  const actualTotalSteps = totalStepsProp ?? steps.length
-  const progressPercent = ((currentStep + 1) / actualTotalSteps) * 100
-  const isComplete = currentStep >= steps.length - 1
+  // useDiagramBase -- step control, colors, lineWeight, RTL
+  const diagram = useDiagramBase({
+    totalSteps: steps.length,
+    subject,
+    complexity,
+    initialStep: initialStep ?? 0,
+    language,
+  })
 
-  const visibleSteps = useMemo(() => steps.filter((s) => s.step <= currentStep), [steps, currentStep])
+  const progressPercent = ((diagram.currentStep + 1) / diagram.totalSteps) * 100
+  const isComplete = diagram.currentStep >= steps.length - 1
+
+  const visibleSteps = useMemo(() => steps.filter((s) => s.step <= diagram.currentStep), [steps, diagram.currentStep])
   // currentStepInfo is used for step-specific logic in the render
-  const _currentStepInfo = steps[currentStep] || null
+  const _currentStepInfo = steps[diagram.currentStep] || null
 
   // Found solutions so far
   const foundSolutions = useMemo(() => {
@@ -204,7 +226,7 @@ export function SystemsOfEquations({
             style={{
               background: isComplete
                 ? 'linear-gradient(90deg, #22c55e, #16a34a)'
-                : 'linear-gradient(90deg, #4f46e5, #6366f1)',
+                : `linear-gradient(90deg, ${diagram.colors.dark}, ${diagram.colors.primary})`,
             }}
           />
         </div>
@@ -235,8 +257,8 @@ export function SystemsOfEquations({
           {/* Equations */}
           <div className="space-y-2">
             <motion.div
-              className="font-mono text-lg font-semibold px-3 py-1 rounded-lg"
-              style={{ 
+              className="text-lg font-semibold px-3 py-1 rounded-lg"
+              style={{
                 color: EQUATION_COLORS[0],
                 backgroundColor: 'rgba(59, 130, 246, 0.1)',
               }}
@@ -244,11 +266,11 @@ export function SystemsOfEquations({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 }}
             >
-              {equation1}
+              <MathText>{`$${normalizeToLatex(equation1)}$`}</MathText>
             </motion.div>
             <motion.div
-              className="font-mono text-lg font-semibold px-3 py-1 rounded-lg"
-              style={{ 
+              className="text-lg font-semibold px-3 py-1 rounded-lg"
+              style={{
                 color: EQUATION_COLORS[1],
                 backgroundColor: 'rgba(139, 92, 246, 0.1)',
               }}
@@ -256,7 +278,7 @@ export function SystemsOfEquations({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
             >
-              {equation2}
+              <MathText>{`$${normalizeToLatex(equation2)}$`}</MathText>
             </motion.div>
           </div>
         </div>
@@ -311,7 +333,7 @@ export function SystemsOfEquations({
         <div className="space-y-4">
           <AnimatePresence mode="sync">
             {visibleSteps.slice(-3).map((step, _index) => { // Show last 3 steps
-              const isCurrentStep = step.step === currentStep
+              const isCurrentStep = step.step === diagram.currentStep
               const stepLabel = getStepLabel(step.type)
 
               return (
@@ -337,7 +359,7 @@ export function SystemsOfEquations({
                     animate={{ scale: 1 }}
                     transition={{ type: 'spring', stiffness: 400 }}
                     style={{
-                      backgroundColor: isCurrentStep ? COLORS.primary[500] : COLORS.gray[200],
+                      backgroundColor: isCurrentStep ? diagram.colors.primary : COLORS.gray[200],
                       color: isCurrentStep ? 'white' : COLORS.gray[500],
                     }}
                   >
@@ -365,7 +387,7 @@ export function SystemsOfEquations({
                         <motion.div
                           key={`eq-${eqIdx}`}
                           className={`
-                            flex items-center justify-center gap-3 font-mono text-base
+                            flex items-center justify-center gap-3 text-base
                             ${isActive && isCurrentStep ? 'font-bold' : ''}
                           `}
                           animate={isActive && isCurrentStep ? { scale: [1, 1.02, 1] } : {}}
@@ -379,7 +401,7 @@ export function SystemsOfEquations({
                             }`}
                             style={{ color }}
                           >
-                            {eq.leftSide}
+                            <MathText>{`$${normalizeToLatex(eq.leftSide)}$`}</MathText>
                           </span>
                           <span className="text-gray-500">=</span>
                           <span
@@ -390,7 +412,7 @@ export function SystemsOfEquations({
                             }`}
                             style={{ color }}
                           >
-                            {eq.rightSide}
+                            <MathText>{`$${normalizeToLatex(eq.rightSide)}$`}</MathText>
                           </span>
                         </motion.div>
                       )
@@ -406,8 +428,8 @@ export function SystemsOfEquations({
                       transition={{ delay: 0.3 }}
                     >
                       <div className="px-4 py-2 rounded-lg bg-green-100 dark:bg-green-900/30 border-2 border-green-300 dark:border-green-700">
-                        <span className="text-green-700 dark:text-green-300 font-bold font-mono">
-                          {step.found.variable} = {step.found.value}
+                        <span className="text-green-700 dark:text-green-300 font-bold">
+                          <MathText>{`$${step.found.variable} = ${normalizeToLatex(step.found.value)}$`}</MathText>
                         </span>
                         <span className="ml-2">✓</span>
                       </div>
@@ -422,8 +444,8 @@ export function SystemsOfEquations({
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.2 }}
                     >
-                      <span className="font-mono text-sm bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-lg">
-                        {step.calculation}
+                      <span className="text-sm bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-lg">
+                        <MathText>{`$${normalizeToLatex(step.calculation)}$`}</MathText>
                       </span>
                     </motion.div>
                   )}
@@ -498,8 +520,8 @@ export function SystemsOfEquations({
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.2 + idx * 0.1 }}
                 >
-                  <div className="text-2xl font-bold font-mono text-green-600 dark:text-green-400">
-                    {v} = {solutions[v]}
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    <MathText>{`$${v} = ${normalizeToLatex(solutions[v])}$`}</MathText>
                   </div>
                 </motion.div>
               ))}
@@ -519,8 +541,8 @@ export function SystemsOfEquations({
         <div className="mt-4 text-center">
           <span className="text-xs text-gray-400 dark:text-gray-500">
             {language === 'he'
-              ? `שלב ${currentStep + 1} מתוך ${actualTotalSteps}`
-              : `Step ${currentStep + 1} of ${actualTotalSteps}`}
+              ? `שלב ${diagram.currentStep + 1} מתוך ${diagram.totalSteps}`
+              : `Step ${diagram.currentStep + 1} of ${diagram.totalSteps}`}
           </span>
         </div>
       )}

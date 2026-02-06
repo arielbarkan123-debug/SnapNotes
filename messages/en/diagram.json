@@ -1,0 +1,63 @@
+{
+  "back": "Back",
+  "close": "Close",
+  "previous": "Previous",
+  "next": "Next",
+  "pause": "Pause",
+  "autoPlay": "Auto-play",
+  "stepOf": "Step {current} of {total}",
+  "gotIt": "Got it!",
+  "keyboardHint": "Use arrow keys to navigate, Space to toggle auto-play, Esc to close",
+  "expand": "Expand diagram",
+  "collapse": "Collapse diagram",
+  "fullscreen": "View fullscreen",
+  "exitFullscreen": "Exit fullscreen",
+
+  "interactive": {
+    "whatIf": "What If?",
+    "whatIfSubtitle": "Adjust parameters to explore",
+    "parameters": "Parameters",
+    "results": "Results",
+    "suggestions": "Try These",
+    "reset": "Reset",
+    "undo": "Undo",
+    "redo": "Redo",
+    "tryChangingValues": "Try changing the values!",
+    "enableInteractive": "Enable interactive mode",
+    "disableInteractive": "Disable interactive mode",
+
+    "physics": {
+      "mass": "Mass",
+      "angle": "Angle",
+      "friction": "Friction Coefficient",
+      "velocity": "Velocity",
+      "force": "Force",
+      "acceleration": "Acceleration",
+      "weight": "Weight",
+      "normalForce": "Normal Force",
+      "frictionForce": "Friction Force",
+      "netForce": "Net Force",
+      "gravity": "Gravity",
+      "radius": "Radius",
+      "height": "Height",
+      "period": "Period",
+      "frequency": "Frequency",
+      "range": "Range",
+      "maxHeight": "Maximum Height",
+      "timeOfFlight": "Time of Flight",
+      "parallelComponent": "Parallel Component",
+      "perpendicularComponent": "Perpendicular Component"
+    },
+
+    "suggestions": {
+      "steepAngle": "What if the angle was steeper?",
+      "noFriction": "What if there was no friction?",
+      "criticalAngle": "What angle makes it start sliding?",
+      "doubleMass": "What if the mass was doubled?",
+      "optimalAngle": "What angle gives maximum range?",
+      "highAngle": "What if launched nearly vertical?",
+      "lowAngle": "What if launched at a low angle?",
+      "doubleVelocity": "What if velocity was doubled?"
+    }
+  }
+}

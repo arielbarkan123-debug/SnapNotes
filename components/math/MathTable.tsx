@@ -2,17 +2,21 @@
 
 import type { TableData, TableCell } from '@/types'
 import { MathRenderer } from '@/components/ui/MathRenderer'
+import type { SubjectKey } from '@/lib/diagram-theme'
+import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
 interface MathTableProps {
   data: TableData
   className?: string
+  subject?: SubjectKey
+  complexity?: VisualComplexityLevel
 }
 
 /**
  * MathTable - Component for displaying math tables
  * Used for value tables, sign tables, and pattern tables
  */
-export function MathTable({ data, className = '' }: MathTableProps) {
+export function MathTable({ data, className = '', subject: _subject = 'math', complexity: _complexity = 'middle_school' }: MathTableProps) {
   const { rows, title, caption } = data
 
   if (!rows.length) return null

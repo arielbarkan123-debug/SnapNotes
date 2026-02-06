@@ -318,11 +318,7 @@ export function useStepControls(
     managerRef.current = new StepSyncManager(
       steps,
       {
-        onStepChange: () => setState(managerRef.current!.getState()),
-        onAnimationStart: () => setState(managerRef.current!.getState()),
-        onAnimationComplete: () => setState(managerRef.current!.getState()),
         onComplete: options?.onComplete,
-        onReset: () => setState(managerRef.current!.getState()),
       },
       {
         defaultAnimationDuration: options?.defaultAnimationDuration ?? 400,
@@ -330,14 +326,24 @@ export function useStepControls(
       }
     )
 
-    return () => managerRef.current?.destroy()
+    // Subscribe to all state changes
+    const unsubscribe = managerRef.current.subscribe((newState) => {
+      setState(newState)
+    })
+
+    return () => {
+      unsubscribe()
+      managerRef.current?.destroy()
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Update steps if they change
   useEffect(() => {
-    managerRef.current?.updateSteps(steps)
-    setState(managerRef.current!.getState())
+    if (managerRef.current) {
+      managerRef.current.updateSteps(steps)
+      setState(managerRef.current.getState())
+    }
   }, [steps])
 
   const next = useCallback(() => managerRef.current?.next(), [])
