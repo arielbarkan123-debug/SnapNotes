@@ -392,8 +392,7 @@ export function MathDiagramRenderer({
         )
 
       case 'number_line':
-        // NumberLine doesn't have step-sync yet, render directly
-        // Cast through unknown to bridge between math.ts and index.ts NumberLineData types
+        // Self-managing: has own useDiagramBase + DiagramStepControls
         return (
           <NumberLine
             data={diagram.data as unknown as Parameters<typeof NumberLine>[0]['data']}
@@ -402,12 +401,13 @@ export function MathDiagramRenderer({
             className="diagram-content"
             subject={subject}
             complexity={complexity}
+            language={language}
+            initialStep={currentStep}
           />
         )
 
       case 'coordinate_plane':
-        // CoordinatePlane doesn't have step-sync yet, render directly
-        // Cast through unknown to bridge between math.ts and index.ts types
+        // Self-managing: has own useDiagramBase + DiagramStepControls
         return (
           <CoordinatePlane
             data={diagram.data as unknown as Parameters<typeof CoordinatePlane>[0]['data']}
@@ -416,6 +416,8 @@ export function MathDiagramRenderer({
             className="diagram-content"
             subject={subject}
             complexity={complexity}
+            language={language}
+            initialStep={currentStep}
           />
         )
 
@@ -500,6 +502,8 @@ export function MathDiagramRenderer({
             className="diagram-content"
             subject={subject}
             complexity={complexity}
+            language={language}
+            initialStep={currentStep}
           />
         )
 
@@ -512,6 +516,8 @@ export function MathDiagramRenderer({
             className="diagram-content"
             subject={subject}
             complexity={complexity}
+            language={language}
+            initialStep={currentStep}
           />
         )
 
@@ -524,6 +530,8 @@ export function MathDiagramRenderer({
             className="diagram-content"
             subject={subject}
             complexity={complexity}
+            language={language}
+            initialStep={currentStep}
           />
         )
 
@@ -536,6 +544,8 @@ export function MathDiagramRenderer({
             className="diagram-content"
             subject={subject}
             complexity={complexity}
+            language={language}
+            initialStep={currentStep}
           />
         )
 
@@ -549,6 +559,7 @@ export function MathDiagramRenderer({
             subject={subject}
             complexity={complexity}
             language={language}
+            initialStep={currentStep}
           />
         )
 
@@ -565,6 +576,7 @@ export function MathDiagramRenderer({
             subject={subject}
             complexity={complexity}
             language={language}
+            initialStep={currentStep}
           />
         )
 

@@ -14,9 +14,8 @@ const FullScreenDiagramView = dynamic(
 
 interface InlineDiagramProps {
   diagram: DiagramState
+  /** Override which step to display (defaults to last step = fully revealed) */
   currentStep?: number
-  onStepAdvance?: () => void
-  onStepBack?: () => void
   /** Size variant: 'compact' (350x280), 'default' (400x350), or 'large' (500x400) */
   size?: 'compact' | 'default' | 'large'
   /** Language for labels */
@@ -38,8 +37,6 @@ const SIZE_MAP = {
 export default function InlineDiagram({
   diagram,
   currentStep,
-  onStepAdvance,
-  onStepBack,
   size = 'compact',
   language,
   showExpandButton = true,
@@ -53,8 +50,14 @@ export default function InlineDiagram({
 
   const { width, height } = SIZE_MAP[size]
 
+  // Inline diagrams show fully revealed (all steps visible) for quick viewing.
+  // Users can expand to fullscreen for the step-by-step experience.
+  const totalSteps = diagram.totalSteps ?? diagram.stepConfig?.length ?? 1
+  const inlineStep = currentStep ?? (totalSteps > 0 ? totalSteps - 1 : 0)
+
   const handleOpenFullscreen = () => {
-    setFullscreenStep(currentStep ?? 0)
+    // Fullscreen starts from step 0 for the full step-by-step experience
+    setFullscreenStep(0)
     setIsFullscreen(true)
   }
 
@@ -64,7 +67,7 @@ export default function InlineDiagram({
         {/* Header with diagram type and expand button */}
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-medium text-violet-600 dark:text-violet-400">
-            📊 {getDiagramTypeName(diagram.type)}
+            {getDiagramTypeName(diagram.type)}
           </span>
 
           {showExpandButton && (
@@ -81,25 +84,23 @@ export default function InlineDiagram({
           )}
         </div>
 
-        {/* Diagram container */}
+        {/* Diagram container — fully revealed, no step controls */}
         <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 overflow-x-auto">
           <DiagramRenderer
             diagram={diagram}
-            currentStep={currentStep}
-            animate={true}
-            showControls={true}
-            onStepAdvance={onStepAdvance}
-            onStepBack={onStepBack}
+            currentStep={inlineStep}
+            animate={false}
+            showControls={false}
             width={width}
             height={height}
             language={lang}
           />
         </div>
 
-        {/* Hint to expand for better view */}
-        {showExpandButton && (diagram.totalSteps || 1) > 3 && (
+        {/* Hint to expand for step-by-step view */}
+        {showExpandButton && totalSteps > 1 && (
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
-            {lang === 'he' ? 'לחץ להגדלה לצפייה טובה יותר' : 'Click expand for a better view'}
+            {lang === 'he' ? 'לחץ להגדלה לצפייה צעד-אחר-צעד' : 'Expand for step-by-step view'}
           </p>
         )}
       </div>

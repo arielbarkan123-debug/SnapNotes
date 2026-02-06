@@ -1,14 +1,12 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import type { HomeworkSession, ConversationMessage, HintLevel } from '@/lib/homework/types'
 
 // Import diagram components
 import {
-  type DiagramState,
   InlineDiagram,
-  getLatestDiagram,
   convertToDiagramState,
 } from './diagram'
 
@@ -104,15 +102,9 @@ function clearDraft(sessionId: string): void {
 function MessageBubble({
   message,
   t,
-  diagramStep,
-  onStepAdvance,
-  onStepBack,
 }: {
   message: ConversationMessage
   t: ReturnType<typeof useTranslations<'chat'>>
-  diagramStep?: number
-  onStepAdvance?: () => void
-  onStepBack?: () => void
 }) {
   const isTutor = message.role === 'tutor'
   const hasDiagram = isTutor && message.diagram
@@ -147,13 +139,10 @@ function MessageBubble({
         >
           <p className="whitespace-pre-wrap">{message.content}</p>
 
-          {/* Inline Diagram */}
+          {/* Inline Diagram — shows fully revealed, expand for step-by-step */}
           {diagramState && (
             <InlineDiagram
               diagram={diagramState}
-              currentStep={diagramStep ?? 0}
-              onStepAdvance={onStepAdvance}
-              onStepBack={onStepBack}
             />
           )}
         </div>
@@ -274,29 +263,8 @@ export default function TutoringChat({
   const t = useTranslations('chat')
   const [input, setInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [diagramStep, setDiagramStep] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-
-  // Get the current diagram from conversation (if any)
-  const currentDiagram = useMemo<DiagramState | null>(() => {
-    return getLatestDiagram(session.conversation)
-  }, [session.conversation])
-
-  // Track previous diagram step for animation detection
-  const prevDiagramStepRef = useRef<number>(0)
-
-  // Reset diagram step when a new diagram arrives (auto-advance)
-  // NOTE: Only run when currentDiagram changes, NOT when diagramStep changes
-  // Otherwise clicking Next/Prev would reset the step back to visibleStep
-  useEffect(() => {
-    if (currentDiagram) {
-      const newStep = currentDiagram.visibleStep
-      prevDiagramStepRef.current = diagramStep
-      setDiagramStep(newStep)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentDiagram])
 
   // Restore draft from localStorage on mount
   useEffect(() => {
@@ -367,14 +335,6 @@ export default function TutoringChat({
     [isLoading, isSubmitting, onRequestHint]
   )
 
-  const handleStepAdvance = useCallback(() => {
-    setDiagramStep(prev => Math.min(prev + 1, (currentDiagram?.totalSteps || 10) - 1))
-  }, [currentDiagram?.totalSteps])
-
-  const handleStepBack = useCallback(() => {
-    setDiagramStep(prev => Math.max(prev - 1, 0))
-  }, [])
-
   return (
     <div className="flex h-full bg-gray-50 dark:bg-gray-900">
       {/* Main Chat Area */}
@@ -393,9 +353,6 @@ export default function TutoringChat({
               key={idx}
               message={msg}
               t={t}
-              diagramStep={diagramStep}
-              onStepAdvance={handleStepAdvance}
-              onStepBack={handleStepBack}
             />
           ))}
 
