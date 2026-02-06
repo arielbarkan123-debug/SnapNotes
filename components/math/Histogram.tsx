@@ -141,8 +141,7 @@ export function Histogram({
         data-testid="hist-svg"
         viewBox={viewBox}
         width="100%"
-        height="100%"
-        className="overflow-visible"
+        preserveAspectRatio="xMidYMid meet"
       >
         {/* Step 0: Axes */}
         <AnimatePresence>
@@ -270,20 +269,21 @@ export function Histogram({
               {bins.map((bin, i) => {
                 const barH = (bin.count / maxCount) * plotHeight
                 const x = originX + i * barWidth
-                const y = originY - barH
+                const barY = originY - barH
                 return (
                   <motion.rect
                     key={`bar-${i}`}
                     data-testid={`hist-bar-${i}`}
                     x={x}
-                    y={originY}
+                    y={barY}
                     width={barWidth}
-                    height={0}
+                    height={barH}
                     fill={`${primaryColor}60`}
                     stroke={primaryColor}
                     strokeWidth={diagram.lineWeight * 0.5}
-                    initial={{ y: originY, height: 0 }}
-                    animate={{ y, height: barH }}
+                    initial={{ scaleY: 0 }}
+                    animate={{ scaleY: 1 }}
+                    style={{ transformOrigin: `${x + barWidth / 2}px ${originY}px` }}
                     transition={{
                       type: 'spring',
                       stiffness: 200,

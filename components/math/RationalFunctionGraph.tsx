@@ -273,7 +273,6 @@ export function RationalFunctionGraph({
         data-testid="rfg-svg"
         viewBox={`0 0 ${width} ${height}`}
         width="100%"
-        height="auto"
         className="overflow-visible"
       >
         {/* Step 0: Axes and grid */}

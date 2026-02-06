@@ -239,7 +239,6 @@ export function ConicSections({
         data-testid="cs-svg"
         viewBox={`0 0 ${width} ${height}`}
         width="100%"
-        height="auto"
         className="overflow-visible"
       >
         {/* Step 0: Axes */}

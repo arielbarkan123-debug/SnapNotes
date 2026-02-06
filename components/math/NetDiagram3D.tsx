@@ -251,7 +251,6 @@ export function NetDiagram3D({
         data-testid="nd-svg"
         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
         width="100%"
-        height="auto"
         className="overflow-visible"
       >
         {/* Step 0: 3D shape outline */}

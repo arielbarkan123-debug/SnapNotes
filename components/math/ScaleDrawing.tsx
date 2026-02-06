@@ -193,7 +193,6 @@ export function ScaleDrawing({
         data-testid="sd-svg"
         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
         width="100%"
-        height="auto"
         className="overflow-visible"
       >
         {/* Step 0: Original shape with measurements */}

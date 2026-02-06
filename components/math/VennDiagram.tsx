@@ -173,7 +173,6 @@ export function VennDiagram({
         data-testid="vd-svg"
         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
         width="100%"
-        height="auto"
         className="overflow-visible"
       >
         {/* Universal set rectangle */}

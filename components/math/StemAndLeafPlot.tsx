@@ -127,7 +127,6 @@ export function StemAndLeafPlot({
         data-testid="slp-svg"
         viewBox={viewBox}
         width="100%"
-        height="100%"
         className="overflow-visible"
       >
         {/* Step 0: Structure (divider line and headers) */}

@@ -144,7 +144,6 @@ export function TapeDiagramRatio({
         data-testid="tdr-svg"
         viewBox={viewBox}
         width="100%"
-        height="100%"
         className="overflow-visible"
       >
         {/* Step 0: First tape */}

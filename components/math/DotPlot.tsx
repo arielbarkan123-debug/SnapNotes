@@ -156,7 +156,6 @@ export function DotPlot({
         data-testid="dp-svg"
         viewBox={viewBox}
         width="100%"
-        height="100%"
         className="overflow-visible"
       >
         {/* Step 0: Number line */}

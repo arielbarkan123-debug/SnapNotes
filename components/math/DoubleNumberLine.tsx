@@ -147,7 +147,6 @@ export function DoubleNumberLine({
         data-testid="dnl-svg"
         viewBox={viewBox}
         width="100%"
-        height="100%"
         className="overflow-visible"
       >
         {/* Step 0: Top number line */}

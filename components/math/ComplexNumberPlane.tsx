@@ -167,7 +167,6 @@ export function ComplexNumberPlane({
         data-testid="cnp-svg"
         viewBox={`0 0 ${width} ${height}`}
         width="100%"
-        height="auto"
         className="overflow-visible"
       >
         {/* Step 0: Axes */}
