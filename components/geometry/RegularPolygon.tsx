@@ -196,8 +196,8 @@ export function RegularPolygon({
   }, [n, hasDiagonals])
 
   // First side midpoint for apothem line
-  const midX = (vertices[0]?.x ?? 0 + (vertices[1]?.x ?? 0)) / 2
-  const midY = (vertices[0]?.y ?? 0 + (vertices[1]?.y ?? 0)) / 2
+  const _midX = (vertices[0]?.x ?? 0 + (vertices[1]?.x ?? 0)) / 2
+  const _midY = (vertices[0]?.y ?? 0 + (vertices[1]?.y ?? 0)) / 2
   const sideMidX = vertices.length >= 2 ? (vertices[0].x + vertices[1].x) / 2 : cx
   const sideMidY = vertices.length >= 2 ? (vertices[0].y + vertices[1].y) / 2 : cy
 

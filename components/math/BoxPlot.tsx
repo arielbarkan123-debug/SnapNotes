@@ -69,7 +69,7 @@ export function BoxPlot({
     max: dataMax,
     outliers,
     title,
-    showLabels: dataShowLabels,
+    showLabels: _dataShowLabels,
   } = data
 
   const hasOutliers = outliers && outliers.length > 0

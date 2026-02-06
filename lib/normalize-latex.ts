@@ -93,7 +93,7 @@ export function radianToLatex(input: string): string {
   if (input === '0') return '0'
 
   // Normalize π first
-  let result = input.replace(/\u03C0/g, '\\pi')
+  const result = input.replace(/\u03C0/g, '\\pi')
 
   // Handle simple cases
   if (result === '\\pi') return '\\pi'

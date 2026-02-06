@@ -180,7 +180,7 @@ export function ExteriorAngleTheorem({
   }
 
   const makeArc = (ox: number, oy: number, startDeg: number, endDeg: number, r: number) => {
-    let s = startDeg
+    const s = startDeg
     let e = endDeg
     let diff = e - s
     if (diff > 180) e -= 360

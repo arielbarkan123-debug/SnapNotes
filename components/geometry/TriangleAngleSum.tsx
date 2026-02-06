@@ -158,7 +158,7 @@ export function TriangleAngleSum({
 
   const makeArc = (ox: number, oy: number, startDeg: number, endDeg: number, r: number) => {
     // Ensure we go the short way around
-    let s = startDeg
+    const s = startDeg
     let e = endDeg
     let diff = e - s
     if (diff > 180) e -= 360

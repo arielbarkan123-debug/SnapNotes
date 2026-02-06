@@ -59,7 +59,7 @@ export function DilationCoordinatePlane({
   height = 400,
   className = '',
   initialStep,
-  showStepByStep = false,
+  showStepByStep: _showStepByStep = false,
   language = 'en',
   subject = 'geometry',
   complexity = 'middle_school',

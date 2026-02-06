@@ -146,7 +146,7 @@ export function RationalFunctionGraph({
     holes = [],
     xIntercepts = [],
     domain: dataDomain,
-    showAsymptotes,
+    showAsymptotes: _showAsymptotes,
     title,
   } = data
 

@@ -279,7 +279,7 @@ export const GeometryCanvas = forwardRef<GeometryCanvasRef, GeometryCanvasProps>
     ref
   ) {
     const subjectColors = useMemo(() => getSubjectColor(subject), [subject])
-    const adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
+    const _adaptiveLineWeight = useMemo(() => getAdaptiveLineWeight(complexity), [complexity])
     const svgRef = useRef<SVGSVGElement>(null)
     const [tool, setTool] = useState<GeometryToolType>(controlledTool || 'select')
     const [state, setState] = useState<GeometryState>({

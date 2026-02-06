@@ -35,8 +35,6 @@ export function SVGCurve({
   animate = true,
   visible = true,
 }: SVGCurveProps): ReactElement | null {
-  if (!visible) return null
-
   const plotW = width - padding * 2
   const plotH = height - padding * 2
   const xRange = xMax - xMin || 1
@@ -56,11 +54,13 @@ export function SVGCurve({
       }
       const sx = padding + ((x - xMin) / xRange) * plotW
       const sy = padding + plotH - ((y - yMin) / yRange) * plotH
-      parts.push(`${drawing ? 'L' : 'M'} ${sx.toFixed(2)} ${sy.toFixed(2)}`)
+      parts.push(`${drawing ? "L" : "M"} ${sx.toFixed(2)} ${sy.toFixed(2)}`)
       drawing = true
     }
     return parts.join(' ')
   }, [fn, xMin, xMax, yMin, yMax, padding, plotW, plotH, xRange, yRange, samples])
+
+  if (!visible) return null
 
   return (
     <motion.path

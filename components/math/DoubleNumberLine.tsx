@@ -101,7 +101,7 @@ export function DoubleNumberLine({
   const lineWidth = width - padding.left - padding.right
   const topLineY = 60
   const bottomLineY = 150
-  const valueCount = Math.max(topLine.values.length, bottomLine.values.length)
+  const _valueCount = Math.max(topLine.values.length, bottomLine.values.length)
 
   // Compute positions
   const topValues = topLine.values

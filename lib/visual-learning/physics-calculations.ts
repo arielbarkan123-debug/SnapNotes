@@ -475,7 +475,7 @@ export interface CircularMotionResults {
  * Calculate circular motion
  */
 export function calculateCircularMotion(params: CircularMotionParams): CircularMotionResults {
-  const { mass, velocity, radius, gravity = GRAVITY } = params
+  const { mass, velocity, radius, gravity: _gravity = GRAVITY } = params
 
   const centripetalAcceleration = velocity ** 2 / radius
   const centripetalForce = mass * centripetalAcceleration

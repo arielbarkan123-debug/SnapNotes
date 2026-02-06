@@ -12,6 +12,7 @@ import {
   labelAppearVariants,
   createPathDrawVariants,
 } from '@/lib/diagram-animations'
+import { formatProbability } from '@/lib/utils/math-format'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -255,7 +256,7 @@ export function ProbabilityTree({
                       animate="visible"
                       variants={labelAppearVariants}
                     >
-                      {branch.probability}
+                      {formatProbability(branch.probability)}
                     </motion.text>
                     {/* Node */}
                     <circle
@@ -325,7 +326,7 @@ export function ProbabilityTree({
                           animate="visible"
                           variants={labelAppearVariants}
                         >
-                          {branchData.probability}
+                          {formatProbability(branchData.probability)}
                         </motion.text>
                       )}
                       <circle
@@ -389,7 +390,7 @@ export function ProbabilityTree({
                         fontWeight={700}
                         fill={primaryColor}
                       >
-                        P = {outcome.probability}
+                        P = {formatProbability(outcome.probability)}
                       </text>
                     </motion.g>
                   )

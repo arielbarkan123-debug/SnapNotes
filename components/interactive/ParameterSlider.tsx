@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { ParameterDefinition, SliderMark, ParameterSliderProps as BaseSliderProps } from '@/types/interactivity'
+import type { ParameterDefinition, SliderMark } from '@/types/interactivity'
 
 /**
  * Legacy parameter definition for backward compatibility
@@ -380,7 +380,7 @@ export function ParameterSliderGroup({
 
       <div className={compact ? 'space-y-1' : 'space-y-3'}>
         {filteredParams.map((param) => {
-          const normalized = isLegacyParameter(param) ? convertLegacyParameter(param) : param
+          const _normalized = isLegacyParameter(param) ? convertLegacyParameter(param) : param
           const paramName = isLegacyParameter(param) ? param.id : param.name
           const paramDefault = isLegacyParameter(param) ? param.defaultValue : param.default
           return (

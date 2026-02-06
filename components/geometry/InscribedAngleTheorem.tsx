@@ -70,7 +70,7 @@ export function InscribedAngleTheorem({
   complexity = 'high_school',
 }: InscribedAngleTheoremProps) {
   const {
-    radius,
+    radius: _radius,
     centralAngle,
     inscribedAngle,
     arcAngle,

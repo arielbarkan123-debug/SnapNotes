@@ -65,6 +65,35 @@ import {
   type LimitVisualizationData,
   type DerivativeTangentLineData,
   type ResidualPlotData,
+  type SequenceDiagramData,
+  type SamplingDistributionData,
+  type FBDData,
+  // Geometry data types
+  type RotationCoordinatePlaneData,
+  type DilationCoordinatePlaneData,
+  type TessellationPatternData,
+  type TransformationsCompositionData,
+  type TriangleGeometryData,
+  type RegularPolygonData,
+  type PerpendicularBisectorConstructionData,
+  type OrthographicViews3DData,
+  type TangentRadiusPerpendicularityData,
+  type ExteriorAngleTheoremData,
+  type InscribedAngleTheoremData,
+  type TriangleCongruenceData,
+  type TriangleSimilarityData,
+  type LawOfSinesCosinesData,
+  type AngleTypesData,
+  type ComplementarySupplementaryData,
+  type VerticalAnglesData,
+  type ParallelLinesTransversalData,
+  type TriangleAngleSumData,
+  // Basic shape data types
+  type SquareData,
+  type RectangleData,
+  type ParallelogramData,
+  type RhombusData,
+  type TrapezoidData,
 } from '@/types/math'
 import type { SubjectKey } from '@/lib/diagram-theme'
 import type { VisualComplexityLevel } from '@/lib/visual-complexity'
@@ -159,6 +188,41 @@ import { ProbabilityDistribution } from './ProbabilityDistribution'
 import { ParametricCurve } from './ParametricCurve'
 import { LimitVisualization } from './LimitVisualization'
 import { DerivativeTangentLine } from './DerivativeTangentLine'
+import { SequenceDiagram } from './SequenceDiagram'
+import { SamplingDistribution } from './SamplingDistribution'
+import { FBD } from './FBD'
+
+// ============================================================================
+// Geometry component imports
+// ============================================================================
+import { RotationCoordinatePlane } from './RotationCoordinatePlane'
+import { DilationCoordinatePlane } from './DilationCoordinatePlane'
+import { TessellationPattern } from './TessellationPattern'
+import { TransformationsComposition } from './TransformationsComposition'
+import { TriangleGeometry } from './TriangleGeometry'
+import { RegularPolygon } from './RegularPolygon'
+import { PerpendicularBisectorConstruction } from './PerpendicularBisectorConstruction'
+import { OrthographicViews3D } from './OrthographicViews3D'
+import { TangentRadiusPerpendicularity } from './TangentRadiusPerpendicularity'
+import { ExteriorAngleTheorem } from './ExteriorAngleTheorem'
+import { InscribedAngleTheorem } from './InscribedAngleTheorem'
+import { TriangleCongruence } from './TriangleCongruence'
+import { TriangleSimilarity } from './TriangleSimilarity'
+import { LawOfSinesCosines } from './LawOfSinesCosines'
+import { AngleTypes } from './AngleTypes'
+import { ComplementarySupplementary } from './ComplementarySupplementary'
+import { VerticalAngles } from './VerticalAngles'
+import { ParallelLinesTransversal } from './ParallelLinesTransversal'
+import { TriangleAngleSum } from './TriangleAngleSum'
+
+// ============================================================================
+// Basic shape component imports
+// ============================================================================
+import { Square } from './Square'
+import { Rectangle } from './Rectangle'
+import { Parallelogram } from './Parallelogram'
+import { Rhombus } from './Rhombus'
+import { Trapezoid } from './Trapezoid'
 
 // ============================================================================
 // Utility component imports
@@ -1067,6 +1131,296 @@ export function MathDiagramRenderer({
           />
         )
 
+      case 'sequence_diagram':
+        return (
+          <SequenceDiagram
+            data={diagram.data as unknown as SequenceDiagramData}
+            width={width || 500}
+            height={height || 220}
+            {...commonProps}
+          />
+        )
+
+      case 'sampling_distribution':
+        return (
+          <SamplingDistribution
+            data={diagram.data as unknown as SamplingDistributionData}
+            width={width || 450}
+            height={height || 350}
+            {...commonProps}
+          />
+        )
+
+      case 'free_body_diagram':
+        return (
+          <FBD
+            data={diagram.data as unknown as FBDData}
+            width={width || 400}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      // ====================================================================
+      // Geometry – Transformations
+      // ====================================================================
+
+      case 'rotation_coordinate_plane':
+        return (
+          <RotationCoordinatePlane
+            data={diagram.data as unknown as RotationCoordinatePlaneData}
+            width={width || 450}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      case 'dilation_coordinate_plane':
+        return (
+          <DilationCoordinatePlane
+            data={diagram.data as unknown as DilationCoordinatePlaneData}
+            width={width || 450}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      case 'tessellation_pattern':
+        return (
+          <TessellationPattern
+            data={diagram.data as unknown as TessellationPatternData}
+            width={width || 450}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      case 'transformations_composition':
+        return (
+          <TransformationsComposition
+            data={diagram.data as unknown as TransformationsCompositionData}
+            width={width || 500}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      // ====================================================================
+      // Geometry – Step-synced
+      // ====================================================================
+
+      case 'triangle_geometry':
+        return (
+          <TriangleGeometry
+            data={diagram.data as unknown as TriangleGeometryData}
+            width={width || 450}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      case 'regular_polygon':
+        return (
+          <RegularPolygon
+            data={diagram.data as unknown as RegularPolygonData}
+            width={width || 400}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      case 'perpendicular_bisector_construction':
+        return (
+          <PerpendicularBisectorConstruction
+            data={diagram.data as unknown as PerpendicularBisectorConstructionData}
+            width={width || 450}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      case 'orthographic_views_3d':
+        return (
+          <OrthographicViews3D
+            data={diagram.data as unknown as OrthographicViews3DData}
+            width={width || 500}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      case 'tangent_radius_perpendicularity':
+        return (
+          <TangentRadiusPerpendicularity
+            data={diagram.data as unknown as TangentRadiusPerpendicularityData}
+            width={width || 400}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      // ====================================================================
+      // Geometry – Theorems
+      // ====================================================================
+
+      case 'exterior_angle_theorem':
+        return (
+          <ExteriorAngleTheorem
+            data={diagram.data as unknown as ExteriorAngleTheoremData}
+            width={width || 450}
+            height={height || 350}
+            {...commonProps}
+          />
+        )
+
+      case 'inscribed_angle_theorem':
+        return (
+          <InscribedAngleTheorem
+            data={diagram.data as unknown as InscribedAngleTheoremData}
+            width={width || 400}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      case 'triangle_congruence':
+        return (
+          <TriangleCongruence
+            data={diagram.data as unknown as TriangleCongruenceData}
+            width={width || 500}
+            height={height || 350}
+            {...commonProps}
+          />
+        )
+
+      case 'triangle_similarity':
+        return (
+          <TriangleSimilarity
+            data={diagram.data as unknown as TriangleSimilarityData}
+            width={width || 500}
+            height={height || 350}
+            {...commonProps}
+          />
+        )
+
+      case 'law_of_sines_cosines':
+        return (
+          <LawOfSinesCosines
+            data={diagram.data as unknown as LawOfSinesCosinesData}
+            width={width || 500}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      // ====================================================================
+      // Geometry – Angle / Line Theorems
+      // ====================================================================
+
+      case 'angle_types':
+        return (
+          <AngleTypes
+            data={diagram.data as unknown as AngleTypesData}
+            width={width || 500}
+            height={height || 300}
+            {...commonProps}
+          />
+        )
+
+      case 'complementary_supplementary':
+        return (
+          <ComplementarySupplementary
+            data={diagram.data as unknown as ComplementarySupplementaryData}
+            width={width || 450}
+            height={height || 350}
+            {...commonProps}
+          />
+        )
+
+      case 'vertical_angles':
+        return (
+          <VerticalAngles
+            data={diagram.data as unknown as VerticalAnglesData}
+            width={width || 400}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      case 'parallel_lines_transversal':
+        return (
+          <ParallelLinesTransversal
+            data={diagram.data as unknown as ParallelLinesTransversalData}
+            width={width || 450}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      case 'triangle_angle_sum':
+        return (
+          <TriangleAngleSum
+            data={diagram.data as unknown as TriangleAngleSumData}
+            width={width || 450}
+            height={height || 350}
+            {...commonProps}
+          />
+        )
+
+      // ====================================================================
+      // Basic Shapes
+      // ====================================================================
+
+      case 'square':
+        return (
+          <Square
+            data={diagram.data as unknown as SquareData}
+            width={width || 400}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      case 'rectangle':
+        return (
+          <Rectangle
+            data={diagram.data as unknown as RectangleData}
+            width={width || 450}
+            height={height || 350}
+            {...commonProps}
+          />
+        )
+
+      case 'parallelogram':
+        return (
+          <Parallelogram
+            data={diagram.data as unknown as ParallelogramData}
+            width={width || 450}
+            height={height || 350}
+            {...commonProps}
+          />
+        )
+
+      case 'rhombus':
+        return (
+          <Rhombus
+            data={diagram.data as unknown as RhombusData}
+            width={width || 400}
+            height={height || 400}
+            {...commonProps}
+          />
+        )
+
+      case 'trapezoid':
+        return (
+          <Trapezoid
+            data={diagram.data as unknown as TrapezoidData}
+            width={width || 450}
+            height={height || 350}
+            {...commonProps}
+          />
+        )
+
       // ====================================================================
       // Utility diagrams
       // ====================================================================
@@ -1183,6 +1537,35 @@ export function MathDiagramRenderer({
         parametric_curve: 'Parametric Curve',
         limit_visualization: 'Limit Visualization',
         derivative_tangent_line: 'Derivative & Tangent Line',
+        sequence_diagram: 'Sequence Diagram',
+        sampling_distribution: 'Sampling Distribution',
+        free_body_diagram: 'Free Body Diagram',
+        // Geometry
+        rotation_coordinate_plane: 'Rotation',
+        dilation_coordinate_plane: 'Dilation',
+        tessellation_pattern: 'Tessellation',
+        transformations_composition: 'Composition of Transformations',
+        triangle_geometry: 'Triangle Geometry',
+        regular_polygon: 'Regular Polygon',
+        perpendicular_bisector_construction: 'Perpendicular Bisector',
+        orthographic_views_3d: 'Orthographic Views',
+        tangent_radius_perpendicularity: 'Tangent-Radius',
+        exterior_angle_theorem: 'Exterior Angle Theorem',
+        inscribed_angle_theorem: 'Inscribed Angle Theorem',
+        triangle_congruence: 'Triangle Congruence',
+        triangle_similarity: 'Triangle Similarity',
+        law_of_sines_cosines: 'Law of Sines/Cosines',
+        angle_types: 'Angle Types',
+        complementary_supplementary: 'Complementary & Supplementary',
+        vertical_angles: 'Vertical Angles',
+        parallel_lines_transversal: 'Parallel Lines & Transversal',
+        triangle_angle_sum: 'Triangle Angle Sum',
+        // Basic Shapes
+        square: 'Square',
+        rectangle: 'Rectangle',
+        parallelogram: 'Parallelogram',
+        rhombus: 'Rhombus',
+        trapezoid: 'Trapezoid',
         // Utility
         math_table: 'Math Table',
       },
@@ -1266,6 +1649,35 @@ export function MathDiagramRenderer({
         parametric_curve: 'עקומה פרמטרית',
         limit_visualization: 'המחשת גבול',
         derivative_tangent_line: 'נגזרת וקו משיק',
+        sequence_diagram: 'דיאגרמת סדרה',
+        sampling_distribution: 'התפלגות דגימה',
+        free_body_diagram: 'דיאגרמת גוף חופשי',
+        // Geometry
+        rotation_coordinate_plane: 'סיבוב',
+        dilation_coordinate_plane: 'דילציה',
+        tessellation_pattern: 'ריצוף',
+        transformations_composition: 'הרכבת טרנספורמציות',
+        triangle_geometry: 'גיאומטריית משולש',
+        regular_polygon: 'מצולע משוכלל',
+        perpendicular_bisector_construction: 'אנך אמצעי',
+        orthographic_views_3d: 'מבטים אורתוגרפיים',
+        tangent_radius_perpendicularity: 'משיק-רדיוס',
+        exterior_angle_theorem: 'משפט הזווית החיצונית',
+        inscribed_angle_theorem: 'משפט הזווית החסומה',
+        triangle_congruence: 'חפיפת משולשים',
+        triangle_similarity: 'דמיון משולשים',
+        law_of_sines_cosines: 'משפט הסינוסים/קוסינוסים',
+        angle_types: 'סוגי זוויות',
+        complementary_supplementary: 'זוויות משלימות ומשלימות ל-180°',
+        vertical_angles: 'זוויות קודקודיות',
+        parallel_lines_transversal: 'ישרים מקבילים וחותך',
+        triangle_angle_sum: 'סכום זוויות במשולש',
+        // Basic Shapes
+        square: 'ריבוע',
+        rectangle: 'מלבן',
+        parallelogram: 'מקבילית',
+        rhombus: 'מעוין',
+        trapezoid: 'טרפז',
         // Utility
         math_table: 'טבלה מתמטית',
       },

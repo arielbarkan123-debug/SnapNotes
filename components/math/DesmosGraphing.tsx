@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react'
 import { motion } from 'framer-motion'
-import { COLORS, getSubjectColor } from '@/lib/diagram-theme'
+import { getSubjectColor } from '@/lib/diagram-theme'
 import type { SubjectKey } from '@/lib/diagram-theme'
 
 // ============================================================================

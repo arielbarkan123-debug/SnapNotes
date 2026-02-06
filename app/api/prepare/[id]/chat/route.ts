@@ -27,6 +27,51 @@ interface ChatRequest {
   language?: 'en' | 'he'
 }
 
+/**
+ * Sanitize and validate AI-generated diagram data.
+ * Returns the diagram if valid, or null if it's malformed.
+ */
+function sanitizeDiagram(raw: unknown): Record<string, unknown> | null {
+  if (!raw || typeof raw !== 'object') return null
+  const d = raw as Record<string, unknown>
+
+  // Must have a string type
+  if (typeof d.type !== 'string' || !d.type.trim()) {
+    console.warn('[PrepareChat] Diagram rejected: missing or invalid type', d)
+    return null
+  }
+
+  // Must have a data object
+  if (!d.data || typeof d.data !== 'object') {
+    console.warn('[PrepareChat] Diagram rejected: missing or invalid data', { type: d.type })
+    return null
+  }
+
+  // Ensure visibleStep is a non-negative integer
+  if (typeof d.visibleStep !== 'number' || d.visibleStep < 0) {
+    d.visibleStep = 0
+  } else {
+    d.visibleStep = Math.floor(d.visibleStep)
+  }
+
+  // Ensure totalSteps is a positive integer if present
+  if (d.totalSteps !== undefined) {
+    if (typeof d.totalSteps !== 'number' || d.totalSteps < 1) {
+      d.totalSteps = 1
+    } else {
+      d.totalSteps = Math.floor(d.totalSteps)
+    }
+  }
+
+  // Check that the type is a known diagram type (warn but still allow)
+  const knownType = d.type in DIAGRAM_SCHEMAS
+  if (!knownType) {
+    console.warn(`[PrepareChat] Diagram type '${d.type}' not in known schemas, passing through`)
+  }
+
+  return d
+}
+
 function buildSystemPrompt(guideContent: string, language: 'en' | 'he', action?: string): string {
   const langInstruction = language === 'he'
     ? `\n## Language: Respond ONLY in Hebrew (עברית). Keep math notation standard.\n`
@@ -187,7 +232,7 @@ export async function POST(
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0])
         assistantMessage = parsed.message || content.text
-        diagram = parsed.diagram || null
+        diagram = sanitizeDiagram(parsed.diagram)
       } else {
         assistantMessage = content.text
       }

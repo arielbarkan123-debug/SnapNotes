@@ -69,7 +69,7 @@ export function DotPlot({
     return map
   }, [values])
 
-  const maxFrequency = Math.max(...frequencyMap.values(), 1)
+  const _maxFrequency = Math.max(...frequencyMap.values(), 1)
 
   // Build unique sorted values on the line
   const uniqueValues = useMemo(() => {
@@ -111,7 +111,7 @@ export function DotPlot({
   const isCurrent = (id: string) => stepIndexOf(id) === diagram.currentStep
 
   const primaryColor = diagram.colors.primary
-  const accentColor = diagram.colors.accent
+  const _accentColor = diagram.colors.accent
 
   const spotlight = useMemo(
     () => createSpotlightVariants(primaryColor),
@@ -124,7 +124,7 @@ export function DotPlot({
   // Layout
   const padding = { left: 30, right: 30, top: 20, bottom: 45 }
   const plotWidth = width - padding.left - padding.right
-  const plotHeight = height - padding.top - padding.bottom
+  const _plotHeight = height - padding.top - padding.bottom
   const lineY = height - padding.bottom
 
   const dotRadius = Math.min(8, plotWidth / (uniqueValues.length * 3))

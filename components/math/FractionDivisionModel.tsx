@@ -78,7 +78,7 @@ export function FractionDivisionModel({
   language = 'en',
   initialStep,
 }: FractionDivisionModelProps) {
-  const { dividend, divisor, showGroups, quotient, title } = data
+  const { dividend, divisor, showGroups: _showGroups, quotient, title } = data
 
   const stepDefs = useMemo(() => {
     const defs: Array<{ id: string; label: string; labelHe: string }> = [

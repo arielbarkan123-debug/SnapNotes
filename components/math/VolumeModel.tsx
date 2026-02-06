@@ -122,7 +122,7 @@ export function VolumeModel({
   language = 'en',
   initialStep,
 }: VolumeModelProps) {
-  const { length, width: w, height: h, showUnitCubes, title } = data
+  const { length, width: w, height: h, showUnitCubes: _showUnitCubes, title } = data
 
   const stepDefs = useMemo(() => {
     const defs: Array<{ id: string; label: string; labelHe: string }> = [
@@ -153,7 +153,7 @@ export function VolumeModel({
 
   const primaryColor = diagram.colors.primary
   const accentColor = diagram.colors.accent
-  const lightColor = diagram.colors.light
+  const _lightColor = diagram.colors.light
 
   const spotlight = useMemo(
     () => createSpotlightVariants(primaryColor),

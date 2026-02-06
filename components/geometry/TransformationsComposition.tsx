@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { TransformationsCompositionData, Point2D } from '@/types/geometry'
-import { GEOMETRY_COLORS } from '@/types/geometry'
+
 import type { SubjectKey } from '@/lib/diagram-theme'
 import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import { useDiagramBase } from '@/hooks/useDiagramBase'

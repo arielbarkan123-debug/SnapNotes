@@ -173,7 +173,7 @@ export function TreeDiagram({
   const padding = { top: 40, bottom: 30, left: 50, right: 50 }
   const titleHeight = title ? 30 : 0
 
-  const treeWidth = useMemo(() => getTreeWidth(root), [root])
+  const _treeWidth = useMemo(() => getTreeWidth(root), [root])
   const availableWidth = width - padding.left - padding.right
   const availableHeight = height - padding.top - padding.bottom - titleHeight
   const levelHeight = availableHeight / Math.max(treeDepth - 1, 1)

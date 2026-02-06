@@ -77,11 +77,6 @@ All plan execution gaps have been fixed as of Feb 2026.
 - **GAP 7 (Missing Schemas):** RESOLVED — sequence_diagram + sampling_distribution added (102 total schemas)
 - **GAP 8 (i18n Files):** RESOLVED — messages/en/diagram.json and messages/he/diagram.json committed
 
-### GAP 6: Batch 8 "Polish Existing Components" Not Done
-
-Plan Task 16 specified refactoring NumberLine, CoordinatePlane, and Triangle to use the shared SVG primitives and add proper step-sync animations. Since the SVG primitives library was never built, these refactors didn't happen.
-
-**Fix:** After building the SVG primitives library (Gap 1), refactor these 3 key components as the plan specified.
 
 ### GAP 7: Missing Schemas for SequenceDiagram and SamplingDistribution
 

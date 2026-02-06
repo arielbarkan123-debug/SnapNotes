@@ -1038,6 +1038,34 @@ export interface SamplingDistributionData {
   title?: string
 }
 
+export interface FBDData {
+  object: {
+    type: 'block' | 'sphere' | 'wedge' | 'particle' | 'car' | 'person'
+    position: { x: number; y: number }
+    mass?: number
+    label?: string
+    color?: string
+  }
+  forces: Array<{
+    name: string
+    type: 'weight' | 'normal' | 'friction' | 'applied' | 'tension' | 'drag' | 'spring'
+    magnitude: number
+    angle: number
+    symbol: string
+    subscript?: string
+    color?: string
+  }>
+  title?: string
+  showForceMagnitudes?: boolean
+  stepConfig?: Array<{
+    step: number
+    visibleForces: string[]
+    highlightForces?: string[]
+    stepLabel: string
+    stepLabelHe?: string
+  }>
+}
+
 export interface ConfidenceIntervalData {
   pointEstimate: number
   marginOfError: number
@@ -1060,6 +1088,341 @@ export interface HypothesisTestData {
   decision: 'reject' | 'fail_to_reject'
   showDistribution?: boolean
   title?: string
+}
+
+// ============================================================================
+// Geometry Diagram Types (Step-synced)
+// ============================================================================
+
+export interface TriangleGeometryData {
+  type: 'scalene' | 'isosceles' | 'equilateral' | 'right'
+  vertices: Array<{ x: number; y: number }>
+  sides: {
+    a: number
+    b: number
+    c: number
+    labels?: { a?: string; b?: string; c?: string }
+  }
+  angles: { A: number; B: number; C: number }
+  height?: { value: number; from: string; showLine?: boolean }
+  title?: string
+  showFormulas?: boolean
+}
+
+export interface RegularPolygonData {
+  sides: number
+  sideLength: number
+  sideLabel?: string
+  showApothem?: boolean
+  showCentralAngle?: boolean
+  showInteriorAngle?: boolean
+  title?: string
+  showFormulas?: boolean
+}
+
+export interface PerpendicularBisectorConstructionData {
+  point1: { x: number; y: number }
+  point2: { x: number; y: number }
+  showConstruction?: boolean
+  showArcs?: boolean
+  showBisector?: boolean
+  showMidpoint?: boolean
+  title?: string
+}
+
+export interface OrthographicViews3DData {
+  shape: string
+  views: {
+    front: number[][]
+    side: number[][]
+    top: number[][]
+  }
+  show3DModel?: boolean
+  title?: string
+}
+
+export interface TangentRadiusPerpendicularityData {
+  radius: number
+  tangentPoint: number
+  showRightAngle?: boolean
+  showTangentLine?: boolean
+  showRadius?: boolean
+  title?: string
+}
+
+// ============================================================================
+// Transformation Geometry Types
+// ============================================================================
+
+export interface RotationCoordinatePlaneData {
+  originalVertices: Array<{ x: number; y: number }>
+  centerOfRotation: { x: number; y: number }
+  angleDegrees: number
+  showCenter?: boolean
+  showArc?: boolean
+  showPrime?: boolean
+  title?: string
+}
+
+export interface DilationCoordinatePlaneData {
+  originalVertices: Array<{ x: number; y: number }>
+  centerOfDilation: { x: number; y: number }
+  scaleFactor: number
+  showCenter?: boolean
+  showRays?: boolean
+  showPrime?: boolean
+  title?: string
+}
+
+export interface TessellationPatternData {
+  baseShape: 'triangle' | 'square' | 'hexagon'
+  rows: number
+  columns: number
+  showTransformations?: boolean
+  colors?: string[]
+  title?: string
+}
+
+export interface TransformationsCompositionData {
+  originalShape: Array<{ x: number; y: number }>
+  transformations: Array<{
+    type: 'reflection' | 'rotation' | 'translation' | 'dilation'
+    params: Record<string, number | string>
+  }>
+  finalShape: Array<{ x: number; y: number }>
+  showIntermediate?: boolean
+  showOrder?: boolean
+  title?: string
+}
+
+// ============================================================================
+// Advanced Geometry Theorem Types
+// ============================================================================
+
+export interface ExteriorAngleTheoremData {
+  /** Interior angles of the triangle (must sum to 180) */
+  interiorAngles: [number, number, number]
+  /** The exterior angle value */
+  exteriorAngle: number
+  /** Vertex index (0, 1, or 2) where the exterior angle is drawn */
+  exteriorAtVertex: number
+  /** Triangle vertex positions */
+  vertices: Array<{ x: number; y: number }>
+  /** Whether to show the relationship equation */
+  showRelationship?: boolean
+  /** Diagram title */
+  title?: string
+}
+
+export interface InscribedAngleTheoremData {
+  /** Circle radius */
+  radius: number
+  /** Central angle in degrees */
+  centralAngle: number
+  /** Inscribed angle in degrees (should be half of central) */
+  inscribedAngle: number
+  /** Arc angle in degrees */
+  arcAngle: number
+  /** Angle (in degrees) on the circle where the inscribed angle vertex sits */
+  inscribedVertex: number
+  /** Angles (in degrees) on the circle for the arc endpoints */
+  arcEndpoints: [number, number]
+  /** Whether to show the relationship equation */
+  showRelationship?: boolean
+  /** Diagram title */
+  title?: string
+}
+
+export interface TriangleCongruenceData {
+  /** First triangle */
+  triangle1: {
+    vertices: Array<{ x: number; y: number }>
+    sides: number[]
+    angles: number[]
+  }
+  /** Second triangle */
+  triangle2: {
+    vertices: Array<{ x: number; y: number }>
+    sides: number[]
+    angles: number[]
+  }
+  /** Congruence criterion (e.g. "SSS", "SAS", "ASA", "AAS", "HL") */
+  criterion: string
+  /** Which parts correspond between the triangles */
+  correspondingParts: Array<{
+    type: string
+    index1: number
+    index2: number
+  }>
+  /** Whether to show tick/arc congruence marks */
+  showCongruenceMarks?: boolean
+  /** Diagram title */
+  title?: string
+}
+
+export interface TriangleSimilarityData {
+  /** First (smaller) triangle */
+  triangle1: {
+    vertices: Array<{ x: number; y: number }>
+    sides: number[]
+    angles: number[]
+  }
+  /** Second (larger) triangle */
+  triangle2: {
+    vertices: Array<{ x: number; y: number }>
+    sides: number[]
+    angles: number[]
+  }
+  /** Similarity criterion (e.g. "AA", "SSS", "SAS") */
+  criterion: string
+  /** Scale factor between the triangles */
+  scaleFactor: number
+  /** Whether to show side ratio labels */
+  showRatios?: boolean
+  /** Diagram title */
+  title?: string
+}
+
+export interface LawOfSinesCosinesData {
+  /** The triangle with all measurements */
+  triangle: {
+    vertices: Array<{ x: number; y: number }>
+    sides: number[]
+    angles: number[]
+  }
+  /** Which law to demonstrate */
+  law: 'sines' | 'cosines'
+  /** Which part we are solving for (e.g. "a", "B") */
+  solveFor: string
+  /** Known parts used in the calculation (e.g. ["b", "c", "A"]) */
+  knownParts: string[]
+  /** Whether to show the formula */
+  showFormula?: boolean
+  /** Whether to show the substitution step */
+  showSubstitution?: boolean
+  /** Diagram title */
+  title?: string
+}
+
+// ============================================================================
+// Angle / Line Theorem Geometry Types
+// ============================================================================
+
+export interface AngleTypesData {
+  angles: Array<{
+    measure: number
+    type: 'acute' | 'right' | 'obtuse' | 'straight' | 'reflex'
+    label: string
+    vertex: { x: number; y: number }
+    ray1Angle: number
+    ray2Angle: number
+  }>
+  title?: string
+}
+
+export interface ComplementarySupplementaryData {
+  angle1: number
+  angle2: number
+  relationship: 'complementary' | 'supplementary'
+  showSum?: boolean
+  vertex?: { x: number; y: number }
+  title?: string
+}
+
+export interface VerticalAnglesData {
+  angle1: number
+  angle2: number
+  intersection: { x: number; y: number }
+  showCongruenceMarks?: boolean
+  title?: string
+}
+
+export interface ParallelLinesTransversalData {
+  line1Y: number
+  line2Y: number
+  transversalAngle: number
+  highlightAngles?: Array<{
+    position: string
+    side: string
+    type: string
+  }>
+  showAngleMeasures?: boolean
+  title?: string
+}
+
+export interface TriangleAngleSumData {
+  angles: [number, number, number]
+  vertices: Array<{ x: number; y: number }>
+  labels: [string, string, string]
+  showSum?: boolean
+  title?: string
+}
+
+// ============================================================================
+// Basic Shape Geometry
+// ============================================================================
+
+export interface SquareData {
+  side: number
+  sideLabel?: string
+  showDiagonals?: boolean
+  diagonalLabel?: string
+  title?: string
+  showFormulas?: boolean
+  showCalculations?: boolean
+}
+
+export interface RectangleData {
+  width: number
+  height: number
+  widthLabel?: string
+  heightLabel?: string
+  showDiagonals?: boolean
+  diagonalLabel?: string
+  title?: string
+  showFormulas?: boolean
+  showCalculations?: boolean
+}
+
+export interface ParallelogramData {
+  base: number
+  side: number
+  height: number
+  baseLabel?: string
+  sideLabel?: string
+  heightLabel?: string
+  angle?: number
+  showHeight?: boolean
+  title?: string
+  showFormulas?: boolean
+  showCalculations?: boolean
+}
+
+export interface RhombusData {
+  side: number
+  diagonal1: number
+  diagonal2: number
+  sideLabel?: string
+  d1Label?: string
+  d2Label?: string
+  showDiagonals?: boolean
+  title?: string
+  showFormulas?: boolean
+  showCalculations?: boolean
+}
+
+export interface TrapezoidData {
+  topBase: number
+  bottomBase: number
+  height: number
+  topLabel?: string
+  bottomLabel?: string
+  heightLabel?: string
+  showHeight?: boolean
+  isIsosceles?: boolean
+  title?: string
+  showFormulas?: boolean
+  showCalculations?: boolean
 }
 
 // ============================================================================
@@ -1134,6 +1497,10 @@ export type MathDiagramType =
   | 'two_way_frequency_table'
   | 'pythagorean_theorem_diagram'
   | 'transformation_diagram'
+  | 'rotation_coordinate_plane'
+  | 'dilation_coordinate_plane'
+  | 'tessellation_pattern'
+  | 'transformations_composition'
   | 'irrational_number_line'
   | 'scientific_notation_scale'
   // High School Math (Grades 9-12)
@@ -1167,6 +1534,32 @@ export type MathDiagramType =
   | 'sampling_distribution'
   | 'confidence_interval'
   | 'hypothesis_test'
+  // Physics
+  | 'free_body_diagram'
+  // Geometry (Step-synced)
+  | 'triangle_geometry'
+  | 'regular_polygon'
+  | 'perpendicular_bisector_construction'
+  | 'orthographic_views_3d'
+  | 'tangent_radius_perpendicularity'
+  // Advanced Geometry Theorems
+  | 'exterior_angle_theorem'
+  | 'inscribed_angle_theorem'
+  | 'triangle_congruence'
+  | 'triangle_similarity'
+  | 'law_of_sines_cosines'
+  // Angle / Line Theorem Geometry
+  | 'angle_types'
+  | 'complementary_supplementary'
+  | 'vertical_angles'
+  | 'parallel_lines_transversal'
+  | 'triangle_angle_sum'
+  // Basic Shape Geometry
+  | 'square'
+  | 'rectangle'
+  | 'parallelogram'
+  | 'rhombus'
+  | 'trapezoid'
   // Utility
   | 'math_table'
 
@@ -1225,6 +1618,10 @@ export type MathDiagramData =
   | TwoWayFrequencyTableData
   | PythagoreanTheoremDiagramData
   | TransformationDiagramData
+  | RotationCoordinatePlaneData
+  | DilationCoordinatePlaneData
+  | TessellationPatternData
+  | TransformationsCompositionData
   | IrrationalNumberLineData
   | ScientificNotationScaleData
   // High School Math (Grades 9-12)
@@ -1258,6 +1655,32 @@ export type MathDiagramData =
   | SamplingDistributionData
   | ConfidenceIntervalData
   | HypothesisTestData
+  // Physics
+  | FBDData
+  // Geometry (Step-synced)
+  | TriangleGeometryData
+  | RegularPolygonData
+  | PerpendicularBisectorConstructionData
+  | OrthographicViews3DData
+  | TangentRadiusPerpendicularityData
+  // Advanced Geometry Theorems
+  | ExteriorAngleTheoremData
+  | InscribedAngleTheoremData
+  | TriangleCongruenceData
+  | TriangleSimilarityData
+  | LawOfSinesCosinesData
+  // Angle / Line Theorem Geometry
+  | AngleTypesData
+  | ComplementarySupplementaryData
+  | VerticalAnglesData
+  | ParallelLinesTransversalData
+  | TriangleAngleSumData
+  // Basic Shape Geometry
+  | SquareData
+  | RectangleData
+  | ParallelogramData
+  | RhombusData
+  | TrapezoidData
 
 export interface MathDiagramState {
   /** Type of diagram */

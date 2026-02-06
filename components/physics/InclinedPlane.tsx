@@ -482,7 +482,7 @@ export function InclinedPlane({
   }
 
   // Single force rendering helper
-  const renderForce = (force: typeof forces[0], isHighlighted: boolean) => {
+  const renderForce = (force: typeof forces[0], _isHighlighted: boolean) => {
     const forceScale = 1.8
     const arrowSize = 10
     const mag = (force.magnitude ?? 0) * forceScale

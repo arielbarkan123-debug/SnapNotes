@@ -9,7 +9,6 @@ import { useDiagramBase } from '@/hooks/useDiagramBase'
 import { DiagramStepControls } from '@/components/diagrams/DiagramStepControls'
 import {
   createSpotlightVariants,
-  lineDrawVariants,
   labelAppearVariants,
 } from '@/lib/diagram-animations'
 

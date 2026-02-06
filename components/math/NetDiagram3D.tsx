@@ -152,7 +152,7 @@ export function NetDiagram3D({
   language = 'en',
   initialStep,
 }: NetDiagram3DProps) {
-  const { shape, dimensions, title, showFoldLines, showLabels } = data
+  const { shape, dimensions, title, showFoldLines, showLabels: _showLabels } = data
 
   const stepDefs = useMemo(() => [
     { id: 'shape3d', label: STEP_LABELS.shape3d.en, labelHe: STEP_LABELS.shape3d.he },

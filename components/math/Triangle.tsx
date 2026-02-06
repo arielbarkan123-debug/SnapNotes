@@ -80,31 +80,9 @@ export function Triangle({
 }: TriangleProps) {
   const { vertices, sides = [], angles = [], altitude, title, errorHighlight } = data
 
-  // Guard against empty or insufficient vertices
-  if (!vertices || vertices.length < 3) {
-    return (
-      <div
-        data-testid="triangle-diagram"
-        style={{ width: '100%', maxWidth: width }}
-      >
-        <svg
-          width="100%"
-          height={height}
-          viewBox={`0 0 ${width} ${height}`}
-          className={className}
-          role="img"
-          aria-label="Triangle diagram - insufficient data"
-        >
-          <rect width={width} height={height} fill="#f9fafb" rx={8} />
-          <text x={width / 2} y={height / 2} textAnchor="middle" fill="#9ca3af" fontSize={14}>
-            Insufficient vertex data
-          </text>
-        </svg>
-      </div>
-    )
-  }
-
   // Determine which step groups exist based on data
+  // (computed before hooks so hooks can use these values)
+  const hasValidVertices = !!vertices && vertices.length >= 3
   const hasSides = sides.length > 0
   const hasAngles = angles.length > 0
   const hasSpecial = !!altitude
@@ -134,6 +112,36 @@ export function Triangle({
     language,
   })
 
+  // Subject-coded spotlight
+  const spotlight = useMemo(
+    () => createSpotlightVariants(diagram.colors.primary),
+    [diagram.colors.primary]
+  )
+
+  // Guard against empty or insufficient vertices (after all hooks)
+  if (!hasValidVertices) {
+    return (
+      <div
+        data-testid="triangle-diagram"
+        style={{ width: '100%', maxWidth: width }}
+      >
+        <svg
+          width="100%"
+          height={height}
+          viewBox={`0 0 ${width} ${height}`}
+          className={className}
+          role="img"
+          aria-label="Triangle diagram - insufficient data"
+        >
+          <rect width={width} height={height} fill="#f9fafb" rx={8} />
+          <text x={width / 2} y={height / 2} textAnchor="middle" fill="#9ca3af" fontSize={14}>
+            Insufficient vertex data
+          </text>
+        </svg>
+      </div>
+    )
+  }
+
   // Convenience: step visibility helpers
   const stepIndexOf = (id: string) => stepDefs.findIndex((s) => s.id === id)
   const isVisible = (id: string) => {
@@ -141,12 +149,6 @@ export function Triangle({
     return idx !== -1 && diagram.currentStep >= idx
   }
   const isCurrent = (id: string) => stepIndexOf(id) === diagram.currentStep
-
-  // Subject-coded spotlight
-  const spotlight = useMemo(
-    () => createSpotlightVariants(diagram.colors.primary),
-    [diagram.colors.primary]
-  )
 
   // ---------------------------------------------------------------------------
   // Geometry calculations

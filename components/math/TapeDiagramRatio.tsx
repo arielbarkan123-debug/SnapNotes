@@ -113,7 +113,7 @@ export function TapeDiagramRatio({
   const tapeHeight = 36
   const tape1Y = 50
   const tape2Y = 110
-  const gapBetweenTapes = tape2Y - tape1Y - tapeHeight
+  const _gapBetweenTapes = tape2Y - tape1Y - tapeHeight
 
   const color1 = partColors?.[0] ?? primaryColor
   const color2 = partColors?.[1] ?? accentColor

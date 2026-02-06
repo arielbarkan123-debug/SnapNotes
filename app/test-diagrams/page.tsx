@@ -235,6 +235,18 @@ export default function TestDiagramsPage() {
   const [darkMode, setDarkMode] = useState(false)
   const [rtl, setRtl] = useState(false)
 
+  // Dev-only guard: this page should not be accessible in production
+  if (process.env.NODE_ENV === 'production') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Page Not Found</h1>
+          <p className="text-gray-500">This page is only available in development mode.</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={`${darkMode ? 'dark' : ''} min-h-screen`} dir={rtl ? 'rtl' : 'ltr'}>
       <div className="p-6 bg-white dark:bg-gray-900 min-h-screen transition-colors">

@@ -117,7 +117,7 @@ export function ComplexNumberPlane({
   const isCurrent = (id: string) => stepIndexOf(id) === diagram.currentStep
 
   const primaryColor = diagram.colors.primary
-  const accentColor = diagram.colors.accent
+  const _accentColor = diagram.colors.accent
 
   const spotlight = useMemo(
     () => createSpotlightVariants(primaryColor),

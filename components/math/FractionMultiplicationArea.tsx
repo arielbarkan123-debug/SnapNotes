@@ -60,7 +60,7 @@ export function FractionMultiplicationArea({
   language = 'en',
   initialStep,
 }: FractionMultiplicationAreaProps) {
-  const { fraction1, fraction2, showOverlap, title } = data
+  const { fraction1, fraction2, showOverlap: _showOverlap, title } = data
 
   const stepDefs = useMemo(() => {
     const defs: Array<{ id: string; label: string; labelHe: string }> = [

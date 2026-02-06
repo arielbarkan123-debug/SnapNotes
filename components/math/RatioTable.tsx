@@ -96,7 +96,7 @@ export function RatioTable({
   const stepLabel = language === 'he' ? currentStepDef?.labelHe : currentStepDef?.label
 
   // Determine which columns are visible
-  const visibleColumnCount = columns.reduce((count, _, i) => {
+  const _visibleColumnCount = columns.reduce((count, _, i) => {
     return count + (isVisible(`col-${i}`) ? 1 : 0)
   }, 0)
 

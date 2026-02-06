@@ -64,7 +64,7 @@ export function VerticalAngles({
 }: VerticalAnglesProps) {
   const {
     angle1,
-    angle2,
+    angle2: _angle2,
     showCongruenceMarks = true,
     title,
   } = data

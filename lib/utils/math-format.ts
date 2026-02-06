@@ -244,4 +244,47 @@ export function formatMathInText(text: string): string {
   return formatMath(text)
 }
 
+/**
+ * Converts a decimal probability to a readable fraction or rounded decimal.
+ * Examples:
+ *   0.5 → "1/2"
+ *   0.333... → "1/3"
+ *   0.166... → "1/6"
+ *   0.25 → "1/4"
+ *   0.142857... → "1/7"
+ *   0.375 → "3/8"
+ *   0.1234 → "0.123"  (falls back to rounded decimal)
+ */
+export function formatProbability(value: number): string {
+  if (value === 0) return '0'
+  if (value === 1) return '1'
+
+  // Try common denominators up to 12
+  const denominators = [2, 3, 4, 5, 6, 7, 8, 9, 10, 12]
+  for (const den of denominators) {
+    const num = value * den
+    const rounded = Math.round(num)
+    if (Math.abs(num - rounded) < 0.001 && rounded > 0 && rounded < den) {
+      // Simplify the fraction
+      const g = gcd(rounded, den)
+      return `${rounded / g}/${den / g}`
+    }
+  }
+
+  // Fall back to rounded decimal (3 decimal places, strip trailing zeros)
+  const formatted = value.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')
+  return formatted
+}
+
+function gcd(a: number, b: number): number {
+  a = Math.abs(a)
+  b = Math.abs(b)
+  while (b) {
+    const t = b
+    b = a % b
+    a = t
+  }
+  return a
+}
+
 export default formatMath

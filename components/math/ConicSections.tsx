@@ -162,7 +162,7 @@ export function ConicSections({
       case 'parabola': {
         const pts: string[] = []
         const vp = vertex ?? mainPoint
-        const svgV = svgCoord(vp.x, vp.y, cx, cy, scale)
+        const _svgV = svgCoord(vp.x, vp.y, cx, cy, scale)
         // Determine direction: if focus is above vertex, opens up; etc.
         const fp = focus ?? { x: vp.x, y: vp.y + 1 }
         const opens = fp.y > vp.y ? 'up' : fp.y < vp.y ? 'down' : fp.x > vp.x ? 'right' : 'left'
@@ -183,9 +183,9 @@ export function ConicSections({
         return pts.join(' ')
       }
       case 'hyperbola': {
-        const ha = (a ?? 2) * scale
-        const hb = (b ?? 1) * scale
-        const hc = svgCoord(mainPoint.x, mainPoint.y, cx, cy, scale)
+        const _ha = (a ?? 2) * scale
+        const _hb = (b ?? 1) * scale
+        const _hc = svgCoord(mainPoint.x, mainPoint.y, cx, cy, scale)
 
         // Two branches
         const branches: string[] = []

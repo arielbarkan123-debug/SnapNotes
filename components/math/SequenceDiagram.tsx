@@ -66,7 +66,7 @@ export function SequenceDiagram({
   language = 'en',
   initialStep,
 }: SequenceDiagramProps) {
-  const { terms, firstTerm, commonDifferenceOrRatio, type, formula, showFormula, showDifferences, title } = data
+  const { terms, firstTerm: _firstTerm, commonDifferenceOrRatio, type, formula, showFormula, showDifferences, title } = data
 
   // Build step definitions
   const stepDefs = useMemo(() => {

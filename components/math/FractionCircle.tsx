@@ -11,7 +11,6 @@ import {
   createSpotlightVariants,
   labelAppearVariants,
 } from '@/lib/diagram-animations'
-import { hexToRgba } from '@/lib/diagram-theme'
 
 // ---------------------------------------------------------------------------
 // Types
