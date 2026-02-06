@@ -323,6 +323,20 @@ export function MathDiagramRenderer({
     }
   }, [currentStep, onStepBack])
 
+  // Components that manage their own step controls via internal useDiagramBase + DiagramStepControls.
+  // MathDiagramRenderer should NOT show outer step controls for these types to avoid duplicate controls.
+  const SELF_MANAGING_TYPES = new Set([
+    'number_line',
+    'coordinate_plane',
+    'triangle',
+    'circle',
+    'unit_circle',
+    'tree_diagram',
+    'interactive_coordinate_plane',
+    'equation_grapher',
+  ])
+  const isSelfManaging = SELF_MANAGING_TYPES.has(diagram.type)
+
   // Render the appropriate diagram type
   const renderDiagram = () => {
     const commonProps = {
@@ -1692,9 +1706,11 @@ export function MathDiagramRenderer({
         <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
           {getDiagramTypeName()}
         </span>
-        <span className="text-xs text-gray-400">
-          {language === 'he' ? 'צעד' : 'Step'} {currentStep + 1}/{calculatedTotalSteps}
-        </span>
+        {!isSelfManaging && (
+          <span className="text-xs text-gray-400">
+            {language === 'he' ? 'צעד' : 'Step'} {currentStep + 1}/{calculatedTotalSteps}
+          </span>
+        )}
       </div>
 
       {/* Diagram */}
@@ -1702,8 +1718,8 @@ export function MathDiagramRenderer({
         {renderDiagram()}
       </div>
 
-      {/* Step controls (optional) */}
-      {showControls && calculatedTotalSteps > 1 && (
+      {/* Step controls (optional) — hidden for self-managing components */}
+      {showControls && calculatedTotalSteps > 1 && !isSelfManaging && (
         <div className="step-controls mt-3 flex items-center justify-between px-2">
           {/* Progress indicator */}
           <div className="progress-indicator flex items-center gap-2">
@@ -1735,8 +1751,8 @@ export function MathDiagramRenderer({
         </div>
       )}
 
-      {/* Current step info */}
-      {diagram.stepConfig?.[currentStep]?.stepLabel && (
+      {/* Current step info — hidden for self-managing components */}
+      {!isSelfManaging && diagram.stepConfig?.[currentStep]?.stepLabel && (
         <div className="step-info mt-2 p-2 bg-violet-50 dark:bg-violet-900/30 rounded-md mx-2">
           <p className="text-sm text-violet-700 dark:text-violet-300">
             {language === 'he'
