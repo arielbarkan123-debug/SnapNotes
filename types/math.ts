@@ -278,6 +278,791 @@ export interface CircleData {
 }
 
 // ============================================================================
+// Elementary Math Types (Grades 1-5)
+// ============================================================================
+
+export interface CountingObjectsData {
+  objects: Array<{ type: string; count: number; color?: string }>
+  operation: 'count' | 'add' | 'subtract'
+  total: number
+  title?: string
+  groupSize?: number
+}
+
+export interface TenFrameData {
+  filled: number
+  total: 10 | 20
+  color?: string
+  showSecondFrame?: boolean
+  title?: string
+  highlightFilled?: number[]
+}
+
+export interface PartPartWholeData {
+  whole: number
+  part1: number
+  part2: number
+  showParts: boolean
+  title?: string
+  labels?: { whole?: string; part1?: string; part2?: string }
+}
+
+export interface BarModelData {
+  parts: Array<{ value: number; label: string; color?: string }>
+  total: number
+  operation: 'add' | 'subtract' | 'compare' | 'multiply' | 'divide'
+  unknownPart?: number
+  title?: string
+}
+
+export interface PlaceValueChartData {
+  number: number
+  columns: ('ones' | 'tens' | 'hundreds' | 'thousands' | 'ten_thousands')[]
+  showExpanded?: boolean
+  title?: string
+  highlightColumn?: string
+}
+
+export interface Base10BlocksData {
+  number: number
+  showDecomposition: boolean
+  showRegrouping?: boolean
+  title?: string
+  operation?: 'represent' | 'add' | 'subtract'
+  secondNumber?: number
+}
+
+export interface PictureGraphData {
+  categories: Array<{ label: string; count: number; icon: string }>
+  title: string
+  symbolValue?: number
+  showKey?: boolean
+}
+
+export interface BarGraphData {
+  categories: Array<{ label: string; value: number; color?: string }>
+  title: string
+  scale: number
+  orientation?: 'vertical' | 'horizontal'
+  yAxisLabel?: string
+  xAxisLabel?: string
+}
+
+export interface FractionCircleData {
+  numerator: number
+  denominator: number
+  showLabel: boolean
+  color?: string
+  compareTo?: Fraction
+  title?: string
+}
+
+export interface FractionBarData {
+  numerator: number
+  denominator: number
+  showEquivalent?: Fraction
+  color?: string
+  title?: string
+  showLabel?: boolean
+}
+
+export interface FractionNumberLineData {
+  fractions: Fraction[]
+  min: number
+  max: number
+  denominator: number
+  showTickMarks?: boolean
+  title?: string
+}
+
+export interface MultiplicationArrayData {
+  rows: number
+  columns: number
+  showPartialProducts: boolean
+  color?: string
+  highlightRow?: number
+  highlightColumn?: number
+  title?: string
+}
+
+export interface AreaModelMultiplicationData {
+  factor1: number
+  factor2: number
+  showPartials: boolean
+  decomposition1?: number[]
+  decomposition2?: number[]
+  title?: string
+}
+
+export interface ScaledBarGraphData {
+  data: Array<{ label: string; value: number; color?: string }>
+  scale: number
+  title: string
+  yAxisLabel?: string
+  xAxisLabel?: string
+  showGridLines?: boolean
+}
+
+export interface EquivalentFractionModelData {
+  fraction1: Fraction
+  fraction2: Fraction
+  showAlignment: boolean
+  modelType?: 'circle' | 'bar' | 'both'
+  title?: string
+}
+
+export interface MixedNumberModelData {
+  wholeNumber: number
+  fraction: Fraction
+  showImproper: boolean
+  modelType?: 'circle' | 'bar'
+  title?: string
+}
+
+export interface DecimalGridData {
+  value: number
+  gridSize: 10 | 100
+  showFractionEquivalent: boolean
+  highlightCells?: number[]
+  title?: string
+}
+
+export interface FractionMultiplicationAreaData {
+  fraction1: Fraction
+  fraction2: Fraction
+  showOverlap: boolean
+  showProduct?: boolean
+  title?: string
+}
+
+export interface FractionDivisionModelData {
+  dividend: Fraction
+  divisor: Fraction
+  showGroups: boolean
+  quotient?: Fraction
+  title?: string
+}
+
+export interface VolumeModelData {
+  length: number
+  width: number
+  height: number
+  showUnitCubes: boolean
+  showLayers?: boolean
+  showFormula?: boolean
+  title?: string
+}
+
+export interface OrderOfOperationsTreeData {
+  expression: string
+  steps: Array<{ operation: string; result: number; highlighted?: boolean }>
+  title?: string
+  showParentheses?: boolean
+}
+
+// ============================================================================
+// Middle School Math Types (Grades 6-8)
+// ============================================================================
+
+export interface DoubleNumberLineData {
+  topLine: { label: string; values: number[]; unit?: string }
+  bottomLine: { label: string; values: number[]; unit?: string }
+  connections?: Array<{ topIndex: number; bottomIndex: number }>
+  title?: string
+  highlightPair?: number
+}
+
+export interface RatioTableData {
+  columns: Array<{ header: string; values: number[] }>
+  highlightRow?: number
+  highlightColumn?: number
+  showEquivalence?: boolean
+  title?: string
+}
+
+export interface TapeDiagramRatioData {
+  ratio: [number, number]
+  labels: [string, string]
+  totalValue?: number
+  unknownPart?: 0 | 1
+  partColors?: [string, string]
+  title?: string
+}
+
+export interface DotPlotData {
+  data: number[]
+  min: number
+  max: number
+  title: string
+  xAxisLabel?: string
+  highlightValue?: number
+}
+
+export interface HistogramData {
+  bins: Array<{ min: number; max: number; count: number }>
+  title: string
+  xAxisLabel?: string
+  yAxisLabel?: string
+  binWidth?: number
+}
+
+export interface BoxPlotData {
+  min: number
+  q1: number
+  median: number
+  q3: number
+  max: number
+  outliers?: number[]
+  title: string
+  showLabels?: boolean
+  data?: number[]
+}
+
+export interface StemAndLeafPlotData {
+  stems: Array<{ stem: number; leaves: number[] }>
+  title: string
+  stemLabel?: string
+  leafLabel?: string
+  key?: string
+}
+
+export interface MeasuresOfCenterData {
+  data: number[]
+  mean: number
+  median: number
+  mode: number[]
+  range?: number
+  title?: string
+  showOnNumberLine?: boolean
+}
+
+export interface ProportionalRelationshipGraphData {
+  constantOfProportionality: number
+  points: Array<{ x: number; y: number; label?: string }>
+  xLabel?: string
+  yLabel?: string
+  title?: string
+  showUnitRate?: boolean
+}
+
+export interface PercentBarModelData {
+  total: number
+  parts: Array<{ value: number; percent: number; label: string; color?: string }>
+  showPercents: boolean
+  title?: string
+}
+
+export interface ProbabilityTreeData {
+  levels: Array<{
+    branches: Array<{
+      label: string
+      probability: number
+      children?: number[]
+    }>
+  }>
+  outcomes?: Array<{ path: string[]; probability: number }>
+  title?: string
+  highlightPath?: number[]
+}
+
+export interface SampleSpaceDiagramData {
+  event1: { name: string; outcomes: string[] }
+  event2: { name: string; outcomes: string[] }
+  favorableOutcomes?: Array<[string, string]>
+  title?: string
+}
+
+export interface VennDiagramData {
+  sets: Array<{ label: string; elements: string[]; color?: string }>
+  intersections?: Array<{ setIndices: number[]; elements: string[] }>
+  universalSet?: string[]
+  title?: string
+}
+
+export interface NetDiagram3DData {
+  shape: 'cube' | 'rectangular_prism' | 'triangular_prism' | 'cylinder' | 'cone' | 'pyramid'
+  dimensions: Record<string, number>
+  showFoldLines?: boolean
+  showLabels?: boolean
+  title?: string
+}
+
+export interface CrossSectionDiagramData {
+  solid: 'cube' | 'rectangular_prism' | 'cylinder' | 'cone' | 'sphere' | 'pyramid'
+  plane: 'horizontal' | 'vertical' | 'diagonal'
+  planePosition?: number
+  showCrossSection?: boolean
+  title?: string
+}
+
+export interface ScaleDrawingData {
+  scaleFactor: number
+  originalDimensions: Record<string, number>
+  scaledDimensions: Record<string, number>
+  shape: 'rectangle' | 'triangle' | 'polygon'
+  showMeasurements?: boolean
+  title?: string
+}
+
+export interface LinearFunctionGraphData {
+  slope: number
+  yIntercept: number
+  expression?: string
+  showSlope?: boolean
+  showIntercept?: boolean
+  domain?: { min: number; max: number }
+  points?: Array<{ x: number; y: number; label?: string }>
+  title?: string
+}
+
+export interface SystemOfEquationsGraphData {
+  equations: Array<{
+    slope: number
+    yIntercept: number
+    expression: string
+    color?: string
+  }>
+  solution?: { x: number; y: number }
+  showSolution?: boolean
+  title?: string
+}
+
+export interface SlopeTriangleData {
+  point1: { x: number; y: number }
+  point2: { x: number; y: number }
+  rise: number
+  run: number
+  slope: number
+  showRiseRun?: boolean
+  showSlopeFormula?: boolean
+  title?: string
+}
+
+export interface ScatterPlotTrendLineData {
+  points: Array<{ x: number; y: number }>
+  trendLine?: { slope: number; yIntercept: number; rSquared?: number }
+  xLabel?: string
+  yLabel?: string
+  title?: string
+  showResiduals?: boolean
+}
+
+export interface TwoWayFrequencyTableData {
+  rowHeaders: string[]
+  columnHeaders: string[]
+  data: number[][]
+  rowLabel: string
+  columnLabel: string
+  showMarginals?: boolean
+  highlightCell?: [number, number]
+  title?: string
+}
+
+export interface PythagoreanTheoremDiagramData {
+  sideA: number
+  sideB: number
+  hypotenuse: number
+  showSquares: boolean
+  showLabels?: boolean
+  showProof?: boolean
+  title?: string
+}
+
+export interface TransformationDiagramData {
+  original: Array<{ x: number; y: number }>
+  transformed: Array<{ x: number; y: number }>
+  transformationType: 'translation' | 'reflection' | 'rotation' | 'dilation'
+  transformationParams: Record<string, number | string>
+  showOriginal?: boolean
+  showGrid?: boolean
+  title?: string
+}
+
+export interface IrrationalNumberLineData {
+  min: number
+  max: number
+  irrationals: Array<{
+    value: number
+    label: string
+    expression: string
+  }>
+  rationals?: Array<{ value: number; label: string }>
+  title?: string
+}
+
+export interface ScientificNotationScaleData {
+  values: Array<{
+    value: number
+    label: string
+    scientificNotation: string
+  }>
+  showPowersOf10?: boolean
+  title?: string
+}
+
+// ============================================================================
+// High School Math Types (Grades 9-12)
+// ============================================================================
+
+export interface QuadraticGraphData {
+  a: number
+  b: number
+  c: number
+  expression?: string
+  vertex?: { x: number; y: number }
+  roots?: number[]
+  axisOfSymmetry?: number
+  showVertex?: boolean
+  showRoots?: boolean
+  showAxisOfSymmetry?: boolean
+  domain?: { min: number; max: number }
+  title?: string
+}
+
+export interface PolynomialGraphData {
+  coefficients: number[]
+  degree: number
+  expression?: string
+  zeros?: number[]
+  turningPoints?: Array<{ x: number; y: number }>
+  endBehavior?: { left: 'up' | 'down'; right: 'up' | 'down' }
+  domain?: { min: number; max: number }
+  title?: string
+}
+
+export interface ExponentialGraphData {
+  base: number
+  coefficient?: number
+  yIntercept?: number
+  asymptote: number
+  expression?: string
+  isGrowth: boolean
+  domain?: { min: number; max: number }
+  showAsymptote?: boolean
+  title?: string
+}
+
+export interface LogarithmicGraphData {
+  base: number
+  coefficient?: number
+  asymptote: number
+  expression?: string
+  domain?: { min: number; max: number }
+  showAsymptote?: boolean
+  keyPoints?: Array<{ x: number; y: number; label?: string }>
+  title?: string
+}
+
+export interface AbsoluteValueGraphData {
+  a: number
+  h: number
+  k: number
+  expression?: string
+  vertex: { x: number; y: number }
+  domain?: { min: number; max: number }
+  showVertex?: boolean
+  title?: string
+}
+
+export interface RadicalFunctionGraphData {
+  index: number
+  radicand: string
+  coefficient?: number
+  expression?: string
+  domain?: { min: number; max: number }
+  startPoint?: { x: number; y: number }
+  title?: string
+}
+
+export interface PiecewiseFunctionGraphData {
+  pieces: Array<{
+    expression: string
+    domain: { min: number; max: number }
+    includeMin: boolean
+    includeMax: boolean
+    color?: string
+  }>
+  title?: string
+  showBreakpoints?: boolean
+}
+
+export interface SystemOfInequalities2DData {
+  inequalities: Array<{
+    expression: string
+    type: '<' | '<=' | '>' | '>='
+    slope: number
+    yIntercept: number
+    color?: string
+  }>
+  feasibleRegion?: boolean
+  vertices?: Array<{ x: number; y: number }>
+  title?: string
+}
+
+export interface SequenceDiagramData {
+  type: 'arithmetic' | 'geometric'
+  terms: number[]
+  firstTerm: number
+  commonDifferenceOrRatio: number
+  formula?: string
+  showFormula?: boolean
+  showDifferences?: boolean
+  title?: string
+}
+
+export interface RationalFunctionGraphData {
+  numerator: string
+  denominator: string
+  expression?: string
+  verticalAsymptotes?: number[]
+  horizontalAsymptote?: number
+  holes?: Array<{ x: number; y: number }>
+  xIntercepts?: number[]
+  domain?: { min: number; max: number }
+  showAsymptotes?: boolean
+  title?: string
+}
+
+export interface ConicSectionsData {
+  type: 'circle' | 'ellipse' | 'parabola' | 'hyperbola'
+  center?: { x: number; y: number }
+  // Circle / Ellipse
+  radiusX?: number
+  radiusY?: number
+  // Parabola
+  vertex?: { x: number; y: number }
+  focus?: { x: number; y: number }
+  directrix?: number
+  // Hyperbola
+  a?: number
+  b?: number
+  orientation?: 'horizontal' | 'vertical'
+  expression?: string
+  showFoci?: boolean
+  showDirectrix?: boolean
+  showAsymptotes?: boolean
+  title?: string
+}
+
+export interface ComplexNumberPlaneData {
+  points: Array<{
+    real: number
+    imaginary: number
+    label?: string
+    color?: string
+  }>
+  operations?: Array<{
+    type: 'add' | 'subtract' | 'multiply'
+    operand1: number
+    operand2: number
+    result: { real: number; imaginary: number }
+  }>
+  showModulus?: boolean
+  showArgument?: boolean
+  title?: string
+}
+
+export interface MatrixVisualizationData {
+  matrices: Array<{
+    rows: number[][]
+    label?: string
+    highlight?: Array<[number, number]>
+  }>
+  operation?: 'add' | 'subtract' | 'multiply' | 'determinant' | 'inverse' | 'transpose'
+  result?: number[][]
+  title?: string
+}
+
+export interface VectorDiagramData {
+  vectors: Array<{
+    start: { x: number; y: number }
+    end: { x: number; y: number }
+    label?: string
+    color?: string
+  }>
+  operation?: 'add' | 'subtract' | 'scalar_multiply' | 'dot_product' | 'cross_product'
+  resultant?: { start: { x: number; y: number }; end: { x: number; y: number } }
+  showComponents?: boolean
+  showMagnitude?: boolean
+  title?: string
+}
+
+export interface TrigFunctionGraphsData {
+  functions: Array<{
+    type: 'sin' | 'cos' | 'tan' | 'csc' | 'sec' | 'cot'
+    amplitude?: number
+    period?: number
+    phaseShift?: number
+    verticalShift?: number
+    color?: string
+  }>
+  domain?: { min: number; max: number }
+  showAmplitude?: boolean
+  showPeriod?: boolean
+  showPhaseShift?: boolean
+  title?: string
+}
+
+export interface PolarCoordinateGraphData {
+  curves: Array<{
+    expression: string
+    type: 'rose' | 'cardioid' | 'limacon' | 'circle' | 'spiral' | 'custom'
+    color?: string
+  }>
+  thetaRange?: { min: number; max: number }
+  showGrid?: boolean
+  showLabels?: boolean
+  title?: string
+}
+
+export interface ParametricCurveData {
+  xExpression: string
+  yExpression: string
+  tRange: { min: number; max: number }
+  showDirection?: boolean
+  showPoints?: Array<{ t: number; label?: string }>
+  title?: string
+}
+
+export interface LimitVisualizationData {
+  expression: string
+  approachValue: number
+  leftLimit?: number
+  rightLimit?: number
+  actualValue?: number
+  showApproachArrows?: boolean
+  showDiscontinuity?: boolean
+  domain?: { min: number; max: number }
+  title?: string
+}
+
+export interface DerivativeTangentLineData {
+  expression: string
+  point: { x: number; y: number }
+  slope: number
+  tangentLine?: { slope: number; yIntercept: number }
+  secantLines?: Array<{
+    x1: number
+    x2: number
+    slope: number
+  }>
+  domain?: { min: number; max: number }
+  showSecants?: boolean
+  title?: string
+}
+
+export interface FunctionDerivativeRelationshipData {
+  functions: Array<{
+    expression: string
+    label: string
+    type: 'f' | "f'" | "f''"
+    color?: string
+  }>
+  criticalPoints?: Array<{ x: number; type: 'max' | 'min' | 'inflection' }>
+  domain?: { min: number; max: number }
+  title?: string
+}
+
+export interface RiemannSumData {
+  expression: string
+  interval: { a: number; b: number }
+  numRectangles: number
+  method: 'left' | 'right' | 'midpoint' | 'trapezoid'
+  approximation: number
+  actualArea?: number
+  showFunction?: boolean
+  title?: string
+}
+
+export interface SolidOfRevolutionData {
+  expression: string
+  interval: { a: number; b: number }
+  axis: 'x' | 'y'
+  method: 'disk' | 'washer' | 'shell'
+  showCrossSection?: boolean
+  volume?: number
+  title?: string
+}
+
+export interface NormalDistributionData {
+  mean: number
+  standardDeviation: number
+  shadedRegion?: { min?: number; max?: number }
+  showEmpirical?: boolean
+  zScores?: Array<{ value: number; label?: string }>
+  probability?: number
+  title?: string
+}
+
+export interface RegressionResidualsData {
+  points: Array<{ x: number; y: number }>
+  regressionLine: { slope: number; yIntercept: number }
+  residuals: Array<{ x: number; observed: number; predicted: number; residual: number }>
+  rSquared?: number
+  showResidualLines?: boolean
+  title?: string
+}
+
+export interface ResidualPlotData {
+  residuals: Array<{ predicted: number; residual: number }>
+  showZeroLine?: boolean
+  showPattern?: boolean
+  title?: string
+}
+
+export interface ProbabilityDistributionData {
+  outcomes: Array<{ value: number | string; probability: number; label?: string }>
+  expectedValue?: number
+  standardDeviation?: number
+  type: 'discrete' | 'continuous'
+  title?: string
+}
+
+export interface BinomialDistributionData {
+  n: number
+  p: number
+  highlightK?: number
+  showMean?: boolean
+  showStd?: boolean
+  cumulative?: boolean
+  title?: string
+}
+
+export interface SamplingDistributionData {
+  populationMean: number
+  populationStd: number
+  sampleSize: number
+  numSamples: number
+  sampleMeans?: number[]
+  showCLT?: boolean
+  title?: string
+}
+
+export interface ConfidenceIntervalData {
+  pointEstimate: number
+  marginOfError: number
+  confidenceLevel: number
+  lower: number
+  upper: number
+  sampleSize?: number
+  standardError?: number
+  showDistribution?: boolean
+  title?: string
+}
+
+export interface HypothesisTestData {
+  nullHypothesis: string
+  alternativeHypothesis: string
+  testStatistic: number
+  pValue: number
+  significanceLevel: number
+  rejectionRegion?: { type: 'left' | 'right' | 'two-tailed'; criticalValue: number }
+  decision: 'reject' | 'fail_to_reject'
+  showDistribution?: boolean
+  title?: string
+}
+
+// ============================================================================
 // Combined Math Diagram Types
 // ============================================================================
 
@@ -301,6 +1086,84 @@ export type MathDiagramType =
   | 'tree_diagram'
   | 'interactive_coordinate_plane'
   | 'equation_grapher'
+  // Elementary Math (Grades 1-5)
+  | 'counting_objects'
+  | 'ten_frame'
+  | 'part_part_whole'
+  | 'place_value_chart'
+  | 'base_10_blocks'
+  | 'picture_graph'
+  | 'bar_graph'
+  | 'fraction_circle'
+  | 'fraction_bar'
+  | 'fraction_number_line'
+  | 'multiplication_array'
+  | 'area_model_multiplication'
+  | 'scaled_bar_graph'
+  | 'equivalent_fraction_model'
+  | 'mixed_number_model'
+  | 'decimal_grid'
+  | 'fraction_multiplication_area'
+  | 'fraction_division_model'
+  | 'volume_model'
+  | 'order_of_operations_tree'
+  // Middle School Math (Grades 6-8)
+  | 'double_number_line'
+  | 'ratio_table'
+  | 'tape_diagram_ratio'
+  | 'dot_plot'
+  | 'histogram'
+  | 'box_plot'
+  | 'stem_and_leaf_plot'
+  | 'measures_of_center'
+  | 'proportional_relationship_graph'
+  | 'percent_bar_model'
+  | 'probability_tree'
+  | 'sample_space_diagram'
+  | 'venn_diagram'
+  | 'net_diagram_3d'
+  | 'cross_section_diagram'
+  | 'scale_drawing'
+  | 'linear_function_graph'
+  | 'system_of_equations_graph'
+  | 'slope_triangle'
+  | 'scatter_plot_trend_line'
+  | 'two_way_frequency_table'
+  | 'pythagorean_theorem_diagram'
+  | 'transformation_diagram'
+  | 'irrational_number_line'
+  | 'scientific_notation_scale'
+  // High School Math (Grades 9-12)
+  | 'quadratic_graph'
+  | 'polynomial_graph'
+  | 'exponential_graph'
+  | 'logarithmic_graph'
+  | 'absolute_value_graph'
+  | 'radical_function_graph'
+  | 'piecewise_function_graph'
+  | 'system_of_inequalities_2d'
+  | 'sequence_diagram'
+  | 'rational_function_graph'
+  | 'conic_sections'
+  | 'complex_number_plane'
+  | 'matrix_visualization'
+  | 'vector_diagram'
+  | 'trig_function_graphs'
+  | 'polar_coordinate_graph'
+  | 'parametric_curve'
+  | 'limit_visualization'
+  | 'derivative_tangent_line'
+  | 'function_derivative_relationship'
+  | 'riemann_sum'
+  | 'solid_of_revolution'
+  | 'normal_distribution'
+  | 'regression_residuals'
+  | 'residual_plot'
+  | 'probability_distribution'
+  | 'binomial_distribution'
+  | 'sampling_distribution'
+  | 'confidence_interval'
+  | 'hypothesis_test'
 
 // Base MathDiagramData - new diagram types use 'unknown' casting in renderer
 // to avoid circular dependencies
