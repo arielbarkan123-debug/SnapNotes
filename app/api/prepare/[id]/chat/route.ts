@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { ErrorCodes, createErrorResponse } from '@/lib/api/errors'
-import { getDiagramSchemaPrompt } from '@/lib/diagram-schemas'
+import { getDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-schemas'
 
 export const maxDuration = 60
 
@@ -56,13 +56,16 @@ ${guideContent.slice(0, 15000)}
 - "Quiz Me": Generate a multiple choice or short answer question from the guide
 - "Practice Qs": Generate 3-5 practice questions from a random topic
 - "Explain More": Explain the referenced section in simpler terms with an analogy
-- "Draw Diagram": Generate a visual diagram.${action === 'diagram' ? ` You MUST use one of these exact schemas:\n\n${getDiagramSchemaPrompt()}` : ' (Ask the user to click the "Draw Diagram" button for full diagram support)'}
-
+- "Draw Diagram": Generate a visual diagram to help explain a concept.
+- When explaining a concept, you can include a "diagram" field to show a visual. Available types (${Object.keys(DIAGRAM_SCHEMAS).length} total): ${Object.keys(DIAGRAM_SCHEMAS).slice(0, 30).join(', ')}, and many more.
+${action === 'diagram' ? `\nYou MUST include a diagram in your response. Use one of these exact schemas:\n\n${getDiagramSchemaPrompt()}` : ''}
 ## Response Format
 Return ONLY valid JSON:
 {"message": "Your markdown explanation", "diagram": null}
 
-For diagram action, "diagram" MUST be a complete diagram object following one of the schemas above. Pick the most appropriate diagram type for the topic. Return ONLY valid JSON, nothing else.`
+For any diagram, use: {"type": "<diagram_type>", "visibleStep": 0, "totalSteps": N, "data": {/* type-specific */}, "stepConfig": [{"step": 0, "stepLabel": "..."}]}
+${action === 'diagram' ? 'The "diagram" field MUST be a complete diagram object following one of the schemas above. Pick the most appropriate diagram type for the topic.' : 'Include a "diagram" when a visual would help understanding.'}
+Return ONLY valid JSON, nothing else.`
 }
 
 export async function POST(

@@ -1088,10 +1088,12 @@ export type MathDiagramType =
   | 'equation_grapher'
   // Elementary Math (Grades 1-5)
   | 'counting_objects'
+  | 'counting_objects_array'
   | 'ten_frame'
   | 'part_part_whole'
   | 'place_value_chart'
   | 'base_10_blocks'
+  | 'base10_blocks'
   | 'picture_graph'
   | 'bar_graph'
   | 'fraction_circle'
@@ -1107,6 +1109,7 @@ export type MathDiagramType =
   | 'fraction_division_model'
   | 'volume_model'
   | 'order_of_operations_tree'
+  | 'quadrant_one_coordinate_plane'
   // Middle School Math (Grades 6-8)
   | 'double_number_line'
   | 'ratio_table'
@@ -1164,10 +1167,11 @@ export type MathDiagramType =
   | 'sampling_distribution'
   | 'confidence_interval'
   | 'hypothesis_test'
+  // Utility
+  | 'math_table'
 
-// Base MathDiagramData - new diagram types use 'unknown' casting in renderer
-// to avoid circular dependencies
 export type MathDiagramData =
+  // Core types
   | LongDivisionData
   | EquationData
   | FractionOperationData
@@ -1175,9 +1179,85 @@ export type MathDiagramData =
   | CoordinatePlaneData
   | TriangleData
   | CircleData
-  // New diagram types are handled via unknown casting in MathDiagramRenderer
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  | Record<string, any>
+  // Elementary Math (Grades 1-5)
+  | CountingObjectsData
+  | TenFrameData
+  | PartPartWholeData
+  | BarModelData
+  | PlaceValueChartData
+  | Base10BlocksData
+  | PictureGraphData
+  | BarGraphData
+  | FractionCircleData
+  | FractionBarData
+  | FractionNumberLineData
+  | MultiplicationArrayData
+  | AreaModelMultiplicationData
+  | ScaledBarGraphData
+  | EquivalentFractionModelData
+  | MixedNumberModelData
+  | DecimalGridData
+  | FractionMultiplicationAreaData
+  | FractionDivisionModelData
+  | VolumeModelData
+  | OrderOfOperationsTreeData
+  // Middle School Math (Grades 6-8)
+  | DoubleNumberLineData
+  | RatioTableData
+  | TapeDiagramRatioData
+  | DotPlotData
+  | HistogramData
+  | BoxPlotData
+  | StemAndLeafPlotData
+  | MeasuresOfCenterData
+  | ProportionalRelationshipGraphData
+  | PercentBarModelData
+  | ProbabilityTreeData
+  | SampleSpaceDiagramData
+  | VennDiagramData
+  | NetDiagram3DData
+  | CrossSectionDiagramData
+  | ScaleDrawingData
+  | LinearFunctionGraphData
+  | SystemOfEquationsGraphData
+  | SlopeTriangleData
+  | ScatterPlotTrendLineData
+  | TwoWayFrequencyTableData
+  | PythagoreanTheoremDiagramData
+  | TransformationDiagramData
+  | IrrationalNumberLineData
+  | ScientificNotationScaleData
+  // High School Math (Grades 9-12)
+  | QuadraticGraphData
+  | PolynomialGraphData
+  | ExponentialGraphData
+  | LogarithmicGraphData
+  | AbsoluteValueGraphData
+  | RadicalFunctionGraphData
+  | PiecewiseFunctionGraphData
+  | SystemOfInequalities2DData
+  | SequenceDiagramData
+  | RationalFunctionGraphData
+  | ConicSectionsData
+  | ComplexNumberPlaneData
+  | MatrixVisualizationData
+  | VectorDiagramData
+  | TrigFunctionGraphsData
+  | PolarCoordinateGraphData
+  | ParametricCurveData
+  | LimitVisualizationData
+  | DerivativeTangentLineData
+  | FunctionDerivativeRelationshipData
+  | RiemannSumData
+  | SolidOfRevolutionData
+  | NormalDistributionData
+  | RegressionResidualsData
+  | ResidualPlotData
+  | ProbabilityDistributionData
+  | BinomialDistributionData
+  | SamplingDistributionData
+  | ConfidenceIntervalData
+  | HypothesisTestData
 
 export interface MathDiagramState {
   /** Type of diagram */

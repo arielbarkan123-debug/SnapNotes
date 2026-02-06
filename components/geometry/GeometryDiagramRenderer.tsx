@@ -12,6 +12,23 @@ import type {
   RhombusData,
   TrapezoidData,
   RegularPolygonData,
+  AngleTypesDiagramData,
+  ComplementarySupplementaryData,
+  VerticalAnglesData,
+  ParallelLinesTransversalData,
+  TriangleAngleSumData,
+  ExteriorAngleTheoremData,
+  PerpendicularBisectorConstructionData,
+  RotationCoordinatePlaneData,
+  DilationCoordinatePlaneData,
+  TessellationPatternData,
+  InscribedAngleTheoremData,
+  TriangleCongruenceData,
+  TriangleSimilarityData,
+  LawOfSinesCosinesData,
+  TransformationsCompositionData,
+  OrthographicViews3DData,
+  TangentRadiusPerpendicularityData,
   GeometryShapeType,
 } from '@/types/geometry'
 import { Square } from './Square'
@@ -22,6 +39,23 @@ import { Parallelogram } from './Parallelogram'
 import { Rhombus } from './Rhombus'
 import { Trapezoid } from './Trapezoid'
 import { RegularPolygon } from './RegularPolygon'
+import { AngleTypesDiagram } from './AngleTypesDiagram'
+import { ComplementarySupplementary } from './ComplementarySupplementary'
+import { VerticalAngles } from './VerticalAngles'
+import { ParallelLinesTransversal } from './ParallelLinesTransversal'
+import { TriangleAngleSum } from './TriangleAngleSum'
+import { ExteriorAngleTheorem } from './ExteriorAngleTheorem'
+import { PerpendicularBisectorConstruction } from './PerpendicularBisectorConstruction'
+import { RotationCoordinatePlane } from './RotationCoordinatePlane'
+import { DilationCoordinatePlane } from './DilationCoordinatePlane'
+import { TessellationPattern } from './TessellationPattern'
+import { InscribedAngleTheorem } from './InscribedAngleTheorem'
+import { TriangleCongruence } from './TriangleCongruence'
+import { TriangleSimilarity } from './TriangleSimilarity'
+import { LawOfSinesCosines } from './LawOfSinesCosines'
+import { TransformationsComposition } from './TransformationsComposition'
+import { OrthographicViews3D } from './OrthographicViews3D'
+import { TangentRadiusPerpendicularity } from './TangentRadiusPerpendicularity'
 import type { SubjectKey } from '@/lib/diagram-theme'
 import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
@@ -217,6 +251,57 @@ export function GeometryDiagramRenderer({
 
       case 'regular_polygon':
         return <RegularPolygon data={diagram.data as RegularPolygonData} {...commonProps} />
+
+      case 'angle_types':
+        return <AngleTypesDiagram data={diagram.data as AngleTypesDiagramData} {...commonProps} />
+
+      case 'complementary_supplementary':
+        return <ComplementarySupplementary data={diagram.data as ComplementarySupplementaryData} {...commonProps} />
+
+      case 'vertical_angles':
+        return <VerticalAngles data={diagram.data as VerticalAnglesData} {...commonProps} />
+
+      case 'parallel_lines_transversal':
+        return <ParallelLinesTransversal data={diagram.data as ParallelLinesTransversalData} {...commonProps} />
+
+      case 'triangle_angle_sum':
+        return <TriangleAngleSum data={diagram.data as TriangleAngleSumData} {...commonProps} />
+
+      case 'exterior_angle_theorem':
+        return <ExteriorAngleTheorem data={diagram.data as ExteriorAngleTheoremData} {...commonProps} />
+
+      case 'perpendicular_bisector_construction':
+        return <PerpendicularBisectorConstruction data={diagram.data as PerpendicularBisectorConstructionData} {...commonProps} />
+
+      case 'rotation_coordinate_plane':
+        return <RotationCoordinatePlane data={diagram.data as RotationCoordinatePlaneData} {...commonProps} />
+
+      case 'dilation_coordinate_plane':
+        return <DilationCoordinatePlane data={diagram.data as DilationCoordinatePlaneData} {...commonProps} />
+
+      case 'tessellation_pattern':
+        return <TessellationPattern data={diagram.data as TessellationPatternData} {...commonProps} />
+
+      case 'inscribed_angle_theorem':
+        return <InscribedAngleTheorem data={diagram.data as InscribedAngleTheoremData} {...commonProps} />
+
+      case 'triangle_congruence':
+        return <TriangleCongruence data={diagram.data as TriangleCongruenceData} {...commonProps} />
+
+      case 'triangle_similarity':
+        return <TriangleSimilarity data={diagram.data as TriangleSimilarityData} {...commonProps} />
+
+      case 'law_of_sines_cosines':
+        return <LawOfSinesCosines data={diagram.data as LawOfSinesCosinesData} {...commonProps} />
+
+      case 'transformations_composition':
+        return <TransformationsComposition data={diagram.data as TransformationsCompositionData} {...commonProps} />
+
+      case 'orthographic_views_3d':
+        return <OrthographicViews3D data={diagram.data as OrthographicViews3DData} {...commonProps} />
+
+      case 'tangent_radius_perpendicularity':
+        return <TangentRadiusPerpendicularity data={diagram.data as TangentRadiusPerpendicularityData} {...commonProps} />
 
       default:
         return (
