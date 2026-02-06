@@ -146,7 +146,7 @@ class DiagramErrorBoundary extends Component<DiagramErrorBoundaryProps, DiagramE
 
 interface DiagramRendererProps {
   diagram: DiagramState
-  currentStep: number
+  currentStep?: number
   onStepAdvance?: () => void
   onStepBack?: () => void
   showControls?: boolean

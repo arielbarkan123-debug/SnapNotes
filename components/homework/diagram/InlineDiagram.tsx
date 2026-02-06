@@ -14,7 +14,7 @@ const FullScreenDiagramView = dynamic(
 
 interface InlineDiagramProps {
   diagram: DiagramState
-  currentStep: number
+  currentStep?: number
   onStepAdvance?: () => void
   onStepBack?: () => void
   /** Size variant: 'compact' (350x280), 'default' (400x350), or 'large' (500x400) */
@@ -49,12 +49,12 @@ export default function InlineDiagram({
   const lang = language || (locale as 'en' | 'he')
 
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [fullscreenStep, setFullscreenStep] = useState(currentStep)
+  const [fullscreenStep, setFullscreenStep] = useState(currentStep ?? 0)
 
   const { width, height } = SIZE_MAP[size]
 
   const handleOpenFullscreen = () => {
-    setFullscreenStep(currentStep)
+    setFullscreenStep(currentStep ?? 0)
     setIsFullscreen(true)
   }
 
