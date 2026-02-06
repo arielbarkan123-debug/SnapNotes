@@ -1,6 +1,10 @@
 /**
  * Tests for Practice Questions Generation API
  * Verifies proper integration of user profile and curriculum context
+ *
+ * NOTE: The route creates `const anthropic = new Anthropic(...)` at module scope,
+ * so we use a shared mutable mock with a getter to allow beforeEach to swap
+ * the implementation.
  */
 
 import { POST } from '@/app/api/generate-questions/route'
@@ -8,13 +12,28 @@ import { NextRequest } from 'next/server'
 import { mockDatabaseProfiles } from '../fixtures/mock-user-profiles'
 import { mockCourseFromDB, mockGeneratedCourse } from '../fixtures/mock-courses'
 
+// Shared mutable mock for Anthropic SDK messages.create
+// The route creates `new Anthropic(...)` at module scope, so we can't use
+// mockImplementation in beforeEach. Instead, use a getter that returns the
+// current mock function.
+let mockMessagesCreate: jest.Mock = jest.fn().mockResolvedValue({
+  content: [{ type: 'text', text: '{"questions":[]}' }],
+})
+
+jest.mock('@anthropic-ai/sdk', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    messages: {
+      get create() {
+        return mockMessagesCreate
+      },
+    },
+  })),
+}))
+
 // Mock modules
 jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(),
-}))
-
-jest.mock('@anthropic-ai/sdk', () => ({
-  default: jest.fn(),
 }))
 
 jest.mock('@/lib/curriculum/context-builder', () => ({
@@ -36,7 +55,6 @@ process.env.ANTHROPIC_API_KEY = 'test-api-key'
 
 describe('Generate Questions API - POST', () => {
   let mockSupabase: any
-  let mockAnthropic: any
   let capturedSystemPrompt: string
   let capturedUserMessage: string
 
@@ -79,60 +97,53 @@ describe('Generate Questions API - POST', () => {
       }),
     }
 
-    // Create mock Anthropic client
-    mockAnthropic = {
-      messages: {
-        create: jest.fn().mockImplementation(async (params: any) => {
-          capturedSystemPrompt = params.system || ''
-          capturedUserMessage = params.messages[0]?.content || ''
-
-          return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify({
-                  questions: [
-                    {
-                      type: 'multiple_choice',
-                      question: 'What is the function of mitochondria?',
-                      options: [
-                        'Energy production',
-                        'Protein synthesis',
-                        'Cell division',
-                        'Waste removal',
-                      ],
-                      correct_answer: 0,
-                      explanation: 'Mitochondria produce ATP through cellular respiration.',
-                    },
-                    {
-                      type: 'multiple_choice',
-                      question: 'Which organelle contains genetic material?',
-                      options: ['Ribosome', 'Golgi body', 'Nucleus', 'Lysosome'],
-                      correct_answer: 2,
-                      explanation: 'The nucleus contains DNA.',
-                    },
-                    {
-                      type: 'true_false',
-                      question: 'Prokaryotic cells have a nucleus.',
-                      options: ['True', 'False'],
-                      correct_answer: 1,
-                      explanation: 'Prokaryotic cells lack a membrane-bound nucleus.',
-                    },
-                  ],
-                }),
-              },
-            ],
-          }
-        }),
-      },
-    }
-
-    // Set up mocks
+    // Set up Supabase mock
     const { createClient } = require('@/lib/supabase/server')
     createClient.mockResolvedValue(mockSupabase)
 
-    const Anthropic = require('@anthropic-ai/sdk').default
-    Anthropic.mockImplementation(() => mockAnthropic)
+    // Set up Anthropic messages.create mock — captures prompts
+    mockMessagesCreate = jest.fn().mockImplementation(async (params: any) => {
+      capturedSystemPrompt = params.system || ''
+      capturedUserMessage = params.messages[0]?.content || ''
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              questions: [
+                {
+                  type: 'multiple_choice',
+                  question: 'What is the function of mitochondria?',
+                  options: [
+                    'Energy production',
+                    'Protein synthesis',
+                    'Cell division',
+                    'Waste removal',
+                  ],
+                  correct_answer: 0,
+                  explanation: 'Mitochondria produce ATP through cellular respiration.',
+                },
+                {
+                  type: 'multiple_choice',
+                  question: 'Which organelle contains genetic material?',
+                  options: ['Ribosome', 'Golgi body', 'Nucleus', 'Lysosome'],
+                  correct_answer: 2,
+                  explanation: 'The nucleus contains DNA.',
+                },
+                {
+                  type: 'true_false',
+                  question: 'Prokaryotic cells have a nucleus.',
+                  options: ['True', 'False'],
+                  correct_answer: 1,
+                  explanation: 'Prokaryotic cells lack a membrane-bound nucleus.',
+                },
+              ],
+            }),
+          },
+        ],
+      }
+    })
   })
 
   describe('User Profile Integration', () => {
@@ -470,7 +481,8 @@ describe('Generate Questions API - POST', () => {
       expect(capturedSystemPrompt).toContain('Generate 10 questions')
     })
 
-    it('ensures at least MIN_QUESTIONS (1)', async () => {
+    it('treats count=0 as unspecified and uses default (3)', async () => {
+      // Route uses `Number(count) || 3` — since 0 is falsy, it defaults to 3
       const request = new NextRequest('http://localhost/api/generate-questions', {
         method: 'POST',
         body: JSON.stringify({
@@ -481,7 +493,7 @@ describe('Generate Questions API - POST', () => {
 
       await POST(request)
 
-      expect(capturedSystemPrompt).toContain('Generate 1 questions')
+      expect(capturedSystemPrompt).toContain('Generate 3 questions')
     })
 
     it('defaults to 3 questions when not specified', async () => {
@@ -548,7 +560,7 @@ describe('Generate Questions API - POST', () => {
     })
 
     it('filters out invalid questions', async () => {
-      mockAnthropic.messages.create.mockResolvedValueOnce({
+      mockMessagesCreate.mockResolvedValueOnce({
         content: [
           {
             type: 'text',

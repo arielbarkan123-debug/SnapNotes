@@ -14,7 +14,10 @@ jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(),
 }))
 
+// The route creates `new Anthropic()` inside the handler function,
+// so mockImplementation in beforeEach works here.
 jest.mock('@anthropic-ai/sdk', () => ({
+  __esModule: true,
   default: jest.fn(),
 }))
 
@@ -54,6 +57,10 @@ describe('Exams API - POST (Generate Exam)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     capturedPrompt = ''
+
+    // Reset rate limit to default (allowed)
+    const { checkRateLimit } = require('@/lib/rate-limit')
+    checkRateLimit.mockReturnValue({ allowed: true })
 
     // Create mock Supabase client
     mockSupabase = {
@@ -532,7 +539,7 @@ describe('Exams API - POST (Generate Exam)', () => {
       const data = await response.json()
 
       expect(response.status).toBe(401)
-      expect(data.error).toContain('authenticated')
+      expect(data.error.message).toContain('log in')
     })
   })
 
@@ -547,7 +554,7 @@ describe('Exams API - POST (Generate Exam)', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('required')
+      expect(data.error.message).toContain('required')
     })
 
     it('returns 400 for invalid question count', async () => {
@@ -564,7 +571,7 @@ describe('Exams API - POST (Generate Exam)', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('5-50')
+      expect(data.error.message).toContain('5-50')
     })
   })
 
@@ -586,7 +593,7 @@ describe('Exams API - POST (Generate Exam)', () => {
       const data = await response.json()
 
       expect(response.status).toBe(429)
-      expect(data.error).toContain('Too many requests')
+      expect(data.error.message).toContain('Too many requests')
     })
   })
 })
@@ -654,6 +661,6 @@ describe('Exams API - GET (List Exams)', () => {
     const data = await response.json()
 
     expect(response.status).toBe(401)
-    expect(data.error).toContain('authenticated')
+    expect(data.error.message).toContain('log in')
   })
 })

@@ -1281,7 +1281,7 @@ Update `isMathDiagram()` and add `isGeometryDiagram()` type guards to recognize 
 
 ### Issue D1: generate-questions.test.ts — Anthropic SDK Mock Broken
 
-**Status:** 🔴 Blocking (29 tests fail)
+**Status:** ✅ RESOLVED
 **Priority:** High (fix before next release)
 **Discovered:** 2026-02-05 during Phase 3 verification
 **Pre-existing:** Yes — fails on main branch too
@@ -1319,9 +1319,9 @@ jest.mock('@anthropic-ai/sdk', () => ({
 
 ---
 
-### Issue D2: generate-course.test.ts — Duplicate Detection Logic Mismatch
+### Issue D2: generate-course.test.ts — Streaming Tests + Mock Fixes
 
-**Status:** 🟡 Partial (19/20 tests pass, 1 fails)
+**Status:** ✅ RESOLVED
 **Priority:** Medium
 **Discovered:** 2026-02-05 during Phase 3 verification
 **Pre-existing:** Yes — fails on main branch
@@ -1350,9 +1350,9 @@ Test expects 400 for some duplicate detection scenario but route returns 200.
 
 ---
 
-### Issue D3: exams.test.ts — Auth Error Handling
+### Issue D3: exams.test.ts — Auth Error Handling + SDK Mock
 
-**Status:** 🟡 Partial (some tests fail)
+**Status:** ✅ RESOLVED
 **Priority:** Medium
 **Discovered:** 2026-02-05 during Phase 3 verification
 **Pre-existing:** Yes — fails on main branch
@@ -1379,35 +1379,20 @@ Test expects `data.error` to be a string containing "authenticated" but receives
 
 ---
 
-### Current Status (2026-02-05 evening)
+### Current Status (2026-02-06)
 
-**Partially Fixed:**
-- D1: ✅ generate-questions.test.ts now passes (22/22 tests)
-- D2: ✅ generate-course.test.ts streaming tests skipped with TODO
-- D3: 🔄 exams.test.ts - fixed error shape, but prompt capture still broken (same issue as D1, partially applied)
+**All Resolved:**
+- D1: ✅ generate-questions.test.ts — 22/22 pass (shared mutable mock with getter for module-scope Anthropic client)
+- D2: ✅ generate-course.test.ts — 20/20 pass (switched to `@jest-environment node` for proper ReadableStream support, fixed mock names, added missing mocks)
+- D3: ✅ exams.test.ts — 21/21 pass (added `__esModule: true`, fixed error shape from `data.error.toContain()` to `data.error.message.toContain()`, reset rate limit in beforeEach)
 
-**Remaining Work:**
-1. Finish applying the shared mock pattern to exams.test.ts
-2. Run full test suite to verify all passes
-3. May need to check if the prompt capture actually works now
+**Key fixes applied:**
+1. `jest.setup.ts` — guarded `Element.prototype.scrollIntoView` and `ResizeObserver` for node environment compatibility
+2. `jest.config.js` — added `.worktrees/` to `testPathIgnorePatterns` to prevent duplicate test discovery
+3. `generate-course.test.ts` — uses `@jest-environment node` because jsdom's Response doesn't support ReadableStream bodies
+4. All three test files — proper Anthropic SDK mocking patterns for module-scope vs function-scope client instantiation
 
-**To Resume:**
-```bash
-cd /Users/curvalux/NoteSnap/.worktrees/visual-overhaul
-npm test -- __tests__/api/exams.test.ts --no-coverage
-```
-
-If tests fail on prompt capture, the fix is to ensure `mockExamsMessagesCreate` captures `params.system` into `capturedPrompt` (currently captures `params.messages[0]?.content`).
-
----
-
-### When to Fix These (Original Options)
-
-**Option A (Recommended):** Fix after Phase 3 commit, before continuing to Phase 4. Takes ~30 minutes.
-
-**Option B:** Fix at end of visual learning work before final merge to main.
-
-**Option C:** Create separate PR to fix on main branch in parallel.
+**Full test suite: 302/302 pass, 12/12 suites pass.**
 
 ---
 

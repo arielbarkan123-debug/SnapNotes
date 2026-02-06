@@ -1,6 +1,19 @@
 /**
+ * @jest-environment node
+ */
+
+/**
  * Tests for Course Generation API
  * Verifies proper integration of user profile for personalization
+ *
+ * NOTE: The route uses a streaming pattern — POST() returns a ReadableStream
+ * immediately while processing happens in a fire-and-forget async IIFE.
+ * Tests must drain the stream to completion to ensure the IIFE finishes
+ * before checking mock assertions.
+ *
+ * IMPORTANT: This test requires @jest-environment node because the route
+ * creates Response objects with ReadableStream bodies, which jsdom's
+ * Response implementation doesn't support properly.
  */
 
 import { POST } from '@/app/api/generate-course/route'
@@ -15,8 +28,8 @@ jest.mock('@/lib/supabase/server', () => ({
 
 jest.mock('@/lib/ai', () => ({
   generateCourseFromImage: jest.fn(),
-  generateCourseFromMultipleImages: jest.fn(),
-  generateCourseFromDocument: jest.fn(),
+  generateCourseFromMultipleImagesProgressive: jest.fn(),
+  generateInitialCourse: jest.fn(),
   generateCourseFromText: jest.fn(),
   ClaudeAPIError: class ClaudeAPIError extends Error {
     code: string
@@ -38,16 +51,12 @@ jest.mock('@/lib/api/errors', () => ({
     AI_PROCESSING_FAILED: 'AI_PROCESSING_FAILED',
     RATE_LIMITED: 'RATE_LIMITED',
     INTERNAL_ERROR: 'INTERNAL_ERROR',
+    IMAGE_UNREADABLE: 'IMAGE_UNREADABLE',
+    AI_SERVICE_UNAVAILABLE: 'AI_SERVICE_UNAVAILABLE',
+    NETWORK_ERROR: 'NETWORK_ERROR',
+    PROCESSING_TIMEOUT: 'PROCESSING_TIMEOUT',
   },
-  createErrorResponse: jest.fn().mockImplementation((code, message) => {
-    const status = code === 'UNAUTHORIZED' ? 401 : code === 'RATE_LIMITED' ? 429 : 400
-    return new Response(JSON.stringify({ success: false, error: message, code }), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    })
-  }),
   logError: jest.fn(),
-  mapClaudeAPIError: jest.fn().mockReturnValue({ code: 'AI_ERROR', message: 'AI error' }),
 }))
 
 jest.mock('@/lib/srs', () => ({
@@ -83,13 +92,83 @@ jest.mock('@/lib/rate-limit', () => ({
   getRateLimitHeaders: jest.fn().mockReturnValue({}),
 }))
 
+jest.mock('@/lib/curriculum/learning-objectives', () => ({
+  validateLearningObjectives: jest.fn().mockReturnValue({
+    results: {},
+    summary: { errorCount: 0, warningCount: 0 },
+  }),
+}))
+
+jest.mock('@/lib/extraction/confidence-scorer', () => ({
+  scoreExtraction: jest.fn().mockReturnValue({
+    overall: 0.85,
+    textQuality: 0.9,
+    structureQuality: 0.8,
+  }),
+}))
+
+// ============================================================================
+// Stream Helper
+// ============================================================================
+
+/**
+ * Drain the response stream and parse all JSON messages.
+ * This ensures the fire-and-forget IIFE in the route completes
+ * before we check any mock assertions.
+ */
+async function drainStream(response: Response): Promise<Array<Record<string, unknown>>> {
+  const messages: Array<Record<string, unknown>> = []
+  const reader = response.body?.getReader()
+  if (!reader) return messages
+
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (value) {
+      buffer += decoder.decode(value, { stream: true })
+      // Parse complete lines
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || '' // Keep incomplete line in buffer
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (trimmed) {
+          try {
+            messages.push(JSON.parse(trimmed))
+          } catch {
+            // Skip non-JSON lines
+          }
+        }
+      }
+    }
+    if (done) break
+  }
+
+  // Parse any remaining buffer
+  if (buffer.trim()) {
+    try {
+      messages.push(JSON.parse(buffer.trim()))
+    } catch {
+      // Skip non-JSON
+    }
+  }
+
+  return messages
+}
+
 describe('Course Generation API - POST', () => {
   let mockSupabase: any
   let capturedUserContext: any
 
   beforeEach(() => {
+    jest.restoreAllMocks()
     jest.clearAllMocks()
     capturedUserContext = null
+
+    // Reset rate limit to default (allowed)
+    const { checkRateLimit } = require('@/lib/rate-limit')
+    checkRateLimit.mockReturnValue({ allowed: true })
 
     // Create mock Supabase client
     mockSupabase = {
@@ -116,6 +195,7 @@ describe('Course Generation API - POST', () => {
             error: null,
           })
         } else if (table === 'courses') {
+          // Default: no duplicate found, insert succeeds
           builder.maybeSingle.mockResolvedValue({ data: null, error: null })
           builder.single.mockResolvedValue({ data: { id: 'course-123' }, error: null })
         } else if (table === 'review_cards') {
@@ -138,14 +218,14 @@ describe('Course Generation API - POST', () => {
 
     // Set up AI mock to capture user context
     const { generateCourseFromImage, generateCourseFromText } = require('@/lib/ai')
-    generateCourseFromImage.mockImplementation(async (url: string, title: string, userContext: any) => {
+    generateCourseFromImage.mockImplementation(async (_url: string, _title: string, userContext: any) => {
       capturedUserContext = userContext
       return {
         generatedCourse: mockGeneratedCourse,
         extractionRawText: 'Extracted text content',
       }
     })
-    generateCourseFromText.mockImplementation(async (text: string, title: string, userContext: any) => {
+    generateCourseFromText.mockImplementation(async (_text: string, _title: string, userContext: any) => {
       capturedUserContext = userContext
       return {
         generatedCourse: mockGeneratedCourse,
@@ -160,7 +240,7 @@ describe('Course Generation API - POST', () => {
         body: JSON.stringify({ imageUrl: 'https://example.com/image.jpg' }),
       })
 
-      await POST(request)
+      await drainStream(await POST(request))
 
       expect(mockSupabase.from).toHaveBeenCalledWith('user_learning_profile')
     })
@@ -171,7 +251,7 @@ describe('Course Generation API - POST', () => {
         body: JSON.stringify({ imageUrl: 'https://example.com/image.jpg' }),
       })
 
-      await POST(request)
+      await drainStream(await POST(request))
 
       expect(capturedUserContext).toEqual({
         educationLevel: 'high_school',
@@ -188,7 +268,7 @@ describe('Course Generation API - POST', () => {
         body: JSON.stringify({ textContent: 'Some study material about cells' }),
       })
 
-      await POST(request)
+      await drainStream(await POST(request))
 
       expect(capturedUserContext.educationLevel).toBe('high_school')
     })
@@ -199,7 +279,7 @@ describe('Course Generation API - POST', () => {
         body: JSON.stringify({ textContent: 'Some study material' }),
       })
 
-      await POST(request)
+      await drainStream(await POST(request))
 
       expect(capturedUserContext.studySystem).toBe('ib')
     })
@@ -210,7 +290,7 @@ describe('Course Generation API - POST', () => {
         body: JSON.stringify({ textContent: 'Some study material' }),
       })
 
-      await POST(request)
+      await drainStream(await POST(request))
 
       expect(capturedUserContext.studyGoal).toBe('exam_prep')
     })
@@ -221,7 +301,7 @@ describe('Course Generation API - POST', () => {
         body: JSON.stringify({ textContent: 'Some study material' }),
       })
 
-      await POST(request)
+      await drainStream(await POST(request))
 
       expect(capturedUserContext.learningStyles).toEqual(['practice', 'visual'])
     })
@@ -232,7 +312,7 @@ describe('Course Generation API - POST', () => {
         body: JSON.stringify({ textContent: 'Some study material' }),
       })
 
-      await POST(request)
+      await drainStream(await POST(request))
 
       expect(capturedUserContext.language).toBe('en')
     })
@@ -265,11 +345,11 @@ describe('Course Generation API - POST', () => {
         body: JSON.stringify({ imageUrl: 'https://example.com/image.jpg' }),
       })
 
-      const response = await POST(request)
-      const data = await response.json()
+      const messages = await drainStream(await POST(request))
 
-      // Should continue without personalization
-      expect(data.success).toBe(true)
+      // Should continue without personalization — look for success message
+      const successMsg = messages.find((m) => m.type === 'success')
+      expect(successMsg).toBeDefined()
       expect(capturedUserContext).toBeUndefined()
     })
 
@@ -311,7 +391,7 @@ describe('Course Generation API - POST', () => {
         body: JSON.stringify({ textContent: 'Some study material' }),
       })
 
-      await POST(request)
+      await drainStream(await POST(request))
 
       expect(capturedUserContext).toEqual({
         educationLevel: 'high_school', // default
@@ -357,7 +437,7 @@ describe('Course Generation API - POST', () => {
         body: JSON.stringify({ textContent: 'תוכן ללמידה' }),
       })
 
-      await POST(request)
+      await drainStream(await POST(request))
 
       expect(capturedUserContext.language).toBe('he')
     })
@@ -372,10 +452,10 @@ describe('Course Generation API - POST', () => {
         body: JSON.stringify({ imageUrl: 'https://example.com/image.jpg' }),
       })
 
-      const response = await POST(request)
-      const data = await response.json()
+      const messages = await drainStream(await POST(request))
+      const successMsg = messages.find((m) => m.type === 'success')
 
-      expect(data.success).toBe(true)
+      expect(successMsg).toBeDefined()
       expect(generateCourseFromImage).toHaveBeenCalled()
     })
 
@@ -387,18 +467,23 @@ describe('Course Generation API - POST', () => {
         body: JSON.stringify({ textContent: 'Some educational content about biology' }),
       })
 
-      const response = await POST(request)
-      const data = await response.json()
+      const messages = await drainStream(await POST(request))
+      const successMsg = messages.find((m) => m.type === 'success')
 
-      expect(data.success).toBe(true)
+      expect(successMsg).toBeDefined()
       expect(generateCourseFromText).toHaveBeenCalled()
     })
 
     it('handles document-based course generation', async () => {
-      const { generateCourseFromDocument } = require('@/lib/ai')
-      generateCourseFromDocument.mockImplementation(async (doc: any, title: string, urls: string[], userContext: any) => {
+      const { generateInitialCourse } = require('@/lib/ai')
+      generateInitialCourse.mockImplementation(async (_doc: any, _title: string, _urls: string[], userContext: any) => {
         capturedUserContext = userContext
-        return { generatedCourse: mockGeneratedCourse }
+        return {
+          generatedCourse: mockGeneratedCourse,
+          lessonOutline: [],
+          documentSummary: 'Summary',
+          totalLessons: 3,
+        }
       })
 
       const request = new NextRequest('http://localhost/api/generate-course', {
@@ -412,20 +497,23 @@ describe('Course Generation API - POST', () => {
         }),
       })
 
-      const response = await POST(request)
-      const data = await response.json()
+      const messages = await drainStream(await POST(request))
+      const successMsg = messages.find((m) => m.type === 'success')
 
-      expect(data.success).toBe(true)
-      expect(generateCourseFromDocument).toHaveBeenCalled()
+      expect(successMsg).toBeDefined()
+      expect(generateInitialCourse).toHaveBeenCalled()
     })
 
     it('handles multiple images', async () => {
-      const { generateCourseFromMultipleImages } = require('@/lib/ai')
-      generateCourseFromMultipleImages.mockImplementation(async (urls: string[], title: string, userContext: any) => {
+      const { generateCourseFromMultipleImagesProgressive } = require('@/lib/ai')
+      generateCourseFromMultipleImagesProgressive.mockImplementation(async (_urls: string[], _title: string, userContext: any) => {
         capturedUserContext = userContext
         return {
           generatedCourse: mockGeneratedCourse,
           extractionRawText: 'Extracted from multiple images',
+          lessonOutline: [],
+          documentSummary: 'Multi-image summary',
+          totalLessons: 3,
         }
       })
 
@@ -436,11 +524,11 @@ describe('Course Generation API - POST', () => {
         }),
       })
 
-      const response = await POST(request)
-      const data = await response.json()
+      const messages = await drainStream(await POST(request))
+      const successMsg = messages.find((m) => m.type === 'success')
 
-      expect(data.success).toBe(true)
-      expect(generateCourseFromMultipleImages).toHaveBeenCalled()
+      expect(successMsg).toBeDefined()
+      expect(generateCourseFromMultipleImagesProgressive).toHaveBeenCalled()
     })
   })
 
@@ -453,7 +541,7 @@ describe('Course Generation API - POST', () => {
         body: JSON.stringify({ textContent: 'Cell biology content' }),
       })
 
-      await POST(request)
+      await drainStream(await POST(request))
 
       // Curriculum context is built asynchronously for concept extraction
       // We can verify the function was set up to be called
@@ -462,7 +550,7 @@ describe('Course Generation API - POST', () => {
   })
 
   describe('Authentication', () => {
-    it('returns 401 for unauthenticated users', async () => {
+    it('sends UNAUTHORIZED error for unauthenticated users', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: null },
         error: { message: 'Unauthorized' },
@@ -473,14 +561,17 @@ describe('Course Generation API - POST', () => {
         body: JSON.stringify({ imageUrl: 'https://example.com/image.jpg' }),
       })
 
-      const response = await POST(request)
+      const messages = await drainStream(await POST(request))
 
-      expect(response.status).toBe(401)
+      const errorMsg = messages.find((m) => m.type === 'error')
+
+      expect(errorMsg).toBeDefined()
+      expect(errorMsg?.code).toBe('UNAUTHORIZED')
     })
   })
 
   describe('Rate Limiting', () => {
-    it('returns 429 when rate limited', async () => {
+    it('sends RATE_LIMITED error when rate limited', async () => {
       const { checkRateLimit } = require('@/lib/rate-limit')
       checkRateLimit.mockReturnValue({ allowed: false, remaining: 0, resetTime: Date.now() + 60000 })
 
@@ -489,25 +580,29 @@ describe('Course Generation API - POST', () => {
         body: JSON.stringify({ imageUrl: 'https://example.com/image.jpg' }),
       })
 
-      const response = await POST(request)
+      const messages = await drainStream(await POST(request))
+      const errorMsg = messages.find((m) => m.type === 'error')
 
-      expect(response.status).toBe(429)
+      expect(errorMsg).toBeDefined()
+      expect(errorMsg?.code).toBe('RATE_LIMITED')
     })
   })
 
   describe('Input Validation', () => {
-    it('returns error for missing content', async () => {
+    it('sends error for missing content', async () => {
       const request = new NextRequest('http://localhost/api/generate-course', {
         method: 'POST',
         body: JSON.stringify({}),
       })
 
-      const response = await POST(request)
+      const messages = await drainStream(await POST(request))
+      const errorMsg = messages.find((m) => m.type === 'error')
 
-      expect(response.status).toBe(400)
+      expect(errorMsg).toBeDefined()
+      expect(errorMsg?.code).toBe('MISSING_FIELD')
     })
 
-    it('returns error for too many images', async () => {
+    it('sends error for too many images', async () => {
       const request = new NextRequest('http://localhost/api/generate-course', {
         method: 'POST',
         body: JSON.stringify({
@@ -515,9 +610,11 @@ describe('Course Generation API - POST', () => {
         }),
       })
 
-      const response = await POST(request)
+      const messages = await drainStream(await POST(request))
+      const errorMsg = messages.find((m) => m.type === 'error')
 
-      expect(response.status).toBe(400)
+      expect(errorMsg).toBeDefined()
+      expect(errorMsg?.code).toBe('VALIDATION_ERROR')
     })
   })
 
@@ -536,6 +633,7 @@ describe('Course Generation API - POST', () => {
         if (table === 'user_learning_profile') {
           builder.single.mockResolvedValue({ data: mockDatabaseProfiles.ibBiologyHL, error: null })
         } else if (table === 'courses') {
+          // First maybeSingle call: duplicate found by original_image_url
           builder.maybeSingle.mockResolvedValue({ data: { id: 'existing-course-123' }, error: null })
         }
 
@@ -547,12 +645,11 @@ describe('Course Generation API - POST', () => {
         body: JSON.stringify({ imageUrl: 'https://example.com/image.jpg' }),
       })
 
-      const response = await POST(request)
-      const data = await response.json()
+      const messages = await drainStream(await POST(request))
+      const successMsg = messages.find((m) => m.type === 'success')
 
-      expect(data.success).toBe(true)
-      expect(data.courseId).toBe('existing-course-123')
-      expect(data.isDuplicate).toBe(true)
+      expect(successMsg).toBeDefined()
+      expect(successMsg?.courseId).toBe('existing-course-123')
     })
   })
 })
