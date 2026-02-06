@@ -13,6 +13,7 @@ import {
   lineDrawVariants,
   labelAppearVariants,
 } from '@/lib/diagram-animations'
+import { SVGLabel } from '@/components/math/shared'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -67,6 +68,7 @@ const STEP_LABELS: Record<string, { en: string; he: string }> = {
  * - [x] Subject-coded colors
  * - [x] Adaptive line weight
  * - [x] Step-by-step progressive reveal with AnimatePresence
+ * - [x] Uses shared SVG primitives (SVGPoint, SVGLabel)
  */
 export function CoordinatePlane({
   data,
@@ -333,25 +335,17 @@ export function CoordinatePlane({
                 {gridData.xMinorTicks.map((x) => (
                   <line
                     key={`grid-v-minor-${x}`}
-                    x1={xToSvg(x)}
-                    y1={padding.top}
-                    x2={xToSvg(x)}
-                    y2={height - padding.bottom}
-                    stroke="currentColor"
-                    strokeWidth={0.5}
-                    opacity={0.3}
+                    x1={xToSvg(x)} y1={padding.top}
+                    x2={xToSvg(x)} y2={height - padding.bottom}
+                    stroke="currentColor" strokeWidth={0.5} opacity={0.3}
                   />
                 ))}
                 {gridData.yMinorTicks.map((y) => (
                   <line
                     key={`grid-h-minor-${y}`}
-                    x1={padding.left}
-                    y1={yToSvg(y)}
-                    x2={width - padding.right}
-                    y2={yToSvg(y)}
-                    stroke="currentColor"
-                    strokeWidth={0.5}
-                    opacity={0.3}
+                    x1={padding.left} y1={yToSvg(y)}
+                    x2={width - padding.right} y2={yToSvg(y)}
+                    stroke="currentColor" strokeWidth={0.5} opacity={0.3}
                   />
                 ))}
               </g>
@@ -362,13 +356,9 @@ export function CoordinatePlane({
                   x === 0 ? null : (
                     <line
                       key={`grid-v-major-${x}`}
-                      x1={xToSvg(x)}
-                      y1={padding.top}
-                      x2={xToSvg(x)}
-                      y2={height - padding.bottom}
-                      stroke="currentColor"
-                      strokeWidth={0.75}
-                      opacity={0.5}
+                      x1={xToSvg(x)} y1={padding.top}
+                      x2={xToSvg(x)} y2={height - padding.bottom}
+                      stroke="currentColor" strokeWidth={0.75} opacity={0.5}
                     />
                   )
                 )}
@@ -376,13 +366,9 @@ export function CoordinatePlane({
                   y === 0 ? null : (
                     <line
                       key={`grid-h-major-${y}`}
-                      x1={padding.left}
-                      y1={yToSvg(y)}
-                      x2={width - padding.right}
-                      y2={yToSvg(y)}
-                      stroke="currentColor"
-                      strokeWidth={0.75}
-                      opacity={0.5}
+                      x1={padding.left} y1={yToSvg(y)}
+                      x2={width - padding.right} y2={yToSvg(y)}
+                      stroke="currentColor" strokeWidth={0.75} opacity={0.5}
                     />
                   )
                 )}
@@ -403,12 +389,8 @@ export function CoordinatePlane({
               {/* X axis line */}
               <motion.path
                 d={`M ${padding.left} ${showXAxis ? originY : height - padding.bottom} L ${width - padding.right} ${showXAxis ? originY : height - padding.bottom}`}
-                stroke="currentColor"
-                strokeWidth={diagram.lineWeight}
-                fill="none"
-                initial="hidden"
-                animate="visible"
-                variants={lineDrawVariants}
+                stroke="currentColor" strokeWidth={diagram.lineWeight} fill="none"
+                initial="hidden" animate="visible" variants={lineDrawVariants}
               />
 
               {/* X axis arrow */}
@@ -421,27 +403,19 @@ export function CoordinatePlane({
               />
 
               {/* X axis label */}
-              <motion.text
+              <SVGLabel
                 x={width - padding.right + 18}
                 y={(showXAxis ? originY : height - padding.bottom) + 5}
+                text={xLabel}
+                fontSize={14}
                 className="fill-current"
-                style={{ fontSize: 14 }}
-                initial="hidden"
-                animate="visible"
-                variants={labelAppearVariants}
-              >
-                {xLabel}
-              </motion.text>
+              />
 
               {/* Y axis line */}
               <motion.path
                 d={`M ${showYAxis ? originX : padding.left} ${height - padding.bottom} L ${showYAxis ? originX : padding.left} ${padding.top}`}
-                stroke="currentColor"
-                strokeWidth={diagram.lineWeight}
-                fill="none"
-                initial="hidden"
-                animate="visible"
-                variants={lineDrawVariants}
+                stroke="currentColor" strokeWidth={diagram.lineWeight} fill="none"
+                initial="hidden" animate="visible" variants={lineDrawVariants}
               />
 
               {/* Y axis arrow */}
@@ -454,18 +428,14 @@ export function CoordinatePlane({
               />
 
               {/* Y axis label */}
-              <motion.text
+              <SVGLabel
                 x={(showYAxis ? originX : padding.left) - 5}
                 y={padding.top - 18}
+                text={yLabel}
                 textAnchor="middle"
+                fontSize={14}
                 className="fill-current"
-                style={{ fontSize: 14 }}
-                initial="hidden"
-                animate="visible"
-                variants={labelAppearVariants}
-              >
-                {yLabel}
-              </motion.text>
+              />
 
               {/* X axis tick marks and labels */}
               {gridData.xMajorTicks.map((x, index) => {
@@ -475,24 +445,16 @@ export function CoordinatePlane({
                 return (
                   <motion.g
                     key={`x-tick-${x}`}
-                    initial="hidden"
-                    animate="visible"
-                    variants={labelAppearVariants}
+                    initial="hidden" animate="visible" variants={labelAppearVariants}
                     transition={{ delay: index * 0.02 }}
                   >
                     <line
-                      x1={svgX}
-                      y1={tickY - 4}
-                      x2={svgX}
-                      y2={tickY + 4}
-                      stroke="currentColor"
-                      strokeWidth={1.5}
+                      x1={svgX} y1={tickY - 4} x2={svgX} y2={tickY + 4}
+                      stroke="currentColor" strokeWidth={1.5}
                     />
                     <text
-                      x={svgX}
-                      y={tickY + 18}
-                      textAnchor="middle"
-                      className="fill-current"
+                      x={svgX} y={tickY + 18}
+                      textAnchor="middle" className="fill-current"
                       style={{ fontSize: 11 }}
                     >
                       {Number.isInteger(x) ? x : x.toFixed(1)}
@@ -509,24 +471,16 @@ export function CoordinatePlane({
                 return (
                   <motion.g
                     key={`y-tick-${y}`}
-                    initial="hidden"
-                    animate="visible"
-                    variants={labelAppearVariants}
+                    initial="hidden" animate="visible" variants={labelAppearVariants}
                     transition={{ delay: index * 0.02 }}
                   >
                     <line
-                      x1={tickX - 4}
-                      y1={svgY}
-                      x2={tickX + 4}
-                      y2={svgY}
-                      stroke="currentColor"
-                      strokeWidth={1.5}
+                      x1={tickX - 4} y1={svgY} x2={tickX + 4} y2={svgY}
+                      stroke="currentColor" strokeWidth={1.5}
                     />
                     <text
-                      x={tickX - 10}
-                      y={svgY + 4}
-                      textAnchor="end"
-                      className="fill-current"
+                      x={tickX - 10} y={svgY + 4}
+                      textAnchor="end" className="fill-current"
                       style={{ fontSize: 11 }}
                     >
                       {Number.isInteger(y) ? y : y.toFixed(1)}
@@ -544,10 +498,8 @@ export function CoordinatePlane({
                 >
                   <circle cx={originX} cy={originY} r={3} fill="currentColor" />
                   <text
-                    x={originX - 12}
-                    y={originY + 18}
-                    textAnchor="end"
-                    className="fill-current"
+                    x={originX - 12} y={originY + 18}
+                    textAnchor="end" className="fill-current"
                     style={{ fontSize: 11 }}
                   >
                     0
@@ -578,11 +530,8 @@ export function CoordinatePlane({
                     fill="none"
                     stroke={curve.color || diagram.colors.primary}
                     strokeWidth={diagram.lineWeight}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    initial="hidden"
-                    animate="visible"
-                    variants={lineDrawVariants}
+                    strokeLinecap="round" strokeLinejoin="round"
+                    initial="hidden" animate="visible" variants={lineDrawVariants}
                   />
                 )
               })}
@@ -615,9 +564,7 @@ export function CoordinatePlane({
                     strokeWidth={diagram.lineWeight}
                     strokeDasharray={line.dashed ? '6,4' : undefined}
                     strokeLinecap="round"
-                    initial="hidden"
-                    animate="visible"
-                    variants={lineDrawVariants}
+                    initial="hidden" animate="visible" variants={lineDrawVariants}
                   />
                 )
               })}
@@ -638,49 +585,27 @@ export function CoordinatePlane({
                 const svgX = xToSvg(point.x)
                 const svgY = yToSvg(point.y)
                 const color = point.color || diagram.colors.primary
+                const pointId = (point as unknown as Record<string, unknown>).id as string | undefined
 
                 return (
                   <motion.g
                     key={`point-${index}`}
-                    data-testid={`cp-point-${(point as any).id || index}`}
+                    data-testid={`cp-point-${pointId || index}`}
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={{
-                      type: 'spring',
-                      stiffness: 300,
-                      damping: 25,
-                      delay: index * 0.1,
-                    }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 25, delay: index * 0.1 }}
                   >
-                    {/* Point outer glow */}
                     <circle cx={svgX} cy={svgY} r={10} fill={color} opacity={0.15} />
-                    {/* Point fill */}
                     <circle
-                      data-testid={`cp-point-circle-${(point as any).id || index}`}
-                      cx={svgX}
-                      cy={svgY}
-                      r={6}
-                      fill={color}
-                      stroke={color}
-                      strokeWidth={2}
+                      data-testid={`cp-point-circle-${pointId || index}`}
+                      cx={svgX} cy={svgY} r={6} fill={color} stroke={color} strokeWidth={2}
                     />
-                    {/* Inner highlight */}
                     <circle cx={svgX - 1.5} cy={svgY - 1.5} r={2} fill="rgba(255,255,255,0.5)" />
-
-                    {/* Point label */}
                     {point.label && (
-                      <motion.text
-                        x={svgX + 12}
-                        y={svgY - 10}
-                        className="font-medium"
-                        style={{ fontSize: 12, fill: color }}
-                        initial="hidden"
-                        animate="visible"
-                        variants={labelAppearVariants}
-                        transition={{ delay: index * 0.1 + 0.2 }}
-                      >
-                        {point.label}
-                      </motion.text>
+                      <SVGLabel
+                        x={svgX + 12} y={svgY - 10}
+                        text={point.label} fontSize={12} fontWeight={500} color={color}
+                      />
                     )}
                   </motion.g>
                 )
@@ -700,19 +625,17 @@ export function CoordinatePlane({
             >
               {/* Title */}
               {title && (
-                <motion.text
-                  data-testid="cp-title"
-                  x={width / 2}
-                  y={24}
-                  textAnchor="middle"
-                  className="fill-current font-medium"
-                  style={{ fontSize: 15 }}
-                  initial="hidden"
-                  animate="visible"
-                  variants={labelAppearVariants}
-                >
-                  {title}
-                </motion.text>
+                <g data-testid="cp-title">
+                  <SVGLabel
+                    x={width / 2}
+                    y={24}
+                    text={title}
+                    textAnchor="middle"
+                    fontSize={15}
+                    fontWeight={500}
+                    className="fill-current"
+                  />
+                </g>
               )}
             </motion.g>
           )}
@@ -738,9 +661,7 @@ export function CoordinatePlane({
                     <line x1={svgX - 5} y1={svgY - 5} x2={svgX + 5} y2={svgY + 5} stroke="#EF4444" strokeWidth={3} strokeLinecap="round" />
                     <line x1={svgX + 5} y1={svgY - 5} x2={svgX - 5} y2={svgY + 5} stroke="#EF4444" strokeWidth={3} strokeLinecap="round" />
                     {point.errorLabel && (
-                      <text x={svgX} y={svgY - 20} textAnchor="middle" style={{ fill: '#EF4444', fontSize: '11px', fontWeight: 500 }}>
-                        {point.errorLabel}
-                      </text>
+                      <SVGLabel x={svgX} y={svgY - 20} text={point.errorLabel} textAnchor="middle" color="#EF4444" fontSize={11} fontWeight={500} animate={false} />
                     )}
                   </g>
                 )
@@ -759,9 +680,7 @@ export function CoordinatePlane({
                       stroke="white" strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round"
                     />
                     {point.correctLabel && (
-                      <text x={svgX} y={svgY - 20} textAnchor="middle" style={{ fill: '#22C55E', fontSize: '11px', fontWeight: 500 }}>
-                        {point.correctLabel}
-                      </text>
+                      <SVGLabel x={svgX} y={svgY - 20} text={point.correctLabel} textAnchor="middle" color="#22C55E" fontSize={11} fontWeight={500} animate={false} />
                     )}
                   </g>
                 )
@@ -772,14 +691,9 @@ export function CoordinatePlane({
                 <motion.path
                   key={`wrong-curve-${index}`}
                   d={generateCurvePath(curve.expression, curve.domain)}
-                  fill="none"
-                  stroke="#EF4444"
-                  strokeWidth={2.5}
-                  strokeDasharray="6,4"
-                  opacity={0.8}
-                  initial="hidden"
-                  animate="visible"
-                  variants={lineDrawVariants}
+                  fill="none" stroke="#EF4444" strokeWidth={2.5}
+                  strokeDasharray="6,4" opacity={0.8}
+                  initial="hidden" animate="visible" variants={lineDrawVariants}
                 />
               ))}
 
@@ -788,12 +702,8 @@ export function CoordinatePlane({
                 <motion.path
                   key={`correct-curve-${index}`}
                   d={generateCurvePath(curve.expression, curve.domain)}
-                  fill="none"
-                  stroke="#22C55E"
-                  strokeWidth={3}
-                  initial="hidden"
-                  animate="visible"
-                  variants={lineDrawVariants}
+                  fill="none" stroke="#22C55E" strokeWidth={3}
+                  initial="hidden" animate="visible" variants={lineDrawVariants}
                 />
               ))}
             </motion.g>

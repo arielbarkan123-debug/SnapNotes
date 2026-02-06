@@ -12,6 +12,7 @@ import {
   lineDrawVariants,
   labelAppearVariants,
 } from '@/lib/diagram-animations'
+import { SVGPoint, SVGLabel, SVGLine } from '@/components/math/shared'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -65,6 +66,7 @@ const STEP_LABELS: Record<string, { en: string; he: string }> = {
  * - [x] Subject-coded colors
  * - [x] Adaptive line weight
  * - [x] Progressive reveal with AnimatePresence + isVisible()
+ * - [x] Uses shared SVG primitives (SVGPoint, SVGLabel, SVGLine)
  */
 export function Triangle({
   data,
@@ -276,15 +278,16 @@ export function Triangle({
 
         {/* Title */}
         {title && (
-          <text
+          <SVGLabel
             x={width / 2}
             y={20}
+            text={title}
             textAnchor="middle"
-            className="fill-current font-medium"
-            style={{ fontSize: 14 }}
-          >
-            {title}
-          </text>
+            fontSize={14}
+            fontWeight={500}
+            className="fill-current"
+            animate={false}
+          />
         )}
 
         {/* ── Step 0: Outline ───────────────────────────────────── */}
@@ -315,42 +318,35 @@ export function Triangle({
                 variants={lineDrawVariants}
               />
 
-              {/* Vertex points */}
+              {/* Vertex points (uses SVGPoint shared primitive) */}
               {transformedVertices.map((vertex, index) => (
-                <motion.circle
+                <SVGPoint
                   key={`vertex-point-${index}`}
                   cx={vertex.x}
                   cy={vertex.y}
                   r={diagram.lineWeight}
-                  fill="currentColor"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.3 + index * 0.1, type: 'spring', stiffness: 300, damping: 20 }}
+                  color="currentColor"
+                  animate={true}
                 />
               ))}
 
-              {/* Vertex labels */}
+              {/* Vertex labels (uses SVGLabel shared primitive) */}
               {transformedVertices.map((vertex, index) => {
                 const dx = vertex.x - triCenter.x
                 const dy = vertex.y - triCenter.y
                 const dist = Math.hypot(dx, dy)
                 const labelDist = 20
                 return (
-                  <motion.text
+                  <SVGLabel
                     key={`vertex-label-${index}`}
                     x={vertex.x + (dx / dist) * labelDist}
                     y={vertex.y + (dy / dist) * labelDist}
+                    text={vertex.label}
                     textAnchor="middle"
-                    dominantBaseline="middle"
-                    className="fill-current font-bold"
-                    style={{ fontSize: 14 }}
-                    initial="hidden"
-                    animate="visible"
-                    variants={labelAppearVariants}
-                    transition={{ delay: 0.4 + index * 0.1 }}
-                  >
-                    {vertex.label}
-                  </motion.text>
+                    fontSize={14}
+                    fontWeight={700}
+                    className="fill-current"
+                  />
                 )
               })}
             </motion.g>
@@ -394,25 +390,27 @@ export function Triangle({
                     variants={labelAppearVariants}
                     transition={{ delay: index * 0.1 }}
                   >
+                    {/* Side highlight line (uses SVGLine shared primitive) */}
                     {side.highlight && (
-                      <line
-                        x1={from.x}
-                        y1={from.y}
-                        x2={to.x}
-                        y2={to.y}
-                        stroke={diagram.colors.primary}
+                      <SVGLine
+                        x1={from.x} y1={from.y}
+                        x2={to.x} y2={to.y}
+                        color={diagram.colors.primary}
                         strokeWidth={diagram.lineWeight + 1}
+                        animate={false}
                       />
                     )}
-                    <text
+                    {/* Side length label (uses SVGLabel shared primitive) */}
+                    <SVGLabel
                       x={midpoint.x + perpX * 15 * direction}
                       y={midpoint.y + perpY * 15 * direction}
+                      text={side.length}
                       textAnchor="middle"
-                      dominantBaseline="middle"
-                      style={{ fill: diagram.colors.primary, fontSize: 14, fontWeight: 500 }}
-                    >
-                      {side.length}
-                    </text>
+                      fontSize={14}
+                      fontWeight={500}
+                      color={diagram.colors.primary}
+                      animate={false}
+                    />
                   </motion.g>
                 )
               })}
@@ -466,21 +464,16 @@ export function Triangle({
                       animate="visible"
                       variants={lineDrawVariants}
                     />
+                    {/* Angle measure label (uses SVGLabel shared primitive) */}
                     {angle.measure && (
-                      <motion.text
+                      <SVGLabel
                         x={labelX}
                         y={labelY}
+                        text={angle.measure}
                         textAnchor="middle"
-                        dominantBaseline="middle"
+                        fontSize={12}
                         className="fill-gray-600 dark:fill-gray-400"
-                        style={{ fontSize: 12 }}
-                        initial="hidden"
-                        animate="visible"
-                        variants={labelAppearVariants}
-                        transition={{ delay: index * 0.15 + 0.2 }}
-                      >
-                        {angle.measure}
-                      </motion.text>
+                      />
                     )}
                   </motion.g>
                 )
@@ -520,24 +513,20 @@ export function Triangle({
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.4 }}
                   >
-                    <motion.path
-                      d={`M ${from.x} ${from.y} L ${foot.x} ${foot.y}`}
-                      stroke="#10B981"
+                    {/* Altitude line (uses SVGLine shared primitive) */}
+                    <SVGLine
+                      x1={from.x} y1={from.y}
+                      x2={foot.x} y2={foot.y}
+                      color="#10B981"
                       strokeWidth={diagram.lineWeight}
-                      strokeDasharray="5,5"
-                      fill="none"
-                      initial="hidden"
-                      animate="visible"
-                      variants={lineDrawVariants}
+                      dashed
+                      dashPattern="5 5"
                     />
+                    {/* Right angle marker at foot */}
                     <rect
-                      x={foot.x - 5}
-                      y={foot.y - 5}
-                      width={10}
-                      height={10}
-                      fill="none"
-                      stroke="#10B981"
-                      strokeWidth={1}
+                      x={foot.x - 5} y={foot.y - 5}
+                      width={10} height={10}
+                      fill="none" stroke="#10B981" strokeWidth={1}
                       transform={`rotate(${Math.atan2(dy, dx) * (180 / Math.PI)}, ${foot.x}, ${foot.y})`}
                     />
                   </motion.g>
@@ -565,14 +554,16 @@ export function Triangle({
                 const midY = (from.y + to.y) / 2
                 return (
                   <g key={`wrong-side-${sideLabel}`} data-testid={`tri-wrong-side-${sideLabel}`}>
-                    <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="#EF4444" strokeWidth={4} strokeDasharray="6,4" opacity={0.8} />
+                    <SVGLine
+                      x1={from.x} y1={from.y} x2={to.x} y2={to.y}
+                      color="#EF4444" strokeWidth={4} dashed dashPattern="6 4"
+                      animate={false}
+                    />
                     <circle cx={midX} cy={midY} r={10} fill="#EF4444" opacity={0.2} />
                     <line x1={midX - 6} y1={midY - 6} x2={midX + 6} y2={midY + 6} stroke="#EF4444" strokeWidth={2} strokeLinecap="round" />
                     <line x1={midX + 6} y1={midY - 6} x2={midX - 6} y2={midY + 6} stroke="#EF4444" strokeWidth={2} strokeLinecap="round" />
                     {errorHighlight?.corrections?.[sideLabel] && (
-                      <text x={midX} y={midY - 18} textAnchor="middle" style={{ fill: '#EF4444', fontSize: 12, fontWeight: 500 }}>
-                        {errorHighlight.corrections[sideLabel]}
-                      </text>
+                      <SVGLabel x={midX} y={midY - 18} text={errorHighlight.corrections[sideLabel]} textAnchor="middle" color="#EF4444" fontSize={12} fontWeight={500} animate={false} />
                     )}
                   </g>
                 )
@@ -588,9 +579,7 @@ export function Triangle({
                     <line x1={vertex.x - 6} y1={vertex.y - 6} x2={vertex.x + 6} y2={vertex.y + 6} stroke="#EF4444" strokeWidth={2} strokeLinecap="round" />
                     <line x1={vertex.x + 6} y1={vertex.y - 6} x2={vertex.x - 6} y2={vertex.y + 6} stroke="#EF4444" strokeWidth={2} strokeLinecap="round" />
                     {errorHighlight?.corrections?.[vertexLabel] && (
-                      <text x={vertex.x} y={vertex.y + 25} textAnchor="middle" style={{ fill: '#EF4444', fontSize: 12, fontWeight: 500 }}>
-                        {errorHighlight.corrections[vertexLabel]}
-                      </text>
+                      <SVGLabel x={vertex.x} y={vertex.y + 25} text={errorHighlight.corrections[vertexLabel]} textAnchor="middle" color="#EF4444" fontSize={12} fontWeight={500} animate={false} />
                     )}
                   </g>
                 )

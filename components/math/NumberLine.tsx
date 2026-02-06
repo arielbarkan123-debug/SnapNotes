@@ -15,6 +15,7 @@ import {
   labelAppearVariants,
 } from '@/lib/diagram-animations'
 import { detectCollisions, type BoundingBox, type LayoutElement } from '@/lib/visual-learning'
+import { SVGArrow, SVGLabel } from '@/components/math/shared'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -68,6 +69,7 @@ const STEP_LABELS: Record<string, { en: string; he: string }> = {
  * - [x] Subject-coded colors
  * - [x] Adaptive line weight
  * - [x] Age-adaptive (elementary concrete examples)
+ * - [x] Uses shared SVG primitives (SVGArrow, SVGLabel)
  */
 export function NumberLine({
   data,
@@ -248,16 +250,18 @@ export function NumberLine({
 
         {/* Title */}
         {title && (
-          <text
-            data-testid="nl-title"
-            x={width / 2}
-            y={isElementary ? 20 : 15}
-            textAnchor="middle"
-            className="fill-current font-medium"
-            style={{ fontSize: fontSize.normal }}
-          >
-            {title}
-          </text>
+          <g data-testid="nl-title">
+            <SVGLabel
+              x={width / 2}
+              y={isElementary ? 20 : 15}
+              text={title}
+              textAnchor="middle"
+              fontSize={fontSize.normal}
+              fontWeight={500}
+              className="fill-current"
+              animate={false}
+            />
+          </g>
         )}
 
         {/* ── Step 0: Axis ─────────────────────────────────────────── */}
@@ -281,22 +285,20 @@ export function NumberLine({
                 variants={lineDrawVariants}
               />
 
-              {/* Left arrow */}
-              <motion.polygon
-                points={`${lineStartX - 8},${lineY} ${lineStartX},${lineY - 4} ${lineStartX},${lineY + 4}`}
-                fill="currentColor"
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 20 }}
+              {/* Left arrow (uses SVGArrow shared primitive) */}
+              <SVGArrow
+                x={lineStartX}
+                y={lineY}
+                direction="left"
+                size={8}
               />
 
-              {/* Right arrow */}
-              <motion.polygon
-                points={`${lineEndX + 8},${lineY} ${lineEndX},${lineY - 4} ${lineEndX},${lineY + 4}`}
-                fill="currentColor"
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.6, type: 'spring', stiffness: 300, damping: 20 }}
+              {/* Right arrow (uses SVGArrow shared primitive) */}
+              <SVGArrow
+                x={lineEndX}
+                y={lineY}
+                direction="right"
+                size={8}
               />
             </motion.g>
           )}
@@ -330,15 +332,15 @@ export function NumberLine({
                       stroke="currentColor"
                       strokeWidth={isElementary ? 2 : 1}
                     />
-                    <text
+                    <SVGLabel
                       x={x}
                       y={lineY + (isElementary ? 22 : 18)}
+                      text={String(tick)}
                       textAnchor="middle"
+                      fontSize={fontSize.small}
                       className="fill-current"
-                      style={{ fontSize: fontSize.small }}
-                    >
-                      {tick}
-                    </text>
+                      animate={false}
+                    />
                     {renderConcreteExample(tick, x, lineY)}
                   </motion.g>
                 )
@@ -396,19 +398,15 @@ export function NumberLine({
                             opacity={0.5}
                           />
                         )}
-                        <motion.text
+                        <SVGLabel
                           x={x}
                           y={labelPositions.get(point.value)?.y ?? lineY - (isElementary ? 16 : 12)}
+                          text={point.label}
                           textAnchor="middle"
-                          className="font-medium"
-                          style={{ fontSize: fontSize.small, fill: diagram.colors.primary }}
-                          initial="hidden"
-                          animate="visible"
-                          variants={labelAppearVariants}
-                          transition={{ delay: index * 0.1 + 0.2 }}
-                        >
-                          {point.label}
-                        </motion.text>
+                          fontSize={fontSize.small}
+                          fontWeight={500}
+                          color={diagram.colors.primary}
+                        />
                       </>
                     )}
                     {renderConcreteExample(point.value, x, lineY)}
@@ -441,10 +439,8 @@ export function NumberLine({
                   >
                     {/* Shaded region */}
                     <rect
-                      x={sx}
-                      y={lineY - 8}
-                      width={ex - sx}
-                      height={16}
+                      x={sx} y={lineY - 8}
+                      width={ex - sx} height={16}
                       fill={interval.color || diagram.colors.primary}
                       opacity={0.3}
                     />
@@ -452,11 +448,8 @@ export function NumberLine({
                     <motion.path
                       d={`M ${sx} ${lineY} L ${ex} ${lineY}`}
                       stroke={interval.color || diagram.colors.primary}
-                      strokeWidth={4}
-                      fill="none"
-                      initial="hidden"
-                      animate="visible"
-                      variants={lineDrawVariants}
+                      strokeWidth={4} fill="none"
+                      initial="hidden" animate="visible" variants={lineDrawVariants}
                     />
                     {/* Infinity arrows */}
                     {interval.start === null && (
@@ -474,9 +467,7 @@ export function NumberLine({
                     {/* Endpoint markers */}
                     {interval.start !== null && (
                       <circle
-                        cx={valueToX(interval.start)}
-                        cy={lineY}
-                        r={5}
+                        cx={valueToX(interval.start)} cy={lineY} r={5}
                         fill={interval.startInclusive ? (interval.color || diagram.colors.primary) : 'white'}
                         stroke={interval.color || diagram.colors.primary}
                         strokeWidth={2}
@@ -484,9 +475,7 @@ export function NumberLine({
                     )}
                     {interval.end !== null && (
                       <circle
-                        cx={valueToX(interval.end)}
-                        cy={lineY}
-                        r={5}
+                        cx={valueToX(interval.end)} cy={lineY} r={5}
                         fill={interval.endInclusive ? (interval.color || diagram.colors.primary) : 'white'}
                         stroke={interval.color || diagram.colors.primary}
                         strokeWidth={2}
@@ -516,9 +505,7 @@ export function NumberLine({
                     <line x1={x - 6} y1={lineY - 6} x2={x + 6} y2={lineY + 6} stroke="#EF4444" strokeWidth={3} strokeLinecap="round" />
                     <line x1={x + 6} y1={lineY - 6} x2={x - 6} y2={lineY + 6} stroke="#EF4444" strokeWidth={3} strokeLinecap="round" />
                     {point.errorLabel && (
-                      <text x={x} y={lineY - 16} textAnchor="middle" style={{ fill: '#EF4444', fontSize: '12px', fontWeight: 500 }}>
-                        {point.errorLabel}
-                      </text>
+                      <SVGLabel x={x} y={lineY - 16} text={point.errorLabel} textAnchor="middle" color="#EF4444" fontSize={12} fontWeight={500} animate={false} />
                     )}
                   </g>
                 )
@@ -536,9 +523,7 @@ export function NumberLine({
                       stroke="white" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round"
                     />
                     {point.correctLabel && (
-                      <text x={x} y={lineY - 16} textAnchor="middle" style={{ fill: '#22C55E', fontSize: '12px', fontWeight: 500 }}>
-                        {point.correctLabel}
-                      </text>
+                      <SVGLabel x={x} y={lineY - 16} text={point.correctLabel} textAnchor="middle" color="#22C55E" fontSize={12} fontWeight={500} animate={false} />
                     )}
                   </g>
                 )
@@ -551,8 +536,8 @@ export function NumberLine({
                 return (
                   <g key={`wrong-interval-${index}`}>
                     <line x1={sx} y1={lineY - 12} x2={ex} y2={lineY - 12} stroke="#EF4444" strokeWidth={2} strokeDasharray="4,2" />
-                    <text x={sx} y={lineY - 18} textAnchor="middle" style={{ fill: '#EF4444', fontSize: '12px' }}>&#x2717;</text>
-                    <text x={ex} y={lineY - 18} textAnchor="middle" style={{ fill: '#EF4444', fontSize: '12px' }}>&#x2717;</text>
+                    <SVGLabel x={sx} y={lineY - 18} text="&#x2717;" textAnchor="middle" color="#EF4444" fontSize={12} animate={false} />
+                    <SVGLabel x={ex} y={lineY - 18} text="&#x2717;" textAnchor="middle" color="#EF4444" fontSize={12} animate={false} />
                   </g>
                 )
               })}
@@ -565,12 +550,8 @@ export function NumberLine({
                   <g key={`correct-interval-${index}`}>
                     <rect x={sx} y={lineY - (isElementary ? 12 : 10)} width={ex - sx} height={isElementary ? 24 : 20} fill="#22C55E" opacity={0.15} />
                     <line x1={sx} y1={lineY} x2={ex} y2={lineY} stroke="#22C55E" strokeWidth={isElementary ? 5 : 4} />
-                    <text x={sx} y={lineY - (isElementary ? 22 : 18)} textAnchor="middle" style={{ fill: '#22C55E', fontSize: fontSize.small }}>
-                      {isElementary ? '\uD83D\uDC4D' : '\u2713'}
-                    </text>
-                    <text x={ex} y={lineY - (isElementary ? 22 : 18)} textAnchor="middle" style={{ fill: '#22C55E', fontSize: fontSize.small }}>
-                      {isElementary ? '\uD83D\uDC4D' : '\u2713'}
-                    </text>
+                    <SVGLabel x={sx} y={lineY - (isElementary ? 22 : 18)} text={isElementary ? '\uD83D\uDC4D' : '\u2713'} textAnchor="middle" color="#22C55E" fontSize={fontSize.small} animate={false} />
+                    <SVGLabel x={ex} y={lineY - (isElementary ? 22 : 18)} text={isElementary ? '\uD83D\uDC4D' : '\u2713'} textAnchor="middle" color="#22C55E" fontSize={fontSize.small} animate={false} />
                   </g>
                 )
               })}
