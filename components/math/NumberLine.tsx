@@ -321,7 +321,7 @@ export function NumberLine({
                     initial="hidden"
                     animate="visible"
                     variants={labelAppearVariants}
-                    transition={{ delay: index * 0.03 }}
+                    transition={{ delay: Math.min(index * 0.03, 1.5) }}
                   >
                     <line
                       data-testid={`nl-tick-${tick}`}
@@ -372,7 +372,7 @@ export function NumberLine({
                       type: 'spring',
                       stiffness: isElementary ? 150 : 300,
                       damping: isElementary ? 15 : 25,
-                      delay: index * 0.1,
+                      delay: Math.min(index * 0.1, 1.5),
                     }}
                   >
                     <circle
@@ -435,7 +435,7 @@ export function NumberLine({
                     key={`interval-${index}`}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: index * 0.15 }}
+                    transition={{ delay: Math.min(index * 0.15, 1.5) }}
                   >
                     {/* Shaded region */}
                     <rect

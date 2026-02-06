@@ -185,7 +185,7 @@ export function TapeDiagramRatio({
                   rx={i === 0 ? 4 : 0}
                   initial={{ scaleX: 0, originX: 0 }}
                   animate={{ scaleX: 1 }}
-                  transition={{ duration: 0.3, delay: i * 0.1 }}
+                  transition={{ duration: 0.3, delay: Math.min(i * 0.1, 1.5) }}
                 />
               ))}
 
@@ -245,7 +245,7 @@ export function TapeDiagramRatio({
                   rx={i === 0 ? 4 : 0}
                   initial={{ scaleX: 0, originX: 0 }}
                   animate={{ scaleX: 1 }}
-                  transition={{ duration: 0.3, delay: i * 0.1 }}
+                  transition={{ duration: 0.3, delay: Math.min(i * 0.1, 1.5) }}
                 />
               ))}
 

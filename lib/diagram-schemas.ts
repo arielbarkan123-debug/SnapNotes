@@ -2209,3 +2209,63 @@ export function getDiagramSchemaPrompt(subject?: string): string {
     )
     .join('\n\n')
 }
+
+/**
+ * Check if a grade falls within a gradeRange string like "3-8" or "8".
+ */
+function gradeInRange(grade: number, gradeRange: string): boolean {
+  const parts = gradeRange.split('-').map(Number)
+  if (parts.length === 1) {
+    return grade === parts[0]
+  }
+  return grade >= parts[0] && grade <= parts[1]
+}
+
+/**
+ * Generate a context-aware diagram schema prompt filtered by subject and grade.
+ * Only includes schemas relevant to the current subject and grade level,
+ * significantly reducing token usage compared to getDiagramSchemaPrompt().
+ *
+ * Falls back to a compact type-name-only summary if no subject is provided.
+ */
+export function getFilteredDiagramSchemaPrompt(
+  subject?: string,
+  grade?: number
+): string {
+  // If no subject context, return compact summary (just type names)
+  if (!subject) {
+    const typesBySubject: Record<string, string[]> = {}
+    for (const schema of Object.values(DIAGRAM_SCHEMAS)) {
+      if (!typesBySubject[schema.subject]) {
+        typesBySubject[schema.subject] = []
+      }
+      typesBySubject[schema.subject].push(schema.type)
+    }
+    return Object.entries(typesBySubject)
+      .map(([subj, types]) => `${subj}: ${types.join(', ')}`)
+      .join('\n')
+  }
+
+  // Filter by subject
+  let filtered = Object.values(DIAGRAM_SCHEMAS).filter(
+    (s) => s.subject === subject
+  )
+
+  // Further filter by grade if provided
+  if (grade !== undefined && grade > 0) {
+    const gradeFiltered = filtered.filter((s) => gradeInRange(grade, s.gradeRange))
+    // Only apply grade filter if it produces results; otherwise keep all for the subject
+    if (gradeFiltered.length > 0) {
+      filtered = gradeFiltered
+    }
+  }
+
+  if (filtered.length === 0) return ''
+
+  return filtered
+    .map(
+      (s) =>
+        `### ${s.type}\n${s.description}\nGrades: ${s.gradeRange}\nExample: ${s.jsonExample}`
+    )
+    .join('\n\n')
+}

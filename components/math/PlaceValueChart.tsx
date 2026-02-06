@@ -231,7 +231,7 @@ export function PlaceValueChart({
                     key={`header-${col}`}
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.1 }}
+                    transition={{ delay: Math.min(i * 0.1, 1.5) }}
                   >
                     {/* Column header background */}
                     <rect
@@ -333,7 +333,7 @@ export function PlaceValueChart({
                       type: 'spring',
                       stiffness: 300,
                       damping: 20,
-                      delay: i * 0.15,
+                      delay: Math.min(i * 0.15, 1.5),
                     }}
                   >
                     {digit}

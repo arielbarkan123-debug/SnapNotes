@@ -264,7 +264,7 @@ export function BarModel({
                     strokeDasharray={isUnknown ? '8 4' : 'none'}
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: 1 }}
-                    transition={{ duration: 0.4, delay: i * 0.15, ease: 'easeOut' }}
+                    transition={{ duration: 0.4, delay: Math.min(i * 0.15, 1.5), ease: 'easeOut' }}
                     style={{ transformOrigin: `${partPositions[i]}px ${barTop + barHeight / 2}px` }}
                   />
                 )
@@ -293,7 +293,7 @@ export function BarModel({
                     initial="hidden"
                     animate="visible"
                     variants={labelAppearVariants}
-                    transition={{ delay: i * 0.12 }}
+                    transition={{ delay: Math.min(i * 0.12, 1.5) }}
                   >
                     {/* Value inside bar */}
                     <text

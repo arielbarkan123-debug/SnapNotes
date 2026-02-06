@@ -105,7 +105,7 @@ function renderRod(
       />
       {/* Grid lines to show 10 units */}
       {Array.from({ length: 9 }).map((_, i) => (
-        <motion.line
+        <line
           key={`${key}-line-${i}`}
           x1={x}
           y1={y + (i + 1) * unitSize}
@@ -114,9 +114,6 @@ function renderRod(
           stroke={stroke}
           strokeWidth={strokeWidth * 0.3}
           strokeOpacity={0.4}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: delay + 0.2 }}
         />
       ))}
     </motion.g>
@@ -152,7 +149,7 @@ function renderFlat(
       />
       {/* Grid lines */}
       {Array.from({ length: 9 }).map((_, i) => (
-        <motion.g key={`${key}-grid-${i}`}>
+        <g key={`${key}-grid-${i}`}>
           <line
             x1={x}
             y1={y + (i + 1) * unitSize}
@@ -171,7 +168,7 @@ function renderFlat(
             strokeWidth={strokeWidth * 0.2}
             strokeOpacity={0.3}
           />
-        </motion.g>
+        </g>
       ))}
     </motion.g>
   )

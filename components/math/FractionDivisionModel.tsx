@@ -210,7 +210,7 @@ export function FractionDivisionModel({
                   strokeWidth={diagram.lineWeight * 0.4}
                   initial={{ opacity: 0, scaleX: 0 }}
                   animate={{ opacity: 1, scaleX: 1 }}
-                  transition={{ delay: i * 0.05, duration: 0.2 }}
+                  transition={{ delay: Math.min(i * 0.05, 1.5), duration: 0.2 }}
                 />
               ))}
               {/* Outer border */}
@@ -310,7 +310,7 @@ export function FractionDivisionModel({
                     data-testid={`fdm-group-${i}`}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.15, type: 'spring', stiffness: 300, damping: 25 }}
+                    transition={{ delay: Math.min(i * 0.15, 1.5), type: 'spring', stiffness: 300, damping: 25 }}
                   >
                     <rect
                       x={padding.left + i * groupWidth + 1}

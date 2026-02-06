@@ -237,27 +237,42 @@ export function TessellationPattern({
           </text>
         )}
 
-        {/* Tiles */}
+        {/* Tiles - batched by row for animation performance */}
         <AnimatePresence>
-          {visibleTiles.map((tile, idx) => {
-            const isSingleHighlight = tile.row === 0 && tile.col === 0 && isCurrent('single')
-            const color = colors[tile.colorIdx % colors.length]
-            return (
-              <motion.path
-                key={`tile-${tile.row}-${tile.col}`}
-                data-testid={`tess-tile-${tile.row}-${tile.col}`}
-                d={tile.path}
-                fill={color}
-                fillOpacity={isSingleHighlight ? 0.3 : 0.15}
-                stroke={color}
-                strokeWidth={isSingleHighlight ? diagram.lineWeight + 0.5 : diagram.lineWeight * 0.7}
+          {(() => {
+            // Group visible tiles by row
+            const tilesByRow = new Map<number, typeof visibleTiles>()
+            visibleTiles.forEach((tile) => {
+              const existing = tilesByRow.get(tile.row) || []
+              existing.push(tile)
+              tilesByRow.set(tile.row, existing)
+            })
+            return Array.from(tilesByRow.entries()).map(([rowIdx, rowTiles]) => (
+              <motion.g
+                key={`tile-row-${rowIdx}`}
                 initial="hidden"
                 animate="visible"
                 variants={lineDrawVariants}
-                transition={{ delay: idx * 0.02 }}
-              />
-            )
-          })}
+                transition={{ delay: Math.min(rowIdx * 0.08, 1.5) }}
+              >
+                {rowTiles.map((tile) => {
+                  const isSingleHighlight = tile.row === 0 && tile.col === 0 && isCurrent('single')
+                  const color = colors[tile.colorIdx % colors.length]
+                  return (
+                    <path
+                      key={`tile-${tile.row}-${tile.col}`}
+                      data-testid={`tess-tile-${tile.row}-${tile.col}`}
+                      d={tile.path}
+                      fill={color}
+                      fillOpacity={isSingleHighlight ? 0.3 : 0.15}
+                      stroke={color}
+                      strokeWidth={isSingleHighlight ? diagram.lineWeight + 0.5 : diagram.lineWeight * 0.7}
+                    />
+                  )
+                })}
+              </motion.g>
+            ))
+          })()}
         </AnimatePresence>
 
         {/* Transformation annotations */}

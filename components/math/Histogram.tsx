@@ -288,7 +288,7 @@ export function Histogram({
                       type: 'spring',
                       stiffness: 200,
                       damping: 20,
-                      delay: i * 0.1,
+                      delay: Math.min(i * 0.1, 1.5),
                     }}
                   />
                 )

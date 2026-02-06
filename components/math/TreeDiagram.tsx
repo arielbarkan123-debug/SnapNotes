@@ -365,7 +365,7 @@ export function TreeDiagram({
                           type: 'spring',
                           stiffness: 300,
                           damping: 25,
-                          delay: index * 0.08,
+                          delay: Math.min(index * 0.08, 1.5),
                         }}
                       >
                         <circle
@@ -387,7 +387,7 @@ export function TreeDiagram({
                           initial="hidden"
                           animate="visible"
                           variants={labelAppearVariants}
-                          transition={{ delay: index * 0.08 + 0.1 }}
+                          transition={{ delay: Math.min(index * 0.08, 1.5) + 0.1 }}
                         >
                           {pos.node.label}
                         </motion.text>
@@ -426,7 +426,7 @@ export function TreeDiagram({
                       initial="hidden"
                       animate="visible"
                       variants={labelAppearVariants}
-                      transition={{ delay: index * 0.06 }}
+                      transition={{ delay: Math.min(index * 0.06, 1.5) }}
                     >
                       {pos.node.value}
                     </motion.text>

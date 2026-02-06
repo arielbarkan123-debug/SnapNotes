@@ -269,7 +269,7 @@ export function ProbabilityDistribution({
                       type: 'spring',
                       stiffness: 200,
                       damping: 20,
-                      delay: i * 0.08,
+                      delay: Math.min(i * 0.08, 1.5),
                     }}
                     style={{ transformOrigin: `${x + barWidth / 2}px ${barBaseY}px` }}
                   />
@@ -287,7 +287,7 @@ export function ProbabilityDistribution({
                   initial="hidden"
                   animate="visible"
                   variants={labelAppearVariants}
-                  transition={{ delay: i * 0.05 }}
+                  transition={{ delay: Math.min(i * 0.05, 1.5) }}
                 >
                   {outcome.label || String(outcome.value)}
                 </motion.text>
@@ -357,7 +357,7 @@ export function ProbabilityDistribution({
                     initial="hidden"
                     animate="visible"
                     variants={labelAppearVariants}
-                    transition={{ delay: i * 0.04 }}
+                    transition={{ delay: Math.min(i * 0.04, 1.5) }}
                   >
                     {outcome.probability.toFixed(2)}
                   </motion.text>

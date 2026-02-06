@@ -331,7 +331,7 @@ export function DerivativeTangentLine({
                     variants={lineDrawVariants}
                     initial="hidden"
                     animate="visible"
-                    transition={{ delay: i * 0.2 }}
+                    transition={{ delay: Math.min(i * 0.2, 1.5) }}
                   />
                 )
               })}

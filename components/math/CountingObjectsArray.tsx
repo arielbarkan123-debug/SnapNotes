@@ -275,30 +275,36 @@ export function CountingObjectsArray({
               animate={isCurrent('grid') ? 'spotlight' : 'visible'}
               variants={spotlight}
             >
-              {Array.from({ length: totalObjects }).map((_, i) => {
-                const col = i % cols
-                const row = Math.floor(i / cols)
-                const cx = padding.left + col * cellW + cellW / 2
-                const cy = padding.top + row * cellH + cellH / 2
-                return (
-                  <motion.rect
-                    key={`cell-${i}`}
-                    data-testid={`coa-cell-${i}`}
-                    x={cx - cellW / 2 + 2}
-                    y={cy - cellH / 2 + 2}
-                    width={cellW - 4}
-                    height={cellH - 4}
-                    rx={6}
-                    fill="none"
-                    stroke={diagram.colors.light}
-                    strokeWidth={diagram.lineWeight / 2}
-                    strokeDasharray="4 3"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: i * 0.02 }}
-                  />
-                )
-              })}
+              {/* Batch grid cells by row to reduce motion element count */}
+              {Array.from({ length: Math.ceil(totalObjects / cols) }).map((_, row) => (
+                <motion.g
+                  key={`row-${row}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: Math.min(row * 0.05, 1.0) }}
+                >
+                  {Array.from({ length: Math.min(cols, totalObjects - row * cols) }).map((_, col) => {
+                    const i = row * cols + col
+                    const cx = padding.left + col * cellW + cellW / 2
+                    const cy = padding.top + row * cellH + cellH / 2
+                    return (
+                      <rect
+                        key={`cell-${i}`}
+                        data-testid={`coa-cell-${i}`}
+                        x={cx - cellW / 2 + 2}
+                        y={cy - cellH / 2 + 2}
+                        width={cellW - 4}
+                        height={cellH - 4}
+                        rx={6}
+                        fill="none"
+                        stroke={diagram.colors.light}
+                        strokeWidth={diagram.lineWeight / 2}
+                        strokeDasharray="4 3"
+                      />
+                    )
+                  })}
+                </motion.g>
+              ))}
             </motion.g>
           )}
         </AnimatePresence>
@@ -312,36 +318,41 @@ export function CountingObjectsArray({
               animate={isCurrent('objects') ? 'spotlight' : 'visible'}
               variants={spotlight}
             >
-              {flatObjects.map((obj, i) => {
-                const col = i % cols
-                const row = Math.floor(i / cols)
-                const cx = padding.left + col * cellW + cellW / 2
-                const cy = padding.top + row * cellH + cellH / 2
-                return (
-                  <motion.g
-                    key={`obj-${i}`}
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{
-                      type: 'spring',
-                      stiffness: 200,
-                      damping: 15,
-                      delay: i * 0.06,
-                    }}
-                  >
-                    {renderShape(
-                      obj.type,
-                      cx,
-                      cy,
-                      shapeSize,
-                      obj.color,
-                      diagram.colors.dark,
-                      diagram.lineWeight,
-                      `coa-object-${i}`
-                    )}
-                  </motion.g>
-                )
-              })}
+              {/* Batch objects by row for better animation performance */}
+              {Array.from({ length: Math.ceil(flatObjects.length / cols) }).map((_, row) => (
+                <motion.g
+                  key={`obj-row-${row}`}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{
+                    type: 'spring',
+                    stiffness: 200,
+                    damping: 15,
+                    delay: Math.min(row * 0.1, 1.5),
+                  }}
+                >
+                  {flatObjects.slice(row * cols, (row + 1) * cols).map((obj, colIdx) => {
+                    const i = row * cols + colIdx
+                    const col = i % cols
+                    const cx = padding.left + col * cellW + cellW / 2
+                    const cy = padding.top + row * cellH + cellH / 2
+                    return (
+                      <g key={`obj-${i}`}>
+                        {renderShape(
+                          obj.type,
+                          cx,
+                          cy,
+                          shapeSize,
+                          obj.color,
+                          diagram.colors.dark,
+                          diagram.lineWeight,
+                          `coa-object-${i}`
+                        )}
+                      </g>
+                    )
+                  })}
+                </motion.g>
+              ))}
             </motion.g>
           )}
         </AnimatePresence>

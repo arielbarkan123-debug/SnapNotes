@@ -322,7 +322,7 @@ export function BarGraph({
                       fill={color}
                       initial={{ height: 0, y: padding.top + chartHeight }}
                       animate={{ height: barH, y }}
-                      transition={{ delay: i * 0.12, duration: 0.5, ease: 'easeOut' }}
+                      transition={{ delay: Math.min(i * 0.12, 1.5), duration: 0.5, ease: 'easeOut' }}
                     />
                   )
                 } else {
@@ -340,7 +340,7 @@ export function BarGraph({
                       fill={color}
                       initial={{ width: 0 }}
                       animate={{ width: barW }}
-                      transition={{ delay: i * 0.12, duration: 0.5, ease: 'easeOut' }}
+                      transition={{ delay: Math.min(i * 0.12, 1.5), duration: 0.5, ease: 'easeOut' }}
                     />
                   )
                 }
@@ -369,7 +369,7 @@ export function BarGraph({
                       initial="hidden"
                       animate="visible"
                       variants={labelAppearVariants}
-                      transition={{ delay: i * 0.08 }}
+                      transition={{ delay: Math.min(i * 0.08, 1.5) }}
                     >
                       {/* Category label on x-axis */}
                       <text
@@ -404,7 +404,7 @@ export function BarGraph({
                       initial="hidden"
                       animate="visible"
                       variants={labelAppearVariants}
-                      transition={{ delay: i * 0.08 }}
+                      transition={{ delay: Math.min(i * 0.08, 1.5) }}
                     >
                       {/* Category label on y-axis */}
                       <text

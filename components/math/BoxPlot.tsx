@@ -352,7 +352,7 @@ export function BoxPlot({
                   strokeWidth={2}
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 20, delay: i * 0.1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 20, delay: Math.min(i * 0.1, 1.5) }}
                 />
               ))}
             </motion.g>

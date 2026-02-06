@@ -222,7 +222,7 @@ export function AreaModelMultiplication({
                   initial="hidden"
                   animate="visible"
                   variants={labelAppearVariants}
-                  transition={{ delay: i * 0.12 }}
+                  transition={{ delay: Math.min(i * 0.12, 1.5) }}
                 >
                   {part}
                 </motion.text>
@@ -241,7 +241,7 @@ export function AreaModelMultiplication({
                   initial="hidden"
                   animate="visible"
                   variants={labelAppearVariants}
-                  transition={{ delay: i * 0.12 + 0.1 }}
+                  transition={{ delay: Math.min(i * 0.12, 1.5) + 0.1 }}
                 >
                   {part}
                 </motion.text>
@@ -273,7 +273,7 @@ export function AreaModelMultiplication({
                   initial="hidden"
                   animate="visible"
                   variants={lineDrawVariants}
-                  transition={{ delay: i * 0.1 }}
+                  transition={{ delay: Math.min(i * 0.1, 1.5) }}
                 />
               ))}
 
@@ -291,7 +291,7 @@ export function AreaModelMultiplication({
                   initial="hidden"
                   animate="visible"
                   variants={lineDrawVariants}
-                  transition={{ delay: i * 0.1 + 0.15 }}
+                  transition={{ delay: Math.min(i * 0.1, 1.5) + 0.15 }}
                 />
               ))}
             </motion.g>

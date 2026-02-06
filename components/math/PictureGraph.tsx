@@ -230,7 +230,7 @@ export function PictureGraph({
                     key={`cat-${i}`}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.1, duration: 0.3 }}
+                    transition={{ delay: Math.min(i * 0.1, 1.5), duration: 0.3 }}
                   >
                     {/* Category label */}
                     <text

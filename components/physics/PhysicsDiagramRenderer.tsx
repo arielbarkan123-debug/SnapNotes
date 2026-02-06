@@ -183,25 +183,39 @@ export function PhysicsDiagramRenderer({
       // Placeholder for remaining diagram types
       case 'circuit':
       case 'wave':
-      case 'optics':
+      case 'optics': {
+        console.warn('[DiagramRenderer] Failed to render diagram:', {
+          type: diagram.type,
+          error: `Physics diagram type '${diagram.type}' is not yet implemented`,
+          data: diagram.data,
+        })
         return (
-          <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
-            <p className="text-gray-500">
+          <div className="flex items-center justify-center h-64 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 px-4">
+            <p className="text-sm text-blue-700 dark:text-blue-300">
               {language === 'he'
-                ? `סוג תרשים "${diagram.type}" בפיתוח`
-                : `Diagram type "${diagram.type}" coming soon`}
+                ? `סוג תרשים '${diagram.type}' בפיתוח`
+                : `Diagram type '${diagram.type}' is coming soon`}
             </p>
           </div>
         )
+      }
 
-      default:
+      default: {
+        console.warn('[DiagramRenderer] Failed to render diagram:', {
+          type: diagram.type,
+          error: `Unknown physics diagram type '${diagram.type}'`,
+          data: diagram.data,
+        })
         return (
-          <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
-            <p className="text-gray-500">
-              {language === 'he' ? 'סוג תרשים לא ידוע' : 'Unknown diagram type'}
+          <div className="flex items-center justify-center h-64 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800 px-4">
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              {language === 'he'
+                ? `סוג תרשים '${diagram.type}' לא נתמך`
+                : `Diagram type '${diagram.type}' is not supported`}
             </p>
           </div>
         )
+      }
     }
   }
 

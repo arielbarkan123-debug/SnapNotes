@@ -303,16 +303,22 @@ export function GeometryDiagramRenderer({
       case 'tangent_radius_perpendicularity':
         return <TangentRadiusPerpendicularity data={diagram.data as TangentRadiusPerpendicularityData} {...commonProps} />
 
-      default:
+      default: {
+        console.warn('[DiagramRenderer] Failed to render diagram:', {
+          type: diagram.type,
+          error: `Unknown geometry diagram type '${diagram.type}'`,
+          data: diagram.data,
+        })
         return (
-          <div className="flex items-center justify-center h-64 bg-gray-100 dark:bg-gray-800 rounded-lg">
-            <p className="text-gray-500 dark:text-gray-400">
+          <div className="flex items-center justify-center h-64 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800 px-4">
+            <p className="text-sm text-amber-700 dark:text-amber-300">
               {language === 'he'
-                ? `סוג צורה "${diagram.type}" לא נתמך`
-                : `Shape type "${diagram.type}" not supported`}
+                ? `סוג צורה '${diagram.type}' לא נתמך`
+                : `Diagram type '${diagram.type}' is not supported`}
             </p>
           </div>
         )
+      }
     }
   }
 

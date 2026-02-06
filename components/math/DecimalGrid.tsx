@@ -181,31 +181,35 @@ export function DecimalGrid({
               animate={isCurrent('grid') ? 'spotlight' : 'visible'}
               variants={spotlight}
             >
-              {/* Grid cells (empty) */}
-              {Array.from({ length: rows }, (_, row) =>
-                Array.from({ length: cols }, (_, col) => {
-                  const cellIndex = row * cols + col
-                  const x = padding.left + col * cellWidth
-                  const y = padding.top + row * cellHeight
-                  return (
-                    <motion.rect
-                      key={`cell-${cellIndex}`}
-                      data-testid={`dg-cell-${cellIndex}`}
-                      x={x}
-                      y={y}
-                      width={cellWidth}
-                      height={cellHeight}
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={diagram.lineWeight * 0.4}
-                      strokeOpacity={0.3}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: cellIndex * 0.005 }}
-                    />
-                  )
-                })
-              )}
+              {/* Grid cells (empty) - single motion.g per row to avoid 100 motion elements */}
+              {Array.from({ length: rows }, (_, row) => (
+                <motion.g
+                  key={`row-${row}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: Math.min(row * 0.05, 1.0) }}
+                >
+                  {Array.from({ length: cols }, (_, col) => {
+                    const cellIndex = row * cols + col
+                    const x = padding.left + col * cellWidth
+                    const y = padding.top + row * cellHeight
+                    return (
+                      <rect
+                        key={`cell-${cellIndex}`}
+                        data-testid={`dg-cell-${cellIndex}`}
+                        x={x}
+                        y={y}
+                        width={cellWidth}
+                        height={cellHeight}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={diagram.lineWeight * 0.4}
+                        strokeOpacity={0.3}
+                      />
+                    )
+                  })}
+                </motion.g>
+              ))}
 
               {/* Outer border */}
               <rect
@@ -231,29 +235,34 @@ export function DecimalGrid({
               animate={isCurrent('shade') ? 'spotlight' : 'visible'}
               variants={spotlight}
             >
-              {Array.from({ length: rows }, (_, row) =>
-                Array.from({ length: cols }, (_, col) => {
-                  const cellIndex = row * cols + col
-                  if (!shadedCellSet.has(cellIndex)) return null
-                  const x = padding.left + col * cellWidth
-                  const y = padding.top + row * cellHeight
-                  return (
-                    <motion.rect
-                      key={`shaded-${cellIndex}`}
-                      data-testid={`dg-shaded-cell-${cellIndex}`}
-                      x={x + 0.5}
-                      y={y + 0.5}
-                      width={cellWidth - 1}
-                      height={cellHeight - 1}
-                      fill={primaryColor}
-                      opacity={0.6}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 0.6, scale: 1 }}
-                      transition={{ delay: cellIndex * 0.01, duration: 0.2 }}
-                    />
-                  )
-                })
-              )}
+              {/* Single motion.g per row to avoid 100 motion elements */}
+              {Array.from({ length: rows }, (_, row) => (
+                <motion.g
+                  key={`shade-row-${row}`}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: Math.min(row * 0.05, 1.0), duration: 0.2 }}
+                >
+                  {Array.from({ length: cols }, (_, col) => {
+                    const cellIndex = row * cols + col
+                    if (!shadedCellSet.has(cellIndex)) return null
+                    const x = padding.left + col * cellWidth
+                    const y = padding.top + row * cellHeight
+                    return (
+                      <rect
+                        key={`shaded-${cellIndex}`}
+                        data-testid={`dg-shaded-cell-${cellIndex}`}
+                        x={x + 0.5}
+                        y={y + 0.5}
+                        width={cellWidth - 1}
+                        height={cellHeight - 1}
+                        fill={primaryColor}
+                        opacity={0.6}
+                      />
+                    )
+                  })}
+                </motion.g>
+              ))}
             </motion.g>
           )}
         </AnimatePresence>

@@ -282,7 +282,7 @@ export function ResidualPlot({
                       type: 'spring',
                       stiffness: 300,
                       damping: 20,
-                      delay: i * 0.05,
+                      delay: Math.min(i * 0.05, 1.5),
                     }}
                   />
                 )

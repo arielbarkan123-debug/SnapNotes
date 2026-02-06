@@ -231,7 +231,7 @@ export function MeasuresOfCenter({
                       type: 'spring',
                       stiffness: 400,
                       damping: 20,
-                      delay: i * 0.04,
+                      delay: Math.min(i * 0.04, 1.5),
                     }}
                   />
                 ))
@@ -359,7 +359,7 @@ export function MeasuresOfCenter({
                     strokeWidth={2.5}
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 20, delay: i * 0.1 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 20, delay: Math.min(i * 0.1, 1.5) }}
                   />
                   {/* Highlight ring around dot column */}
                   <motion.circle
@@ -372,7 +372,7 @@ export function MeasuresOfCenter({
                     strokeDasharray="3 2"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 0.5 }}
-                    transition={{ duration: 0.3, delay: i * 0.1 }}
+                    transition={{ duration: 0.3, delay: Math.min(i * 0.1, 1.5) }}
                   />
                 </motion.g>
               ))}

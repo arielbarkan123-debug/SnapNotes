@@ -424,7 +424,7 @@ export function QuadraticGraph({
                     strokeWidth={2}
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 20, delay: i * 0.15 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20, delay: Math.min(i * 0.15, 1.5) }}
                   />
                   <motion.text
                     x={toSvgX(root)}

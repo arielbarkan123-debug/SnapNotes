@@ -1081,14 +1081,22 @@ export function MathDiagramRenderer({
           />
         )
 
-      default:
+      default: {
+        console.warn('[DiagramRenderer] Failed to render diagram:', {
+          type: diagram.type,
+          error: `Unknown math diagram type '${diagram.type}'`,
+          data: diagram.data,
+        })
         return (
-          <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
-            <p className="text-gray-500">
-              {language === 'he' ? 'סוג תרשים לא ידוע' : 'Unknown diagram type'}
+          <div className="flex items-center justify-center h-64 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800 px-4">
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              {language === 'he'
+                ? `סוג תרשים '${diagram.type}' לא נתמך`
+                : `Diagram type '${diagram.type}' is not supported`}
             </p>
           </div>
         )
+      }
     }
   }
 

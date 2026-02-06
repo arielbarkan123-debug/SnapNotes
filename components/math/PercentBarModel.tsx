@@ -229,7 +229,7 @@ export function PercentBarModel({
                   rx={i === 0 ? 4 : 0}
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
-                  transition={{ duration: 0.5, delay: i * 0.15, ease: 'easeOut' }}
+                  transition={{ duration: 0.5, delay: Math.min(i * 0.15, 1.5), ease: 'easeOut' }}
                   style={{ transformOrigin: `${barX + x}px ${barY}px` }}
                 />
               ))}

@@ -4,7 +4,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import type { TutorDiagramState, PedagogicalIntent, HintLevel } from '@/lib/homework/types'
 import { generateDiagramFromTutorMessage } from '@/lib/homework/diagram-generator'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
-import { getDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-schemas'
+import { getFilteredDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-schemas'
 
 // Allow 60 seconds for response generation
 export const maxDuration = 60
@@ -40,6 +40,10 @@ interface PracticeTutorRequest {
   wasCorrect?: boolean
   conversation: Array<{ role: string; content: string }>
   language?: 'en' | 'he'
+  /** Subject context for diagram schema filtering (e.g. 'math', 'physics', 'geometry') */
+  subject?: string
+  /** Grade level for diagram schema filtering (e.g. 5, 8, 11) */
+  grade?: number
 }
 
 interface TutorResponseData {
@@ -52,7 +56,7 @@ interface TutorResponseData {
 // System Prompt
 // ============================================================================
 
-function buildSystemPrompt(language: 'en' | 'he'): string {
+function buildSystemPrompt(language: 'en' | 'he', subject?: string, grade?: number): string {
   const languageInstruction = language === 'he'
     ? `
 ## Language Requirement - CRITICAL
@@ -99,8 +103,8 @@ For any diagram, use this format:
   ]
 }
 
-Common diagram schemas (for full reference):
-${getDiagramSchemaPrompt('math').slice(0, 3000)}
+${subject ? `Relevant diagram schemas for ${subject}${grade ? ` grade ${grade}` : ''}:` : 'Available diagram types by subject:'}
+${getFilteredDiagramSchemaPrompt(subject, grade)}
 
 ## Response Format
 Return JSON:
@@ -153,6 +157,8 @@ export async function POST(request: NextRequest) {
       wasCorrect,
       conversation,
       language = 'en',
+      subject,
+      grade,
     } = body
 
     if (!question || !correctAnswer) {
@@ -164,7 +170,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Build conversation for AI
-    const systemPrompt = buildSystemPrompt(language)
+    const systemPrompt = buildSystemPrompt(language, subject, grade)
 
     const contextMessage = language === 'he'
       ? `## הקשר

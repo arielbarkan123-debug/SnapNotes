@@ -246,25 +246,32 @@ export function DotPlot({
               {Array.from(frequencyMap.entries()).map(([value, count]) => {
                 const x = scaleX(value)
                 const isHighlighted = hasHighlight && highlightValue === value && isVisible('highlight')
-                return Array.from({ length: count }, (_, dotIdx) => (
-                  <motion.circle
-                    key={`dot-${value}-${dotIdx}`}
-                    cx={x}
-                    cy={lineY - dotRadius - 4 - dotIdx * dotSpacing}
-                    r={dotRadius}
-                    fill={isHighlighted ? '#ef4444' : primaryColor}
-                    stroke="white"
-                    strokeWidth={1}
+                const valueIdx = Array.from(frequencyMap.keys()).indexOf(value)
+                return (
+                  <motion.g
+                    key={`dots-${value}`}
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{
                       type: 'spring',
                       stiffness: 400,
                       damping: 20,
-                      delay: dotIdx * 0.05 + Array.from(frequencyMap.keys()).indexOf(value) * 0.08,
+                      delay: Math.min(valueIdx * 0.08, 1.5),
                     }}
-                  />
-                ))
+                  >
+                    {Array.from({ length: count }, (_, dotIdx) => (
+                      <circle
+                        key={`dot-${value}-${dotIdx}`}
+                        cx={x}
+                        cy={lineY - dotRadius - 4 - dotIdx * dotSpacing}
+                        r={dotRadius}
+                        fill={isHighlighted ? '#ef4444' : primaryColor}
+                        stroke="white"
+                        strokeWidth={1}
+                      />
+                    ))}
+                  </motion.g>
+                )
               })}
             </motion.g>
           )}

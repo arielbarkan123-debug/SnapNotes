@@ -292,7 +292,7 @@ export function ScatterPlotTrendLine({
                   opacity={0.8}
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 15, delay: i * 0.05 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 15, delay: Math.min(i * 0.05, 1.5) }}
                 />
               ))}
             </motion.g>

@@ -305,7 +305,7 @@ export function NetDiagram3D({
                   strokeLinejoin="round"
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.4, delay: i * 0.12, type: 'spring', stiffness: 200, damping: 20 }}
+                  transition={{ duration: 0.4, delay: Math.min(i * 0.12, 1.5), type: 'spring', stiffness: 200, damping: 20 }}
                 />
               ))}
 

@@ -424,7 +424,7 @@ export function ParallelLinesTransversal({
                     key={`pair-${i}`}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: i * 0.3 }}
+                    transition={{ delay: Math.min(i * 0.3, 1.5) }}
                   >
                     {/* Arc at intersection 1 */}
                     <motion.path

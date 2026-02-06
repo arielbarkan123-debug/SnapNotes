@@ -399,7 +399,7 @@ export function SamplingDistribution({
                       type: 'spring',
                       stiffness: 200,
                       damping: 20,
-                      delay: i * 0.03,
+                      delay: Math.min(i * 0.03, 1.5),
                     }}
                     style={{ transformOrigin: `${x1 + bw / 2}px ${barBaseY}px` }}
                   />

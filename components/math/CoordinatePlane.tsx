@@ -593,7 +593,7 @@ export function CoordinatePlane({
                     data-testid={`cp-point-${pointId || index}`}
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 25, delay: index * 0.1 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 25, delay: Math.min(index * 0.1, 1.5) }}
                   >
                     <circle cx={svgX} cy={svgY} r={10} fill={color} opacity={0.15} />
                     <circle

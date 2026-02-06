@@ -398,7 +398,7 @@ export function ParametricCurve({
                   key={`pt-${i}`}
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.15, type: 'spring', stiffness: 300, damping: 20 }}
+                  transition={{ delay: Math.min(i * 0.15, 1.5), type: 'spring', stiffness: 300, damping: 20 }}
                 >
                   <circle
                     cx={pt.svgX}

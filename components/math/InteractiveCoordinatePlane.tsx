@@ -520,7 +520,7 @@ export function InteractiveCoordinatePlane({
                     key={`ipoint-${index}`}
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 25, delay: index * 0.08 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 25, delay: Math.min(index * 0.08, 1.5) }}
                     onMouseDown={(e) => handlePointPointerDown(e, index)}
                     onTouchStart={(e) => handlePointPointerDown(e, index)}
                     onMouseEnter={() => setHoveredIndex(index)}

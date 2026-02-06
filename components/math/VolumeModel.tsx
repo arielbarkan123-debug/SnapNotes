@@ -323,7 +323,7 @@ export function VolumeModel({
                   key={`length-cube-${ix}`}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: ix * 0.08, type: 'spring', stiffness: 300, damping: 25 }}
+                  transition={{ delay: Math.min(ix * 0.08, 1.5), type: 'spring', stiffness: 300, damping: 25 }}
                 >
                   <path d={cubePolygon(ix, 0, 0, 'top', cubeSize, originX, originY)} fill={hexToRgba(primaryColor, 0.3)} stroke={primaryColor} strokeWidth={1} />
                   <path d={cubePolygon(ix, 0, 0, 'left', cubeSize, originX, originY)} fill={hexToRgba(primaryColor, 0.2)} stroke={primaryColor} strokeWidth={1} />
@@ -363,7 +363,7 @@ export function VolumeModel({
                       key={`area-cube-${ix}-${iy}`}
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: cubeIndex * 0.03, type: 'spring', stiffness: 300, damping: 25 }}
+                      transition={{ delay: Math.min(cubeIndex * 0.03, 1.5), type: 'spring', stiffness: 300, damping: 25 }}
                     >
                       <path d={cubePolygon(ix, iy, 0, 'top', cubeSize, originX, originY)} fill={hexToRgba(primaryColor, 0.3)} stroke={primaryColor} strokeWidth={0.8} />
                       {iy === w - 1 && <path d={cubePolygon(ix, iy, 0, 'left', cubeSize, originX, originY)} fill={hexToRgba(primaryColor, 0.2)} stroke={primaryColor} strokeWidth={0.8} />}
@@ -397,52 +397,53 @@ export function VolumeModel({
               variants={spotlight}
             >
               {/* Draw cubes from back to front, bottom to top for proper overlap */}
-              {Array.from({ length: h }, (_, iz) =>
-                Array.from({ length: w }, (_, iy) =>
-                  Array.from({ length: length }, (_, ix) => {
-                    const cubeIndex = iz * (length * w) + iy * length + ix
-                    // Determine layer color intensity
-                    const layerAlpha = 0.2 + (iz / h) * 0.3
-                    const isFrontFace = iy === w - 1
-                    const isRightFace = ix === length - 1
-                    const isTopFace = iz === h - 1
+              {/* One motion.g per layer to avoid hundreds of motion elements */}
+              {Array.from({ length: h }, (_, iz) => (
+                <motion.g
+                  key={`layer-${iz}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: Math.min(iz * 0.15, 1.5) }}
+                >
+                  {Array.from({ length: w }, (_, iy) =>
+                    Array.from({ length: length }, (_, ix) => {
+                      const layerAlpha = 0.2 + (iz / h) * 0.3
+                      const isFrontFace = iy === w - 1
+                      const isRightFace = ix === length - 1
+                      const isTopFace = iz === h - 1
 
-                    return (
-                      <motion.g
-                        key={`cube-${ix}-${iy}-${iz}`}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: iz * 0.1 + (iy * length + ix) * 0.005 }}
-                      >
-                        {isTopFace && (
-                          <path
-                            d={cubePolygon(ix, iy, iz, 'top', cubeSize, originX, originY)}
-                            fill={hexToRgba(primaryColor, layerAlpha + 0.1)}
-                            stroke={primaryColor}
-                            strokeWidth={0.5}
-                          />
-                        )}
-                        {isFrontFace && (
-                          <path
-                            d={cubePolygon(ix, iy, iz, 'left', cubeSize, originX, originY)}
-                            fill={hexToRgba(primaryColor, layerAlpha - 0.05)}
-                            stroke={primaryColor}
-                            strokeWidth={0.5}
-                          />
-                        )}
-                        {isRightFace && (
-                          <path
-                            d={cubePolygon(ix, iy, iz, 'right', cubeSize, originX, originY)}
-                            fill={hexToRgba(primaryColor, layerAlpha - 0.1)}
-                            stroke={primaryColor}
-                            strokeWidth={0.5}
-                          />
-                        )}
-                      </motion.g>
-                    )
-                  })
-                )
-              )}
+                      return (
+                        <g key={`cube-${ix}-${iy}-${iz}`}>
+                          {isTopFace && (
+                            <path
+                              d={cubePolygon(ix, iy, iz, 'top', cubeSize, originX, originY)}
+                              fill={hexToRgba(primaryColor, layerAlpha + 0.1)}
+                              stroke={primaryColor}
+                              strokeWidth={0.5}
+                            />
+                          )}
+                          {isFrontFace && (
+                            <path
+                              d={cubePolygon(ix, iy, iz, 'left', cubeSize, originX, originY)}
+                              fill={hexToRgba(primaryColor, layerAlpha - 0.05)}
+                              stroke={primaryColor}
+                              strokeWidth={0.5}
+                            />
+                          )}
+                          {isRightFace && (
+                            <path
+                              d={cubePolygon(ix, iy, iz, 'right', cubeSize, originX, originY)}
+                              fill={hexToRgba(primaryColor, layerAlpha - 0.1)}
+                              stroke={primaryColor}
+                              strokeWidth={0.5}
+                            />
+                          )}
+                        </g>
+                      )
+                    })
+                  )}
+                </motion.g>
+              ))}
 
               {/* Layer count labels on the side */}
               {Array.from({ length: h }, (_, iz) => {
@@ -456,7 +457,7 @@ export function VolumeModel({
                     style={{ fontSize: 11, fill: '#22c55e', fontWeight: 500 }}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: iz * 0.1 + 0.2 }}
+                    transition={{ delay: Math.min(iz * 0.15, 1.5) + 0.2 }}
                   >
                     {language === 'he' ? `\u05E9\u05DB\u05D1\u05D4 ${iz + 1}` : `Layer ${iz + 1}`}
                   </motion.text>

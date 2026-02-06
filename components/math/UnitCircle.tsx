@@ -505,7 +505,7 @@ export function UnitCircle({
                       type: 'spring',
                       stiffness: 300,
                       damping: 25,
-                      delay: index * 0.05,
+                      delay: Math.min(index * 0.05, 1.5),
                     }}
                   >
                     {/* Radius line for highlighted angles */}
@@ -597,7 +597,7 @@ export function UnitCircle({
                     key={`label-${index}`}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: index * 0.04 }}
+                    transition={{ delay: Math.min(index * 0.04, 1.5) }}
                   >
                     {/* Coordinate label (KaTeX) */}
                     <DiagramMathLabel
