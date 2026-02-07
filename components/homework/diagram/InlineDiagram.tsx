@@ -37,7 +37,7 @@ const SIZE_MAP = {
 export default function InlineDiagram({
   diagram,
   currentStep,
-  size = 'compact',
+  size = 'default',
   language,
   showExpandButton = true,
 }: InlineDiagramProps) {

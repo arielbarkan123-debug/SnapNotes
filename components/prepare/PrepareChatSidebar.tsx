@@ -166,7 +166,6 @@ export default function PrepareChatSidebar({ guideId, sectionRef, onClearSection
                   {msg.diagram && (
                     <InlineDiagram
                       diagram={msg.diagram}
-                      size="compact"
                       showExpandButton={true}
                     />
                   )}

@@ -288,12 +288,12 @@ export default function FullScreenDiagramView({
         {/* Diagram Area */}
         <main
           ref={containerRef}
-          className="flex-1 flex items-center justify-center p-6 bg-gray-100 dark:bg-gray-950 overflow-hidden"
+          className="flex-1 flex items-center justify-center p-3 bg-gray-100 dark:bg-gray-950 overflow-hidden"
           role="region"
           aria-label={isRTL ? 'אזור הדיאגרמה' : 'Diagram area'}
         >
           <div
-            className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-4 w-full h-full flex items-center justify-center"
+            className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-2 w-full h-full flex items-center justify-center"
             style={{ maxWidth: '100%', maxHeight: '100%' }}
           >
             <DiagramRenderer
@@ -303,8 +303,8 @@ export default function FullScreenDiagramView({
               showControls={isSelfManaging}
               onStepAdvance={handleNext}
               onStepBack={handlePrevious}
-              width={Math.min(containerSize.width - 80, 1000)}
-              height={Math.min(containerSize.height - 80, 700)}
+              width={Math.max(containerSize.width - 48, 400)}
+              height={Math.max(containerSize.height - 48, 300)}
               language={language}
             />
           </div>
