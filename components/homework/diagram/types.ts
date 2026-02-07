@@ -64,6 +64,20 @@ export const GEOMETRY_DIAGRAM_TYPES = [
   'regular_polygon',
 ]
 
+// Components that manage their own step controls via internal useDiagramBase + DiagramStepControls.
+// These do NOT respond to external currentStep changes — they only accept initialStep (one-time).
+// Used to suppress outer step controls and let the component's own controls work.
+export const SELF_MANAGING_DIAGRAM_TYPES = new Set([
+  'number_line',
+  'coordinate_plane',
+  'triangle',
+  'circle',
+  'unit_circle',
+  'tree_diagram',
+  'interactive_coordinate_plane',
+  'equation_grapher',
+])
+
 // Human-readable diagram type names
 export const DIAGRAM_TYPE_NAMES: Record<string, string> = {
   // Physics diagrams

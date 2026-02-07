@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
-import { type DiagramState, getDiagramTypeName } from '@/components/homework/diagram/types'
+import { type DiagramState, getDiagramTypeName, SELF_MANAGING_DIAGRAM_TYPES } from '@/components/homework/diagram/types'
 import DiagramRenderer from '@/components/homework/diagram/DiagramRenderer'
 import DiagramExplanationPanel, { type StepExplanation } from './DiagramExplanationPanel'
 
@@ -213,6 +213,10 @@ export default function FullScreenDiagramView({
     setAutoPlay(prev => !prev)
   }, [])
 
+  // Self-managing components have their own step controls and don't respond
+  // to external currentStep changes. Let them manage their own stepping.
+  const isSelfManaging = SELF_MANAGING_DIAGRAM_TYPES.has(diagram.type)
+
   if (!isOpen) return null
 
   return (
@@ -256,7 +260,7 @@ export default function FullScreenDiagramView({
           <h2 id="diagram-dialog-title" className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <span className="text-violet-500" aria-hidden="true">📊</span>
             {displayTitle}
-            {totalSteps > 1 && (
+            {totalSteps > 1 && !isSelfManaging && (
               <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
                 — {t('stepOf', { current: currentStep + 1, total: totalSteps })}
               </span>
@@ -294,9 +298,9 @@ export default function FullScreenDiagramView({
           >
             <DiagramRenderer
               diagram={diagram}
-              currentStep={currentStep}
+              currentStep={isSelfManaging ? undefined : currentStep}
               animate={true}
-              showControls={false}
+              showControls={isSelfManaging}
               onStepAdvance={handleNext}
               onStepBack={handlePrevious}
               width={Math.min(containerSize.width - 80, 1000)}
@@ -306,8 +310,8 @@ export default function FullScreenDiagramView({
           </div>
         </main>
 
-        {/* Explanation Panel */}
-        {totalSteps > 1 && (
+        {/* Explanation Panel — hidden for self-managing types that have their own controls */}
+        {totalSteps > 1 && !isSelfManaging && (
           <DiagramExplanationPanel
             currentStep={currentStep}
             totalSteps={totalSteps}

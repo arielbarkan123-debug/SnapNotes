@@ -95,6 +95,7 @@ import {
   type RhombusData,
   type TrapezoidData,
 } from '@/types/math'
+import { SELF_MANAGING_DIAGRAM_TYPES } from '@/components/homework/diagram/types'
 import type { SubjectKey } from '@/lib/diagram-theme'
 import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 import type { TableData } from '@/types'
@@ -323,19 +324,7 @@ export function MathDiagramRenderer({
     }
   }, [currentStep, onStepBack])
 
-  // Components that manage their own step controls via internal useDiagramBase + DiagramStepControls.
-  // MathDiagramRenderer should NOT show outer step controls for these types to avoid duplicate controls.
-  const SELF_MANAGING_TYPES = new Set([
-    'number_line',
-    'coordinate_plane',
-    'triangle',
-    'circle',
-    'unit_circle',
-    'tree_diagram',
-    'interactive_coordinate_plane',
-    'equation_grapher',
-  ])
-  const isSelfManaging = SELF_MANAGING_TYPES.has(diagram.type)
+  const isSelfManaging = SELF_MANAGING_DIAGRAM_TYPES.has(diagram.type)
 
   // Render the appropriate diagram type
   const renderDiagram = () => {
@@ -1726,7 +1715,7 @@ export function MathDiagramRenderer({
       </div>
 
       {/* Diagram */}
-      <div className="flex justify-center rounded-lg overflow-x-auto">
+      <div className={`flex justify-center rounded-lg overflow-x-auto ${isSelfManaging && !showControls ? '[&_[data-diagram-controls]]:hidden' : ''}`}>
         {renderDiagram()}
       </div>
 

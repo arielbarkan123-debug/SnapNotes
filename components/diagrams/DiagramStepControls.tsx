@@ -34,6 +34,7 @@ export function DiagramStepControls({
 
   return (
     <div
+      data-diagram-controls
       className={`flex items-center gap-3 px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg ${className}`}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
