@@ -26,6 +26,7 @@ export default function RichTextInput({
   const isUpdatingRef = useRef(false)
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         // Disable all formatting — we only want plain text + links

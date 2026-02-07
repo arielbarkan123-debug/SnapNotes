@@ -292,8 +292,12 @@ export default function FullScreenDiagramView({
           role="region"
           aria-label={isRTL ? 'אזור הדיאגרמה' : 'Diagram area'}
         >
+          {/* CSS overrides:
+               - diagram-content: remove per-component maxWidth caps, fill height
+               - SVG inside: fill both dimensions so viewBox scales uniformly (centered via preserveAspectRatio)
+               - flex-col wrapper from MathDiagramRenderer: fill height, grow diagram area */}
           <div
-            className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-2 w-full h-full flex items-center justify-center [&_.diagram-content]:!max-w-full"
+            className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-2 w-full h-full flex items-center justify-center [&_.diagram-content]:!max-w-full [&_.diagram-content]:flex-1 [&_.diagram-content_svg]:w-full [&_.diagram-content_svg]:!h-full [&>div]:h-full [&_.flex.justify-center]:flex-1"
             style={{ maxWidth: '100%', maxHeight: '100%' }}
           >
             <DiagramRenderer

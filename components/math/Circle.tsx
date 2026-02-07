@@ -77,9 +77,13 @@ export function Circle({
   language = 'en',
   initialStep,
 }: CircleProps) {
+  // Normalize center coordinates — AI may send either
+  // { centerX, centerY } (types/index.ts) or { center: {x, y} } (types/math.ts)
+  const dataAny = data as unknown as Record<string, unknown>
+  const cx = data.centerX ?? (dataAny.center as { x: number; y: number } | undefined)?.x ?? 0
+  const cy = data.centerY ?? (dataAny.center as { x: number; y: number } | undefined)?.y ?? 0
+
   const {
-    centerX: cx,
-    centerY: cy,
     radius,
     centerLabel,
     showRadius,

@@ -87,7 +87,7 @@ export default function InlineDiagram({
         {/* Diagram container — fully revealed, no step controls.
              The .diagram-content override removes per-component maxWidth caps
              so the SVG fills available width (components use width:100% + viewBox). */}
-        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 overflow-hidden [&_.diagram-content]:!max-w-full">
+        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 overflow-hidden [&_.diagram-content]:mx-auto [&_.flex.justify-center]:justify-center">
           <DiagramRenderer
             diagram={diagram}
             currentStep={inlineStep}
