@@ -148,10 +148,10 @@ export function Circle({
   // Geometry calculations
   // ---------------------------------------------------------------------------
 
-  const padding = 40
+  const padding = 30
   const titleHeight = title ? 25 : 0
   const availableSize = Math.min(width, height) - padding * 2 - titleHeight
-  const scale = availableSize / (radius * 2.5)
+  const scale = availableSize / (radius * 2.2)
 
   const transform = (x: number, y: number): { x: number; y: number } => ({
     x: width / 2 + (x - cx) * scale,

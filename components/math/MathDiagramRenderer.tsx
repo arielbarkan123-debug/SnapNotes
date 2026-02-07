@@ -1702,17 +1702,19 @@ export function MathDiagramRenderer({
 
   return (
     <div className={`flex flex-col ${className}`}>
-      {/* Diagram type header */}
-      <div className="flex items-center justify-between mb-3 px-2">
-        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-          {getDiagramTypeName()}
-        </span>
-        {!isSelfManaging && (
-          <span className="text-xs text-gray-400">
-            {language === 'he' ? 'צעד' : 'Step'} {currentStep + 1}/{calculatedTotalSteps}
+      {/* Diagram type header — hidden when showControls is false (inline mode) */}
+      {showControls && (
+        <div className="flex items-center justify-between mb-3 px-2">
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            {getDiagramTypeName()}
           </span>
-        )}
-      </div>
+          {!isSelfManaging && (
+            <span className="text-xs text-gray-400">
+              {language === 'he' ? 'צעד' : 'Step'} {currentStep + 1}/{calculatedTotalSteps}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Diagram */}
       <div className={`flex justify-center rounded-lg overflow-x-auto ${isSelfManaging && !showControls ? '[&_[data-diagram-controls]]:hidden' : ''}`}>
@@ -1752,8 +1754,8 @@ export function MathDiagramRenderer({
         </div>
       )}
 
-      {/* Current step info — hidden for self-managing components */}
-      {!isSelfManaging && diagram.stepConfig?.[currentStep]?.stepLabel && (
+      {/* Current step info — hidden for self-managing components and inline mode */}
+      {showControls && !isSelfManaging && diagram.stepConfig?.[currentStep]?.stepLabel && (
         <div className="step-info mt-2 p-2 bg-violet-50 dark:bg-violet-900/30 rounded-md mx-2">
           <p className="text-sm text-violet-700 dark:text-violet-300">
             {language === 'he'
