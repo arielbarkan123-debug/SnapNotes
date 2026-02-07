@@ -312,6 +312,17 @@ body {
   max-width: 1100px;
 }
 
+/* Collapsible sidebar - main content margin */
+@media (min-width: 768px) {
+  main.sidebar-main {
+    margin-inline-start: 250px;
+    transition: margin-inline-start 0.3s ease-in-out;
+  }
+  [data-sidebar-collapsed="true"] main.sidebar-main {
+    margin-inline-start: 0px;
+  }
+}
+
 @media (max-width: 767px) {
   .main-with-sidebar {
     margin-inline-start: 0;

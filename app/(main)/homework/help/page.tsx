@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useTranslations } from 'next-intl'
 import Button from '@/components/ui/Button'
 import RichTextInput from '@/components/ui/RichTextInput'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
@@ -64,6 +65,8 @@ function ImageUploader({
   onRemove,
   required = false,
   icon,
+  uploadedLabel,
+  dragDropLabel,
 }: {
   label: string
   description: string
@@ -72,6 +75,8 @@ function ImageUploader({
   onRemove: () => void
   required?: boolean
   icon: string
+  uploadedLabel: string
+  dragDropLabel: string
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -135,7 +140,7 @@ function ImageUploader({
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            Uploaded
+            {uploadedLabel}
           </div>
         </div>
       </div>
@@ -173,7 +178,7 @@ function ImageUploader({
           {description}
         </p>
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          Drag & drop or click to upload
+          {dragDropLabel}
         </p>
       </div>
     </div>
@@ -295,158 +300,12 @@ function MultiImageUploader({
 }
 
 // ============================================================================
-// Input Mode Toggle Component
-// ============================================================================
-
-function InputModeToggle({
-  mode,
-  onChange,
-}: {
-  mode: InputMode
-  onChange: (mode: InputMode) => void
-}) {
-  return (
-    <div className="mb-6">
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-        How would you like to submit your question?
-      </label>
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={() => onChange('image')}
-          className={`
-            flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all
-            ${mode === 'image'
-              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-              : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700'
-            }
-          `}
-        >
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-            mode === 'image' ? 'bg-purple-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-          }`}>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <span className={`text-sm font-medium ${
-            mode === 'image' ? 'text-purple-700 dark:text-purple-300' : 'text-gray-700 dark:text-gray-300'
-          }`}>
-            Upload Image
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onChange('text')}
-          className={`
-            flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all
-            ${mode === 'text'
-              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-              : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700'
-            }
-          `}
-        >
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-            mode === 'text' ? 'bg-purple-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-          }`}>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </div>
-          <span className={`text-sm font-medium ${
-            mode === 'text' ? 'text-purple-700 dark:text-purple-300' : 'text-gray-700 dark:text-gray-300'
-          }`}>
-            Paste Text
-          </span>
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ============================================================================
-// Question Text Input Component
-// ============================================================================
-
-function QuestionTextInput({
-  questionText,
-  onChange,
-}: {
-  questionText: string
-  onChange: (text: string) => void
-}) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-        Your Question <span className="text-red-500">*</span>
-      </label>
-      <RichTextInput
-        value={questionText}
-        onChange={onChange}
-        placeholder="Paste or type your homework question here..."
-        minHeight="144px"
-      />
-      {questionText.length > 0 && questionText.length < MIN_QUESTION_TEXT_LENGTH && (
-        <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
-          Please enter at least {MIN_QUESTION_TEXT_LENGTH} characters ({MIN_QUESTION_TEXT_LENGTH - questionText.length} more needed)
-        </p>
-      )}
-    </div>
-  )
-}
-
-// ============================================================================
-// Comfort Level Selector
-// ============================================================================
-
-function ComfortLevelSelector({
-  value,
-  onChange,
-}: {
-  value: ComfortLevel
-  onChange: (level: ComfortLevel) => void
-}) {
-  const options: { value: ComfortLevel; label: string; icon: string; description: string }[] = [
-    { value: 'new', label: 'New to me', icon: '🌱', description: "I haven't seen this before" },
-    { value: 'some_idea', label: 'Some idea', icon: '💭', description: 'I understand the basics' },
-    { value: 'stuck', label: 'Just stuck', icon: '🤔', description: 'I know it, just need a nudge' },
-  ]
-
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-        How comfortable are you with this topic?
-      </label>
-      <div className="grid grid-cols-3 gap-3">
-        {options.map((option) => (
-          <button
-            key={option.value}
-            onClick={() => onChange(option.value)}
-            className={`
-              p-4 rounded-xl border-2 text-center transition-all
-              ${value === option.value
-                ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700'
-              }
-            `}
-          >
-            <div className="text-2xl mb-1">{option.icon}</div>
-            <div className="text-sm font-medium text-gray-900 dark:text-white">{option.label}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 hidden sm:block">{option.description}</div>
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ============================================================================
 // Page Component
 // ============================================================================
 
 export default function HomeworkHelpPage() {
   const router = useRouter()
+  const t = useTranslations('homework.help')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -476,10 +335,10 @@ export default function HomeworkHelpPage() {
       return URL.createObjectURL(file)
     } catch (err) {
       console.error('Failed to create object URL:', err)
-      setError('Failed to preview image. Please try a different image or format.')
+      setError(t('uploadError'))
       return null
     }
-  }, [])
+  }, [t])
 
   // Handlers
   const handleQuestionUpload = useCallback((file: File) => {
@@ -501,13 +360,13 @@ export default function HomeworkHelpPage() {
     // Validate based on input mode
     if (inputMode === 'image') {
       if (!questionImage) {
-        setError(formatError(ERROR_CODES.HH_VAL_001, 'Please upload your homework question', 'HomeworkHelper/ImageMode'))
+        setError(formatError(ERROR_CODES.HH_VAL_001, t('noImageError'), 'HomeworkHelper/ImageMode'))
         return
       }
     } else {
       // Text mode validation
       if (!questionText || questionText.trim().length < MIN_QUESTION_TEXT_LENGTH) {
-        setError(formatError(ERROR_CODES.HH_VAL_002, `Please enter at least ${MIN_QUESTION_TEXT_LENGTH} characters for your question`, 'HomeworkHelper/TextMode'))
+        setError(formatError(ERROR_CODES.HH_VAL_002, t('textTooShort', { min: MIN_QUESTION_TEXT_LENGTH }), 'HomeworkHelper/TextMode'))
         return
       }
     }
@@ -631,6 +490,12 @@ export default function HomeworkHelpPage() {
     ? questionImage && !isSubmitting
     : questionText.trim().length >= MIN_QUESTION_TEXT_LENGTH && !isSubmitting
 
+  const comfortOptions: { value: ComfortLevel; labelKey: 'comfortNew' | 'comfortSomeIdea' | 'comfortStuck'; icon: string; descKey: 'comfortNewDesc' | 'comfortSomeIdeaDesc' | 'comfortStuckDesc' }[] = [
+    { value: 'new', labelKey: 'comfortNew', icon: '🌱', descKey: 'comfortNewDesc' },
+    { value: 'some_idea', labelKey: 'comfortSomeIdea', icon: '💭', descKey: 'comfortSomeIdeaDesc' },
+    { value: 'stuck', labelKey: 'comfortStuck', icon: '🤔', descKey: 'comfortStuckDesc' },
+  ]
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
       {/* Header */}
@@ -643,7 +508,7 @@ export default function HomeworkHelpPage() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            Back to Homework Hub
+            {t('backToHub')}
           </Link>
 
           <div className="flex items-center gap-4">
@@ -652,10 +517,10 @@ export default function HomeworkHelpPage() {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                Homework Helper
+                {t('pageTitle')}
               </h1>
               <p className="text-gray-600 dark:text-gray-400 text-sm">
-                Get guided help to solve it yourself
+                {t('pageSubtitle')}
               </p>
             </div>
           </div>
@@ -667,27 +532,27 @@ export default function HomeworkHelpPage() {
         {/* How it Works */}
         <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-[22px] shadow-card p-5 mb-8 border border-purple-100 dark:border-purple-800">
           <h2 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-            <span>🎓</span> Socratic Tutoring
+            <span>🎓</span> {t('socraticTitle')}
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Instead of giving you the answer, I&apos;ll guide you with questions and hints to help you discover the solution yourself. This builds real understanding!
+            {t('socraticDesc')}
           </p>
           <div className="grid sm:grid-cols-4 gap-3">
             <div className="flex items-center gap-2 text-sm">
               <span className="text-lg">❓</span>
-              <span className="text-gray-700 dark:text-gray-300">Questions</span>
+              <span className="text-gray-700 dark:text-gray-300">{t('stepQuestions')}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <span className="text-lg">💡</span>
-              <span className="text-gray-700 dark:text-gray-300">Hints</span>
+              <span className="text-gray-700 dark:text-gray-300">{t('stepHints')}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <span className="text-lg">🧠</span>
-              <span className="text-gray-700 dark:text-gray-300">Think</span>
+              <span className="text-gray-700 dark:text-gray-300">{t('stepThink')}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <span className="text-lg">🎉</span>
-              <span className="text-gray-700 dark:text-gray-300">Solve!</span>
+              <span className="text-gray-700 dark:text-gray-300">{t('stepSolve')}</span>
             </div>
           </div>
         </div>
@@ -703,41 +568,110 @@ export default function HomeworkHelpPage() {
         <div className="space-y-6">
           {/* Question Upload */}
           <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-5">Your Question</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-5">{t('yourQuestion')}</h3>
 
             {/* Input Mode Toggle */}
-            <InputModeToggle mode={inputMode} onChange={setInputMode} />
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                {t('howToSubmit')}
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setInputMode('image')}
+                  className={`
+                    flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all
+                    ${inputMode === 'image'
+                      ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700'
+                    }
+                  `}
+                >
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    inputMode === 'image' ? 'bg-purple-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                  }`}>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <span className={`text-sm font-medium ${
+                    inputMode === 'image' ? 'text-purple-700 dark:text-purple-300' : 'text-gray-700 dark:text-gray-300'
+                  }`}>
+                    {t('uploadImage')}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setInputMode('text')}
+                  className={`
+                    flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all
+                    ${inputMode === 'text'
+                      ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700'
+                    }
+                  `}
+                >
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    inputMode === 'text' ? 'bg-purple-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                  }`}>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
+                  <span className={`text-sm font-medium ${
+                    inputMode === 'text' ? 'text-purple-700 dark:text-purple-300' : 'text-gray-700 dark:text-gray-300'
+                  }`}>
+                    {t('pasteText')}
+                  </span>
+                </button>
+              </div>
+            </div>
 
             {/* Conditional: Image Mode */}
             {inputMode === 'image' && (
               <ImageUploader
-                label="Homework Question"
-                description="Upload the problem you need help with"
+                label={t('homeworkQuestion')}
+                description={t('uploadProblem')}
                 image={questionImage}
                 onUpload={handleQuestionUpload}
                 onRemove={() => setQuestionImage(null)}
                 required
                 icon="❓"
+                uploadedLabel={t('uploaded')}
+                dragDropLabel={t('dragDropOrClick')}
               />
             )}
 
             {/* Conditional: Text Mode */}
             {inputMode === 'text' && (
-              <QuestionTextInput
-                questionText={questionText}
-                onChange={setQuestionText}
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('questionLabel')} <span className="text-red-500">*</span>
+                </label>
+                <RichTextInput
+                  value={questionText}
+                  onChange={setQuestionText}
+                  placeholder={t('questionPlaceholder')}
+                  minHeight="144px"
+                />
+                {questionText.length > 0 && questionText.length < MIN_QUESTION_TEXT_LENGTH && (
+                  <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+                    {t('minCharsNeeded', { min: MIN_QUESTION_TEXT_LENGTH, remaining: MIN_QUESTION_TEXT_LENGTH - questionText.length })}
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
           {/* Reference Materials - only show in image mode */}
           {inputMode === 'image' && (
             <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Reference Materials</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Optional: add textbook pages, notes, or examples</p>
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{t('referenceMaterials')}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">{t('referenceDesc')}</p>
               <MultiImageUploader
-                label="References"
-                description="Add helpful context"
+                label={t('references')}
+                description={t('addContext')}
                 images={referenceImages}
                 onUpload={handleReferenceUpload}
                 onRemove={(index) => setReferenceImages(prev => prev.filter((_, i) => i !== index))}
@@ -749,26 +683,44 @@ export default function HomeworkHelpPage() {
 
           {/* Context */}
           <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-5">Tell me more</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-5">{t('tellMeMore')}</h3>
 
             {/* Comfort Level */}
             <div className="mb-6">
-              <ComfortLevelSelector
-                value={comfortLevel}
-                onChange={setComfortLevel}
-              />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                {t('comfortLabel')}
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {comfortOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setComfortLevel(option.value)}
+                    className={`
+                      p-4 rounded-xl border-2 text-center transition-all
+                      ${comfortLevel === option.value
+                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700'
+                      }
+                    `}
+                  >
+                    <div className="text-2xl mb-1">{option.icon}</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">{t(option.labelKey)}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 hidden sm:block">{t(option.descKey)}</div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* What Tried */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                What have you tried so far?
-                <span className="text-gray-400 font-normal ms-1">(optional)</span>
+                {t('whatTriedLabel')}
+                <span className="text-gray-400 font-normal ms-1">({t('whatTriedOptional')})</span>
               </label>
               <textarea
                 value={whatTried}
                 onChange={(e) => setWhatTried(e.target.value)}
-                placeholder="Describe any attempts you've made or where you got stuck..."
+                placeholder={t('whatTriedPlaceholder')}
                 rows={3}
                 className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
               />
@@ -790,25 +742,25 @@ export default function HomeworkHelpPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Starting session...
+                  {t('startingSession')}
                 </>
               ) : (
                 <>
                   <span className="me-2">💡</span>
-                  Get Help
+                  {t('getHelp')}
                 </>
               )}
             </Button>
             <Link href="/homework" className="sm:w-auto">
               <Button variant="secondary" size="lg" className="w-full">
-                Cancel
+                {t('cancel')}
               </Button>
             </Link>
           </div>
 
           {/* Privacy Note */}
           <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-            Your tutor won&apos;t give you the answer directly - they&apos;ll help you figure it out!
+            {t('privacyNote')}
           </p>
         </div>
       </main>

@@ -34,7 +34,7 @@ export default async function MainLayout({
         userName={user?.user_metadata?.name}
         isAdmin={isAdmin}
       />
-      <main className="md:ms-[250px] min-h-screen">
+      <main className="sidebar-main min-h-screen">
         {children}
       </main>
       <OfflineIndicator />

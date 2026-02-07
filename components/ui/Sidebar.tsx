@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { useRouter, usePathname } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
 import { useTheme } from 'next-themes'
-import { Search } from 'lucide-react'
+import { Search, PanelLeftClose, Menu } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 const GlobalSearch = dynamic(() => import('@/components/search/GlobalSearch'), { ssr: false })
@@ -27,14 +27,33 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
 
   const displayName = userName || userEmail?.split('@')[0] || 'User'
   const initials = displayName.charAt(0).toUpperCase()
 
-  // Prevent hydration mismatch for theme
+  // Prevent hydration mismatch for theme + restore sidebar state
   useEffect(() => {
     setMounted(true)
+    const saved = localStorage.getItem('sidebar-collapsed')
+    if (saved === 'true') {
+      setIsCollapsed(true)
+    }
   }, [])
+
+  const toggleCollapsed = useCallback(() => {
+    setIsCollapsed(prev => {
+      const next = !prev
+      localStorage.setItem('sidebar-collapsed', String(next))
+      document.documentElement.setAttribute('data-sidebar-collapsed', String(next))
+      return next
+    })
+  }, [])
+
+  // Sync collapsed state to document for CSS
+  useEffect(() => {
+    document.documentElement.setAttribute('data-sidebar-collapsed', String(isCollapsed))
+  }, [isCollapsed])
 
   // Prefetch all navigation routes on mount
   useEffect(() => {
@@ -115,16 +134,29 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
 
   return (
     <>
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex fixed inset-y-0 start-0 z-50 w-[250px] flex-col sidebar">
+      {/* Desktop Sidebar - Expanded */}
+      <aside
+        className={`hidden md:flex fixed inset-y-0 start-0 z-50 w-[250px] flex-col sidebar transition-transform duration-300 ease-in-out ${
+          isCollapsed ? '-translate-x-full rtl:translate-x-full' : 'translate-x-0'
+        }`}
+      >
         <div className="flex flex-col h-full py-7 px-4">
-          {/* Logo */}
-          <Link href="/dashboard" className="flex items-center gap-3 px-2 mb-8">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-rose-500 flex items-center justify-center">
-              <span className="text-white text-lg">📚</span>
-            </div>
-            <span className="text-xl font-extrabold gradient-text">NoteSnap</span>
-          </Link>
+          {/* Logo + Collapse Button */}
+          <div className="flex items-center justify-between mb-8">
+            <Link href="/dashboard" className="flex items-center gap-3 px-2">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-rose-500 flex items-center justify-center">
+                <span className="text-white text-lg">📚</span>
+              </div>
+              <span className="text-xl font-extrabold gradient-text">NoteSnap</span>
+            </Link>
+            <button
+              onClick={toggleCollapsed}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-white/10 transition-colors"
+              aria-label="Close sidebar"
+            >
+              <PanelLeftClose className="w-5 h-5 rtl:scale-x-[-1]" />
+            </button>
+          </div>
 
           {/* Search Button */}
           <button
@@ -193,6 +225,17 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
           </div>
         </div>
       </aside>
+
+      {/* Desktop Collapsed - Hamburger Button */}
+      <button
+        onClick={toggleCollapsed}
+        className={`hidden md:flex fixed top-5 start-5 z-50 items-center justify-center w-10 h-10 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-lg border border-gray-200/50 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-all duration-300 ${
+          isCollapsed ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'
+        }`}
+        aria-label="Open sidebar"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
 
       {/* Mobile Header Bar */}
       <header className="sticky top-0 z-50 bg-white/70 dark:bg-gray-900/60 backdrop-blur-xl shadow-sm md:hidden">
