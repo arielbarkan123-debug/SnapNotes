@@ -1,0 +1,11 @@
+{
+  "pageTitle": "My Courses",
+  "pageSubtitle": "{count, plural, =0 {No courses yet} =1 {1 course} other {# courses}}",
+  "errorTitle": "Something went wrong",
+  "errorDesc": "We couldn't load your courses. Please try again.",
+  "backToDashboard": "Back to Dashboard",
+  "searchResults": "{count, plural, =0 {No results} =1 {1 result} other {# results}} for \"{query}\"",
+  "noSearchResults": "No courses found",
+  "noSearchResultsDesc": "Try a different search term",
+  "clearSearch": "Clear search"
+}

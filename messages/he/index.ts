@@ -24,6 +24,7 @@ import gaps from './gaps.json'
 import knowledgeMap from './knowledgeMap.json'
 import diagram from './diagram.json'
 import prepare from './prepare.json'
+import courses from './courses.json'
 
 const messages = {
   common,
@@ -52,6 +53,7 @@ const messages = {
   knowledgeMap,
   diagram,
   prepare,
+  courses,
 }
 
 export default messages
