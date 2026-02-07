@@ -293,7 +293,7 @@ export default function FullScreenDiagramView({
           aria-label={isRTL ? 'אזור הדיאגרמה' : 'Diagram area'}
         >
           <div
-            className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-2 w-full h-full flex items-center justify-center"
+            className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-2 w-full h-full flex items-center justify-center [&_.diagram-content]:!max-w-full"
             style={{ maxWidth: '100%', maxHeight: '100%' }}
           >
             <DiagramRenderer
