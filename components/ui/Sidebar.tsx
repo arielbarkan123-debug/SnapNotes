@@ -57,7 +57,7 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
 
   // Prefetch all navigation routes on mount
   useEffect(() => {
-    const routes = ['/dashboard', '/review', '/practice', '/homework', '/progress', '/exams', '/study-plan', '/prepare', '/settings']
+    const routes = ['/dashboard', '/courses', '/review', '/practice', '/homework', '/progress', '/exams', '/study-plan', '/prepare', '/settings']
     routes.forEach(route => {
       router.prefetch(route)
     })
@@ -118,6 +118,7 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
 
   const navItems = [
     { href: '/dashboard', icon: '🏠', label: t('nav.dashboard'), active: pathname === '/dashboard' },
+    { href: '/courses', icon: '📚', label: t('nav.courses'), active: isActive('/courses') },
     { href: '/review', icon: '🧠', label: t('nav.review'), active: isActive('/review') },
     { href: '/practice', icon: '🎯', label: t('nav.practice'), active: isActive('/practice') },
     { href: '/homework', icon: '📝', label: t('nav.homework'), active: isActive('/homework') },
