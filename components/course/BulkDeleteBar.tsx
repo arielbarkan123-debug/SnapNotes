@@ -3,7 +3,6 @@
 import { useState, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { useToast } from '@/contexts/ToastContext'
-import { sanitizeError } from '@/lib/utils/error-sanitizer'
 import Button from '@/components/ui/Button'
 import { Trash2, CheckSquare, Square } from 'lucide-react'
 
