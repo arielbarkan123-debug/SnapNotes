@@ -1,11 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { useCourses } from '@/hooks'
+import { type Course } from '@/types'
 import CourseCard, { CourseCardSkeleton } from '@/components/course/CourseCard'
-import { Search, ArrowUpDown, ChevronLeft } from 'lucide-react'
+import CreateCourseModal from '@/components/course/CreateCourseModal'
+import EditCourseModal from '@/components/course/EditCourseModal'
+import BulkDeleteBar from '@/components/course/BulkDeleteBar'
+import { Search, ArrowUpDown, ChevronLeft, Plus, CheckSquare } from 'lucide-react'
+
+// Lazy load UploadModal
+const UploadModal = dynamic(
+  () => import('@/components/upload/UploadModal'),
+  { ssr: false }
+)
 
 export default function CoursesPage() {
   const t = useTranslations('courses')
@@ -25,12 +36,79 @@ export default function CoursesPage() {
 
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set())
 
+  // Modal states
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [editCourse, setEditCourse] = useState<Course | null>(null)
+  const [uploadForCourse, setUploadForCourse] = useState<{ id: string; title: string } | null>(null)
+
+  // Selection state
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  const visibleCourses = filteredCourses.filter(c => !deletedIds.has(c.id))
+
   const handleDelete = (courseId: string) => {
     setDeletedIds(prev => new Set(prev).add(courseId))
     mutate()
   }
 
-  const visibleCourses = filteredCourses.filter(c => !deletedIds.has(c.id))
+  const handleEdit = useCallback((course: Course) => {
+    setEditCourse(course)
+  }, [])
+
+  const handleEditUpdated = useCallback(() => {
+    mutate()
+  }, [mutate])
+
+  const handleOpenUploadForCreate = useCallback(() => {
+    setShowUploadModal(true)
+  }, [])
+
+  const handleOpenUploadForCourse = useCallback((courseId: string, courseTitle: string) => {
+    setUploadForCourse({ id: courseId, title: courseTitle })
+  }, [])
+
+  // Selection handlers
+  const handleToggleSelect = useCallback((courseId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(courseId)) {
+        next.delete(courseId)
+      } else {
+        next.add(courseId)
+      }
+      return next
+    })
+  }, [])
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedIds(new Set(visibleCourses.map(c => c.id)))
+  }, [visibleCourses])
+
+  const handleDeselectAll = useCallback(() => {
+    setSelectedIds(new Set())
+  }, [])
+
+  const handleBulkDeleteComplete = useCallback((ids: string[]) => {
+    setDeletedIds(prev => {
+      const next = new Set(prev)
+      ids.forEach(id => next.add(id))
+      return next
+    })
+    setSelectedIds(new Set())
+    setSelectionMode(false)
+    mutate()
+  }, [mutate])
+
+  const toggleSelectionMode = useCallback(() => {
+    setSelectionMode(prev => {
+      if (prev) {
+        setSelectedIds(new Set())
+      }
+      return !prev
+    })
+  }, [])
 
   if (isLoading) {
     return <LoadingSkeleton />
@@ -59,20 +137,46 @@ export default function CoursesPage() {
   return (
     <div className="container mx-auto px-4 py-6 sm:py-8 pb-24 sm:pb-8">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6 sm:mb-8">
-        <Link
-          href="/dashboard"
-          className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-            {t('pageTitle')}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {t('pageSubtitle', { count: totalCount })}
-          </p>
+      <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard"
+            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+              {t('pageTitle')}
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              {t('pageSubtitle', { count: totalCount })}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Select Toggle */}
+          {visibleCourses.length > 0 && (
+            <button
+              onClick={toggleSelectionMode}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                selectionMode
+                  ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              <CheckSquare className="w-4 h-4" />
+              <span className="hidden sm:inline">{selectionMode ? t('cancelSelect') : t('select')}</span>
+            </button>
+          )}
+          {/* Create Course Button */}
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">{t('createCourse')}</span>
+          </button>
         </div>
       </div>
 
@@ -125,6 +229,10 @@ export default function CoursesPage() {
               key={course.id}
               course={course}
               onDelete={handleDelete}
+              onEdit={handleEdit}
+              selectionMode={selectionMode}
+              isSelected={selectedIds.has(course.id)}
+              onToggleSelect={handleToggleSelect}
             />
           ))}
         </div>
@@ -153,13 +261,64 @@ export default function CoursesPage() {
           <p className="text-gray-500 dark:text-gray-400 mb-4">
             {tDash('noCoursesDescription')}
           </p>
-          <Link
-            href="/dashboard"
+          <button
+            onClick={() => setShowCreateModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
           >
-            {t('backToDashboard')}
-          </Link>
+            <Plus className="w-4 h-4" />
+            {t('createCourse')}
+          </button>
         </div>
+      )}
+
+      {/* Bulk Delete Bar */}
+      {selectionMode && (
+        <BulkDeleteBar
+          selectedIds={selectedIds}
+          totalCount={visibleCourses.length}
+          onSelectAll={handleSelectAll}
+          onDeselectAll={handleDeselectAll}
+          onDeleteComplete={handleBulkDeleteComplete}
+        />
+      )}
+
+      {/* Create Course Modal */}
+      <CreateCourseModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onOpenUpload={handleOpenUploadForCreate}
+      />
+
+      {/* Edit Course Modal */}
+      <EditCourseModal
+        isOpen={!!editCourse}
+        onClose={() => setEditCourse(null)}
+        course={editCourse}
+        onUpdated={handleEditUpdated}
+        onOpenUpload={handleOpenUploadForCourse}
+      />
+
+      {/* Upload Modal (for new AI course) */}
+      {showUploadModal && (
+        <UploadModal
+          isOpen={showUploadModal}
+          onClose={() => setShowUploadModal(false)}
+        />
+      )}
+
+      {/* Upload Modal (for adding material to existing course) */}
+      {uploadForCourse && (
+        <UploadModal
+          isOpen={!!uploadForCourse}
+          onClose={() => setUploadForCourse(null)}
+          mode="addToCourse"
+          courseId={uploadForCourse.id}
+          courseTitle={uploadForCourse.title}
+          onMaterialAdded={() => {
+            setUploadForCourse(null)
+            mutate()
+          }}
+        />
       )}
     </div>
   )

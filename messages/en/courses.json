@@ -7,5 +7,46 @@
   "searchResults": "{count, plural, =0 {No results} =1 {1 result} other {# results}} for \"{query}\"",
   "noSearchResults": "No courses found",
   "noSearchResultsDesc": "Try a different search term",
-  "clearSearch": "Clear search"
+  "clearSearch": "Clear search",
+
+  "createCourse": "Create Course",
+  "createModal": {
+    "title": "Create a New Course",
+    "tabAI": "AI Upload",
+    "tabManual": "Manual",
+    "aiDesc": "Upload notes, photos, or documents and let AI create your course.",
+    "manualDesc": "Start with an empty course and add material later.",
+    "titleLabel": "Course Title",
+    "titlePlaceholder": "e.g. Algebra Chapter 3",
+    "create": "Create",
+    "creating": "Creating..."
+  },
+
+  "select": "Select",
+  "cancelSelect": "Cancel",
+  "bulkDelete": {
+    "selected": "{count} selected",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "deleteSelected": "Delete Selected",
+    "confirmTitle": "Delete Courses",
+    "confirmText": "Are you sure you want to delete {count, plural, =1 {this course} other {these # courses}}? This cannot be undone.",
+    "deleting": "Deleting...",
+    "success": "{count, plural, =1 {1 course deleted} other {# courses deleted}}",
+    "partialFail": "{success} deleted, {failed} failed"
+  },
+
+  "edit": {
+    "title": "Edit Course",
+    "renameLabel": "Course Title",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Title updated",
+    "lessons": "Lessons",
+    "noLessons": "No lessons yet. Add material to get started.",
+    "removeLesson": "Remove",
+    "removeLessonConfirm": "Remove this lesson?",
+    "lessonRemoved": "Lesson removed",
+    "addMaterial": "Add Material"
+  }
 }

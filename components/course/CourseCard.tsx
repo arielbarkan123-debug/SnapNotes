@@ -13,6 +13,10 @@ import DeleteConfirmModal from './DeleteConfirmModal'
 interface CourseCardProps {
   course: Course
   onDelete?: (courseId: string) => void
+  onEdit?: (course: Course) => void
+  selectionMode?: boolean
+  isSelected?: boolean
+  onToggleSelect?: (courseId: string) => void
 }
 
 // Subject detection for gradient colors (no icons)
@@ -195,7 +199,7 @@ function truncateText(text: string | null | undefined, maxLength: number): strin
   }
 }
 
-export default function CourseCard({ course, onDelete }: CourseCardProps) {
+export default function CourseCard({ course, onDelete, onEdit, selectionMode, isSelected, onToggleSelect }: CourseCardProps) {
   const router = useRouter()
   const { success, error: showError } = useToast()
   const t = useTranslations('dashboard.courseCard')
@@ -265,81 +269,183 @@ export default function CourseCard({ course, onDelete }: CourseCardProps) {
     }
   }
 
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    onEdit?.(course)
+  }
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (selectionMode) {
+      e.preventDefault()
+      onToggleSelect?.(course.id)
+    }
+  }
+
   return (
     <>
-      <div className="group relative bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-200 hover:-translate-y-1">
-        {/* Delete Button */}
-        <button
-          onClick={handleDeleteClick}
-          className="absolute top-2 right-2 z-10 p-2 bg-white/90 dark:bg-gray-800/90 rounded-full shadow-md sm:opacity-0 sm:group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all duration-200"
-          aria-label="Delete course"
-        >
-          <svg
-            className="w-4 h-4 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            />
-          </svg>
-        </button>
-
-        <Link href={`/course/${course.id}`} className="block">
-          {/* Cover Image - AI generated or Gradient Fallback */}
-          <div className={`relative aspect-[4/3] w-full overflow-hidden ${showFallback ? `bg-gradient-to-br ${subject.gradient}` : 'bg-gray-200 dark:bg-gray-700'}`}>
-            {/* Fallback: Only show gradient with decorative elements when no image URL or image failed */}
-            {showFallback && (
-              <div className="absolute inset-0 opacity-20">
-                <div className="absolute top-4 left-4 w-20 h-20 rounded-full bg-white/30" />
-                <div className="absolute bottom-8 right-8 w-32 h-32 rounded-full bg-white/20" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full bg-white/10" />
-              </div>
-            )}
-
-            {/* AI-generated cover image - show directly without opacity transition */}
-            {course.cover_image_url && !imageError && (
-              <Image
-                src={course.cover_image_url}
-                alt={course.title}
-                fill
-                className="object-cover group-hover:scale-105 transition-transform duration-300"
-                sizes="(max-width: 768px) 100vw, 300px"
-                onError={() => setImageError(true)}
-              />
-            )}
-            {/* Lesson count badge */}
-            {lessonCount > 0 && (
-              <div className="absolute bottom-3 left-3 bg-black/30 backdrop-blur-sm text-white text-xs font-medium px-2 py-1 rounded-full">
-                {lessonCountText}
-              </div>
-            )}
+      <div
+        className={`group relative bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden transition-all duration-200 ${
+          selectionMode
+            ? `cursor-pointer ${isSelected ? 'ring-2 ring-violet-500 shadow-violet-200 dark:shadow-violet-900/30' : 'hover:shadow-lg'}`
+            : 'hover:shadow-lg hover:-translate-y-1'
+        }`}
+        onClick={handleCardClick}
+      >
+        {/* Selection Checkbox Overlay */}
+        {selectionMode && (
+          <div className="absolute top-2 left-2 z-10">
+            <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
+              isSelected
+                ? 'bg-violet-600 border-violet-600'
+                : 'bg-white/90 dark:bg-gray-800/90 border-gray-300 dark:border-gray-500'
+            }`}>
+              {isSelected && (
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
           </div>
+        )}
 
-          {/* Content */}
-          <div className="p-4">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors line-clamp-2">
-              {truncateText(course.title, 50)}
-            </h3>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {formatDate(course.created_at, locale)}
-              </p>
-              {/* Difficulty Badge */}
-              <div
-                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${difficulty.bgColor} ${difficulty.color}`}
-                title={`${difficultyLabel} - ${lessonCountText}`}
+        {/* Action Buttons (normal mode) */}
+        {!selectionMode && (
+          <div className="absolute top-2 right-2 z-10 flex gap-1">
+            {/* Edit Button */}
+            {onEdit && (
+              <button
+                onClick={handleEditClick}
+                className="p-2 bg-white/90 dark:bg-gray-800/90 rounded-full shadow-md sm:opacity-0 sm:group-hover:opacity-100 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-all duration-200"
+                aria-label="Edit course"
               >
-                <span>{difficulty.icon}</span>
-                <span>{difficultyLabel}</span>
+                <svg
+                  className="w-4 h-4 text-gray-500 hover:text-violet-600 dark:text-gray-400 dark:hover:text-violet-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+              </button>
+            )}
+            {/* Delete Button */}
+            <button
+              onClick={handleDeleteClick}
+              className="p-2 bg-white/90 dark:bg-gray-800/90 rounded-full shadow-md sm:opacity-0 sm:group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all duration-200"
+              aria-label="Delete course"
+            >
+              <svg
+                className="w-4 h-4 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {selectionMode ? (
+          // In selection mode, no Link — just clickable card
+          <div>
+            <div className={`relative aspect-[4/3] w-full overflow-hidden ${showFallback ? `bg-gradient-to-br ${subject.gradient}` : 'bg-gray-200 dark:bg-gray-700'}`}>
+              {showFallback && (
+                <div className="absolute inset-0 opacity-20">
+                  <div className="absolute top-4 left-4 w-20 h-20 rounded-full bg-white/30" />
+                  <div className="absolute bottom-8 right-8 w-32 h-32 rounded-full bg-white/20" />
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full bg-white/10" />
+                </div>
+              )}
+              {course.cover_image_url && !imageError && (
+                <Image
+                  src={course.cover_image_url}
+                  alt={course.title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 300px"
+                  onError={() => setImageError(true)}
+                />
+              )}
+              {lessonCount > 0 && (
+                <div className="absolute bottom-3 left-3 bg-black/30 backdrop-blur-sm text-white text-xs font-medium px-2 py-1 rounded-full">
+                  {lessonCountText}
+                </div>
+              )}
+            </div>
+            <div className="p-4">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
+                {truncateText(course.title, 50)}
+              </h3>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {formatDate(course.created_at, locale)}
+                </p>
+                <div
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${difficulty.bgColor} ${difficulty.color}`}
+                >
+                  <span>{difficulty.icon}</span>
+                  <span>{difficultyLabel}</span>
+                </div>
               </div>
             </div>
           </div>
-        </Link>
+        ) : (
+          <Link href={`/course/${course.id}`} className="block">
+            <div className={`relative aspect-[4/3] w-full overflow-hidden ${showFallback ? `bg-gradient-to-br ${subject.gradient}` : 'bg-gray-200 dark:bg-gray-700'}`}>
+              {showFallback && (
+                <div className="absolute inset-0 opacity-20">
+                  <div className="absolute top-4 left-4 w-20 h-20 rounded-full bg-white/30" />
+                  <div className="absolute bottom-8 right-8 w-32 h-32 rounded-full bg-white/20" />
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full bg-white/10" />
+                </div>
+              )}
+              {course.cover_image_url && !imageError && (
+                <Image
+                  src={course.cover_image_url}
+                  alt={course.title}
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  sizes="(max-width: 768px) 100vw, 300px"
+                  onError={() => setImageError(true)}
+                />
+              )}
+              {lessonCount > 0 && (
+                <div className="absolute bottom-3 left-3 bg-black/30 backdrop-blur-sm text-white text-xs font-medium px-2 py-1 rounded-full">
+                  {lessonCountText}
+                </div>
+              )}
+            </div>
+            <div className="p-4">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors line-clamp-2">
+                {truncateText(course.title, 50)}
+              </h3>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {formatDate(course.created_at, locale)}
+                </p>
+                <div
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${difficulty.bgColor} ${difficulty.color}`}
+                  title={`${difficultyLabel} - ${lessonCountText}`}
+                >
+                  <span>{difficulty.icon}</span>
+                  <span>{difficultyLabel}</span>
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}
