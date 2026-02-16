@@ -13,8 +13,9 @@ import type {
   ConversationMessage,
   TutorDiagramState,
 } from './types'
-import { ensureDiagramInResponse, generateDiagramFromTutorMessage } from './diagram-generator'
+// Old diagram-generator imports removed — engine is now the only diagram source
 import { validateSchema, autoCorrectDiagram, type DiagramType as VisualDiagramType, type StructuredDiagram, SCHEMA_VERSION } from '@/lib/visual-learning'
+import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
 
 // ============================================================================
 // Configuration
@@ -502,11 +503,20 @@ IMPORTANT: Long division must show EVERY step including when the divisor doesn't
 ⚠️ CRITICAL: NEVER use ASCII art (like "8 | 7,248" or text-based division layouts) for division problems. ALWAYS use the JSON diagram structure above.`
 
 /**
- * Build the complete system prompt with optional language instruction
+ * Build the complete system prompt with optional language and grade context
  */
-function buildSocraticTutorSystem(language?: 'en' | 'he'): string {
+function buildSocraticTutorSystem(language?: 'en' | 'he', grade?: string, studySystem?: string): string {
   const languageInstruction = buildLanguageInstruction(language)
-  return SOCRATIC_TUTOR_SYSTEM_BASE + languageInstruction
+
+  let gradeInstruction = ''
+  if (grade || studySystem) {
+    const parts: string[] = []
+    if (grade) parts.push(`grade level: ${grade}`)
+    if (studySystem && studySystem !== 'general' && studySystem !== 'other') parts.push(`education system: ${studySystem}`)
+    gradeInstruction = `\n\n## Student Profile\nThis student is at ${parts.join(', ')}. Adjust your explanation complexity, vocabulary, and examples to be appropriate for this level.`
+  }
+
+  return SOCRATIC_TUTOR_SYSTEM_BASE + gradeInstruction + languageInstruction
 }
 
 const INITIAL_GREETING_PROMPT = `The student has just uploaded their homework question. Generate a warm, encouraging opening message.
@@ -535,9 +545,18 @@ Keep it brief - 2-3 sentences max.`
  */
 export async function generateInitialGreeting(context: TutorContext): Promise<TutorResponse> {
   const client = getAnthropicClient()
+  const questionText = context.questionAnalysis.questionText
+
+  // Fire engine diagram in parallel with AI call (if topic needs it)
+  const enginePromise = shouldUseEngine(questionText)
+    ? tryEngineDiagram(questionText).catch((err) => {
+        console.warn('[TutorEngine] Engine diagram failed for greeting:', err)
+        return undefined
+      })
+    : Promise.resolve(undefined)
 
   const prompt = INITIAL_GREETING_PROMPT
-    .replace('{questionText}', context.questionAnalysis.questionText)
+    .replace('{questionText}', questionText)
     .replace('{topic}', context.questionAnalysis.topic)
     .replace('{difficulty}', String(context.questionAnalysis.difficultyEstimate))
     .replace('{comfortLevel}', context.session.comfort_level || 'unknown')
@@ -546,33 +565,35 @@ export async function generateInitialGreeting(context: TutorContext): Promise<Tu
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
-    system: buildSocraticTutorSystem(context.language),
+    system: buildSocraticTutorSystem(context.language, context.grade, context.studySystem),
     messages: [{ role: 'user', content: prompt }],
   })
 
   const tutorResponse = parseTutorResponse(response)
 
-  // Ensure diagram is present for physics/math problems
-  const originalDiagram = tutorResponse.diagram
-  tutorResponse.diagram = ensureDiagramInResponse(
-    context.questionAnalysis,
-    tutorResponse.diagram
-  )
-
-  // ENHANCED: If no diagram yet, also check the tutor's response message for division
-  // This catches cases where the original question didn't have "divide" keywords
-  // but the tutor's explanation does
-  if (!tutorResponse.diagram && containsAsciiDiagram(tutorResponse.message)) {
-    const diagramFromMessage = generateDiagramFromTutorMessage(tutorResponse.message)
-    if (diagramFromMessage) {
-      tutorResponse.diagram = diagramFromMessage
-    }
-  }
-
-  // If we generated a fallback diagram and message has ASCII diagrams, clean them up
-  if (!originalDiagram && tutorResponse.diagram && containsAsciiDiagram(tutorResponse.message)) {
+  // Strip any ASCII diagrams from the AI response (we use the engine diagram instead)
+  if (containsAsciiDiagram(tutorResponse.message)) {
     tutorResponse.message = stripAsciiDiagrams(tutorResponse.message)
   }
+
+  // Await engine result (was started in parallel with the AI call above)
+  // The engine is the ONLY diagram source — clear any AI-returned diagram
+  delete tutorResponse.diagram  // Don't use AI's old-format diagram
+
+  const engineResult = await enginePromise
+  if (engineResult) {
+    tutorResponse.diagram = {
+      type: 'engine_image',
+      visibleStep: 0,
+      data: {
+        imageUrl: engineResult.imageUrl,
+        pipeline: engineResult.pipeline,
+        overlay: engineResult.overlay,
+        qaVerdict: engineResult.qaVerdict,
+      },
+    }
+  }
+  // If engine failed, no diagram is shown (better than broken old-format diagram)
 
   return tutorResponse
 }
@@ -630,7 +651,7 @@ export async function generateTutorResponse(
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
-    system: buildSocraticTutorSystem(context.language),
+    system: buildSocraticTutorSystem(context.language, context.grade, context.studySystem),
     messages,
   })
 
@@ -642,25 +663,9 @@ export async function generateTutorResponse(
     tutorResponse.diagram.conversationTurn = conversationTurn
   }
 
-  // Ensure diagram is present for physics/math problems (fallback generation)
-  const originalDiagram = tutorResponse.diagram
-  tutorResponse.diagram = ensureDiagramInResponse(
-    context.questionAnalysis,
-    tutorResponse.diagram
-  )
-
-  // ENHANCED: If no diagram yet, also check the tutor's response message for division
-  // This catches cases where the original question didn't have "divide" keywords
-  // but the tutor's explanation does (e.g., "7,248 crayons ÷ 8 boxes")
-  if (!tutorResponse.diagram && containsAsciiDiagram(tutorResponse.message)) {
-    const diagramFromMessage = generateDiagramFromTutorMessage(tutorResponse.message)
-    if (diagramFromMessage) {
-      tutorResponse.diagram = diagramFromMessage
-    }
-  }
-
-  // If we generated a fallback diagram and message has ASCII diagrams, clean them up
-  if (!originalDiagram && tutorResponse.diagram && containsAsciiDiagram(tutorResponse.message)) {
+  // Strip any ASCII diagrams from the AI response
+  // (diagrams are only generated once at session start via the engine)
+  if (containsAsciiDiagram(tutorResponse.message)) {
     tutorResponse.message = stripAsciiDiagrams(tutorResponse.message)
   }
 
@@ -833,7 +838,7 @@ ${questionAnalysis.solutionApproach}
 - Comfort level: ${session.comfort_level || 'not specified'}
 - Initial attempt: ${session.initial_attempt || 'none provided'}
 - Hints used: ${context.hintsUsed}/4
-- Current progress: ${context.currentProgress}%
+- Current progress: ${context.currentProgress}%${context.grade ? `\n- Grade: ${context.grade}` : ''}${context.studySystem && context.studySystem !== 'general' && context.studySystem !== 'other' ? `\n- Study system: ${context.studySystem}` : ''}
 
 ${getComfortLevelGuidance(session.comfort_level || 'some_idea')}
 

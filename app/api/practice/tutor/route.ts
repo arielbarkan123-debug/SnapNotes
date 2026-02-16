@@ -2,12 +2,12 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 import type { TutorDiagramState, PedagogicalIntent, HintLevel } from '@/lib/homework/types'
-import { generateDiagramFromTutorMessage } from '@/lib/homework/diagram-generator'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import { getFilteredDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-schemas'
+import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
 
-// Allow 60 seconds for response generation
-export const maxDuration = 60
+// Allow 120 seconds — engine diagram generation can take 10-60s on top of AI response
+export const maxDuration = 120
 
 const AI_MODEL = 'claude-sonnet-4-5-20250929'
 const MAX_TOKENS = 2048
@@ -219,6 +219,15 @@ ${wasCorrect === false ? '**The student answered incorrectly and is asking for h
       })
     }
 
+    // Fire engine diagram generation in parallel with AI call (if topic needs it).
+    // This saves 10-60s vs running them sequentially.
+    const enginePromise = shouldUseEngine(question)
+      ? tryEngineDiagram(question).catch((err) => {
+          console.warn('[PracticeTutor] Engine diagram failed, using fallback:', err)
+          return undefined
+        })
+      : Promise.resolve(undefined)
+
     // Call AI
     const client = getAnthropicClient()
     const response = await client.messages.create({
@@ -255,17 +264,24 @@ ${wasCorrect === false ? '**The student answered incorrectly and is asking for h
       }
     }
 
-    // Try to generate diagram if none was returned
-    if (!tutorResponse.diagram) {
-      try {
-        const generatedDiagram = generateDiagramFromTutorMessage(tutorResponse.message)
-        if (generatedDiagram) {
-          tutorResponse.diagram = generatedDiagram
-        }
-      } catch (error) {
-        console.warn('[PracticeTutor] Diagram generation failed:', error)
+    // Await engine result (was started in parallel with the AI call above)
+    // The engine is the ONLY diagram source — clear any AI-returned diagram
+    delete tutorResponse.diagram  // Don't use AI's old-format diagram
+
+    const engineResult = await enginePromise
+    if (engineResult) {
+      tutorResponse.diagram = {
+        type: 'engine_image',
+        visibleStep: 0,
+        data: {
+          imageUrl: engineResult.imageUrl,
+          pipeline: engineResult.pipeline,
+          overlay: engineResult.overlay,
+          qaVerdict: engineResult.qaVerdict,
+        },
       }
     }
+    // If engine failed, no diagram is shown (better than broken old-format diagram)
 
     return NextResponse.json({
       success: true,

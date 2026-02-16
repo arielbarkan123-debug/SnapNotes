@@ -1,0 +1,251 @@
+import Anthropic from '@anthropic-ai/sdk';
+import { generateRecraftImage, type RecraftStyle } from './recraft-client';
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY!,
+});
+
+export interface OverlayLabel {
+  text: string;
+  x: number;
+  y: number;
+  targetX: number;
+  targetY: number;
+}
+
+export interface RecraftResult {
+  imageUrl: string;
+  overlay?: OverlayLabel[];
+}
+
+export interface RecraftError {
+  error: string;
+}
+
+// Topics that benefit from 3D cutaway rendering
+const NEEDS_3D = /\b(anatomy|cross.?section|cutaway|internal structure|inside of|layers of|interior|dissect)/i;
+
+// Topics that are best as clean 2D digital illustration
+const PREFERS_2D = /\b(cycle|process|chain|web|flow|stages|system|ecosystem|solar system|planet|molecule|atom|dna|rna|cell|photosynthesis|respiration|mitosis|meiosis|tectonic|volcano|rock cycle|water cycle|carbon cycle|nitrogen cycle|food chain|food web|life cycle|circuit)/i;
+
+/**
+ * Determine the best Recraft style and prompt strategy for a topic.
+ */
+function classifyTopic(question: string): { style: RecraftStyle; is3D: boolean } {
+  const lower = question.toLowerCase();
+
+  if (NEEDS_3D.test(lower)) {
+    return { style: 'realistic_image', is3D: true };
+  }
+
+  if (PREFERS_2D.test(lower)) {
+    return { style: 'digital_illustration', is3D: false };
+  }
+
+  // Default to digital_illustration — cleaner for educational content
+  return { style: 'digital_illustration', is3D: false };
+}
+
+const REWRITE_PROMPT_2D = `You are an expert at writing image generation prompts for educational illustrations.
+
+Rewrite the student's question into a prompt for a CLEAN 2D ILLUSTRATION. Max 500 characters.
+
+CRITICAL: The image must contain ZERO text. No letters, numbers, labels, annotations, or writing of any kind. Labels will be added as a separate overlay AFTER the image is generated. The image is ONLY the visual — pure illustration, nothing else.
+
+STYLE RULES:
+- Flat, clean 2D digital illustration with bold outlines and flat colors
+- Simple vector-like shapes, clear distinct colors for each part/stage/component
+- Show ALL key parts of the subject, each visually distinct and identifiable
+- Pure solid white background, no decorative elements
+- No 3D effects, no shadows, no perspective
+
+STRUCTURE:
+- Cycles → circular flow with arrows between stages
+- Systems → components arranged showing their spatial relationship
+- Chains → connected stages left-to-right or top-to-bottom
+- Anatomy → cross-section showing internal parts in distinct colors
+
+DO NOT include words like "labeled", "annotated", "with text", "with names" in the prompt. The image must be purely visual.
+
+EXAMPLES:
+- "plant cell" → "Clean 2D cross-section of a plant cell showing cell wall, membrane, nucleus, chloroplasts, mitochondria, vacuole, each organelle in a distinct color with bold outlines, flat style, white background"
+- "water cycle" → "Flat 2D illustration of the water cycle showing ocean, rising water vapor, cloud formation, rain falling on mountains, rivers flowing back to ocean, each stage in distinct blue tones, arrows showing flow direction, white background"
+- "food chain" → "Clean 2D illustration of a forest food chain with sun, grass, grasshopper, frog, snake, eagle connected by arrows, each organism clearly drawn in distinct colors, white background"
+
+Original question: "{QUESTION}"
+
+Return ONLY the rewritten prompt. Do NOT include "no text" or "no labels" — that is handled separately.`;
+
+const REWRITE_PROMPT_3D = `You are an expert at writing image generation prompts for educational 3D models.
+
+Rewrite the student's question into a prompt for a photorealistic 3D CUTAWAY MODEL. Max 500 characters.
+
+CRITICAL: The image must contain ZERO text. No letters, numbers, labels, annotations, or writing of any kind. Labels will be added as a separate overlay AFTER the image is generated. The image is ONLY the visual — pure 3D model, nothing else.
+
+STYLE RULES:
+- Photorealistic 3D cutaway model, like a museum exhibit piece or medical teaching model
+- Clean cross-section cut revealing internal layers, organs, or components
+- Vibrant distinct colors for each part — easy to distinguish visually
+- Studio product photography lighting, isolated on pure solid white background
+- No surroundings, table, surface, props, or environment
+
+EXAMPLES:
+- "anatomy of the heart" → "Photorealistic 3D cutaway medical model of the human heart showing chambers, valves, aorta, and blood vessels in distinct red and blue tones, clean cross-section revealing interior structure, studio lighting, pure white background"
+- "inside of a volcano" → "Photorealistic 3D cutaway geological model of a volcano showing magma chamber, conduit, lava flow, layers of rock and ash, cross-section view, studio lighting, pure white background"
+
+Original question: "{QUESTION}"
+
+Return ONLY the rewritten prompt. Do NOT include "no text" or "no labels" — that is handled separately.`;
+
+const VISION_LABELING_PROMPT = `You are an expert scientific illustrator placing precise labels on an educational image.
+
+The student asked: "{QUESTION}"
+
+Your job: identify every key structure/component visible in this image and place labels for a student to learn from.
+
+For each label provide:
+1. "text" — the correct scientific/educational name (concise: 1-3 words max)
+2. "x", "y" — where the label TEXT goes (percentage from top-left corner)
+3. "targetX", "targetY" — where the leader line POINTS TO on the actual structure (percentage)
+
+LABEL PLACEMENT RULES:
+- Place labels OUTSIDE the main illustration, in the margins
+- Left-side labels: x between 2–12
+- Right-side labels: x between 88–98
+- Top labels: y between 2–10
+- Bottom labels: y between 90–98
+- Distribute labels evenly around ALL four sides — don't cluster them all on one side
+- Each label's y should be spaced at least 6 units from the next label on the same side
+- The leader line (x,y → targetX,targetY) must point to the CENTER of the actual structure in the image
+- targetX and targetY should be where the structure actually IS in the image (typically 25–75 range)
+
+CONTENT RULES:
+- Use correct scientific terminology appropriate for a student
+- Label ALL major visible structures (typically 6–12 labels for a complete diagram)
+- Be specific: "Left Atrium" not just "Chamber", "Cornea" not just "Front part"
+- If a structure has sub-parts visible, label the most important ones
+- Order labels clockwise starting from top-left for consistency
+
+Return ONLY a valid JSON array. No explanation, no markdown fences, no text before or after:
+[{"text": "Cornea", "x": 5, "y": 15, "targetX": 38, "targetY": 42}]`;
+
+/**
+ * Generate a realistic/illustrated diagram via Recraft + Claude Vision labeling.
+ *
+ * Pipeline:
+ * 1. Classify topic → pick 2D illustration or 3D cutaway
+ * 2. Claude rewrites the question into an optimal image generation prompt
+ * 3. Recraft generates the image (no text, no labels, clean background)
+ * 4. Claude Vision analyzes the image and places educational labels as JSON overlay
+ */
+export async function generateRecraftDiagram(
+  question: string
+): Promise<RecraftResult | RecraftError> {
+  const { style, is3D } = classifyTopic(question);
+  const rewriteTemplate = is3D ? REWRITE_PROMPT_3D : REWRITE_PROMPT_2D;
+
+  console.log(`[Recraft] Style: ${style}, 3D: ${is3D}`);
+
+  // Step 1: Rewrite prompt for clean image generation
+  let cleanPrompt: string;
+  try {
+    const rewriteMsg = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 400,
+      messages: [
+        {
+          role: 'user',
+          content: rewriteTemplate.replace('{QUESTION}', question),
+        },
+      ],
+    });
+    const rewriteText = rewriteMsg.content.find((b) => b.type === 'text');
+    cleanPrompt =
+      rewriteText && rewriteText.type === 'text'
+        ? rewriteText.text.trim().slice(0, 950)
+        : buildFallbackPrompt(question, is3D);
+  } catch {
+    cleanPrompt = buildFallbackPrompt(question, is3D);
+  }
+
+  console.log(`[Recraft] Prompt: ${cleanPrompt.slice(0, 120)}...`);
+
+  // Step 2: Generate image with Recraft
+  let imageUrl: string;
+  try {
+    const image = await generateRecraftImage({
+      prompt: cleanPrompt,
+      style,
+      size: '1024x1024',
+      format: 'png',
+      no_text: true,
+      negative_prompt: 'text, labels, letters, words, numbers, writing, annotations, captions, watermark, signature, title, heading',
+    });
+    imageUrl = image.url;
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : 'Recraft generation failed',
+    };
+  }
+
+  // Step 3: Claude Vision labels
+  let overlay: OverlayLabel[] | undefined;
+  try {
+    const imageResponse = await fetch(imageUrl);
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const base64Image = Buffer.from(imageBuffer).toString('base64');
+    const contentType = imageResponse.headers.get('content-type') || 'image/png';
+    const mediaType = (
+      ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(contentType)
+        ? contentType
+        : 'image/jpeg'
+    ) as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
+
+    const visionMessage = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2048,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: mediaType, data: base64Image },
+            },
+            {
+              type: 'text',
+              text: VISION_LABELING_PROMPT.replace(/\{QUESTION\}/g, question),
+            },
+          ],
+        },
+      ],
+    });
+
+    const visionText = visionMessage.content.find((b) => b.type === 'text');
+    if (visionText && visionText.type === 'text') {
+      let jsonStr = visionText.text.trim();
+      // Strip markdown fences if present
+      const jsonMatch = jsonStr.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
+      if (jsonMatch) jsonStr = jsonMatch[1].trim();
+      // Find the JSON array even if there's text around it
+      const arrayMatch = jsonStr.match(/\[[\s\S]*\]/);
+      if (arrayMatch) jsonStr = arrayMatch[0];
+      const parsed = JSON.parse(jsonStr) as OverlayLabel[];
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].text) {
+        overlay = parsed;
+      }
+    }
+  } catch (err) {
+    console.error('Vision overlay error:', err);
+    // Still return the image without labels
+  }
+
+  return { imageUrl, overlay };
+}
+
+function buildFallbackPrompt(question: string, is3D: boolean): string {
+  if (is3D) {
+    return `Photorealistic 3D cutaway model of ${question}, showing internal structure with distinct colors for each component, studio lighting, pure white background`.slice(0, 950);
+  }
+  return `Clean 2D digital illustration of ${question}, flat style, bold outlines, distinct colors for each component, white background`.slice(0, 950);
+}
