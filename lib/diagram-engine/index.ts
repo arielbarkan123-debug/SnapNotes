@@ -339,9 +339,12 @@ async function generateRecraftWithQA(
   question: string,
 ): Promise<DiagramResult | DiagramError> {
   const MAX_QA_RETRIES = 2;
+  console.log(`[generateRecraftWithQA] Starting for: "${question.slice(0, 80)}..."`);
 
   for (let qaRound = 0; qaRound <= MAX_QA_RETRIES; qaRound++) {
+    console.log(`[generateRecraftWithQA] QA round ${qaRound + 1}/${MAX_QA_RETRIES + 1}`);
     const recraftResult = await generateRecraftDiagram(question);
+    console.log(`[generateRecraftWithQA] Recraft result:`, 'error' in recraftResult ? recraftResult.error : 'success');
 
     if ('error' in recraftResult) {
       return { error: recraftResult.error, pipeline: 'recraft' };
