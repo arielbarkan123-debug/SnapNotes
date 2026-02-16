@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import dynamic from 'next/dynamic'
-import { type DiagramState, getDiagramTypeName } from './types'
+import { type DiagramState, getDiagramTypeName, isEngineDiagram } from './types'
 import DiagramRenderer from './DiagramRenderer'
 
 // Lazy load fullscreen view
@@ -50,10 +50,16 @@ export default function InlineDiagram({
 
   const { width, height } = SIZE_MAP[size]
 
+  // Engine-generated images don't have steps - they're just static images
+  const isEngineImage = isEngineDiagram(diagram)
+
   // Inline diagrams show fully revealed (all steps visible) for quick viewing.
   // Users can expand to fullscreen for the step-by-step experience.
-  const totalSteps = diagram.totalSteps ?? diagram.stepConfig?.length ?? 1
+  const totalSteps = isEngineImage ? 1 : (diagram.totalSteps ?? diagram.stepConfig?.length ?? 1)
   const inlineStep = currentStep ?? (totalSteps > 0 ? totalSteps - 1 : 0)
+
+  // Engine images don't need expand button or step controls
+  const shouldShowExpandButton = showExpandButton && !isEngineImage
 
   const handleOpenFullscreen = () => {
     // Fullscreen starts from step 0 for the full step-by-step experience
@@ -70,7 +76,7 @@ export default function InlineDiagram({
             {getDiagramTypeName(diagram.type)}
           </span>
 
-          {showExpandButton && (
+          {shouldShowExpandButton && (
             <button
               onClick={handleOpenFullscreen}
               className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
@@ -99,28 +105,30 @@ export default function InlineDiagram({
           />
         </div>
 
-        {/* Hint to expand for step-by-step view */}
-        {showExpandButton && totalSteps > 1 && (
+        {/* Hint to expand for step-by-step view (only for step-based diagrams) */}
+        {shouldShowExpandButton && totalSteps > 1 && (
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
             {lang === 'he' ? 'לחץ להגדלה לצפייה צעד-אחר-צעד' : 'Expand for step-by-step view'}
           </p>
         )}
       </div>
 
-      {/* Fullscreen Dialog */}
-      <FullScreenDiagramView
-        diagram={diagram}
-        isOpen={isFullscreen}
-        onClose={() => setIsFullscreen(false)}
-        initialStep={fullscreenStep}
-        language={lang}
-        stepConfig={diagram.stepConfig?.map((s, idx) => ({
-          step: 'step' in s ? (s as { step: number }).step : idx,
-          stepLabel: s.stepLabel || `Step ${idx + 1}`,
-          stepLabelHe: s.stepLabelHe,
-          showCalculation: typeof s.showCalculation === 'string' ? s.showCalculation : undefined,
-        }))}
-      />
+      {/* Fullscreen Dialog (only for step-based diagrams) */}
+      {!isEngineImage && (
+        <FullScreenDiagramView
+          diagram={diagram}
+          isOpen={isFullscreen}
+          onClose={() => setIsFullscreen(false)}
+          initialStep={fullscreenStep}
+          language={lang}
+          stepConfig={diagram.stepConfig?.map((s, idx) => ({
+            step: 'step' in s ? (s as { step: number }).step : idx,
+            stepLabel: s.stepLabel || `Step ${idx + 1}`,
+            stepLabelHe: s.stepLabelHe,
+            showCalculation: typeof s.showCalculation === 'string' ? s.showCalculation : undefined,
+          }))}
+        />
+      )}
     </>
   )
 }

@@ -44,6 +44,10 @@ export const MATH_DIAGRAM_TYPES = [
   'tree_diagram',
   'interactive_coordinate_plane',
   'equation_grapher',
+  'polynomial',
+  'radical',
+  'systems',
+  'inequality',
 ]
 
 // Chemistry diagram types
@@ -68,6 +72,12 @@ export const GEOMETRY_DIAGRAM_TYPES = [
 // These do NOT respond to external currentStep changes — they only accept initialStep (one-time).
 // Used to suppress outer step controls and let the component's own controls work.
 export const SELF_MANAGING_DIAGRAM_TYPES = new Set([
+  // Original entries
+  'long_division',
+  'equation',
+  'fraction',
+  'factoring',
+  'completing_square',
   'number_line',
   'coordinate_plane',
   'triangle',
@@ -76,7 +86,108 @@ export const SELF_MANAGING_DIAGRAM_TYPES = new Set([
   'tree_diagram',
   'interactive_coordinate_plane',
   'equation_grapher',
+  'polynomial',
+  'radical',
+  'systems',
+  'inequality',
+  // Math / general diagram components
+  'bar_model',
+  'sequence_diagram',
+  'histogram',
+  'fraction_multiplication_area',
+  'fraction_division_model',
+  'fraction_circle',
+  'fbd',
+  'free_body_diagram',
+  'dot_plot',
+  'double_number_line',
+  'conic_sections',
+  'complex_number_plane',
+  'box_plot',
+  'quadratic_graph',
+  'polynomial_graph',
+  'exponential_graph',
+  'logarithmic_graph',
+  'rational_function_graph',
+  'system_of_equations_graph',
+  'slope_triangle',
+  'scatter_plot_trend_line',
+  'two_way_frequency_table',
+  'pythagorean_theorem_diagram',
+  'transformation_diagram',
+  'tessellation_pattern',
+  'net_diagram_3d',
+  'orthographic_views_3d',
+  // Geometry components
+  'regular_polygon',
+  'triangle_angle_sum',
+  'transformations_composition',
+  'parallel_lines_transversal',
+  'triangle_similarity',
+  'vertical_angles',
+  'complementary_supplementary',
+  'law_of_sines_cosines',
+  'triangle_congruence',
+  'tangent_radius_perpendicularity',
+  'perpendicular_bisector_construction',
+  'angle_types',
+  'inscribed_angle_theorem',
+  'trapezoid',
+  'dilation_coordinate_plane',
+  'exterior_angle_theorem',
+  'rhombus',
+  'rotation_coordinate_plane',
+  'parallelogram',
+  'rectangle',
+  'square',
+  'triangle_geometry',
+  // Statistics / probability components
+  'measures_of_center',
+  'stem_and_leaf_plot',
+  'probability_tree',
+  'probability_distribution',
+  'binomial_distribution',
+  'normal_distribution',
+  'sampling_distribution',
+  'residual_plot',
+  'venn_diagram',
+  'sample_space_diagram',
+  // Elementary / visual model components
+  'scale_drawing',
+  'percent_bar_model',
+  'cross_section_diagram',
+  'place_value_chart',
+  'base_10_blocks',
+  'picture_graph',
+  'bar_graph',
+  'fraction_bar',
+  'fraction_number_line',
+  'multiplication_array',
+  'area_model_multiplication',
+  'scaled_bar_graph',
+  'equivalent_fraction_model',
+  'mixed_number_model',
+  'decimal_grid',
+  'volume_model',
+  'order_of_operations_tree',
+  'ratio_table',
+  'tape_diagram_ratio',
+  'counting_objects',
+  'ten_frame',
+  'part_part_whole',
+  'math_table',
+  // Advanced math components
+  'parametric_curve',
+  'polar_curve',
+  'vector_diagram',
+  'matrix_visualization',
+  'limit_visualization',
+  'derivative_tangent_line',
+  'integral_area',
 ])
+
+// Engine-generated image types (E2B/TikZ/Recraft pipeline)
+export const ENGINE_DIAGRAM_TYPES = ['engine_image']
 
 // Human-readable diagram type names
 export const DIAGRAM_TYPE_NAMES: Record<string, string> = {
@@ -119,6 +230,8 @@ export const DIAGRAM_TYPE_NAMES: Record<string, string> = {
   organelle: 'Organelle',
   dna: 'DNA Structure',
   process: 'Biological Process',
+  // Engine-generated image diagrams
+  engine_image: 'AI Generated Diagram',
   // Geometry diagrams (triangle and circle already defined in math section)
   square: 'Square',
   rectangle: 'Rectangle',
@@ -161,6 +274,13 @@ export function isBiologyDiagram(diagram: DiagramState): diagram is BiologyDiagr
  */
 export function isGeometryDiagram(diagram: DiagramState): diagram is GeometryDiagramState {
   return GEOMETRY_DIAGRAM_TYPES.includes(diagram.type as string)
+}
+
+/**
+ * Check if diagram is an engine-generated image (E2B/TikZ/Recraft)
+ */
+export function isEngineDiagram(diagram: DiagramState): boolean {
+  return ENGINE_DIAGRAM_TYPES.includes(diagram.type as string)
 }
 
 /**
