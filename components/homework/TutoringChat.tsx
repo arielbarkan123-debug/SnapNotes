@@ -8,6 +8,7 @@ import type { HomeworkSession, ConversationMessage, HintLevel } from '@/lib/home
 import {
   InlineDiagram,
   convertToDiagramState,
+  isEngineDiagram,
 } from './diagram'
 
 // ============================================================================
@@ -345,16 +346,25 @@ export default function TutoringChat({
     [isLoading, isSubmitting, onRequestHint]
   )
 
+  // Check if session has engine-generated diagrams (no step progress needed)
+  const hasEngineDiagram = session.conversation.some((msg) => {
+    if (!msg.diagram) return false
+    const diagramState = convertToDiagramState(msg.diagram)
+    return diagramState && isEngineDiagram(diagramState)
+  })
+
   return (
     <div className="flex h-full bg-gray-50 dark:bg-gray-900">
       {/* Main Chat Area */}
       <div className="flex flex-col w-full">
-        {/* Progress */}
-        <ChatProgressBar
-          currentStep={session.current_step}
-          totalSteps={session.total_estimated_steps || 5}
-          t={t}
-        />
+        {/* Progress - hidden for engine diagram sessions */}
+        {!hasEngineDiagram && (
+          <ChatProgressBar
+            currentStep={session.current_step}
+            totalSteps={session.total_estimated_steps || 5}
+            t={t}
+          />
+        )}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">

@@ -15,11 +15,13 @@ export {
   MATH_DIAGRAM_TYPES,
   CHEMISTRY_DIAGRAM_TYPES,
   BIOLOGY_DIAGRAM_TYPES,
+  ENGINE_DIAGRAM_TYPES,
   DIAGRAM_TYPE_NAMES,
   isPhysicsDiagram,
   isMathDiagram,
   isChemistryDiagram,
   isBiologyDiagram,
+  isEngineDiagram,
   getDiagramTypeName,
 } from './types'
 
