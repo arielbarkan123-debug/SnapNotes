@@ -2,7 +2,36 @@
 
 import { useState } from 'react'
 import { MathDiagramRenderer } from '@/components/math/MathDiagramRenderer'
+import EngineDiagramImage from '@/components/homework/diagram/EngineDiagramImage'
 import type { MathDiagramState } from '@/types/math'
+
+// Engine diagram test cases to verify pipeline badges
+const engineDiagrams = [
+  {
+    label: 'Recraft AI',
+    pipeline: 'recraft',
+    imageUrl: 'https://placehold.co/400x300/9333ea/white?text=Recraft+AI+Diagram',
+    overlay: [
+      { text: 'Label 1', x: 20, y: 20, targetX: 35, targetY: 35 },
+      { text: 'Label 2', x: 70, y: 60, targetX: 55, targetY: 50 },
+    ],
+  },
+  {
+    label: 'TikZ',
+    pipeline: 'tikz',
+    imageUrl: 'https://placehold.co/400x300/3b82f6/white?text=TikZ+Diagram',
+  },
+  {
+    label: 'LaTeX (E2B)',
+    pipeline: 'e2b-latex',
+    imageUrl: 'https://placehold.co/400x300/22c55e/white?text=LaTeX+Diagram',
+  },
+  {
+    label: 'Matplotlib (E2B)',
+    pipeline: 'e2b-matplotlib',
+    imageUrl: 'https://placehold.co/400x300/f97316/white?text=Matplotlib+Graph',
+  },
+]
 
 const diagrams: Array<{ label: string; diagram: MathDiagramState }> = [
   // 1. Box Plot
@@ -276,7 +305,41 @@ export default function TestDiagramsPage() {
           </button>
         </div>
 
-        {/* Diagram Grid */}
+        {/* Engine Diagrams Section */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            Engine-Generated Diagrams (with Pipeline Badges)
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            These diagrams show the pipeline badge in the top-right corner. No step controls should appear.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {engineDiagrams.map((d, i) => (
+              <div
+                key={`engine-${i}`}
+                className="border rounded-xl p-4 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"
+              >
+                <h3 className="text-sm font-mono mb-3 text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 pb-2">
+                  Engine: {d.label}
+                </h3>
+                <div className="overflow-hidden rounded-lg">
+                  <EngineDiagramImage
+                    imageUrl={d.imageUrl}
+                    pipeline={d.pipeline}
+                    overlay={d.overlay}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* React Component Diagrams */}
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            React Component Diagrams
+          </h2>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {diagrams.map((d, i) => (
             <div
