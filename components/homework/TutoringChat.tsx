@@ -109,6 +109,16 @@ function MessageBubble({
   const isTutor = message.role === 'tutor'
   const hasDiagram = isTutor && message.diagram
 
+  // Debug logging for diagram rendering
+  if (isTutor) {
+    console.log('[MessageBubble] Message:', {
+      role: message.role,
+      hasDiagram: !!message.diagram,
+      diagramType: message.diagram?.type,
+      diagramDataKeys: message.diagram?.data ? Object.keys(message.diagram.data) : 'no data',
+    })
+  }
+
   // Convert diagram to correct type if present
   const diagramState = hasDiagram ? convertToDiagramState(message.diagram!) : null
 
