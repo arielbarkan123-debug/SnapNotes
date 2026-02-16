@@ -648,6 +648,18 @@ export async function generateTutorResponse(
     content: `STUDENT: ${studentMessage}`,
   })
 
+  // Combine question + student message for diagram routing
+  // This ensures topics like "human eye labeled" are detected from the conversation
+  const diagramTopic = `${context.questionAnalysis.questionText} ${studentMessage}`
+
+  // Fire engine diagram in parallel with AI call (if topic needs it and no existing diagram)
+  const enginePromise = !previousDiagram && shouldUseEngine(diagramTopic)
+    ? tryEngineDiagram(diagramTopic).catch((err) => {
+        console.warn('[TutorEngine] Engine diagram failed for chat:', err)
+        return undefined
+      })
+    : Promise.resolve(undefined)
+
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
@@ -657,17 +669,29 @@ export async function generateTutorResponse(
 
   const tutorResponse = parseTutorResponse(response)
 
-  // Set diagram metadata if diagram was returned
-  if (tutorResponse.diagram) {
-    tutorResponse.diagram.evolutionMode = 'auto-advance'
-    tutorResponse.diagram.conversationTurn = conversationTurn
-  }
-
   // Strip any ASCII diagrams from the AI response
-  // (diagrams are only generated once at session start via the engine)
   if (containsAsciiDiagram(tutorResponse.message)) {
     tutorResponse.message = stripAsciiDiagrams(tutorResponse.message)
   }
+
+  // Await engine result (was started in parallel with the AI call above)
+  // The engine is the ONLY diagram source — clear any AI-returned diagram
+  delete tutorResponse.diagram  // Don't use AI's old-format diagram
+
+  const engineResult = await enginePromise
+  if (engineResult) {
+    tutorResponse.diagram = {
+      type: 'engine_image',
+      visibleStep: 0,
+      data: {
+        imageUrl: engineResult.imageUrl,
+        pipeline: engineResult.pipeline,
+        overlay: engineResult.overlay,
+        qaVerdict: engineResult.qaVerdict,
+      },
+    }
+  }
+  // If engine failed or previous diagram exists, no new diagram is shown
 
   return tutorResponse
 }
