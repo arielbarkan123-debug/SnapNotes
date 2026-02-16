@@ -11,6 +11,7 @@ import { analyzeQuestion, analyzeQuestionText } from '@/lib/homework/question-an
 import { analyzeReferences } from '@/lib/homework/reference-analyzer'
 import { generateInitialGreeting } from '@/lib/homework/tutor-engine'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { loadUserProfile } from '@/lib/user-profile'
 
 // ============================================================================
 // Error Codes for Homework Sessions API
@@ -37,7 +38,8 @@ function formatApiError(code: string, message: string, details?: string): string
 }
 
 // Allow 90 seconds for session creation (includes AI analysis)
-export const maxDuration = 90
+// Allow 120 seconds — engine diagram generation can take 10-60s on top of AI response
+export const maxDuration = 120
 
 // ============================================================================
 // POST - Create a new homework help session with AI analysis
@@ -161,9 +163,25 @@ export async function POST(request: NextRequest) {
 
     const createdSession = session as HomeworkSession
 
+    // Load user profile for language/grade/studySystem
+    let userLanguage: 'en' | 'he' | undefined
+    let userGrade: string | undefined
+    let userStudySystem: string | undefined
+    try {
+      const profile = await loadUserProfile(supabase, user.id)
+      if (profile) {
+        userLanguage = profile.language as 'en' | 'he'
+        userGrade = profile.grade || undefined
+        userStudySystem = profile.studySystem
+      }
+    } catch {
+      // Continue without profile data
+    }
+
     // Step 4: Generate warm initial greeting from tutor
     let greetingMessage: ConversationMessage
     try {
+      console.log(`[Sessions] Calling generateInitialGreeting for question: "${questionAnalysis.questionText.slice(0, 80)}..."`)
       const greeting = await generateInitialGreeting({
         session: createdSession,
         questionAnalysis,
@@ -171,7 +189,15 @@ export async function POST(request: NextRequest) {
         recentMessages: [],
         hintsUsed: 0,
         currentProgress: 0,
+        language: userLanguage,
+        grade: userGrade,
+        studySystem: userStudySystem,
       })
+
+      console.log(`[Sessions] Greeting received. Has diagram: ${!!greeting.diagram}, type: ${greeting.diagram?.type}`)
+      if (greeting.diagram) {
+        console.log(`[Sessions] Diagram data keys: ${Object.keys(greeting.diagram.data || {})}`)
+      }
 
       greetingMessage = {
         role: 'tutor',

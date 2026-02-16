@@ -547,6 +547,9 @@ export async function generateInitialGreeting(context: TutorContext): Promise<Tu
   const client = getAnthropicClient()
   const questionText = context.questionAnalysis.questionText
 
+  console.log(`[TutorEngine] generateInitialGreeting called with: "${questionText.slice(0, 80)}..."`)
+  console.log(`[TutorEngine] shouldUseEngine result: ${shouldUseEngine(questionText)}`)
+
   // Fire engine diagram in parallel with AI call (if topic needs it)
   const enginePromise = shouldUseEngine(questionText)
     ? tryEngineDiagram(questionText).catch((err) => {
@@ -581,7 +584,9 @@ export async function generateInitialGreeting(context: TutorContext): Promise<Tu
   delete tutorResponse.diagram  // Don't use AI's old-format diagram
 
   const engineResult = await enginePromise
+  console.log(`[TutorEngine] Engine result received: ${engineResult ? 'success' : 'undefined'}`)
   if (engineResult) {
+    console.log(`[TutorEngine] Engine result details - pipeline: ${engineResult.pipeline}, imageUrl length: ${engineResult.imageUrl?.length || 0}`)
     tutorResponse.diagram = {
       type: 'engine_image',
       visibleStep: 0,
@@ -592,8 +597,9 @@ export async function generateInitialGreeting(context: TutorContext): Promise<Tu
         qaVerdict: engineResult.qaVerdict,
       },
     }
+  } else {
+    console.log(`[TutorEngine] No engine result - diagram will be undefined`)
   }
-  // If engine failed, no diagram is shown (better than broken old-format diagram)
 
   return tutorResponse
 }
