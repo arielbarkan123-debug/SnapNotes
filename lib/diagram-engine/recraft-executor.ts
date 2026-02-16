@@ -141,6 +141,8 @@ Return ONLY a valid JSON array. No explanation, no markdown fences, no text befo
 export async function generateRecraftDiagram(
   question: string
 ): Promise<RecraftResult | RecraftError> {
+  console.log(`[Recraft] generateRecraftDiagram called with: "${question.slice(0, 80)}..."`);
+
   const { style, is3D } = classifyTopic(question);
   const rewriteTemplate = is3D ? REWRITE_PROMPT_3D : REWRITE_PROMPT_2D;
 

@@ -43,18 +43,25 @@ export async function tryEngineDiagram(
   question: string,
   forcePipeline?: Pipeline,
 ): Promise<EngineDiagramResult | undefined> {
+  console.log(`[Engine] tryEngineDiagram called with: "${question.slice(0, 80)}..."`);
+
   // If no forced pipeline, check if the engine should handle this
   if (!forcePipeline && !shouldUseEngine(question)) {
+    console.log('[Engine] shouldUseEngine returned false, skipping');
     return undefined;
   }
+
+  console.log('[Engine] Calling generateDiagram...');
 
   try {
     const result = await generateDiagram(question, forcePipeline);
 
     if ('error' in result) {
-      console.error(`[Engine] Generation failed: ${result.error}`);
+      console.error(`[Engine] Generation failed: ${result.error}`, { pipeline: result.pipeline });
       return undefined; // Fall back to React components
     }
+
+    console.log(`[Engine] Success! Pipeline: ${result.pipeline}, URL length: ${result.imageUrl?.length}`);
 
     return {
       type: 'engine_diagram',
