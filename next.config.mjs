@@ -11,6 +11,16 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Ensure Safari always checks for fresh service worker
+        source: '/sw.js',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+        ],
+      },
+      {
         source: '/:path*',
         headers: [
           {
@@ -48,7 +58,7 @@ const nextConfig = {
               // SECURITY: 'unsafe-eval' only in development for react-refresh, removed in production
               isDev ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'" : "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://images.unsplash.com https://*.unsplash.com https://picsum.photos https://*.picsum.photos",
+              "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://images.unsplash.com https://*.unsplash.com https://picsum.photos https://*.picsum.photos https://img.recraft.ai https://quicklatex.com",
               "font-src 'self' data:",
               "connect-src 'self' https://*.supabase.co https://*.supabase.in https://api.anthropic.com https://generativelanguage.googleapis.com",
               // Allow Web Workers from same origin and blob URLs (needed for heic2any, PDF.js, etc.)
@@ -95,6 +105,11 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: '*.picsum.photos',
+      },
+      // Recraft AI generated images
+      {
+        protocol: 'https',
+        hostname: 'img.recraft.ai',
       },
     ],
     // Optimize images for performance
