@@ -3,9 +3,9 @@
  * Provides offline caching for courses and static assets
  */
 
-const CACHE_NAME = 'notesnap-v1';
-const STATIC_CACHE = 'notesnap-static-v1';
-const COURSE_CACHE = 'notesnap-courses-v1';
+const CACHE_NAME = 'notesnap-v2';
+const STATIC_CACHE = 'notesnap-static-v2';
+const COURSE_CACHE = 'notesnap-courses-v2';
 
 // Static assets to cache immediately
 const STATIC_ASSETS = [
@@ -69,9 +69,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle course pages - cache for offline viewing
+  // Handle course pages - network first to ensure fresh JS bundles
   if (url.pathname.startsWith('/course/')) {
-    event.respondWith(cacheFirstWithNetwork(request, COURSE_CACHE));
+    event.respondWith(networkFirstWithOffline(request));
     return;
   }
 
