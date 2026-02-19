@@ -83,6 +83,10 @@ export default function CourseView({ course, progress }: CourseViewProps) {
 
   return (
     <div className="min-h-screen bg-transparent">
+      {/* Temporary version tag for debugging — remove after confirming fix reaches user */}
+      <div className="fixed bottom-1 left-1 z-[9999] bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none">
+        v7
+      </div>
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="container mx-auto px-4 py-4 max-w-4xl">
