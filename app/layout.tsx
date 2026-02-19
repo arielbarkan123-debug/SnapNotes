@@ -5,6 +5,7 @@ import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import { isRTL, type Locale } from "@/i18n/config";
+import SwCachePurgeScript from "@/components/SwCachePurgeScript";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -99,6 +100,9 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
+      <head>
+        <SwCachePurgeScript />
+      </head>
       <body
         className={`${plusJakarta.variable} ${rubik.variable} antialiased bg-white dark:bg-gray-900 text-gray-900 dark:text-white`}
       >
