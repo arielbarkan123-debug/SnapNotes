@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { GenerationStatus, Course } from '@/types'
 
@@ -50,10 +50,26 @@ export function useGenerationStatus(
 
   const isGenerating = status !== 'complete' && status !== 'failed'
 
+  // Store callbacks in refs to avoid dependency-triggered re-runs
+  const onCompleteRef = useRef(onComplete)
+  onCompleteRef.current = onComplete
+
+  // Track whether we've already fired onComplete to prevent duplicate calls
+  const hasCompletedRef = useRef(false)
+
+  // Reset hasCompleted when courseId changes
+  useEffect(() => {
+    hasCompletedRef.current = false
+  }, [courseId])
+
+  // Ref-based guard for isContinuing to avoid stale closures in recursive setTimeout
+  const isContinuingRef = useRef(false)
+
   // Trigger background continuation
   const triggerContinuation = useCallback(async () => {
-    if (!courseId || isContinuing || status === 'complete') return
+    if (!courseId || isContinuingRef.current) return
 
+    isContinuingRef.current = true
     setIsContinuing(true)
     setError(null)
 
@@ -83,25 +99,31 @@ export function useGenerationStatus(
 
       // If not complete, trigger again
       if (data.continue) {
-        // Small delay before next batch
+        // Small delay before next batch — reset continuing flag so recursive call can proceed
+        isContinuingRef.current = false
+        setIsContinuing(false)
         setTimeout(() => {
           triggerContinuation()
         }, 1000)
-      } else if (data.status === 'complete') {
-        onComplete?.()
+        return // skip the finally block's reset
+      } else if (data.status === 'complete' && !hasCompletedRef.current) {
+        hasCompletedRef.current = true
+        onCompleteRef.current?.()
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to continue generation')
     } finally {
+      isContinuingRef.current = false
       setIsContinuing(false)
     }
-  }, [courseId, isContinuing, status, onComplete])
+  }, [courseId])
 
   // Fetch initial status and subscribe to updates
   useEffect(() => {
     if (!courseId) return
 
     const supabase = createClient()
+    let cancelled = false
 
     // Fetch initial status
     const fetchStatus = async () => {
@@ -111,18 +133,24 @@ export function useGenerationStatus(
         .eq('id', courseId)
         .single()
 
-      if (fetchError) {
-        console.error('[useGenerationStatus] Fetch error:', fetchError)
+      if (fetchError || cancelled) {
+        if (fetchError) console.error('[useGenerationStatus] Fetch error:', fetchError)
         return
       }
 
       if (data) {
-        setStatus((data.generation_status as GenerationStatus) || 'complete')
+        const currentStatus = (data.generation_status as GenerationStatus) || 'complete'
+        setStatus(currentStatus)
         setLessonsReady(data.lessons_ready || 0)
         setTotalLessons(data.total_lessons || 0)
 
+        // If already complete on first fetch, don't subscribe or trigger anything
+        if (currentStatus === 'complete' || currentStatus === 'failed') {
+          return
+        }
+
         // Auto-trigger continuation if partial and enabled
-        if (autoTriggerContinuation && data.generation_status === 'partial') {
+        if (autoTriggerContinuation && currentStatus === 'partial') {
           triggerContinuation()
         }
       }
@@ -133,6 +161,49 @@ export function useGenerationStatus(
     // Subscribe to realtime updates (with fallback for browsers that block WebSocket)
     let channel: ReturnType<typeof supabase.channel> | null = null
     let pollingInterval: ReturnType<typeof setInterval> | null = null
+
+    // Track previous status to detect transitions to 'complete'
+    let lastKnownStatus: GenerationStatus | null = null
+
+    const handleStatusUpdate = (newStatus: GenerationStatus, newLessonsReady?: number, newTotalLessons?: number) => {
+      if (cancelled) return
+
+      if (newStatus) {
+        setStatus(newStatus)
+      }
+      if (typeof newLessonsReady === 'number') {
+        setLessonsReady(newLessonsReady)
+      }
+      if (typeof newTotalLessons === 'number') {
+        setTotalLessons(newTotalLessons)
+      }
+
+      // Only fire onComplete when transitioning TO complete (not when already complete)
+      if (newStatus === 'complete' && lastKnownStatus !== 'complete' && !hasCompletedRef.current) {
+        hasCompletedRef.current = true
+        onCompleteRef.current?.()
+
+        // Stop listening — generation is done
+        cleanup()
+      }
+
+      lastKnownStatus = newStatus
+    }
+
+    const cleanup = () => {
+      if (channel) {
+        try {
+          supabase.removeChannel(channel)
+        } catch {
+          // Ignore errors when removing channel
+        }
+        channel = null
+      }
+      if (pollingInterval) {
+        clearInterval(pollingInterval)
+        pollingInterval = null
+      }
+    }
 
     try {
       channel = supabase
@@ -147,26 +218,18 @@ export function useGenerationStatus(
           },
           (payload) => {
             const newData = payload.new as Partial<Course>
-
             if (newData.generation_status) {
-              setStatus(newData.generation_status)
-            }
-            if (typeof newData.lessons_ready === 'number') {
-              setLessonsReady(newData.lessons_ready)
-            }
-            if (typeof newData.total_lessons === 'number') {
-              setTotalLessons(newData.total_lessons)
-            }
-
-            // Check for completion
-            if (newData.generation_status === 'complete') {
-              onComplete?.()
+              handleStatusUpdate(
+                newData.generation_status,
+                typeof newData.lessons_ready === 'number' ? newData.lessons_ready : undefined,
+                typeof newData.total_lessons === 'number' ? newData.total_lessons : undefined
+              )
             }
           }
         )
-        .subscribe((status) => {
+        .subscribe((subStatus) => {
           // If subscription fails, fall back to polling
-          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          if (subStatus === 'CHANNEL_ERROR' || subStatus === 'TIMED_OUT') {
             console.warn('[useGenerationStatus] Realtime subscription failed, falling back to polling')
             startPolling()
           }
@@ -189,24 +252,17 @@ export function useGenerationStatus(
           .single()
 
         if (data) {
-          if (data.generation_status) {
-            setStatus(data.generation_status as GenerationStatus)
-          }
-          if (typeof data.lessons_ready === 'number') {
-            setLessonsReady(data.lessons_ready)
-          }
-          if (typeof data.total_lessons === 'number') {
-            setTotalLessons(data.total_lessons)
-          }
+          handleStatusUpdate(
+            data.generation_status as GenerationStatus,
+            data.lessons_ready,
+            data.total_lessons
+          )
 
-          // Stop polling when complete
+          // Stop polling when complete or failed
           if (data.generation_status === 'complete' || data.generation_status === 'failed') {
             if (pollingInterval) {
               clearInterval(pollingInterval)
               pollingInterval = null
-            }
-            if (data.generation_status === 'complete') {
-              onComplete?.()
             }
           }
         }
@@ -214,18 +270,10 @@ export function useGenerationStatus(
     }
 
     return () => {
-      if (channel) {
-        try {
-          supabase.removeChannel(channel)
-        } catch {
-          // Ignore errors when removing channel
-        }
-      }
-      if (pollingInterval) {
-        clearInterval(pollingInterval)
-      }
+      cancelled = true
+      cleanup()
     }
-  }, [courseId, autoTriggerContinuation, triggerContinuation, onComplete])
+  }, [courseId, autoTriggerContinuation, triggerContinuation])
 
   return {
     status,

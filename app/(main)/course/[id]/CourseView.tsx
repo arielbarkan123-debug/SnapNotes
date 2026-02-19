@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { type Course, type UserProgress, type GeneratedCourse, type Lesson } from '@/types'
 import { ChatTutor } from '@/components/chat/ChatTutor'
@@ -22,6 +23,7 @@ type LessonStatus = 'completed' | 'current' | 'locked'
 export default function CourseView({ course, progress }: CourseViewProps) {
   const t = useTranslations('lesson')
   const tc = useTranslations('course')
+  const router = useRouter()
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false)
 
@@ -35,9 +37,9 @@ export default function CourseView({ course, progress }: CourseViewProps) {
 
   // Track progressive generation status
   const onGenerationComplete = useCallback(() => {
-    // Refresh the page to get updated lessons
-    window.location.reload()
-  }, [])
+    // Re-fetch server component data without full page reload (preserves scroll position)
+    router.refresh()
+  }, [router])
 
   const {
     status: _generationStatus,
@@ -302,7 +304,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
         courseId={course.id}
         courseTitle={generatedCourse?.title || course.title || ''}
         onMaterialAdded={() => {
-          window.location.reload()
+          router.refresh()
         }}
       />
     </div>
