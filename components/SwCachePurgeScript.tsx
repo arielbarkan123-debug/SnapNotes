@@ -1,7 +1,7 @@
 /**
  * Inline script that runs in <head> BEFORE React hydrates.
- * Detects old service worker v1 caches on Safari iOS and purges them,
- * then unregisters the old SW and reloads once so fresh code loads.
+ * Aggressively clears ALL service worker caches and unregisters old SWs,
+ * then reloads once so fresh network content loads.
  * Uses sessionStorage to prevent reload loops (runs max once per tab session).
  *
  * NOTE: The dangerouslySetInnerHTML usage here is safe because the content
@@ -13,13 +13,12 @@ export default function SwCachePurgeScript() {
   const PURGE_SCRIPT = [
     '(function(){',
     '  try {',
-    '    if (!(\"caches\" in window) || !(\"serviceWorker\" in navigator)) return;',
-    '    if (sessionStorage.getItem(\"_swp\")) return;',
+    '    if (!("caches" in window) || !("serviceWorker" in navigator)) return;',
+    '    if (sessionStorage.getItem("_swp2")) return;',
     '    caches.keys().then(function(keys) {',
-    '      var old = keys.filter(function(k) { return k.indexOf(\"-v1\") !== -1; });',
-    '      if (old.length === 0) return;',
-    '      sessionStorage.setItem(\"_swp\", \"1\");',
-    '      Promise.all(old.map(function(k) { return caches.delete(k); })).then(function() {',
+    '      if (keys.length === 0) return;',
+    '      sessionStorage.setItem("_swp2", "1");',
+    '      Promise.all(keys.map(function(k) { return caches.delete(k); })).then(function() {',
     '        navigator.serviceWorker.getRegistrations().then(function(regs) {',
     '          Promise.all(regs.map(function(r) { return r.unregister(); })).then(function() {',
     '            location.reload();',
