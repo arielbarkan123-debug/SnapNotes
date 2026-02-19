@@ -28,14 +28,6 @@ interface UseGenerationStatusReturn {
   isContinuing: boolean
 }
 
-/**
- * Hook to track progressive course generation status.
- * Uses Supabase Realtime to get live updates as lessons are generated.
- *
- * @param courseId - The course ID to track
- * @param options - Configuration options
- * @returns Generation status and control functions
- */
 export function useGenerationStatus(
   courseId: string | undefined,
   options: UseGenerationStatusOptions = {}
@@ -99,13 +91,12 @@ export function useGenerationStatus(
 
       // If not complete, trigger again
       if (data.continue) {
-        // Small delay before next batch — reset continuing flag so recursive call can proceed
         isContinuingRef.current = false
         setIsContinuing(false)
         setTimeout(() => {
           triggerContinuation()
         }, 1000)
-        return // skip the finally block's reset
+        return
       } else if (data.status === 'complete' && !hasCompletedRef.current) {
         hasCompletedRef.current = true
         onCompleteRef.current?.()
@@ -118,85 +109,18 @@ export function useGenerationStatus(
     }
   }, [courseId])
 
-  // Fetch initial status and subscribe to updates
+  // Fetch initial status and conditionally subscribe to updates
   useEffect(() => {
     if (!courseId) return
 
     const supabase = createClient()
     let cancelled = false
-
-    // Fetch initial status
-    const fetchStatus = async () => {
-      const { data, error: fetchError } = await supabase
-        .from('courses')
-        .select('generation_status, lessons_ready, total_lessons')
-        .eq('id', courseId)
-        .single()
-
-      if (fetchError || cancelled) {
-        if (fetchError) console.error('[useGenerationStatus] Fetch error:', fetchError)
-        return
-      }
-
-      if (data) {
-        const currentStatus = (data.generation_status as GenerationStatus) || 'complete'
-        setStatus(currentStatus)
-        setLessonsReady(data.lessons_ready || 0)
-        setTotalLessons(data.total_lessons || 0)
-
-        // If already complete on first fetch, don't subscribe or trigger anything
-        if (currentStatus === 'complete' || currentStatus === 'failed') {
-          return
-        }
-
-        // Auto-trigger continuation if partial and enabled
-        if (autoTriggerContinuation && currentStatus === 'partial') {
-          triggerContinuation()
-        }
-      }
-    }
-
-    fetchStatus()
-
-    // Subscribe to realtime updates (with fallback for browsers that block WebSocket)
     let channel: ReturnType<typeof supabase.channel> | null = null
     let pollingInterval: ReturnType<typeof setInterval> | null = null
 
-    // Track previous status to detect transitions to 'complete'
-    let lastKnownStatus: GenerationStatus | null = null
-
-    const handleStatusUpdate = (newStatus: GenerationStatus, newLessonsReady?: number, newTotalLessons?: number) => {
-      if (cancelled) return
-
-      if (newStatus) {
-        setStatus(newStatus)
-      }
-      if (typeof newLessonsReady === 'number') {
-        setLessonsReady(newLessonsReady)
-      }
-      if (typeof newTotalLessons === 'number') {
-        setTotalLessons(newTotalLessons)
-      }
-
-      // Only fire onComplete when transitioning TO complete (not when already complete)
-      if (newStatus === 'complete' && lastKnownStatus !== 'complete' && !hasCompletedRef.current) {
-        hasCompletedRef.current = true
-        onCompleteRef.current?.()
-
-        // Stop listening — generation is done
-        cleanup()
-      }
-
-      lastKnownStatus = newStatus
-    }
-
     const cleanup = () => {
       if (channel) {
-        try {
-          supabase.removeChannel(channel)
-        } catch {
-          // Ignore errors when removing channel
-        }
+        try { supabase.removeChannel(channel) } catch { /* ignore */ }
         channel = null
       }
       if (pollingInterval) {
@@ -205,45 +129,23 @@ export function useGenerationStatus(
       }
     }
 
-    try {
-      channel = supabase
-        .channel(`course-${courseId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'courses',
-            filter: `id=eq.${courseId}`,
-          },
-          (payload) => {
-            const newData = payload.new as Partial<Course>
-            if (newData.generation_status) {
-              handleStatusUpdate(
-                newData.generation_status,
-                typeof newData.lessons_ready === 'number' ? newData.lessons_ready : undefined,
-                typeof newData.total_lessons === 'number' ? newData.total_lessons : undefined
-              )
-            }
-          }
-        )
-        .subscribe((subStatus) => {
-          // If subscription fails, fall back to polling
-          if (subStatus === 'CHANNEL_ERROR' || subStatus === 'TIMED_OUT') {
-            console.warn('[useGenerationStatus] Realtime subscription failed, falling back to polling')
-            startPolling()
-          }
-        })
-    } catch (err) {
-      // WebSocket not available (e.g., Safari private mode, some mobile browsers)
-      console.warn('[useGenerationStatus] WebSocket not available, falling back to polling:', err)
-      startPolling()
+    const handleStatusUpdate = (newStatus: GenerationStatus, newLessonsReady?: number, newTotalLessons?: number) => {
+      if (cancelled) return
+
+      if (newStatus) setStatus(newStatus)
+      if (typeof newLessonsReady === 'number') setLessonsReady(newLessonsReady)
+      if (typeof newTotalLessons === 'number') setTotalLessons(newTotalLessons)
+
+      // Only fire onComplete when transitioning TO complete
+      if (newStatus === 'complete' && !hasCompletedRef.current) {
+        hasCompletedRef.current = true
+        onCompleteRef.current?.()
+        cleanup()
+      }
     }
 
-    // Polling fallback for browsers that don't support WebSocket
     function startPolling() {
-      if (pollingInterval) return // Already polling
-
+      if (pollingInterval) return
       pollingInterval = setInterval(async () => {
         const { data } = await supabase
           .from('courses')
@@ -257,8 +159,6 @@ export function useGenerationStatus(
             data.lessons_ready,
             data.total_lessons
           )
-
-          // Stop polling when complete or failed
           if (data.generation_status === 'complete' || data.generation_status === 'failed') {
             if (pollingInterval) {
               clearInterval(pollingInterval)
@@ -266,8 +166,80 @@ export function useGenerationStatus(
             }
           }
         }
-      }, 3000) // Poll every 3 seconds
+      }, 3000)
     }
+
+    function subscribeToUpdates() {
+      try {
+        channel = supabase
+          .channel(`course-${courseId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'courses',
+              filter: `id=eq.${courseId}`,
+            },
+            (payload) => {
+              const newData = payload.new as Partial<Course>
+              if (newData.generation_status) {
+                handleStatusUpdate(
+                  newData.generation_status,
+                  typeof newData.lessons_ready === 'number' ? newData.lessons_ready : undefined,
+                  typeof newData.total_lessons === 'number' ? newData.total_lessons : undefined
+                )
+              }
+            }
+          )
+          .subscribe((subStatus) => {
+            if (subStatus === 'CHANNEL_ERROR' || subStatus === 'TIMED_OUT') {
+              console.warn('[useGenerationStatus] Realtime failed, falling back to polling')
+              startPolling()
+            }
+          })
+      } catch (err) {
+        console.warn('[useGenerationStatus] WebSocket not available, falling back to polling:', err)
+        startPolling()
+      }
+    }
+
+    // Fetch initial status, then decide whether to subscribe
+    const init = async () => {
+      const { data, error: fetchError } = await supabase
+        .from('courses')
+        .select('generation_status, lessons_ready, total_lessons')
+        .eq('id', courseId)
+        .single()
+
+      if (fetchError || cancelled) {
+        if (fetchError) console.error('[useGenerationStatus] Fetch error:', fetchError)
+        return
+      }
+
+      if (!data) return
+
+      const currentStatus = (data.generation_status as GenerationStatus) || 'complete'
+      setStatus(currentStatus)
+      setLessonsReady(data.lessons_ready || 0)
+      setTotalLessons(data.total_lessons || 0)
+
+      // CRITICAL: If already complete or failed, do NOT subscribe to anything.
+      // No realtime, no polling, no onComplete. Nothing to do.
+      if (currentStatus === 'complete' || currentStatus === 'failed') {
+        return
+      }
+
+      // Only subscribe if generation is still in progress
+      subscribeToUpdates()
+
+      // Auto-trigger continuation if partial
+      if (autoTriggerContinuation && currentStatus === 'partial') {
+        triggerContinuation()
+      }
+    }
+
+    init()
 
     return () => {
       cancelled = true
