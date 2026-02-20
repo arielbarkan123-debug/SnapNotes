@@ -54,6 +54,7 @@ const GROUP_COLORS = [
 ]
 
 function fractionToDecimal(f: Fraction): number {
+  if (!f.denominator || f.denominator === 0) return 0
   return f.numerator / f.denominator
 }
 
@@ -127,22 +128,26 @@ export function FractionDivisionModel({
   const divisorValue = fractionToDecimal(divisor)
 
   // How many full groups of divisor fit in dividend
-  const numGroups = Math.floor(dividendValue / divisorValue)
-  const remainder = dividendValue - numGroups * divisorValue
+  const safeDivisorValue = divisorValue === 0 ? 1 : divisorValue
+  const safeDividendValue = dividendValue === 0 ? 1 : dividendValue
+  const numGroups = Math.floor(dividendValue / safeDivisorValue)
+  const remainder = dividendValue - numGroups * safeDivisorValue
 
   // The quotient as a fraction (dividend / divisor = dividend * (1/divisor))
+  const safeDivisorNumerator = divisor.numerator === 0 ? 1 : divisor.numerator
   const computedQuotient = quotient || {
     numerator: dividend.numerator * divisor.denominator,
-    denominator: dividend.denominator * divisor.numerator,
+    denominator: dividend.denominator * safeDivisorNumerator,
   }
 
   // Bar widths (scaled to dividend)
   const dividendBarWidth = barAreaWidth
-  const divisorUnitWidth = (divisorValue / dividendValue) * barAreaWidth
+  const divisorUnitWidth = (safeDivisorValue / safeDividendValue) * barAreaWidth
   const groupWidth = divisorUnitWidth
 
   // Dividend subdivisions (denominator-based)
-  const dividendParts = Math.round(dividendValue * dividend.denominator)
+  const safeDividendDenom = dividend.denominator === 0 ? 1 : dividend.denominator
+  const dividendParts = Math.max(1, Math.round(dividendValue * safeDividendDenom))
   const partWidth = dividendBarWidth / dividendParts
 
   // Y positions
@@ -343,7 +348,7 @@ export function FractionDivisionModel({
                   width={(remainder / dividendValue) * barAreaWidth - 2}
                   height={barHeight - 2}
                   fill={hexToRgba('#9ca3af', 0.2)}
-                  stroke="#9ca3af"
+                  className="stroke-gray-400 dark:stroke-gray-500"
                   strokeWidth={1}
                   strokeDasharray="4,2"
                   rx={3}

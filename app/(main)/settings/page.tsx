@@ -19,8 +19,6 @@ import { locales, localeNames, type Locale } from '@/i18n/config'
 // =============================================================================
 
 type Theme = 'light' | 'dark' | 'system'
-type TimeAvailability = 'short' | 'medium' | 'long'
-type PreferredTime = 'morning' | 'afternoon' | 'evening' | 'varies'
 
 interface UserSettings {
   displayName: string
@@ -28,8 +26,6 @@ interface UserSettings {
   createdAt: string
   studySystem: StudySystem | null
   grade: string | null
-  timeAvailability: TimeAvailability | null
-  preferredTime: PreferredTime | null
   // Curriculum settings
   subjects: SelectedSubject[]
   examFormat: ExamFormat
@@ -48,19 +44,6 @@ const STUDY_SYSTEMS: { id: StudySystem; icon: string }[] = [
   { id: 'israeli_bagrut', icon: '🇮🇱' },
   { id: 'us', icon: '🇺🇸' },
   { id: 'general', icon: '🌍' },
-]
-
-const TIME_OPTIONS: { id: TimeAvailability; icon: string }[] = [
-  { id: 'short', icon: '⚡' },
-  { id: 'medium', icon: '⏱️' },
-  { id: 'long', icon: '📖' },
-]
-
-const PREFERRED_TIMES: { id: PreferredTime; icon: string }[] = [
-  { id: 'morning', icon: '🌅' },
-  { id: 'afternoon', icon: '☀️' },
-  { id: 'evening', icon: '🌙' },
-  { id: 'varies', icon: '🔄' },
 ]
 
 // =============================================================================
@@ -99,8 +82,6 @@ export default function SettingsPage() {
     createdAt: '',
     studySystem: null,
     grade: null,
-    timeAvailability: null,
-    preferredTime: null,
     subjects: [],
     examFormat: 'match_real',
     language: 'en',
@@ -146,8 +127,6 @@ export default function SettingsPage() {
           createdAt: user.created_at,
           studySystem,
           grade: learningProfile?.grade || null,
-          timeAvailability: metadata.time_availability || null,
-          preferredTime: metadata.preferred_time || null,
           subjects: selectedSubjects,
           examFormat: learningProfile?.exam_format || 'match_real',
           language: savedLanguage,
@@ -179,8 +158,6 @@ export default function SettingsPage() {
         studySystem: settings.studySystem,
         grade: settings.grade,
         subjectsCount: settings.subjects.length,
-        hasTimeAvailability: !!settings.timeAvailability,
-        hasPreferredTime: !!settings.preferredTime,
       })
       setHasTrackedView(true)
     }
@@ -292,8 +269,6 @@ export default function SettingsPage() {
         data: {
           name: settings.displayName,
           study_system: settings.studySystem,
-          time_availability: settings.timeAvailability,
-          preferred_time: settings.preferredTime,
         }
       })
 
@@ -355,8 +330,6 @@ export default function SettingsPage() {
           studySystem: settings.studySystem,
           grade: settings.grade,
           subjectsCount: settings.subjects.length,
-          timeAvailability: settings.timeAvailability,
-          preferredTime: settings.preferredTime,
           examFormat: settings.examFormat,
           language: settings.language,
         })
@@ -543,56 +516,6 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              {/* Time Availability */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  {t('learning.dailyStudyTime')}
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {TIME_OPTIONS.map((option) => (
-                    <button
-                      key={option.id}
-                      onClick={() => updateSetting('timeAvailability', option.id)}
-                      className={`
-                        flex flex-col items-center gap-1 rounded-xl border-2 p-4 transition-all
-                        ${settings.timeAvailability === option.id
-                          ? 'border-violet-500 bg-violet-50 dark:border-violet-400 dark:bg-violet-500/10'
-                          : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
-                        }
-                      `}
-                    >
-                      <span className="text-2xl">{option.icon}</span>
-                      <span className="font-medium text-gray-900 dark:text-white">{t(`timeOptions.${option.id}`)}</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">{t(`timeOptions.${option.id}Desc`)}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Preferred Time */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  {t('learning.preferredStudyTime')}
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {PREFERRED_TIMES.map((time) => (
-                    <button
-                      key={time.id}
-                      onClick={() => updateSetting('preferredTime', time.id)}
-                      className={`
-                        flex flex-col items-center gap-1 rounded-xl border-2 p-3 transition-all
-                        ${settings.preferredTime === time.id
-                          ? 'border-violet-500 bg-violet-50 dark:border-violet-400 dark:bg-violet-500/10'
-                          : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
-                        }
-                      `}
-                    >
-                      <span className="text-xl">{time.icon}</span>
-                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{t(`preferredTimes.${time.id}`)}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
           </SettingsCard>
         </section>
@@ -1034,7 +957,7 @@ export default function SettingsPage() {
 
         {/* Save Button - Fixed at bottom when changes exist */}
         {hasChanges && (
-          <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white/80 px-4 py-4 backdrop-blur-lg dark:border-gray-800 dark:bg-gray-900/80">
+          <div className="fixed bottom-0 md:bottom-0 max-md:bottom-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom,0px))] left-0 right-0 border-t border-gray-200 bg-white/80 px-4 py-4 backdrop-blur-lg dark:border-gray-800 dark:bg-gray-900/80">
             <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
               <p className="text-sm text-gray-500 dark:text-gray-400">{tc('labels.unsavedChanges')}</p>
               <div className="flex gap-3">

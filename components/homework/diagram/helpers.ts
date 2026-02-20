@@ -9,10 +9,22 @@ import { type DiagramState, PHYSICS_DIAGRAM_TYPES } from './types'
 
 /**
  * Convert TutorDiagramState from API response to DiagramState for renderer
- * Handles both physics and math diagram types
+ * Handles physics, math, and engine-generated image diagram types
  */
 export function convertToDiagramState(tutorDiagram: TutorDiagramState): DiagramState {
   const diagramType = tutorDiagram.type as string
+
+  // Engine-generated image diagram — pass through as MathDiagramState
+  // (DiagramRenderer handles engine_image before any subject-specific routing)
+  if (diagramType === 'engine_image') {
+    return {
+      type: tutorDiagram.type,
+      data: tutorDiagram.data,
+      visibleStep: tutorDiagram.visibleStep,
+      totalSteps: tutorDiagram.totalSteps,
+      stepConfig: tutorDiagram.stepConfig,
+    } as unknown as MathDiagramState
+  }
 
   // Check if it's a physics diagram
   if (PHYSICS_DIAGRAM_TYPES.includes(diagramType)) {

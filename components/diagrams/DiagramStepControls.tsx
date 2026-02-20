@@ -42,7 +42,7 @@ export function DiagramStepControls({
         onClick={onPrev}
         disabled={isFirst}
         aria-label={prevLabel}
-        className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
       >
         {isRTL ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
       </button>
@@ -85,7 +85,7 @@ export function DiagramStepControls({
         onClick={onNext}
         disabled={isLast}
         aria-label={nextLabel}
-        className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
       >
         {isRTL ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
       </button>

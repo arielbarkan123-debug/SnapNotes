@@ -90,16 +90,15 @@ export function DerivativeTangentLine({
   language = 'en',
   initialStep,
 }: DerivativeTangentLineProps) {
-  const {
-    expression,
-    point,
-    slope,
-    tangentLine,
-    secantLines = [],
-    domain,
-    showSecants = false,
-    title,
-  } = data
+  // Defensive defaults for AI-generated data
+  const expression = data.expression ?? 'x^2'
+  const point = data.point ?? { x: 0, y: 0 }
+  const slope = data.slope ?? 0
+  const tangentLine = data.tangentLine
+  const secantLines = Array.isArray(data.secantLines) ? data.secantLines : []
+  const domain = data.domain
+  const showSecants = data.showSecants ?? false
+  const title = data.title
 
   const xMin = domain?.min ?? point.x - 5
   const xMax = domain?.max ?? point.x + 5
@@ -226,21 +225,21 @@ export function DerivativeTangentLine({
         <g opacity={0.12}>
           {Array.from({ length: 11 }, (_, i) => {
             const x = padding + (i / 10) * plotW
-            return <line key={`gv${i}`} x1={x} y1={padding} x2={x} y2={padding + plotH} stroke="#6b7280" strokeWidth={0.5} />
+            return <line key={`gv${i}`} x1={x} y1={padding} x2={x} y2={padding + plotH} className="stroke-gray-500 dark:stroke-gray-500" strokeWidth={0.5} />
           })}
           {Array.from({ length: 11 }, (_, i) => {
             const y = padding + (i / 10) * plotH
-            return <line key={`gh${i}`} x1={padding} y1={y} x2={padding + plotW} y2={y} stroke="#6b7280" strokeWidth={0.5} />
+            return <line key={`gh${i}`} x1={padding} y1={y} x2={padding + plotW} y2={y} className="stroke-gray-500 dark:stroke-gray-500" strokeWidth={0.5} />
           })}
         </g>
 
         {/* Axes */}
         <g>
           {xAxisVisible && (
-            <line x1={padding} y1={originY} x2={padding + plotW} y2={originY} stroke="#374151" strokeWidth={1.5} />
+            <line x1={padding} y1={originY} x2={padding + plotW} y2={originY} className="stroke-gray-700 dark:stroke-gray-300" strokeWidth={1.5} />
           )}
           {yAxisVisible && (
-            <line x1={originX} y1={padding} x2={originX} y2={padding + plotH} stroke="#374151" strokeWidth={1.5} />
+            <line x1={originX} y1={padding} x2={originX} y2={padding + plotH} className="stroke-gray-700 dark:stroke-gray-300" strokeWidth={1.5} />
           )}
         </g>
 
@@ -281,7 +280,7 @@ export function DerivativeTangentLine({
                 cy={ptSvgY}
                 r={6}
                 fill={accentColor}
-                stroke="white"
+                className="stroke-white dark:stroke-gray-900"
                 strokeWidth={2}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}

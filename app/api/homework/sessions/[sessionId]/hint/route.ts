@@ -17,6 +17,8 @@ import {
 // Old diagram-generator import removed — diagrams are generated once at session start via the engine
 import { addMessage, updateProgress } from '@/lib/homework/session-manager'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { classifyTopicType } from '@/lib/ai/content-classifier'
+import { loadUserProfile } from '@/lib/user-profile'
 
 // Allow 60 seconds for hint generation
 export const maxDuration = 60
@@ -82,12 +84,22 @@ export async function POST(
     const referenceAnalysis = buildReferenceAnalysis(homeworkSession)
     const previousHints = extractPreviousHints(homeworkSession.conversation || [])
 
+    // Classify topic type for content-appropriate hints
+    const topicContent = homeworkSession.question_text || homeworkSession.detected_topic || ''
+    const topicType = classifyTopicType(topicContent, homeworkSession.detected_subject || undefined)
+
+    // Load user language preference
+    const userProfile = await loadUserProfile(supabase, user.id)
+    const userLanguage = (userProfile?.language === 'he' ? 'he' : 'en') as 'en' | 'he'
+
     const hintContext: HintContext = {
       session: homeworkSession,
       questionAnalysis,
       referenceAnalysis,
       requestedLevel: hintLevel,
       previousHints,
+      language: userLanguage,
+      topicType,
     }
 
     // Step 3: Generate the hint
@@ -99,7 +111,7 @@ export async function POST(
       // Fallback hint
       hint = {
         hintLevel,
-        content: getDefaultHintMessage(hintLevel),
+        content: getDefaultHintMessage(hintLevel, topicType),
         isShowAnswer: hintLevel === 5,
       }
     }
@@ -262,7 +274,29 @@ function getTimeSinceLastHint(session: HomeworkSession): number {
   return 999999
 }
 
-function getDefaultHintMessage(level: HintLevel): string {
+function getDefaultHintMessage(level: HintLevel, topicType?: 'computational' | 'conceptual' | 'mixed'): string {
+  if (topicType === 'computational') {
+    const messages: Record<HintLevel, string> = {
+      1: "Think about what formula or operation you need here. What mathematical tool applies?",
+      2: "Start by identifying the values you have. What numbers are given and what are you solving for?",
+      3: "Let me show you a similar calculation to help illustrate the method.",
+      4: "Let's work through the calculation together, step by step.",
+      5: "Here's the complete solution with all calculation steps explained.",
+    }
+    return messages[level]
+  }
+
+  if (topicType === 'conceptual') {
+    const messages: Record<HintLevel, string> = {
+      1: "Think about the key concept behind this question. What principle is being tested?",
+      2: "What are the main ideas or terms related to this topic? Start by recalling those.",
+      3: "Let me show you a similar concept explained in a different context.",
+      4: "Let's break down the key ideas together. What do you understand so far?",
+      5: "Here's a complete explanation with the reasoning behind each point.",
+    }
+    return messages[level]
+  }
+
   const messages: Record<HintLevel, string> = {
     1: "Think about what concept or formula might apply here. What does this problem remind you of from your studies?",
     2: "Let's focus on the first step. What information do you have, and what are you trying to find?",

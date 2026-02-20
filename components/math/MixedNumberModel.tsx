@@ -311,7 +311,9 @@ export function MixedNumberModel({
   language = 'en',
   initialStep,
 }: MixedNumberModelProps) {
-  const { wholeNumber, fraction, showImproper, modelType = 'circle', title } = data
+  const { showImproper, modelType = 'circle', title } = data
+  const wholeNumber = data.wholeNumber ?? 0
+  const fraction = data.fraction ?? { numerator: 0, denominator: 1 }
 
   const stepDefs = useMemo(() => {
     const defs: Array<{ id: string; label: string; labelHe: string }> = [

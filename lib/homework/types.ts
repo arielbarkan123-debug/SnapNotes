@@ -365,6 +365,8 @@ export interface TutorDiagramState {
     | 'process'
     | 'system'
     | 'process_flow'
+    // Engine-generated image diagram (E2B/TikZ/Recraft pipeline)
+    | 'engine_image'
   /** Diagram-specific data */
   data: Record<string, unknown>
   /** Current step to display */
@@ -409,6 +411,10 @@ export interface TutorContext {
   currentProgress: number
   /** User's preferred language ('en' or 'he') */
   language?: 'en' | 'he'
+  /** Student's grade level (e.g., 'יא', 'grade11', 'dp2') */
+  grade?: string
+  /** Student's study system (e.g., 'israeli_bagrut', 'ib', 'ap') */
+  studySystem?: string
 }
 
 export interface HintContext {
@@ -419,4 +425,63 @@ export interface HintContext {
   previousHints: HintResponse[]
   /** User's preferred language ('en' or 'he') */
   language?: 'en' | 'he'
+  /** Topic type for content-appropriate hints */
+  topicType?: 'computational' | 'conceptual' | 'mixed'
+}
+
+// ============================================================================
+// Three-Phase Grading Pipeline Types
+// ============================================================================
+
+/** Verification status for a math problem checked against mathjs */
+export type VerificationStatus = 'verified' | 'unverifiable' | 'disagreement'
+
+/** Input mode for three-phase pipeline: separate images or single combined image */
+export type PipelineInputMode = 'separate' | 'combined'
+
+/** A problem extracted and solved by Phase 1 */
+export interface VerifiedProblem {
+  id: string
+  questionText: string
+  subject: string
+  solutionSteps: string[]
+  correctAnswer: string
+  mathjsVerified: boolean
+  mathjsResult?: string | number
+  verificationStatus: VerificationStatus
+  /** Only populated in combined-image mode */
+  studentAnswer?: string
+  /** Confidence of student answer reading in combined mode */
+  studentAnswerConfidence?: 'high' | 'medium' | 'low'
+}
+
+/** Phase 1 output: extracted problems with verified solutions */
+export interface SolutionSet {
+  problems: VerifiedProblem[]
+  inputMode: PipelineInputMode
+  /** Language detected from the homework image ('en' or 'he') */
+  detectedLanguage: string
+}
+
+/** A student's answer as read by Phase 2 */
+export interface StudentAnswer {
+  problemId: string
+  rawReading: string
+  interpretation: string
+  confidence: 'high' | 'medium' | 'low'
+  ambiguousCharacters?: string[]
+  alternativeReadings?: string[]
+}
+
+/** Phase 2 output: transcribed student answers */
+export interface StudentAnswerSet {
+  answers: StudentAnswer[]
+}
+
+/** Result of feedback quality validation */
+export interface FeedbackQualityResult {
+  passed: boolean
+  failingCorrectIndices: number[]
+  failingImprovementIndices: number[]
+  reasons: string[]
 }

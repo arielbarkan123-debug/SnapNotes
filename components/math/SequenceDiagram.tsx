@@ -186,7 +186,7 @@ export function SequenceDiagram({
                       y={cy + circleR + 16}
                       textAnchor="middle"
                       fontSize={11}
-                      fill="#6b7280"
+                      className="fill-gray-500 dark:fill-gray-400"
                     >
                       a{String.fromCharCode(8321 + i)}
                     </text>

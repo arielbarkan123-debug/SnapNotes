@@ -73,7 +73,10 @@ export function PercentBarModel({
   language = 'en',
   initialStep,
 }: PercentBarModelProps) {
-  const { total, parts, title } = data
+  // Defensive defaults for AI-generated data
+  const total = data.total ?? 100
+  const parts = Array.isArray(data.parts) ? data.parts : []
+  const title = data.title
 
   // Build step definitions
   const stepDefs = useMemo(() => [
@@ -188,7 +191,7 @@ export function PercentBarModel({
                       y1={barY + barHeight}
                       x2={x}
                       y2={barY + barHeight + 8}
-                      stroke="#6b7280"
+                      className="stroke-gray-500 dark:stroke-gray-400"
                       strokeWidth={1}
                     />
                     <text
@@ -196,7 +199,7 @@ export function PercentBarModel({
                       y={barY + barHeight + 22}
                       textAnchor="middle"
                       fontSize={11}
-                      fill="#6b7280"
+                      className="fill-gray-500 dark:fill-gray-400"
                     >
                       {pct}%
                     </text>

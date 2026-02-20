@@ -5,9 +5,14 @@
   "uploadButton": "העלה מבחן קודם",
   "uploadDisabled": "הגעת למקסימום 3 תבניות",
   "templateCount": "{count} מתוך {max} תבניות",
+  "perSubjectLimit": "עד {limit} תבניות לכל מקצוע",
   "noTemplates": "אין עדיין תבניות מבחנים",
+  "noTemplatesForSubject": "אין תבניות למקצוע זה",
   "noTemplatesDescription": "העלה מבחן קודם כדי לעזור לבינה המלאכותית ליצור שאלות בסגנון דומה",
   "uploadFirst": "העלה תבנית ראשונה",
+  "noSubjectsWarning": "לא הוגדרו מקצועות. הוסף מקצועות בהגדרות.",
+  "goToSettings": "עבור להגדרות",
+  "uploadSuccess": "התבנית הועלתה בהצלחה",
 
   "statusPending": "ממתין לניתוח",
   "statusAnalyzing": "מנתח...",
@@ -31,6 +36,8 @@
 
   "uploadModal": {
     "title": "העלה מבחן קודם",
+    "subjectLabel": "מקצוע",
+    "selectSubject": "בחר מקצוע",
     "dragDrop": "גרור או לחץ לבחירה",
     "fileTypes": "PDF, PowerPoint, Word, או תמונה",
     "maxSize": "עד 20MB",
@@ -59,10 +66,12 @@
   },
 
   "errors": {
-    "limitReached": "ניתן להעלות עד 3 תבניות מבחן",
+    "limitReached": "ניתן להעלות עד 3 תבניות לכל מקצוע",
     "uploadFailed": "העלאת התבנית נכשלה",
     "analysisFailed": "הניתוח נכשל. נסה שוב.",
     "deleteFailed": "מחיקת התבנית נכשלה",
-    "fetchFailed": "טעינת התבניות נכשלה"
+    "fetchFailed": "טעינת התבניות נכשלה",
+    "noFile": "יש לבחור קובץ",
+    "noSubject": "יש לבחור מקצוע"
   }
 }

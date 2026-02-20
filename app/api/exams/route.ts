@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
     // Fetch user learning profile for curriculum context (may not exist for new users)
     const { data: userProfile } = await supabase
       .from('user_learning_profile')
-      .select('study_system, subjects, subject_levels, exam_format')
+      .select('study_system, grade, subjects, subject_levels, exam_format')
       .eq('user_id', user.id)
       .maybeSingle()
 
@@ -207,7 +207,8 @@ export async function POST(request: NextRequest) {
       subjects,
       subjectLevels,
       examFormat,
-      courseContent
+      courseContent,
+      userProfile?.grade || undefined
     )
     const curriculumSection = formatContextForPrompt(curriculumContext)
 

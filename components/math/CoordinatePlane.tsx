@@ -50,6 +50,12 @@ const STEP_LABELS: Record<string, { en: string; he: string }> = {
 }
 
 // ---------------------------------------------------------------------------
+// Label background colors for light/dark mode (used as inline SVG fill)
+// ---------------------------------------------------------------------------
+const LABEL_BG_LIGHT = 'rgba(255,255,255,0.88)'
+const LABEL_BG_DARK = 'rgba(17,24,39,0.88)' // gray-900 with alpha
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -69,6 +75,8 @@ const STEP_LABELS: Record<string, { en: string; he: string }> = {
  * - [x] Adaptive line weight
  * - [x] Step-by-step progressive reveal with AnimatePresence
  * - [x] Uses shared SVG primitives (SVGPoint, SVGLabel)
+ * - [x] Label backgrounds for legibility over grid
+ * - [x] Smart point label positioning to avoid axis overlap
  */
 export function CoordinatePlane({
   data,
@@ -101,6 +109,7 @@ export function CoordinatePlane({
   const hasLabels = !!(
     title ||
     points.some((p) => p.label) ||
+    curves.length > 0 ||
     xLabel ||
     yLabel
   )
@@ -151,7 +160,8 @@ export function CoordinatePlane({
   // Geometry calculations
   // ---------------------------------------------------------------------------
 
-  const padding = { left: 50, right: 30, top: 40, bottom: 50 }
+  // Extra top padding when title is present so it sits clearly above the y-axis label
+  const padding = { left: 50, right: 30, top: title ? 56 : 40, bottom: 50 }
   const plotWidth = width - padding.left - padding.right
   const plotHeight = height - padding.top - padding.bottom
 
@@ -160,12 +170,12 @@ export function CoordinatePlane({
 
   const xToSvg = useCallback(
     (x: number): number => padding.left + ((x - xMin) / safeXRange) * plotWidth,
-    [xMin, safeXRange, plotWidth]
+    [xMin, safeXRange, plotWidth, padding.left]
   )
 
   const yToSvg = useCallback(
     (y: number): number => padding.top + plotHeight - ((y - yMin) / safeYRange) * plotHeight,
-    [yMin, safeYRange, plotHeight]
+    [yMin, safeYRange, plotHeight, padding.top]
   )
 
   // Origin position (if visible)
@@ -215,6 +225,7 @@ export function CoordinatePlane({
     }
 
     return { xMajorTicks, xMinorTicks, yMajorTicks, yMinorTicks }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [xMin, xMax, yMin, yMax])
 
   // ---------------------------------------------------------------------------
@@ -260,6 +271,9 @@ export function CoordinatePlane({
     }
   }, [])
 
+  // Unique ID for SVG clipPath (safe for multiple instances on the same page)
+  const clipId = useMemo(() => `cp-clip-${Math.random().toString(36).slice(2, 9)}`, [])
+
   const generateCurvePath = useCallback(
     (expression: string, domain?: { min: number; max: number }): string => {
       const domainMin = domain?.min ?? xMin
@@ -273,11 +287,10 @@ export function CoordinatePlane({
         const x = domainMin + i * step
         const y = evaluateExpression(expression, x)
 
-        if (y !== null && y >= yMin - (yMax - yMin) * 0.5 && y <= yMax + (yMax - yMin) * 0.5) {
+        if (y !== null && isFinite(y)) {
           const svgX = xToSvg(x)
           const svgY = yToSvg(y)
-          const clampedY = Math.max(padding.top - 20, Math.min(height - padding.bottom + 20, svgY))
-          pathPoints.push(`${isFirst ? 'M' : 'L'} ${svgX.toFixed(2)} ${clampedY.toFixed(2)}`)
+          pathPoints.push(`${isFirst ? 'M' : 'L'} ${svgX.toFixed(2)} ${svgY.toFixed(2)}`)
           isFirst = false
         } else {
           isFirst = true
@@ -286,12 +299,61 @@ export function CoordinatePlane({
 
       return pathPoints.join(' ')
     },
-    [xMin, xMax, yMin, yMax, xToSvg, yToSvg, evaluateExpression, height]
+    [xMin, xMax, xToSvg, yToSvg, evaluateExpression]
   )
 
   // Current step label
   const currentStepDef = stepDefs[diagram.currentStep]
   const stepLabel = language === 'he' ? currentStepDef?.labelHe : currentStepDef?.label
+
+  // ---------------------------------------------------------------------------
+  // Smart point label positioning — avoids overlapping axes and tick labels
+  // ---------------------------------------------------------------------------
+  const getPointLabelPosition = useCallback(
+    (svgX: number, svgY: number): { x: number; y: number; anchor: 'start' | 'middle' | 'end' } => {
+      const yAxisSvgX = showYAxis ? originX : padding.left
+      const xAxisSvgY = showXAxis ? originY : height - padding.bottom
+
+      let offsetX = 14
+      let offsetY = -14
+      let anchor: 'start' | 'middle' | 'end' = 'start'
+
+      // If point is close to the y-axis, push label further right
+      if (Math.abs(svgX - yAxisSvgX) < 40) {
+        offsetX = 20
+      }
+
+      // If point is in the right quarter of the plot, flip label to left
+      if (svgX > padding.left + plotWidth * 0.75) {
+        offsetX = -14
+        anchor = 'end'
+      }
+
+      // If point is close to x-axis, offset label above or below
+      if (Math.abs(svgY - xAxisSvgY) < 30) {
+        offsetY = svgY < xAxisSvgY ? -22 : 24
+      }
+
+      // If point is near the top of the plot, push label below
+      if (svgY < padding.top + 30) {
+        offsetY = 22
+      }
+
+      // If point is near the bottom, push label above
+      if (svgY > height - padding.bottom - 30) {
+        offsetY = -22
+      }
+
+      // If label would overlap with y-axis tick labels on the left side, shift right
+      if (anchor === 'end' && svgX + offsetX < yAxisSvgX + 30) {
+        offsetX = 20
+        anchor = 'start'
+      }
+
+      return { x: svgX + offsetX, y: svgY + offsetY, anchor }
+    },
+    [showYAxis, originX, showXAxis, originY, padding.left, padding.top, padding.bottom, plotWidth, height]
+  )
 
   // ---------------------------------------------------------------------------
   // Render
@@ -320,6 +382,18 @@ export function CoordinatePlane({
           rx={4}
           className="fill-white dark:fill-gray-900"
         />
+
+        {/* Clip path for constraining curves/lines to the plot area */}
+        <defs>
+          <clipPath id={clipId}>
+            <rect
+              x={padding.left}
+              y={padding.top}
+              width={plotWidth}
+              height={plotHeight}
+            />
+          </clipPath>
+        </defs>
 
         {/* ── Step 0: Grid ──────────────────────────────────────── */}
         <AnimatePresence>
@@ -402,12 +476,15 @@ export function CoordinatePlane({
                 transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 20 }}
               />
 
-              {/* X axis label */}
+              {/* X axis label with background for legibility */}
               <SVGLabel
                 x={width - padding.right + 18}
                 y={(showXAxis ? originY : height - padding.bottom) + 5}
                 text={xLabel}
                 fontSize={14}
+                fontWeight={600}
+                background={LABEL_BG_LIGHT}
+                backgroundDark={LABEL_BG_DARK}
                 className="fill-current"
               />
 
@@ -427,13 +504,16 @@ export function CoordinatePlane({
                 transition={{ delay: 0.6, type: 'spring', stiffness: 300, damping: 20 }}
               />
 
-              {/* Y axis label */}
+              {/* Y axis label with background — positioned to not overlap with title */}
               <SVGLabel
                 x={(showYAxis ? originX : padding.left) - 5}
                 y={padding.top - 18}
                 text={yLabel}
                 textAnchor="middle"
                 fontSize={14}
+                fontWeight={600}
+                background={LABEL_BG_LIGHT}
+                backgroundDark={LABEL_BG_DARK}
                 className="fill-current"
               />
 
@@ -518,6 +598,7 @@ export function CoordinatePlane({
               initial="hidden"
               animate={isCurrent('curves') ? 'spotlight' : 'visible'}
               variants={spotlight}
+              clipPath={`url(#${clipId})`}
             >
               {/* Equation curves */}
               {curves.map((curve, index) => {
@@ -544,14 +625,21 @@ export function CoordinatePlane({
                 let x2 = xToSvg(p2.x)
                 let y2 = yToSvg(p2.y)
 
-                if (line.type === 'line' && x1 !== x2) {
-                  const slope = (y2 - y1) / (x2 - x1)
-                  const refX = xToSvg(p1.x)
-                  const refY = yToSvg(p1.y)
-                  x1 = padding.left
-                  y1 = slope * (x1 - refX) + refY
-                  x2 = width - padding.right
-                  y2 = slope * (x2 - refX) + refY
+                if (line.type === 'line') {
+                  if (x1 !== x2) {
+                    // Non-vertical line: extend to full plot width
+                    const slope = (y2 - y1) / (x2 - x1)
+                    const refX = xToSvg(p1.x)
+                    const refY = yToSvg(p1.y)
+                    x1 = padding.left
+                    y1 = slope * (x1 - refX) + refY
+                    x2 = width - padding.right
+                    y2 = slope * (x2 - refX) + refY
+                  } else {
+                    // Vertical line: extend to full plot height
+                    y1 = padding.top
+                    y2 = height - padding.bottom
+                  }
                 }
 
                 return (
@@ -561,7 +649,7 @@ export function CoordinatePlane({
                     d={`M ${x1} ${y1} L ${x2} ${y2}`}
                     fill="none"
                     stroke={line.color || diagram.colors.primary}
-                    strokeWidth={diagram.lineWeight}
+                    strokeWidth={line.dashed ? Math.max(diagram.lineWeight * 0.75, 1) : diagram.lineWeight}
                     strokeDasharray={line.dashed ? '6,4' : undefined}
                     strokeLinecap="round"
                     initial="hidden" animate="visible" variants={lineDrawVariants}
@@ -572,7 +660,7 @@ export function CoordinatePlane({
           )}
         </AnimatePresence>
 
-        {/* ── Step 3: Points ────────────────────────────────────── */}
+        {/* ── Step 3: Points (dots only, no labels yet) ────────── */}
         <AnimatePresence>
           {hasPoints && isVisible('points') && (
             <motion.g
@@ -601,12 +689,6 @@ export function CoordinatePlane({
                       cx={svgX} cy={svgY} r={6} fill={color} stroke={color} strokeWidth={2}
                     />
                     <circle cx={svgX - 1.5} cy={svgY - 1.5} r={2} fill="rgba(255,255,255,0.5)" />
-                    {point.label && (
-                      <SVGLabel
-                        x={svgX + 12} y={svgY - 10}
-                        text={point.label} fontSize={12} fontWeight={500} color={color}
-                      />
-                    )}
                   </motion.g>
                 )
               })}
@@ -623,20 +705,82 @@ export function CoordinatePlane({
               animate={isCurrent('labels') ? 'spotlight' : 'visible'}
               variants={spotlight}
             >
-              {/* Title */}
+              {/* Title — centered above the plot, well above the y-axis label */}
               {title && (
                 <g data-testid="cp-title">
                   <SVGLabel
                     x={width / 2}
-                    y={24}
+                    y={18}
                     text={title}
                     textAnchor="middle"
-                    fontSize={15}
-                    fontWeight={500}
-                    className="fill-current"
+                    fontSize={14}
+                    fontWeight={600}
+                    background={LABEL_BG_LIGHT}
+                    backgroundDark={LABEL_BG_DARK}
+                    padding={5}
+                    className="fill-gray-800 dark:fill-gray-100"
                   />
                 </g>
               )}
+
+              {/* Curve expression labels — positioned along each curve with background */}
+              {curves.map((curve, index) => {
+                // Place expression label at ~75% along the x-range, offset above the curve
+                const labelMathX = xMin + (xMax - xMin) * 0.75
+                const labelMathY = evaluateExpression(curve.expression, labelMathX)
+                if (labelMathY === null) return null
+                const svgLX = xToSvg(labelMathX)
+                let svgLY = yToSvg(labelMathY) - 16
+                // Clamp within plot area so the label never overflows
+                svgLY = Math.max(padding.top + 14, Math.min(height - padding.bottom - 10, svgLY))
+                // If the label would be very close to the title area, push it down
+                if (title && svgLY < padding.top + 10) {
+                  svgLY = padding.top + 14
+                }
+                const exprText = `y = ${curve.expression}`
+                return (
+                  <g key={`curve-label-${index}`} data-testid={`cp-curve-label-${index}`}>
+                    <SVGLabel
+                      x={svgLX}
+                      y={svgLY}
+                      text={exprText}
+                      textAnchor="middle"
+                      fontSize={12}
+                      fontWeight={500}
+                      color={curve.color || diagram.colors.primary}
+                      background={LABEL_BG_LIGHT}
+                      backgroundDark={LABEL_BG_DARK}
+                      padding={5}
+                    />
+                  </g>
+                )
+              })}
+
+              {/* Point labels — smart positioning to avoid axis and tick overlap */}
+              {points.map((point, index) => {
+                if (!point.label) return null
+                const svgX = xToSvg(point.x)
+                const svgY = yToSvg(point.y)
+                const color = point.color || diagram.colors.primary
+                const pos = getPointLabelPosition(svgX, svgY)
+
+                return (
+                  <g key={`point-label-${index}`} data-testid={`cp-point-label-${index}`}>
+                    <SVGLabel
+                      x={pos.x}
+                      y={pos.y}
+                      text={point.label}
+                      textAnchor={pos.anchor}
+                      fontSize={12}
+                      fontWeight={500}
+                      color={color}
+                      background={LABEL_BG_LIGHT}
+                      backgroundDark={LABEL_BG_DARK}
+                      padding={4}
+                    />
+                  </g>
+                )
+              })}
             </motion.g>
           )}
         </AnimatePresence>
@@ -661,7 +805,7 @@ export function CoordinatePlane({
                     <line x1={svgX - 5} y1={svgY - 5} x2={svgX + 5} y2={svgY + 5} stroke="#EF4444" strokeWidth={3} strokeLinecap="round" />
                     <line x1={svgX + 5} y1={svgY - 5} x2={svgX - 5} y2={svgY + 5} stroke="#EF4444" strokeWidth={3} strokeLinecap="round" />
                     {point.errorLabel && (
-                      <SVGLabel x={svgX} y={svgY - 20} text={point.errorLabel} textAnchor="middle" color="#EF4444" fontSize={11} fontWeight={500} animate={false} />
+                      <SVGLabel x={svgX} y={svgY - 20} text={point.errorLabel} textAnchor="middle" color="#EF4444" fontSize={11} fontWeight={500} background={LABEL_BG_LIGHT} backgroundDark={LABEL_BG_DARK} padding={3} animate={false} />
                     )}
                   </g>
                 )
@@ -680,32 +824,36 @@ export function CoordinatePlane({
                       stroke="white" strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round"
                     />
                     {point.correctLabel && (
-                      <SVGLabel x={svgX} y={svgY - 20} text={point.correctLabel} textAnchor="middle" color="#22C55E" fontSize={11} fontWeight={500} animate={false} />
+                      <SVGLabel x={svgX} y={svgY - 20} text={point.correctLabel} textAnchor="middle" color="#22C55E" fontSize={11} fontWeight={500} background={LABEL_BG_LIGHT} backgroundDark={LABEL_BG_DARK} padding={3} animate={false} />
                     )}
                   </g>
                 )
               })}
 
-              {/* Wrong curves */}
-              {errorHighlight?.wrongCurves?.map((curve, index) => (
-                <motion.path
-                  key={`wrong-curve-${index}`}
-                  d={generateCurvePath(curve.expression, curve.domain)}
-                  fill="none" stroke="#EF4444" strokeWidth={2.5}
-                  strokeDasharray="6,4" opacity={0.8}
-                  initial="hidden" animate="visible" variants={lineDrawVariants}
-                />
-              ))}
+              {/* Wrong curves (clipped to plot area) */}
+              <g clipPath={`url(#${clipId})`}>
+                {errorHighlight?.wrongCurves?.map((curve, index) => (
+                  <motion.path
+                    key={`wrong-curve-${index}`}
+                    d={generateCurvePath(curve.expression, curve.domain)}
+                    fill="none" stroke="#EF4444" strokeWidth={2.5}
+                    strokeDasharray="6,4" opacity={0.8}
+                    initial="hidden" animate="visible" variants={lineDrawVariants}
+                  />
+                ))}
+              </g>
 
-              {/* Correct curves */}
-              {errorHighlight?.correctCurves?.map((curve, index) => (
-                <motion.path
-                  key={`correct-curve-${index}`}
-                  d={generateCurvePath(curve.expression, curve.domain)}
-                  fill="none" stroke="#22C55E" strokeWidth={3}
-                  initial="hidden" animate="visible" variants={lineDrawVariants}
-                />
-              ))}
+              {/* Correct curves (clipped to plot area) */}
+              <g clipPath={`url(#${clipId})`}>
+                {errorHighlight?.correctCurves?.map((curve, index) => (
+                  <motion.path
+                    key={`correct-curve-${index}`}
+                    d={generateCurvePath(curve.expression, curve.domain)}
+                    fill="none" stroke="#22C55E" strokeWidth={3}
+                    initial="hidden" animate="visible" variants={lineDrawVariants}
+                  />
+                ))}
+              </g>
             </motion.g>
           )}
         </AnimatePresence>

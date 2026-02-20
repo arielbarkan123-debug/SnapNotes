@@ -59,7 +59,12 @@ export function DoubleNumberLine({
   language = 'en',
   initialStep,
 }: DoubleNumberLineProps) {
-  const { topLine, bottomLine, connections, title, highlightPair } = data
+  // Defensive defaults for AI-generated data
+  const topLine = data.topLine ?? { label: '', values: [], unit: '' }
+  const bottomLine = data.bottomLine ?? { label: '', values: [], unit: '' }
+  const connections = data.connections
+  const title = data.title
+  const highlightPair = data.highlightPair
 
   // Build step definitions
   const stepDefs = useMemo(() => [
@@ -101,15 +106,14 @@ export function DoubleNumberLine({
   const lineWidth = width - padding.left - padding.right
   const topLineY = 60
   const bottomLineY = 150
-  const _valueCount = Math.max(topLine.values.length, bottomLine.values.length)
-
   // Compute positions
-  const topValues = topLine.values
-  const bottomValues = bottomLine.values
-  const topMin = Math.min(...topValues)
-  const topMax = Math.max(...topValues)
-  const bottomMin = Math.min(...bottomValues)
-  const bottomMax = Math.max(...bottomValues)
+  const topValues = Array.isArray(topLine.values) ? topLine.values : []
+  const bottomValues = Array.isArray(bottomLine.values) ? bottomLine.values : []
+  const _valueCount = Math.max(topValues.length, bottomValues.length)
+  const topMin = topValues.length > 0 ? Math.min(...topValues) : 0
+  const topMax = topValues.length > 0 ? Math.max(...topValues) : 1
+  const bottomMin = bottomValues.length > 0 ? Math.min(...bottomValues) : 0
+  const bottomMax = bottomValues.length > 0 ? Math.max(...bottomValues) : 1
 
   const topScale = (v: number) =>
     topMax === topMin
@@ -177,7 +181,7 @@ export function DoubleNumberLine({
                   x={padding.left - 10}
                   y={topLineY - 2}
                   textAnchor="end"
-                  fill="#6b7280"
+                  className="fill-gray-500 dark:fill-gray-400"
                   fontSize={10}
                   initial="hidden"
                   animate="visible"
@@ -246,7 +250,7 @@ export function DoubleNumberLine({
                   x={padding.left - 10}
                   y={bottomLineY - 2}
                   textAnchor="end"
-                  fill="#6b7280"
+                  className="fill-gray-500 dark:fill-gray-400"
                   fontSize={10}
                   initial="hidden"
                   animate="visible"
@@ -352,7 +356,8 @@ export function DoubleNumberLine({
                     y1={topLineY + 8}
                     x2={bottomX}
                     y2={bottomLineY - 8}
-                    stroke={isHighlighted ? '#ef4444' : '#9ca3af'}
+                    className={isHighlighted ? '' : 'stroke-gray-400 dark:stroke-gray-500'}
+                    stroke={isHighlighted ? '#ef4444' : undefined}
                     strokeWidth={isHighlighted ? 2 : 1}
                     strokeDasharray={isHighlighted ? undefined : '4 3'}
                     initial="hidden"

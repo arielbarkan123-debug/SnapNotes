@@ -316,7 +316,7 @@ export default function CourseCard({ course, onDelete, onEdit, selectionMode, is
             {onEdit && (
               <button
                 onClick={handleEditClick}
-                className="p-2 bg-white/90 dark:bg-gray-800/90 rounded-full shadow-md sm:opacity-0 sm:group-hover:opacity-100 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-all duration-200"
+                className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center bg-white/90 dark:bg-gray-800/90 rounded-full shadow-md sm:opacity-0 sm:group-hover:opacity-100 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-all duration-200"
                 aria-label="Edit course"
               >
                 <svg
@@ -337,7 +337,7 @@ export default function CourseCard({ course, onDelete, onEdit, selectionMode, is
             {/* Delete Button */}
             <button
               onClick={handleDeleteClick}
-              className="p-2 bg-white/90 dark:bg-gray-800/90 rounded-full shadow-md sm:opacity-0 sm:group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all duration-200"
+              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center bg-white/90 dark:bg-gray-800/90 rounded-full shadow-md sm:opacity-0 sm:group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all duration-200"
               aria-label="Delete course"
             >
               <svg

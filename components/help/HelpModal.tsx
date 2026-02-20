@@ -116,7 +116,7 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
             {view === 'custom' ? t('help.askQuestion') : view === 'response' ? t('help.heresHelp') : view === 'loading' ? t('help.thinking') : t('help.needHelp')}
           </h2>
           {view !== 'loading' && (
-            <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1" aria-label="Close help">✕</button>
+            <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label="Close help">✕</button>
           )}
         </div>
 

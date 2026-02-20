@@ -133,7 +133,7 @@ describe('Generate Questions API - POST', () => {
                 },
                 {
                   type: 'true_false',
-                  question: 'Prokaryotic cells have a nucleus.',
+                  question: 'Do prokaryotic cells have a membrane-bound nucleus?',
                   options: ['True', 'False'],
                   correct_answer: 1,
                   explanation: 'Prokaryotic cells lack a membrane-bound nucleus.',
@@ -568,7 +568,7 @@ describe('Generate Questions API - POST', () => {
               questions: [
                 {
                   type: 'multiple_choice',
-                  question: 'Valid question?',
+                  question: 'What is the primary function of mitochondria in cells?',
                   options: ['A', 'B', 'C', 'D'],
                   correct_answer: 0,
                   explanation: 'Valid',

@@ -188,18 +188,18 @@ export function ComplexNumberPlane({
                     <line x1={padding} y1={sy} x2={width - padding} y2={sy} stroke={v === 0 ? '#374151' : '#e5e7eb'} strokeWidth={v === 0 ? diagram.lineWeight : 0.5} />
                     {v !== 0 && (
                       <>
-                        <text x={sx} y={cySVG + 14} textAnchor="middle" fontSize={10} fill="#9ca3af">{v}</text>
-                        <text x={cxSVG - 12} y={sy + 4} textAnchor="end" fontSize={10} fill="#9ca3af">{v}i</text>
+                        <text x={sx} y={cySVG + 14} textAnchor="middle" fontSize={10} className="fill-gray-400 dark:fill-gray-500">{v}</text>
+                        <text x={cxSVG - 12} y={sy + 4} textAnchor="end" fontSize={10} className="fill-gray-400 dark:fill-gray-500">{v}i</text>
                       </>
                     )}
                   </g>
                 )
               })}
               {/* Axis labels */}
-              <text x={width - padding + 6} y={cySVG + 4} fontSize={12} fill="#6b7280">
+              <text x={width - padding + 6} y={cySVG + 4} fontSize={12} className="fill-gray-500 dark:fill-gray-400">
                 {language === 'he' ? 'ממשי' : 'Re'}
               </text>
-              <text x={cxSVG + 6} y={padding - 8} fontSize={12} fill="#6b7280">
+              <text x={cxSVG + 6} y={padding - 8} fontSize={12} className="fill-gray-500 dark:fill-gray-400">
                 {language === 'he' ? 'מדומה' : 'Im'}
               </text>
             </motion.g>
@@ -304,7 +304,7 @@ export function ComplexNumberPlane({
                 const { sx, sy } = toSVG(result.real, result.imaginary)
                 return (
                   <g key={`op-${i}`}>
-                    <circle cx={sx} cy={sy} r={5} fill="#22c55e" stroke="white" strokeWidth={1.5} />
+                    <circle cx={sx} cy={sy} r={5} fill="#22c55e" className="stroke-white dark:stroke-gray-900" strokeWidth={1.5} />
                     <motion.text
                       x={sx + 8}
                       y={sy - 6}

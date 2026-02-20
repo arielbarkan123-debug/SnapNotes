@@ -215,26 +215,32 @@ export function TriangleSimilarity({
   language = 'en',
   initialStep,
 }: TriangleSimilarityProps) {
-  const {
-    triangle1,
-    triangle2,
-    criterion,
-    scaleFactor,
-    showRatios = true,
-    title,
-  } = data
+  // Defensive defaults for AI-generated data
+  const defaultTriangle = { vertices: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0.5, y: 1 }], sides: [0, 0, 0], angles: [60, 60, 60] }
+  const triangle1 = data.triangle1 ?? defaultTriangle
+  const triangle2 = data.triangle2 ?? defaultTriangle
+  const criterion = data.criterion ?? 'AA'
+  const scaleFactor = data.scaleFactor ?? 1
+  const showRatios = data.showRatios ?? true
+  const title = data.title
+  const t1Vertices = Array.isArray(triangle1.vertices) && triangle1.vertices.length >= 3 ? triangle1.vertices : defaultTriangle.vertices
+  const t2Vertices = Array.isArray(triangle2.vertices) && triangle2.vertices.length >= 3 ? triangle2.vertices : defaultTriangle.vertices
+  const t1Sides = Array.isArray(triangle1.sides) ? triangle1.sides : [0, 0, 0]
+  const t2Sides = Array.isArray(triangle2.sides) ? triangle2.sides : [0, 0, 0]
+  const t1Angles = Array.isArray(triangle1.angles) ? triangle1.angles : [60, 60, 60]
+  const t2Angles = Array.isArray(triangle2.angles) ? triangle2.angles : [60, 60, 60]
 
   // Fit triangle1 (smaller) into left ~40% and triangle2 (larger) into right ~55%
   const gap = 20
   const leftW = (width - gap) * 0.4
   const rightW = (width - gap) * 0.6
   const verts1 = useMemo(
-    () => fitTriangle(triangle1.vertices, 0, 30, leftW, height - 90),
-    [triangle1.vertices, leftW, height]
+    () => fitTriangle(t1Vertices, 0, 30, leftW, height - 90),
+    [t1Vertices, leftW, height]
   )
   const verts2 = useMemo(
-    () => fitTriangle(triangle2.vertices, leftW + gap, 30, rightW, height - 90),
-    [triangle2.vertices, leftW, gap, rightW, height]
+    () => fitTriangle(t2Vertices, leftW + gap, 30, rightW, height - 90),
+    [t2Vertices, leftW, gap, rightW, height]
   )
 
   const centroid1 = useMemo(() => centroid(verts1), [verts1])
@@ -286,12 +292,12 @@ export function TriangleSimilarity({
 
   // Build ratio text: "a1/a2 = b1/b2 = c1/c2 = k"
   const ratioText = useMemo(() => {
-    const pairs = triangle1.sides.map((s1, i) => {
-      const s2 = triangle2.sides[i]
+    const pairs = t1Sides.map((s1, i) => {
+      const s2 = t2Sides[i] ?? 0
       return s1 + '/' + s2
     })
     return pairs.join(' = ') + ' = ' + formatScale(scaleFactor)
-  }, [triangle1.sides, triangle2.sides, scaleFactor])
+  }, [t1Sides, t2Sides, scaleFactor])
 
   const viewBox = '0 0 ' + width + ' ' + height
 
@@ -384,7 +390,7 @@ export function TriangleSimilarity({
                     animate="visible"
                     variants={labelAppearVariants}
                   >
-                    {triangle1.sides[i]}
+                    {t1Sides[i]}
                   </motion.text>
                 )
               })}
@@ -448,7 +454,7 @@ export function TriangleSimilarity({
                     animate="visible"
                     variants={labelAppearVariants}
                   >
-                    {triangle2.sides[i]}
+                    {t2Sides[i]}
                   </motion.text>
                 )
               })}
@@ -500,7 +506,7 @@ export function TriangleSimilarity({
                       animate="visible"
                       variants={labelAppearVariants}
                     >
-                      {triangle1.angles[i]}°
+                      {t1Angles[i]}°
                     </motion.text>
 
                     {/* Triangle 2 angle arcs */}
@@ -529,7 +535,7 @@ export function TriangleSimilarity({
                       animate="visible"
                       variants={labelAppearVariants}
                     >
-                      {triangle2.angles[i]}°
+                      {t2Angles[i]}°
                     </motion.text>
                   </motion.g>
                 )
@@ -587,7 +593,7 @@ export function TriangleSimilarity({
                     y1={mid1.y}
                     x2={mid2.x}
                     y2={mid2.y}
-                    stroke="#9ca3af"
+                    className="stroke-gray-400 dark:stroke-gray-500"
                     strokeWidth={1}
                     strokeDasharray="4 3"
                     opacity={0.5}

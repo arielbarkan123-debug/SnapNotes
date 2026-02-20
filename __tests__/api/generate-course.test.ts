@@ -60,7 +60,7 @@ jest.mock('@/lib/api/errors', () => ({
 }))
 
 jest.mock('@/lib/srs', () => ({
-  generateCardsFromCourse: jest.fn().mockReturnValue([]),
+  generateCardsFromCourse: jest.fn().mockResolvedValue([]),
 }))
 
 jest.mock('@/lib/images', () => ({

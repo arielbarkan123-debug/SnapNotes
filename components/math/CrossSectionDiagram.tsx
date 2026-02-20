@@ -452,7 +452,7 @@ export function CrossSectionDiagram({
                 y1={solidCy}
                 x2={resultCx - solidSize * 0.45}
                 y2={resultCy}
-                stroke="#9ca3af"
+                className="stroke-gray-400 dark:stroke-gray-500"
                 strokeWidth={2}
                 strokeDasharray="6 3"
                 markerEnd="url(#arrowhead)"
@@ -471,7 +471,7 @@ export function CrossSectionDiagram({
                   refY="3.5"
                   orient="auto"
                 >
-                  <polygon points="0 0, 10 3.5, 0 7" fill="#9ca3af" />
+                  <polygon points="0 0, 10 3.5, 0 7" className="fill-gray-400 dark:fill-gray-500" />
                 </marker>
               </defs>
             </motion.g>
@@ -516,7 +516,7 @@ export function CrossSectionDiagram({
                 y={resultCy + solidSize * 0.72}
                 textAnchor="middle"
                 fontSize={11}
-                fill="#6b7280"
+                className="fill-gray-500 dark:fill-gray-400"
                 initial="hidden"
                 animate="visible"
                 variants={labelAppearVariants}

@@ -60,7 +60,9 @@ export function ExponentialGraph({
   language = 'en',
   initialStep,
 }: ExponentialGraphProps) {
-  const { base, asymptote, expression, isGrowth, title } = data
+  const { expression, isGrowth, title } = data
+  const base = data.base ?? 2
+  const asymptote = data.asymptote ?? 0
   const coefficient = data.coefficient ?? 1
   const yInterceptVal = data.yIntercept ?? (coefficient + asymptote)
 
@@ -115,8 +117,8 @@ export function ExponentialGraph({
   let yMax = Math.max(...yValues) + 1
   if (yMax - yMin < 4) { yMin -= 2; yMax += 2 }
 
-  const xRange = domain.max - domain.min
-  const yRange = yMax - yMin
+  const xRange = (domain.max - domain.min) || 1
+  const yRange = (yMax - yMin) || 1
 
   const toSvgX = (val: number) => pad.left + ((val - domain.min) / xRange) * plotW
   const toSvgY = (val: number) => pad.top + ((yMax - val) / yRange) * plotH
@@ -253,7 +255,7 @@ export function ExponentialGraph({
                 cy={toSvgY(yInterceptVal)}
                 r={6}
                 fill={diagram.colors.primary}
-                stroke="white"
+                className="stroke-white dark:stroke-gray-900"
                 strokeWidth={2}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}

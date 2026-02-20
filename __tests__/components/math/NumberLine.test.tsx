@@ -325,6 +325,30 @@ describe('NumberLine', () => {
       )
       expect(intervalRect).toBeTruthy()
     })
+
+    it('renders interval label with bracket annotation when label provided', () => {
+      mockCurrentStep = 2
+      const dataWithLabel = {
+        min: -5,
+        max: 8,
+        points: [],
+        intervals: [{ start: -2, end: 5, startInclusive: true, endInclusive: true, label: '|5 - (-2)| = 7' }],
+      }
+      const { container } = render(<NumberLine data={dataWithLabel} />)
+      // The bracket annotation has 3 lines (left arm, horizontal, right arm) + SVGLabel
+      const intervalGroup = screen.getByTestId('nl-intervals')
+      expect(intervalGroup).toBeInTheDocument()
+      // Check the label text is rendered
+      expect(intervalGroup.textContent).toContain('|5 - (-2)| = 7')
+    })
+
+    it('does not render bracket annotation when no label provided', () => {
+      mockCurrentStep = 2
+      const { container } = render(<NumberLine data={intervalData} />)
+      const intervalGroup = screen.getByTestId('nl-intervals')
+      // Should not have the distance label text
+      expect(intervalGroup.textContent).not.toContain('=')
+    })
   })
 
   // ---------------------------------------------------------------------------

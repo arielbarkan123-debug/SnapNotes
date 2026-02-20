@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
+import { evaluateAnswer } from '@/lib/evaluation/answer-checker'
 
 // Allow 90 seconds for AI evaluation (Claude API call)
 // Increased to handle slower mobile network connections
@@ -22,262 +22,6 @@ interface EvaluateAnswerRequest {
   conceptIds?: string[] // Optional concept IDs for gap detection
   lessonIndex?: number // Optional lesson index for context
   responseTimeMs?: number // Optional response time for mastery calculation
-}
-
-// Note: Interface for documentation purposes; response object follows this structure
-interface _EvaluationResult {
-  isCorrect: boolean
-  score: number // 0-100
-  feedback: string
-  evaluationMethod: 'exact' | 'fuzzy' | 'ai'
-}
-
-// =============================================================================
-// Text Similarity Utilities
-// =============================================================================
-
-/**
- * Normalize text for comparison
- */
-function normalizeText(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[.,!?;:'"()[\]{}]/g, '')
-    .replace(/\s+/g, ' ')
-}
-
-/**
- * Calculate Levenshtein distance between two strings
- */
-function levenshteinDistance(a: string, b: string): number {
-  const matrix: number[][] = []
-
-  for (let i = 0; i <= b.length; i++) {
-    matrix[i] = [i]
-  }
-
-  for (let j = 0; j <= a.length; j++) {
-    matrix[0][j] = j
-  }
-
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      if (b.charAt(i - 1) === a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1]
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1, // substitution
-          matrix[i][j - 1] + 1,     // insertion
-          matrix[i - 1][j] + 1      // deletion
-        )
-      }
-    }
-  }
-
-  return matrix[b.length][a.length]
-}
-
-/**
- * Calculate similarity ratio between two strings (0-1)
- */
-function similarityRatio(a: string, b: string): number {
-  const normalizedA = normalizeText(a)
-  const normalizedB = normalizeText(b)
-
-  if (normalizedA === normalizedB) return 1
-  if (!normalizedA || !normalizedB) return 0
-
-  const maxLength = Math.max(normalizedA.length, normalizedB.length)
-  if (maxLength === 0) return 1
-
-  const distance = levenshteinDistance(normalizedA, normalizedB)
-  return 1 - distance / maxLength
-}
-
-/**
- * Parse a string as a number, handling various formats
- * Returns null if the string is not a valid number
- */
-function parseNumericAnswer(text: string): number | null {
-  if (!text || typeof text !== 'string') return null
-
-  // Clean the text
-  const cleaned = text.trim()
-    .replace(/,/g, '') // Remove thousands separators
-    .replace(/\s+/g, '') // Remove spaces
-    .replace(/^[$€£¥₹]/g, '') // Remove currency symbols at start
-    .replace(/[$€£¥₹]$/g, '') // Remove currency symbols at end
-    .replace(/^[+-]?\s*/, match => match.trim()) // Clean up sign
-
-  // Try to extract a number
-  // Match patterns like: 123, 123.45, -123, +123, 123.456, .5, -.5
-  const numMatch = cleaned.match(/^[+-]?(\d+\.?\d*|\.\d+)$/)
-  if (!numMatch) return null
-
-  const num = parseFloat(cleaned)
-  return isNaN(num) ? null : num
-}
-
-/**
- * Check if two numeric answers are equal within tolerance
- * This is the MOST RELIABLE check for math problems
- */
-function numericMatch(
-  userAnswer: string,
-  correctAnswer: string,
-  acceptableAnswers: string[] = [],
-  tolerance: number = 0.001 // 0.1% tolerance for rounding differences
-): { matches: boolean; method: 'numeric'; userValue?: number; correctValue?: number } | null {
-  const userNum = parseNumericAnswer(userAnswer)
-  if (userNum === null) return null // Not a numeric answer
-
-  // Check against correct answer
-  const correctNum = parseNumericAnswer(correctAnswer)
-  if (correctNum !== null) {
-    // For very small numbers, use absolute tolerance
-    const absTolerance = Math.max(tolerance, Math.abs(correctNum) * tolerance)
-    if (Math.abs(userNum - correctNum) <= absTolerance) {
-      return { matches: true, method: 'numeric', userValue: userNum, correctValue: correctNum }
-    }
-  }
-
-  // Check against acceptable answers
-  for (const alt of acceptableAnswers) {
-    const altNum = parseNumericAnswer(alt)
-    if (altNum !== null) {
-      const absTolerance = Math.max(tolerance, Math.abs(altNum) * tolerance)
-      if (Math.abs(userNum - altNum) <= absTolerance) {
-        return { matches: true, method: 'numeric', userValue: userNum, correctValue: altNum }
-      }
-    }
-  }
-
-  // If user answer is numeric but doesn't match any acceptable numeric answer
-  // Check if the correct answer is also numeric - if so, it's definitely wrong
-  if (correctNum !== null) {
-    return { matches: false, method: 'numeric', userValue: userNum, correctValue: correctNum }
-  }
-
-  // Correct answer isn't numeric, so this check doesn't apply
-  return null
-}
-
-/**
- * Check if answer matches any acceptable answer with fuzzy matching
- */
-function fuzzyMatch(
-  userAnswer: string,
-  correctAnswer: string,
-  acceptableAnswers: string[] = [],
-  threshold: number = 0.85
-): { matches: boolean; similarity: number; matchedAnswer?: string } {
-  const allAnswers = [correctAnswer, ...acceptableAnswers].filter(Boolean)
-
-  let bestSimilarity = 0
-  let matchedAnswer: string | undefined
-
-  for (const answer of allAnswers) {
-    const similarity = similarityRatio(userAnswer, answer)
-    if (similarity > bestSimilarity) {
-      bestSimilarity = similarity
-      matchedAnswer = answer
-    }
-  }
-
-  return {
-    matches: bestSimilarity >= threshold,
-    similarity: bestSimilarity,
-    matchedAnswer: bestSimilarity >= threshold ? matchedAnswer : undefined
-  }
-}
-
-// =============================================================================
-// AI Evaluation
-// =============================================================================
-
-/**
- * Evaluate answer using Claude AI
- */
-async function evaluateWithAI(
-  question: string,
-  expectedAnswer: string,
-  userAnswer: string,
-  context?: string,
-  curriculumContext?: string,
-  language: string = 'en'
-): Promise<{ isCorrect: boolean; score: number; feedback: string }> {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY not configured')
-  }
-
-  const client = new Anthropic({ apiKey })
-
-  // Build curriculum-aware grading prompt
-  const curriculumInstructions = curriculumContext
-    ? `
-${curriculumContext}
-
-Use the curriculum context above to:
-- Apply appropriate command terms and assessment criteria
-- Grade according to the curriculum's standards
-- Consider assessment objectives when evaluating depth of understanding
-`
-    : ''
-
-  // Build Hebrew language instruction if needed
-  const hebrewInstruction = language === 'he'
-    ? '\nCRITICAL: Write ALL feedback in Hebrew (עברית). The feedback field must be in Hebrew.'
-    : ''
-
-  // Minimal prompt for speed with optional curriculum context
-  const prompt = `You are grading a student's answer.${curriculumContext ? ' Apply curriculum-specific grading criteria.' : ' Be generous with partial credit.'}${hebrewInstruction}
-${curriculumInstructions}
-Question: ${question}
-Expected Answer: ${expectedAnswer}
-Student's Answer: ${userAnswer}
-${context ? `Context: ${context}` : ''}
-
-Evaluate if the student's answer is correct. Consider:
-- Same meaning with different words = CORRECT
-- Key concepts present = PARTIAL CREDIT
-- Minor typos/spelling = IGNORE
-- Empty or completely wrong = INCORRECT
-${curriculumContext ? '- Apply curriculum command terms and assessment objectives' : ''}
-
-Respond with ONLY valid JSON (no markdown):
-{"correct":true/false,"score":0-100,"feedback":"one brief sentence${language === 'he' ? ' in Hebrew' : ''}"}`
-
-  try {
-    const response = await client.messages.create({
-      model: 'claude-3-5-haiku-latest', // Fastest model
-      max_tokens: 150,
-      messages: [{ role: 'user', content: prompt }]
-    })
-
-    // Extract text from response
-    const textContent = response.content.find(block => block.type === 'text')
-    if (!textContent || textContent.type !== 'text') {
-      throw new Error('No text response from AI')
-    }
-
-    // Parse JSON response
-    const text = textContent.text.trim()
-    // Remove any markdown code blocks if present
-    const jsonText = text.replace(/```json\s*|\s*```/g, '').trim()
-    const result = JSON.parse(jsonText)
-
-    return {
-      isCorrect: result.correct === true,
-      score: typeof result.score === 'number' ? Math.max(0, Math.min(100, result.score)) : (result.correct ? 100 : 0),
-      feedback: result.feedback || (result.correct ? 'Correct!' : 'Not quite right.')
-    }
-  } catch (error) {
-    // Fallback to fuzzy matching if AI fails
-    throw error
-  }
 }
 
 // =============================================================================
@@ -309,17 +53,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       )
     }
 
-    // Handle empty user answer
-    if (!userAnswer || !userAnswer.trim()) {
-      return NextResponse.json({
-        isCorrect: false,
-        score: 0,
-        feedback: 'No answer provided.',
-        evaluationMethod: 'exact',
-        evaluationTimeMs: Date.now() - startTime
-      })
-    }
-
     // Get user for curriculum context and gap detection
     let curriculumContextString = ''
     let userId: string | null = null
@@ -334,7 +67,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Fetch user learning profile
         const { data: userProfile } = await supabase
           .from('user_learning_profile')
-          .select('study_system, subjects, subject_levels, language')
+          .select('study_system, grade, subjects, subject_levels, exam_format, language')
           .eq('user_id', user.id)
           .single()
 
@@ -348,6 +81,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               studySystem: userProfile.study_system as StudySystem,
               subjects: userProfile.subjects || [],
               subjectLevels: userProfile.subject_levels || {},
+              examFormat: userProfile.exam_format as 'match_real' | 'inspired_by' | undefined,
+              grade: userProfile.grade || undefined,
             },
             contentSample: context || question, // Use question/context to detect subject
             purpose: 'evaluation',
@@ -360,167 +95,36 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // Silently continue without curriculum context if auth fails
     }
 
-    // Layer 0: Numeric match (MOST RELIABLE for math answers)
-    // This catches cases where "546" should match "546" regardless of formatting
-    const numericResult = numericMatch(userAnswer, expectedAnswer, acceptableAnswers)
-    if (numericResult !== null) {
-      // This is a numeric answer - use numeric comparison result
-      if (numericResult.matches) {
-        // Record performance for gap detection (fire and forget, but log errors)
-        if (userId && conceptIds.length > 0) {
-          recordPerformanceForGapDetection(userId, conceptIds, true, 100, courseId, lessonIndex, responseTimeMs).catch(err => {
-            console.error('[Evaluate Answer] Gap detection recording failed:', err)
-          })
-        }
-        return NextResponse.json({
-          isCorrect: true,
-          score: 100,
-          feedback: 'Correct!',
-          evaluationMethod: 'numeric',
-          evaluationTimeMs: Date.now() - startTime
-        })
-      } else {
-        // Numeric answer but wrong value - don't send to AI, it's definitively wrong
-        if (userId && conceptIds.length > 0) {
-          recordPerformanceForGapDetection(userId, conceptIds, false, 0, courseId, lessonIndex, responseTimeMs).catch(err => {
-            console.error('[Evaluate Answer] Gap detection recording failed:', err)
-          })
-        }
-        return NextResponse.json({
-          isCorrect: false,
-          score: 0,
-          feedback: `Incorrect. Your answer was ${numericResult.userValue}, but the correct answer is ${numericResult.correctValue}.`,
-          evaluationMethod: 'numeric',
-          evaluationTimeMs: Date.now() - startTime
-        })
-      }
-    }
+    // Use the shared evaluation utility
+    const result = await evaluateAnswer({
+      question,
+      expectedAnswer,
+      userAnswer,
+      acceptableAnswers,
+      context,
+      curriculumContext: curriculumContextString,
+      language: userLanguage,
+    })
 
-    // Layer 1: Exact match (fastest for text answers)
-    const normalizedUser = normalizeText(userAnswer)
-    const normalizedExpected = normalizeText(expectedAnswer)
-
-    if (normalizedUser === normalizedExpected) {
-      // Record performance for gap detection (fire and forget, but log errors)
-      if (userId && conceptIds.length > 0) {
-        recordPerformanceForGapDetection(userId, conceptIds, true, 100, courseId, lessonIndex, responseTimeMs).catch(err => {
-          console.error('[Evaluate Answer] Gap detection recording failed:', err)
-        })
-      }
-      return NextResponse.json({
-        isCorrect: true,
-        score: 100,
-        feedback: 'Correct!',
-        evaluationMethod: 'exact',
-        evaluationTimeMs: Date.now() - startTime
+    // Record performance for gap detection (fire and forget, but log errors)
+    if (userId && conceptIds.length > 0) {
+      recordPerformanceForGapDetection(
+        userId,
+        conceptIds,
+        result.isCorrect,
+        result.score,
+        courseId,
+        lessonIndex,
+        responseTimeMs
+      ).catch(err => {
+        console.error('[Evaluate Answer] Gap detection recording failed:', err)
       })
     }
 
-    // Check acceptable answers for exact match
-    for (const alt of acceptableAnswers) {
-      if (normalizeText(alt) === normalizedUser) {
-        // Record performance for gap detection (fire and forget, but log errors)
-        if (userId && conceptIds.length > 0) {
-          recordPerformanceForGapDetection(userId, conceptIds, true, 100, courseId, lessonIndex, responseTimeMs).catch(err => {
-            console.error('[Evaluate Answer] Gap detection recording failed:', err)
-          })
-        }
-        return NextResponse.json({
-          isCorrect: true,
-          score: 100,
-          feedback: 'Correct!',
-          evaluationMethod: 'exact',
-          evaluationTimeMs: Date.now() - startTime
-        })
-      }
-    }
-
-    // Layer 2: Fuzzy match (catches typos)
-    const fuzzyResult = fuzzyMatch(userAnswer, expectedAnswer, acceptableAnswers, 0.85)
-
-    if (fuzzyResult.matches) {
-      const fuzzyScore = Math.round(fuzzyResult.similarity * 100)
-      // Record performance for gap detection (fire and forget, but log errors)
-      if (userId && conceptIds.length > 0) {
-        recordPerformanceForGapDetection(userId, conceptIds, true, fuzzyScore, courseId, lessonIndex, responseTimeMs).catch(err => {
-          console.error('[Evaluate Answer] Gap detection recording failed:', err)
-        })
-      }
-      return NextResponse.json({
-        isCorrect: true,
-        score: fuzzyScore,
-        feedback: 'Correct! (minor spelling differences accepted)',
-        evaluationMethod: 'fuzzy',
-        evaluationTimeMs: Date.now() - startTime
-      })
-    }
-
-    // Layer 3: AI evaluation for semantic matching
-    try {
-      const aiResult = await evaluateWithAI(question, expectedAnswer, userAnswer, context, curriculumContextString, userLanguage)
-
-      // Record performance for gap detection (fire and forget, but log errors)
-      if (userId && conceptIds.length > 0) {
-        recordPerformanceForGapDetection(
-          userId,
-          conceptIds,
-          aiResult.isCorrect,
-          aiResult.score,
-          courseId,
-          lessonIndex,
-          responseTimeMs
-        ).catch(err => {
-          console.error('[Evaluate Answer] Gap detection recording failed:', err)
-        })
-      }
-
-      return NextResponse.json({
-        isCorrect: aiResult.isCorrect,
-        score: aiResult.score,
-        feedback: aiResult.feedback,
-        evaluationMethod: 'ai',
-        evaluationTimeMs: Date.now() - startTime
-      })
-    } catch {
-      // If AI fails, fall back to fuzzy result
-
-      // Use a lower threshold for "partial" credit
-      const partialScore = Math.round(fuzzyResult.similarity * 100)
-      const isPartial = fuzzyResult.similarity >= 0.6
-
-      // Record performance for gap detection (fire and forget, but log errors)
-      if (userId && conceptIds.length > 0) {
-        recordPerformanceForGapDetection(
-          userId,
-          conceptIds,
-          false,
-          isPartial ? partialScore : Math.round(fuzzyResult.similarity * 50),
-          courseId,
-          lessonIndex,
-          responseTimeMs
-        ).catch(err => {
-          console.error('[Evaluate Answer] Gap detection recording failed:', err)
-        })
-      }
-
-      if (isPartial) {
-        return NextResponse.json({
-          isCorrect: false,
-          score: partialScore,
-          feedback: 'Partially correct. Review the expected answer.',
-          evaluationMethod: 'fuzzy',
-          evaluationTimeMs: Date.now() - startTime
-        })
-      }
-
-      return NextResponse.json({
-        isCorrect: false,
-        score: Math.round(fuzzyResult.similarity * 50), // Lower score for low similarity
-        feedback: 'Not quite. Compare with the correct answer.',
-        evaluationMethod: 'fuzzy',
-        evaluationTimeMs: Date.now() - startTime
-      })
-    }
+    return NextResponse.json({
+      ...result,
+      evaluationTimeMs: Date.now() - startTime,
+    })
   } catch {
     return NextResponse.json(
       { error: 'Failed to evaluate answer' },

@@ -238,14 +238,14 @@ export function DilationCoordinatePlane({
               {/* Axis arrows */}
               <motion.polygon
                 points={`${scaleX(0)},${padding.top - 6} ${scaleX(0) - 4},${padding.top + 2} ${scaleX(0) + 4},${padding.top + 2}`}
-                fill="#6b7280"
+                className="fill-gray-500 dark:fill-gray-400"
                 initial="hidden"
                 animate="visible"
                 variants={labelAppearVariants}
               />
               <motion.polygon
                 points={`${width - padding.right + 6},${scaleY(0)} ${width - padding.right - 2},${scaleY(0) - 4} ${width - padding.right - 2},${scaleY(0) + 4}`}
-                fill="#6b7280"
+                className="fill-gray-500 dark:fill-gray-400"
                 initial="hidden"
                 animate="visible"
                 variants={labelAppearVariants}
@@ -320,7 +320,7 @@ export function DilationCoordinatePlane({
                     cy={scaleY(v.y)}
                     r={4}
                     fill={primaryColor}
-                    stroke="white"
+                    className="stroke-white dark:stroke-gray-900"
                     strokeWidth={1}
                   />
                   <motion.text
@@ -346,7 +346,7 @@ export function DilationCoordinatePlane({
                     cy={scaleY(centerOfDilation.y)}
                     r={5}
                     fill="#ef4444"
-                    stroke="white"
+                    className="stroke-white dark:stroke-gray-900"
                     strokeWidth={1.5}
                   />
                   <motion.text
@@ -389,7 +389,7 @@ export function DilationCoordinatePlane({
                     y1={scaleY(centerOfDilation.y)}
                     x2={scaleX(ex)}
                     y2={scaleY(ey)}
-                    stroke="#9ca3af"
+                    className="stroke-gray-400 dark:stroke-gray-500"
                     strokeWidth={1}
                     strokeDasharray="6 4"
                     initial="hidden"
@@ -403,7 +403,7 @@ export function DilationCoordinatePlane({
                 x={width - padding.right - 10}
                 y={padding.top + 16}
                 textAnchor="end"
-                fill="#6b7280"
+                className="fill-gray-500 dark:fill-gray-400"
                 fontSize={12}
                 fontWeight={600}
                 initial="hidden"
@@ -442,7 +442,7 @@ export function DilationCoordinatePlane({
                     cy={scaleY(v.y)}
                     r={4}
                     fill={accentColor}
-                    stroke="white"
+                    className="stroke-white dark:stroke-gray-900"
                     strokeWidth={1}
                   />
                   {showPrime && (

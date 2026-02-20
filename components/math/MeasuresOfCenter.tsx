@@ -69,10 +69,16 @@ export function MeasuresOfCenter({
   language = 'en',
   initialStep,
 }: MeasuresOfCenterProps) {
-  const { data: values, mean, median, mode, range, title } = data
+  // Defensive defaults for AI-generated data
+  const values = Array.isArray(data.data) ? data.data : [0]
+  const mean = data.mean ?? 0
+  const median = data.median ?? 0
+  const mode = Array.isArray(data.mode) ? data.mode : []
+  const range = data.range
+  const title = data.title
 
-  const dataMin = Math.min(...values)
-  const dataMax = Math.max(...values)
+  const dataMin = values.length > 0 ? Math.min(...values) : 0
+  const dataMax = values.length > 0 ? Math.max(...values) : 1
   const lineMin = dataMin - (dataMax - dataMin) * 0.1 - 0.5
   const lineMax = dataMax + (dataMax - dataMin) * 0.1 + 0.5
 
@@ -169,7 +175,7 @@ export function MeasuresOfCenter({
                 y1={lineY}
                 x2={width - padding.right}
                 y2={lineY}
-                stroke="#374151"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 strokeLinecap="round"
                 initial="hidden"
@@ -185,7 +191,7 @@ export function MeasuresOfCenter({
                     y1={lineY - 4}
                     x2={scaleX(v)}
                     y2={lineY + 4}
-                    stroke="#374151"
+                    className="stroke-gray-700 dark:stroke-gray-300"
                     strokeWidth={1}
                     initial="hidden"
                     animate="visible"
@@ -195,7 +201,7 @@ export function MeasuresOfCenter({
                     x={scaleX(v)}
                     y={lineY + 18}
                     textAnchor="middle"
-                    fill="#6b7280"
+                    className="fill-gray-500 dark:fill-gray-400"
                     fontSize={10}
                     initial="hidden"
                     animate="visible"
@@ -242,7 +248,7 @@ export function MeasuresOfCenter({
                   x={width / 2}
                   y={lineY + 32}
                   textAnchor="middle"
-                  fill="#9ca3af"
+                  className="fill-gray-400 dark:fill-gray-500"
                   fontSize={10}
                   initial="hidden"
                   animate="visible"
@@ -346,7 +352,7 @@ export function MeasuresOfCenter({
               animate={isCurrent('mode') ? 'spotlight' : 'visible'}
               variants={spotlight}
             >
-              {mode.map((m, i) => (
+              {mode.length > 0 && mode.map((m, i) => (
                 <motion.g key={`mode-${i}`}>
                   {/* Circle marker */}
                   <motion.circle
@@ -376,19 +382,21 @@ export function MeasuresOfCenter({
                 </motion.g>
               ))}
               {/* Mode label */}
-              <motion.text
-                x={scaleX(mode[0])}
-                y={lineY + 10 + markerSize * 2 + 14}
-                textAnchor="middle"
-                fill={MEASURE_COLORS.mode}
-                fontSize={11}
-                fontWeight={700}
-                initial="hidden"
-                animate="visible"
-                variants={labelAppearVariants}
-              >
-                {language === 'he' ? 'שכיח' : 'Mode'}: {mode.join(', ')}
-              </motion.text>
+              {mode.length > 0 && (
+                <motion.text
+                  x={scaleX(mode[0])}
+                  y={lineY + 10 + markerSize * 2 + 14}
+                  textAnchor="middle"
+                  fill={MEASURE_COLORS.mode}
+                  fontSize={11}
+                  fontWeight={700}
+                  initial="hidden"
+                  animate="visible"
+                  variants={labelAppearVariants}
+                >
+                  {language === 'he' ? 'שכיח' : 'Mode'}: {mode.join(', ')}
+                </motion.text>
+              )}
             </motion.g>
           )}
         </AnimatePresence>

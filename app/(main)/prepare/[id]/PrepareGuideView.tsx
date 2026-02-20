@@ -113,7 +113,7 @@ export default function PrepareGuideView({ guideId, shareToken, isOwner }: Prepa
       {/* Main content area */}
       <div className="flex-1 lg:me-[400px]">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+        <div className="sticky top-14 md:top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700 px-4 py-3">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <Link
               href="/prepare"
@@ -190,7 +190,7 @@ export default function PrepareGuideView({ guideId, shareToken, isOwner }: Prepa
       {/* Mobile Chat Button */}
       <button
         onClick={() => setIsChatOpen(true)}
-        className="lg:hidden fixed bottom-20 end-4 z-30 w-14 h-14 rounded-full bg-gradient-to-r from-violet-600 to-rose-500 text-white shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity"
+        className="lg:hidden fixed bottom-[calc(72px+env(safe-area-inset-bottom,0px))] end-4 z-30 w-14 h-14 rounded-full bg-gradient-to-r from-violet-600 to-rose-500 text-white shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity"
       >
         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />

@@ -162,8 +162,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
     return (
       <button
         onClick={() => setIsMinimized(false)}
-        className="fixed bottom-20 md:bottom-6 right-4 z-50 bg-violet-600 text-white p-3 xs:p-4 rounded-full shadow-lg hover:bg-violet-700 transition-all hover:scale-105 min-h-[48px] min-w-[48px]"
-        style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+        className="fixed bottom-[calc(72px+env(safe-area-inset-bottom,0px))] md:bottom-6 end-4 z-50 bg-violet-600 text-white p-3 xs:p-4 rounded-full shadow-lg hover:bg-violet-700 transition-all hover:scale-105 min-h-[48px] min-w-[48px]"
         aria-label={t('openChat')}
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -180,8 +179,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
 
   return (
     <div
-      className="fixed bottom-20 md:bottom-4 right-2 left-2 xs:left-auto xs:right-4 z-50 xs:w-[360px] sm:w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col max-h-[70vh] xs:max-h-[500px] sm:max-h-[600px]"
-      style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+      className="fixed bottom-[calc(72px+env(safe-area-inset-bottom,0px))] md:bottom-4 start-2 end-2 xs:start-auto xs:end-4 z-50 xs:w-[360px] sm:w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col max-h-[70vh] xs:max-h-[500px] sm:max-h-[600px]"
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-violet-600 text-white rounded-t-2xl">
@@ -201,7 +199,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
         <div className="flex items-center gap-1">
           <button
             onClick={clearChat}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+            className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-white/20 rounded-lg transition-colors"
             title={t('clearChat')}
             aria-label={t('clearChat')}
           >
@@ -211,7 +209,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
           </button>
           <button
             onClick={() => setIsMinimized(true)}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+            className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-white/20 rounded-lg transition-colors"
             title={t('minimize')}
             aria-label={t('minimize')}
           >
@@ -222,7 +220,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
           {onClose && (
             <button
               onClick={onClose}
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-white/20 rounded-lg transition-colors"
               title={t('close')}
               aria-label={t('close')}
             >

@@ -423,7 +423,7 @@ export function PerpendicularBisectorConstruction({
                 cy={M.y}
                 r={5}
                 fill="#ef4444"
-                stroke="white"
+                className="stroke-white dark:stroke-gray-900"
                 strokeWidth={2}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}

@@ -113,15 +113,14 @@ export function LawOfSinesCosines({
   language = 'en',
   initialStep,
 }: LawOfSinesCosinesProps) {
-  const {
-    triangle,
-    law,
-    solveFor,
-    knownParts,
-    showFormula = true,
-    showSubstitution = true,
-    title,
-  } = data
+  // Defensive defaults for AI-generated data
+  const triangle = data.triangle ?? { vertices: [], sides: [0, 0, 0], angles: [0, 0, 0] }
+  const law = data.law ?? 'cosines'
+  const solveFor = data.solveFor ?? 'a'
+  const knownParts = Array.isArray(data.knownParts) ? data.knownParts : []
+  const showFormula = data.showFormula ?? true
+  const showSubstitution = data.showSubstitution ?? true
+  const title = data.title
 
   // Vertex labels and opposite side labels
   const vertexLabels = ['A', 'B', 'C']
@@ -364,8 +363,7 @@ export function LawOfSinesCosines({
                     y1={scaledVertices[i].y}
                     x2={scaledVertices[j].x}
                     y2={scaledVertices[j].y}
-                    stroke="#374151"
-                    className="dark:stroke-gray-300"
+                    className="stroke-gray-700 dark:stroke-gray-300"
                     strokeWidth={diagram.lineWeight}
                     strokeLinecap="round"
                     initial="hidden"

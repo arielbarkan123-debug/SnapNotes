@@ -20,7 +20,18 @@ import type {
   AnnotationRegion,
   AnnotationData,
   InputMode,
+  SolutionSet,
+  VerifiedProblem,
+  StudentAnswerSet,
+  FeedbackPoint,
 } from './types'
+import { verifyAnswer, answersMatch } from './math-verifier'
+import { readStudentWork } from './student-work-reader'
+import { validateFeedbackQuality, regenerateWeakFeedback } from './feedback-quality'
+import {
+  normalizeText,
+  similarityRatio,
+} from '@/lib/evaluation/answer-checker'
 
 // ============================================================================
 // Error Codes for Homework Checker Engine
@@ -403,178 +414,827 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
     }
 
     // ============================================================================
-    // IMAGE MODE: Fetch images and analyze with vision
+    // IMAGE MODE: Three-Phase Pipeline (with legacy fallback)
     // ============================================================================
-    // Validate that taskImageUrl exists for image mode
     if (!input.taskImageUrl) {
       throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_IMG_004, 'Task image URL is required for image mode', 'CheckerEngine/ImageMode/Validation'))
     }
 
-    // Fetch images and convert to base64
-    // Note: The API route uses streaming with heartbeats to keep mobile connections alive
-    // while this fetch is happening
-    console.log('[Checker] Fetching images for analysis...')
-
-    // Fetch task image (required) and answer image (optional)
-    const taskImage = await fetchImageAsBase64(input.taskImageUrl)
-    const answerImage = input.answerImageUrl
-      ? await fetchImageAsBase64(input.answerImageUrl)
-      : null
-
-    // Fetch reference images if provided
-    let referenceImages: FetchedImage[] = []
-    if (input.referenceImageUrls && input.referenceImageUrls.length > 0) {
-      referenceImages = await Promise.all(
-        input.referenceImageUrls.map(url => fetchImageAsBase64(url))
-      )
+    try {
+      console.log('[Checker] Starting three-phase grading pipeline...')
+      return await analyzeHomeworkThreePhase(client, input)
+    } catch (pipelineError) {
+      // Fallback: if the three-phase pipeline fails, use legacy single-pass
+      console.warn('[Checker] Three-phase pipeline failed, falling back to legacy single-pass:', pipelineError instanceof Error ? pipelineError.message : String(pipelineError))
+      return await analyzeHomeworkLegacy(client, input)
     }
-
-    // Fetch teacher review images if provided
-    let teacherImages: FetchedImage[] = []
-    if (input.teacherReviewUrls && input.teacherReviewUrls.length > 0) {
-      teacherImages = await Promise.all(
-        input.teacherReviewUrls.map(url => fetchImageAsBase64(url))
-      )
-    }
-
-    console.log('[Checker] All images fetched, building prompt...')
-
-    // Build message content with base64 images
-    const content: Anthropic.MessageParam['content'] = []
-
-    // Add task content (DOCX text, PDF document, or image)
-    content.push({
-      type: 'text',
-      text: '## HOMEWORK TASK:\nAnalyze this homework assignment/task:',
+  } catch (error) {
+    // Detailed error logging for debugging mobile vs desktop issues
+    console.error('[Homework Checker] analyzeHomework error:', {
+      message: error instanceof Error ? error.message : String(error),
+      name: error instanceof Error ? error.name : 'Unknown',
+      stack: error instanceof Error ? error.stack : undefined,
+      cause: error instanceof Error ? (error as Error & { cause?: unknown }).cause : undefined,
     })
 
-    // Check if we have extracted DOCX text (DOCX not supported by Claude Vision)
-    if (input.taskDocumentText) {
-      content.push({
-        type: 'text',
-        text: `\n[Document Content]:\n${input.taskDocumentText}`,
-      })
-    } else if (taskImage.mediaType === 'application/pdf') {
-      // Use document block for PDFs (Claude Vision API supports this)
-      content.push({
-        type: 'document',
-        source: {
-          type: 'base64',
-          media_type: 'application/pdf',
-          data: taskImage.base64,
-        },
-      } as Anthropic.DocumentBlockParam)
-    } else {
-      content.push({
-        type: 'image',
-        source: {
-          type: 'base64',
-          media_type: taskImage.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-          data: taskImage.base64,
-        },
-      })
+    const errorMessage = error instanceof Error ? error.message.toLowerCase() : ''
+    const errorName = error instanceof Error ? error.name : ''
+
+    if (errorMessage.includes('timeout') || errorName === 'AbortError' || errorMessage.includes('timed out')) {
+      throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_IMG_003, 'Analysis took too long. Please try again with clearer images.', 'CheckerEngine/ImageMode/Timeout'))
     }
 
-    // Add answer content (if provided)
-    if (input.answerDocumentText) {
-      // DOCX text was extracted
-      content.push({
-        type: 'text',
-        text: '\n## STUDENT\'S ANSWER:\nHere is the student\'s submitted work:',
-      })
-      content.push({
-        type: 'text',
-        text: `\n[Document Content]:\n${input.answerDocumentText}`,
-      })
-    } else if (answerImage) {
-      content.push({
-        type: 'text',
-        text: '\n## STUDENT\'S ANSWER:\nHere is the student\'s submitted work:',
-      })
-      if (answerImage.mediaType === 'application/pdf') {
+    if (errorMessage.includes('overloaded') || errorMessage.includes('529')) {
+      throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_API_002, 'Our AI is busy right now. Please try again in a moment.', 'CheckerEngine/API/Overloaded'))
+    }
+
+    if (error instanceof Error && error.message.startsWith('[')) {
+      throw error
+    }
+    throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_IMG_002, error instanceof Error ? error.message : 'Analysis failed', 'CheckerEngine/ImageMode/Unknown'))
+  }
+}
+
+// ============================================================================
+// Three-Phase Grading Pipeline
+// ============================================================================
+
+async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput): Promise<CheckerOutput> {
+  const isSeparateImages = !!input.answerImageUrl
+  console.log(`[Checker/3Phase] Mode: ${isSeparateImages ? 'separate' : 'combined'} images`)
+
+  // Fetch all images upfront
+  const taskImage = await fetchImageAsBase64(input.taskImageUrl!)
+  const answerImage = input.answerImageUrl ? await fetchImageAsBase64(input.answerImageUrl) : null
+
+  // PDF documents can't go through the three-phase pipeline (need legacy)
+  if (taskImage.mediaType === 'application/pdf' || input.taskDocumentText || input.answerDocumentText) {
+    console.log('[Checker/3Phase] PDF/DOCX detected, falling back to legacy pipeline')
+    throw new Error('PDF/DOCX not supported in three-phase pipeline')
+  }
+
+  const taskMediaType = taskImage.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
+
+  // Fetch reference images (used in Phase 1 for solving context)
+  let referenceImages: FetchedImage[] = []
+  if (input.referenceImageUrls && input.referenceImageUrls.length > 0) {
+    referenceImages = await Promise.all(
+      input.referenceImageUrls.map(url => fetchImageAsBase64(url))
+    )
+  }
+
+  // Fetch teacher review images (used in Phase 3 for feedback style)
+  let teacherImages: FetchedImage[] = []
+  if (input.teacherReviewUrls && input.teacherReviewUrls.length > 0) {
+    teacherImages = await Promise.all(
+      input.teacherReviewUrls.map(url => fetchImageAsBase64(url))
+    )
+  }
+
+  // ============================================================================
+  // Phase 1 + Phase 2 (truly parallel in separate-image mode)
+  // ============================================================================
+  let solutionSet: SolutionSet
+  let studentAnswerSet: StudentAnswerSet | null = null
+
+  if (isSeparateImages && answerImage) {
+    const answerMediaType = answerImage.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
+    console.log('[Checker/3Phase] Running Phase 1 + Phase 2 in parallel...')
+
+    // Phase 1 and Phase 2 run truly in parallel — they look at different images.
+    // Phase 2 runs without a problem list; it transcribes all answers in visual
+    // order with sequential IDs (q1, q2, ...). Phase 3 matches by index.
+    const [phase1Result, phase2Result] = await Promise.all([
+      extractAndSolveProblems(client, taskImage.base64, taskMediaType, false, referenceImages),
+      readStudentWork(client, answerImage.base64, answerMediaType),
+    ])
+
+    solutionSet = phase1Result
+    studentAnswerSet = phase2Result
+
+    // Remap Phase 2 sequential IDs (q1, q2, ...) to Phase 1 problem IDs by index
+    if (studentAnswerSet.answers.length > 0 && solutionSet.problems.length > 0) {
+      const answerCount = studentAnswerSet.answers.length
+      const problemCount = solutionSet.problems.length
+
+      if (answerCount !== problemCount) {
+        console.warn(`[Checker/3Phase] Phase 1/2 count mismatch: ${problemCount} problems vs ${answerCount} student answers`)
+      }
+
+      // Map by index up to the minimum of both arrays
+      const mapCount = Math.min(answerCount, problemCount)
+      for (let i = 0; i < mapCount; i++) {
+        studentAnswerSet.answers[i].problemId = solutionSet.problems[i].id
+      }
+
+      // Drop excess answers that don't map to any problem (likely scratch work)
+      if (answerCount > problemCount) {
+        console.warn(`[Checker/3Phase] Dropping ${answerCount - problemCount} excess student answers (no matching problems)`)
+        studentAnswerSet.answers = studentAnswerSet.answers.slice(0, problemCount)
+      }
+    }
+  } else {
+    // Combined image mode: Phase 1 extracts problems AND reads student answers
+    console.log('[Checker/3Phase] Running Phase 1 (combined mode — extract + solve + read)...')
+    solutionSet = await extractAndSolveProblems(client, taskImage.base64, taskMediaType, true, referenceImages)
+  }
+
+  // ============================================================================
+  // mathjs Verification + Retry on Disagreement
+  // ============================================================================
+  console.log('[Checker/3Phase] Running mathjs verification...')
+  const disagreements: VerifiedProblem[] = []
+
+  for (const problem of solutionSet.problems) {
+    const verification = verifyAnswer(problem.correctAnswer, problem.subject, problem.questionText)
+    problem.mathjsVerified = verification.verified
+    problem.mathjsResult = verification.result
+    problem.verificationStatus = verification.status
+
+    if (verification.status === 'disagreement') {
+      console.warn(`[Checker/3Phase] mathjs disagrees on problem ${problem.id}: Claude="${problem.correctAnswer}", mathjs="${verification.result}"`)
+      disagreements.push(problem)
+    }
+  }
+
+  // Retry Phase 1 for disagreements
+  if (disagreements.length > 0) {
+    console.log(`[Checker/3Phase] Retrying ${disagreements.length} problems with mathjs disagreement...`)
+    for (const problem of disagreements) {
+      try {
+        const corrected = await recheckProblem(client, problem)
+        if (corrected) {
+          problem.correctAnswer = corrected.correctAnswer
+          problem.solutionSteps = corrected.solutionSteps
+          // Re-verify with mathjs
+          const recheck = verifyAnswer(corrected.correctAnswer, problem.subject, problem.questionText)
+          problem.mathjsVerified = recheck.verified
+          problem.mathjsResult = recheck.result
+          problem.verificationStatus = recheck.status
+          if (recheck.status === 'disagreement') {
+            console.warn(`[Checker/3Phase] Problem ${problem.id} STILL disagrees after recheck: Claude="${corrected.correctAnswer}", mathjs="${recheck.result}". Using Claude's answer — mathjs may not handle this expression.`)
+          } else {
+            console.log(`[Checker/3Phase] Problem ${problem.id} rechecked: status=${recheck.status}`)
+          }
+        }
+      } catch (retryErr) {
+        console.warn(`[Checker/3Phase] Retry failed for problem ${problem.id}:`, retryErr instanceof Error ? retryErr.message : String(retryErr))
+      }
+    }
+  }
+
+  // ============================================================================
+  // Phase 3 — Compare & Generate Feedback
+  // ============================================================================
+  console.log('[Checker/3Phase] Running Phase 3 (compare & generate feedback)...')
+  const result = await compareAndGenerateFeedback(
+    client,
+    solutionSet,
+    studentAnswerSet,
+    answerImage?.base64,
+    answerImage ? (answerImage.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp') : undefined,
+    teacherImages
+  )
+
+  // ============================================================================
+  // Feedback Quality Floor
+  // ============================================================================
+  console.log('[Checker/3Phase] Checking feedback quality...')
+  const qualityResult = validateFeedbackQuality(
+    result.feedback.correctPoints,
+    result.feedback.improvementPoints
+  )
+
+  if (!qualityResult.passed) {
+    console.log('[Checker/3Phase] Feedback quality below floor, regenerating weak items...')
+    const failingItems: { type: 'correct' | 'improvement'; index: number; point: FeedbackPoint }[] = []
+    const contexts: { correctAnswer: string; studentAnswer: string; questionText: string }[] = []
+
+    for (const idx of qualityResult.failingImprovementIndices) {
+      const point = result.feedback.improvementPoints[idx]
+      if (point) {
+        failingItems.push({ type: 'improvement', index: idx, point })
+        const matchedProblem = findProblemForFeedback(point, solutionSet.problems)
+        contexts.push({
+          correctAnswer: matchedProblem?.correctAnswer || '',
+          studentAnswer: matchedProblem?.studentAnswer || '',
+          questionText: matchedProblem?.questionText || '',
+        })
+      }
+    }
+
+    for (const idx of qualityResult.failingCorrectIndices) {
+      const point = result.feedback.correctPoints[idx]
+      if (point) {
+        failingItems.push({ type: 'correct', index: idx, point })
+        const matchedProblem = findProblemForFeedback(point, solutionSet.problems)
+        contexts.push({
+          correctAnswer: matchedProblem?.correctAnswer || '',
+          studentAnswer: matchedProblem?.studentAnswer || '',
+          questionText: matchedProblem?.questionText || '',
+        })
+      }
+    }
+
+    if (failingItems.length > 0) {
+      const regenerated = await regenerateWeakFeedback(
+        client, failingItems, contexts, solutionSet.detectedLanguage
+      )
+
+      // Replace failing items with regenerated ones (only if they have content)
+      let regenIdx = 0
+      for (const idx of qualityResult.failingImprovementIndices) {
+        if (regenerated[regenIdx]?.description) {
+          result.feedback.improvementPoints[idx] = {
+            ...result.feedback.improvementPoints[idx],
+            ...regenerated[regenIdx],
+          }
+        }
+        regenIdx++
+      }
+      for (const idx of qualityResult.failingCorrectIndices) {
+        if (regenerated[regenIdx]?.description) {
+          result.feedback.correctPoints[idx] = {
+            ...result.feedback.correctPoints[idx],
+            ...regenerated[regenIdx],
+          }
+        }
+        regenIdx++
+      }
+
+      // Re-validate after regeneration (one check, no infinite loop)
+      const recheck = validateFeedbackQuality(
+        result.feedback.correctPoints,
+        result.feedback.improvementPoints
+      )
+      if (!recheck.passed) {
+        console.warn(`[Checker/3Phase] Feedback still below quality floor after regeneration (${recheck.reasons.length} issues remain). Accepting as-is.`)
+      }
+    }
+  }
+
+  // Final safety net
+  return ensureGradeConsistency(result)
+}
+
+/**
+ * Match a feedback point to its source problem by searching for problem IDs
+ * or question text in the feedback title/description.
+ */
+function findProblemForFeedback(
+  point: FeedbackPoint,
+  problems: VerifiedProblem[]
+): VerifiedProblem | undefined {
+  const text = `${point.title} ${point.description}`.toLowerCase()
+
+  // First try: match by problem ID in title (e.g., "Problem q1", "q2 — Error")
+  for (const problem of problems) {
+    if (text.includes(problem.id.toLowerCase())) {
+      return problem
+    }
+  }
+
+  // Second try: match by problem number (e.g., "Problem 1", "Problem 2")
+  const numMatch = text.match(/problem\s*(\d+)/i)
+  if (numMatch) {
+    const idx = parseInt(numMatch[1]) - 1
+    if (idx >= 0 && idx < problems.length) {
+      return problems[idx]
+    }
+  }
+
+  // Third try: match by question text overlap (need at least 8 chars for meaningful match)
+  for (const problem of problems) {
+    const snippet = (problem.questionText || '').toLowerCase().slice(0, 30)
+    if (snippet.length >= 8 && text.includes(snippet)) {
+      return problem
+    }
+  }
+
+  return undefined
+}
+
+/**
+ * Re-check a single problem where mathjs disagreed with Claude's answer.
+ * Sends a focused prompt with the discrepancy details.
+ */
+async function recheckProblem(
+  client: Anthropic,
+  problem: VerifiedProblem
+): Promise<{ correctAnswer: string; solutionSteps: string[] } | null> {
+  const prompt = `Recheck this calculation. There is a discrepancy between two solution methods.
+
+Problem: ${problem.questionText}
+
+Your previous answer: ${problem.correctAnswer}
+Your previous steps: ${problem.solutionSteps.join(' → ')}
+
+Independent calculator result: ${problem.mathjsResult}
+
+Please carefully re-solve this problem step by step and provide the correct answer.
+If your previous answer was wrong, provide the corrected answer.
+If the calculator couldn't properly parse the problem, confirm your original answer.
+
+Respond with ONLY JSON:
+{ "correctAnswer": "the verified correct answer", "solutionSteps": ["step1", "step2", ...] }`
+
+  const response = await client.messages.create({
+    model: AI_MODEL,
+    max_tokens: 512,
+    messages: [{ role: 'user', content: prompt }],
+  })
+
+  const textContent = response.content.find(b => b.type === 'text')
+  if (!textContent || textContent.type !== 'text') return null
+
+  const jsonMatch = textContent.text.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) return null
+
+  const parsed = JSON.parse(jsonMatch[0])
+  return {
+    correctAnswer: String(parsed.correctAnswer || problem.correctAnswer),
+    solutionSteps: Array.isArray(parsed.solutionSteps) ? parsed.solutionSteps.map(String) : problem.solutionSteps,
+  }
+}
+
+// ============================================================================
+// Phase 1 — Extract & Solve Problems
+// ============================================================================
+
+async function extractAndSolveProblems(
+  client: Anthropic,
+  imageBase64: string,
+  mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+  includeStudentAnswers: boolean,
+  referenceImages: FetchedImage[] = []
+): Promise<SolutionSet> {
+  const studentAnswerInstruction = includeStudentAnswers
+    ? `
+6. Also READ the student's answers from the same image:
+   - For each problem, transcribe what the student wrote as their answer
+   - Include a "studentAnswer" field with their answer text
+   - Include a "studentAnswerConfidence" field: "high", "medium", or "low"
+   - If handwriting is ambiguous, favor the interpretation that makes the answer correct`
+    : ''
+
+  const studentAnswerFields = includeStudentAnswers
+    ? `
+      "studentAnswer": "what the student wrote (only in combined-image mode)",
+      "studentAnswerConfidence": "high" | "medium" | "low"`
+    : ''
+
+  const prompt = `You are a problem-solving specialist. Your job is to:
+1. READ all problems/questions from this image
+2. SOLVE each one step-by-step showing your work
+3. Provide the correct answer for each
+4. Identify the subject area for each problem
+5. Be especially careful with Hebrew content: read Hebrew labels RTL, math expressions LTR
+${studentAnswerInstruction}
+
+## IMPORTANT RULES:
+- SHOW YOUR WORK for every calculation
+- For multi-line solutions in the image, read ALL lines as ONE solution
+- For Hebrew+math: Hebrew labels are RTL, equations are LTR
+- Double-check every calculation before finalizing
+- Detect the language used in the homework (Hebrew or English)
+
+## Response format (JSON only):
+{
+  "detectedLanguage": "he" or "en",
+  "problems": [
+    {
+      "id": "q1",
+      "questionText": "exact transcription of the problem",
+      "subject": "Math" | "Science" | "Physics" | etc,
+      "solutionSteps": ["step 1: ...", "step 2: ...", "step 3: ..."],
+      "correctAnswer": "the final correct answer"${studentAnswerFields}
+    }
+  ]
+}
+
+Respond with ONLY the JSON, no other text.`
+
+  const content: Anthropic.MessageParam['content'] = [
+    { type: 'text', text: prompt },
+    {
+      type: 'image',
+      source: { type: 'base64', media_type: mediaType, data: imageBase64 },
+    },
+  ]
+
+  // Add reference images if provided (for solving context)
+  if (referenceImages.length > 0) {
+    content.push({
+      type: 'text',
+      text: '\n## REFERENCE MATERIALS (use these to help solve the problems):',
+    })
+    for (const img of referenceImages) {
+      if (img.mediaType === 'application/pdf') {
         content.push({
           type: 'document',
-          source: {
-            type: 'base64',
-            media_type: 'application/pdf',
-            data: answerImage.base64,
-          },
+          source: { type: 'base64', media_type: 'application/pdf', data: img.base64 },
         } as Anthropic.DocumentBlockParam)
       } else {
         content.push({
           type: 'image',
           source: {
             type: 'base64',
-            media_type: answerImage.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-            data: answerImage.base64,
+            media_type: img.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+            data: img.base64,
           },
         })
       }
+    }
+  }
+
+  const response = await streamWithRetry(client, content)
+  return parseSolutionSetResponse(response, includeStudentAnswers)
+}
+
+function parseSolutionSetResponse(response: Anthropic.Message, includeStudentAnswers: boolean): SolutionSet {
+  const textContent = response.content.find(b => b.type === 'text')
+  if (!textContent || textContent.type !== 'text') {
+    throw new Error('Phase 1: No text in response')
+  }
+
+  const jsonMatch = textContent.text.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) {
+    throw new Error('Phase 1: No JSON found in response')
+  }
+
+  const parsed = JSON.parse(jsonMatch[0])
+  if (!Array.isArray(parsed.problems) || parsed.problems.length === 0) {
+    throw new Error('Phase 1: No problems extracted')
+  }
+
+  const detectedLanguage = parsed.detectedLanguage === 'he' ? 'he' : 'en'
+
+  const problems: VerifiedProblem[] = parsed.problems.map((p: Record<string, unknown>, i: number) => ({
+    id: String(p.id || `q${i + 1}`),
+    questionText: String(p.questionText || ''),
+    subject: String(p.subject || 'General'),
+    solutionSteps: Array.isArray(p.solutionSteps) ? p.solutionSteps.map(String) : [],
+    correctAnswer: String(p.correctAnswer || ''),
+    mathjsVerified: false,
+    verificationStatus: 'unverifiable' as const,
+    ...(includeStudentAnswers ? {
+      studentAnswer: p.studentAnswer != null ? String(p.studentAnswer) : undefined,
+      studentAnswerConfidence: validateConfidenceLevel(p.studentAnswerConfidence),
+    } : {}),
+  }))
+
+  console.log(`[Checker/Phase1] Extracted ${problems.length} problems, language: ${detectedLanguage}`)
+
+  return {
+    problems,
+    inputMode: includeStudentAnswers ? 'combined' : 'separate',
+    detectedLanguage,
+  }
+}
+
+function validateConfidenceLevel(value: unknown): 'high' | 'medium' | 'low' | undefined {
+  if (typeof value === 'string' && ['high', 'medium', 'low'].includes(value)) {
+    return value as 'high' | 'medium' | 'low'
+  }
+  return undefined
+}
+
+// ============================================================================
+// Phase 3 — Compare & Generate Feedback
+// ============================================================================
+
+async function compareAndGenerateFeedback(
+  client: Anthropic,
+  solutionSet: SolutionSet,
+  studentAnswerSet: StudentAnswerSet | null,
+  answerImageBase64?: string,
+  answerMediaType?: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+  teacherImages: FetchedImage[] = []
+): Promise<CheckerOutput> {
+  // Build student answers map
+  const studentAnswers = new Map<string, string>()
+  if (studentAnswerSet) {
+    for (const answer of studentAnswerSet.answers) {
+      studentAnswers.set(answer.problemId, answer.interpretation || answer.rawReading)
+    }
+  }
+
+  // For combined mode, student answers are on the problems themselves
+  for (const problem of solutionSet.problems) {
+    if (problem.studentAnswer && !studentAnswers.has(problem.id)) {
+      studentAnswers.set(problem.id, problem.studentAnswer)
+    }
+  }
+
+  // ============================================================================
+  // Layer 1: Deterministic comparison (no AI needed)
+  // ============================================================================
+  const deterministicResults: Map<string, { matched: boolean; method: string }> = new Map()
+
+  for (const problem of solutionSet.problems) {
+    const studentAnswer = studentAnswers.get(problem.id)
+    if (!studentAnswer) continue
+
+    // Numeric match (within 0.1% tolerance)
+    if (answersMatch(problem.correctAnswer, studentAnswer)) {
+      deterministicResults.set(problem.id, { matched: true, method: 'numeric' })
+      continue
+    }
+
+    // Exact text match (normalized)
+    if (normalizeText(problem.correctAnswer) === normalizeText(studentAnswer)) {
+      deterministicResults.set(problem.id, { matched: true, method: 'exact' })
+      continue
+    }
+
+    // Fuzzy text match (Levenshtein >= 85%)
+    const similarity = similarityRatio(problem.correctAnswer, studentAnswer)
+    if (similarity >= 0.85) {
+      deterministicResults.set(problem.id, { matched: true, method: 'fuzzy' })
+      continue
+    }
+
+    // Didn't match deterministically — need AI comparison
+  }
+
+  console.log(`[Checker/Phase3] Deterministic matches: ${deterministicResults.size}/${solutionSet.problems.length}`)
+
+  // ============================================================================
+  // Layer 2 + 3: AI comparison + feedback generation
+  // Build a prompt that only asks AI to judge problems that didn't match
+  // deterministically, and generate all feedback
+  // ============================================================================
+
+  const problemSummaries = solutionSet.problems.map(problem => {
+    const studentAnswer = studentAnswers.get(problem.id) || '(no answer found)'
+    const deterministicMatch = deterministicResults.get(problem.id)
+
+    return {
+      id: problem.id,
+      question: problem.questionText,
+      correctAnswer: problem.correctAnswer,
+      mathjsVerified: problem.mathjsVerified,
+      mathjsResult: problem.mathjsResult,
+      studentAnswer,
+      deterministicMatch: deterministicMatch ? deterministicMatch.method : null,
+      needsAIJudgment: !deterministicMatch,
+    }
+  })
+
+  const content: Anthropic.MessageParam['content'] = []
+
+  // Add answer image for annotation purposes if available
+  if (answerImageBase64 && answerMediaType) {
+    content.push({
+      type: 'text',
+      text: '## Student\'s answer sheet (for annotation region placement):',
+    })
+    content.push({
+      type: 'image',
+      source: { type: 'base64', media_type: answerMediaType, data: answerImageBase64 },
+    })
+  }
+
+  // Add teacher review images for feedback style matching
+  let teacherStyleInstruction = ''
+  if (teacherImages.length > 0) {
+    content.push({
+      type: 'text',
+      text: '\n## PREVIOUS TEACHER REVIEWS (match this grading style):',
+    })
+    for (const img of teacherImages) {
+      if (img.mediaType === 'application/pdf') {
+        content.push({
+          type: 'document',
+          source: { type: 'base64', media_type: 'application/pdf', data: img.base64 },
+        } as Anthropic.DocumentBlockParam)
+      } else {
+        content.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: img.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+            data: img.base64,
+          },
+        })
+      }
+    }
+    teacherStyleInstruction = `
+4. Mirror the teacher's feedback style from the reviews above:
+   - Match their tone, focus areas, and grading standards
+   - Fill in "teacherStyleNotes" and "expectationComparison" fields`
+  }
+
+  content.push({
+    type: 'text',
+    text: `## GRADING TASK — Compare answers and generate feedback
+
+You are given pre-solved problems with verified correct answers and the student's transcribed answers.
+
+### Problem data:
+${JSON.stringify(problemSummaries, null, 2)}
+
+### Your tasks:
+1. For problems where "deterministicMatch" is not null → the student is CORRECT. Generate positive feedback.
+2. For problems where "needsAIJudgment" is true → judge if the student's answer is correct/equivalent to the correct answer:
+   - Consider alternative notations (e.g., "1/2" vs "0.5")
+   - Consider equivalent expressions
+   - Consider conceptual equivalence for non-numeric answers
+   - If ambiguous, favor the student
+3. Generate specific, detailed feedback for every problem.${teacherStyleInstruction}
+
+### Feedback quality requirements:
+- For WRONG answers: state the correct answer, what the student wrote, explain the specific error, show the correction. Minimum 20 words.
+- For CORRECT answers: acknowledge what technique/method the student used correctly. Minimum 10 words.
+- NO generic phrases like "good job", "try again", "needs work".
+
+### Response format (JSON):
+{
+  "subject": "primary subject",
+  "topic": "specific topic",
+  "taskText": "summary of all problems",
+  "answerText": "summary of student's work",
+  "feedback": {
+    "gradeLevel": "excellent" | "good" | "needs_improvement" | "incomplete",
+    "gradeEstimate": "X/100 — MUST equal (correct_count / total) * 100",
+    "summary": "X out of Y problems correct. Brief overall assessment.",
+    "correctPoints": [
+      {
+        "title": "Problem X — Correct",
+        "description": "Specific acknowledgment of what the student did right (20+ words for wrong, 10+ words for correct)",
+        "region": { "x": 0-100, "y": 0-100, "width": 0-100, "height": 0-100 }
+      }
+    ],
+    "improvementPoints": [
+      {
+        "title": "Problem X — Error",
+        "description": "The correct answer is [X]. The student wrote [Y]. [Specific error explanation]. [Correct solution steps].",
+        "severity": "major" | "moderate",
+        "region": { "x": 0-100, "y": 0-100, "width": 0-100, "height": 0-100 }
+      }
+    ],
+    "suggestions": ["specific actionable suggestions"],
+    "teacherStyleNotes": null,
+    "expectationComparison": null,
+    "encouragement": "encouraging message"
+  }
+}
+
+Respond with ONLY JSON.`,
+  })
+
+  const response = await streamWithRetry(client, content)
+  return parseCheckerResponse(response)
+}
+
+// ============================================================================
+// Shared Stream Helper with Retry
+// ============================================================================
+
+async function streamWithRetry(
+  client: Anthropic,
+  content: Anthropic.MessageParam['content']
+): Promise<Anthropic.Message> {
+  let response: Anthropic.Message | null = null
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const stream = client.messages.stream({
+        model: AI_MODEL,
+        max_tokens: MAX_TOKENS,
+        messages: [{ role: 'user', content }],
+      })
+
+      for await (const event of stream) {
+        void event
+      }
+
+      response = await stream.finalMessage()
+      console.log(`[Checker] Response received (attempt ${attempt}), tokens:`, response.usage?.output_tokens)
+      break
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+
+      if (!isRetryableError(error) || attempt === MAX_RETRIES) {
+        console.error(`[Checker] Attempt ${attempt}/${MAX_RETRIES} failed (not retrying):`, lastError.message)
+        throw error
+      }
+
+      const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1)
+      console.warn(`[Checker] Attempt ${attempt}/${MAX_RETRIES} failed: ${lastError.message}. Retrying in ${delay}ms...`)
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
+
+  if (!response) {
+    throw lastError || new Error('Failed to get response from AI')
+  }
+
+  return response
+}
+
+// ============================================================================
+// Legacy Single-Pass Analysis (Fallback)
+// ============================================================================
+
+async function analyzeHomeworkLegacy(client: Anthropic, input: CheckerInput): Promise<CheckerOutput> {
+  console.log('[Checker/Legacy] Running legacy single-pass analysis...')
+
+  // Fetch images
+  const taskImage = await fetchImageAsBase64(input.taskImageUrl!)
+  const answerImage = input.answerImageUrl
+    ? await fetchImageAsBase64(input.answerImageUrl)
+    : null
+
+  // Fetch reference images if provided
+  let referenceImages: FetchedImage[] = []
+  if (input.referenceImageUrls && input.referenceImageUrls.length > 0) {
+    referenceImages = await Promise.all(
+      input.referenceImageUrls.map(url => fetchImageAsBase64(url))
+    )
+  }
+
+  // Fetch teacher review images if provided
+  let teacherImages: FetchedImage[] = []
+  if (input.teacherReviewUrls && input.teacherReviewUrls.length > 0) {
+    teacherImages = await Promise.all(
+      input.teacherReviewUrls.map(url => fetchImageAsBase64(url))
+    )
+  }
+
+  // Build message content
+  const content: Anthropic.MessageParam['content'] = []
+
+  content.push({
+    type: 'text',
+    text: '## HOMEWORK TASK:\nAnalyze this homework assignment/task:',
+  })
+
+  if (input.taskDocumentText) {
+    content.push({ type: 'text', text: `\n[Document Content]:\n${input.taskDocumentText}` })
+  } else if (taskImage.mediaType === 'application/pdf') {
+    content.push({
+      type: 'document',
+      source: { type: 'base64', media_type: 'application/pdf', data: taskImage.base64 },
+    } as Anthropic.DocumentBlockParam)
+  } else {
+    content.push({
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: taskImage.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+        data: taskImage.base64,
+      },
+    })
+  }
+
+  if (input.answerDocumentText) {
+    content.push({ type: 'text', text: '\n## STUDENT\'S ANSWER:\nHere is the student\'s submitted work:' })
+    content.push({ type: 'text', text: `\n[Document Content]:\n${input.answerDocumentText}` })
+  } else if (answerImage) {
+    content.push({ type: 'text', text: '\n## STUDENT\'S ANSWER:\nHere is the student\'s submitted work:' })
+    if (answerImage.mediaType === 'application/pdf') {
+      content.push({
+        type: 'document',
+        source: { type: 'base64', media_type: 'application/pdf', data: answerImage.base64 },
+      } as Anthropic.DocumentBlockParam)
     } else {
       content.push({
-        type: 'text',
-        text: '\n## NOTE: No student answer was provided. Please analyze the task/question and provide guidance on how to approach and solve it.',
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: answerImage.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+          data: answerImage.base64,
+        },
       })
     }
+  } else {
+    content.push({ type: 'text', text: '\n## NOTE: No student answer was provided. Please analyze the task/question and provide guidance on how to approach and solve it.' })
+  }
 
-    // Add reference images if provided
-    if (referenceImages.length > 0) {
-      content.push({
-        type: 'text',
-        text: '\n## REFERENCE MATERIALS:\nThe student provided these reference materials:',
-      })
-      for (const img of referenceImages) {
-        if (img.mediaType === 'application/pdf') {
-          content.push({
-            type: 'document',
-            source: {
-              type: 'base64',
-              media_type: 'application/pdf',
-              data: img.base64,
-            },
-          } as Anthropic.DocumentBlockParam)
-        } else {
-          content.push({
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: img.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-              data: img.base64,
-            },
-          })
-        }
+  if (referenceImages.length > 0) {
+    content.push({ type: 'text', text: '\n## REFERENCE MATERIALS:\nThe student provided these reference materials:' })
+    for (const img of referenceImages) {
+      if (img.mediaType === 'application/pdf') {
+        content.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: img.base64 } } as Anthropic.DocumentBlockParam)
+      } else {
+        content.push({ type: 'image', source: { type: 'base64', media_type: img.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: img.base64 } })
       }
     }
+  }
 
-    // Add teacher review images if provided
-    let teacherStyleContext = ''
-    if (teacherImages.length > 0) {
-      content.push({
-        type: 'text',
-        text: '\n## PREVIOUS TEACHER REVIEWS:\nAnalyze these past graded assignments to understand the teacher\'s expectations and grading style:',
-      })
-      for (const img of teacherImages) {
-        if (img.mediaType === 'application/pdf') {
-          content.push({
-            type: 'document',
-            source: {
-              type: 'base64',
-              media_type: 'application/pdf',
-              data: img.base64,
-            },
-          } as Anthropic.DocumentBlockParam)
-        } else {
-          content.push({
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: img.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-              data: img.base64,
-            },
-          })
-        }
+  let teacherStyleContext = ''
+  if (teacherImages.length > 0) {
+    content.push({ type: 'text', text: '\n## PREVIOUS TEACHER REVIEWS:\nAnalyze these past graded assignments to understand the teacher\'s expectations and grading style:' })
+    for (const img of teacherImages) {
+      if (img.mediaType === 'application/pdf') {
+        content.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: img.base64 } } as Anthropic.DocumentBlockParam)
+      } else {
+        content.push({ type: 'image', source: { type: 'base64', media_type: img.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: img.base64 } })
       }
-      teacherStyleContext = `
+    }
+    teacherStyleContext = `
 IMPORTANT: Based on the previous teacher reviews provided, pay attention to:
 - What the teacher typically focuses on when grading
 - The teacher's tone and communication style
@@ -582,12 +1242,20 @@ IMPORTANT: Based on the previous teacher reviews provided, pay attention to:
 - The grading standards and expectations evident in past reviews
 - Mirror the teacher's feedback style when generating your assessment
 `
-    }
+  }
 
-    // Add the analysis prompt with accuracy-focused instructions
-    content.push({
-      type: 'text',
-      text: `
+  content.push({
+    type: 'text',
+    text: buildLegacyAnalysisPrompt(teacherStyleContext),
+  })
+
+  const response = await streamWithRetry(client, content)
+  const result = parseCheckerResponse(response)
+  return ensureGradeConsistency(result)
+}
+
+function buildLegacyAnalysisPrompt(teacherStyleContext: string): string {
+  return `
 ${teacherStyleContext}
 
 ## YOUR TASK: ACCURATE HOMEWORK GRADING
@@ -603,266 +1271,48 @@ Before analyzing ANY content, you must properly READ the page:
 
 **SPATIAL READING RULES:**
 1. **READ COMPLETE LINES**: Always read from LEFT edge to RIGHT edge of each line
-   - If you see "= 15", STOP and look LEFT to find what equals 15
-   - If you see "5 + x", STOP and look RIGHT to find what it equals
-   - NEVER evaluate a partial/fragment expression
+2. **EQUATION COMPLETENESS**: Before judging ANY equation, find BOTH sides
+3. **MULTI-LINE SOLUTIONS**: Read ALL lines as ONE solution before judging
+4. **VARIABLE TRACKING**: Create a mental dictionary of defined variables
+5. **HEBREW + MATH**: Hebrew text RTL, math expressions LTR
 
-2. **EQUATION COMPLETENESS**: Before judging ANY equation:
-   - Find the LEFT side (before =)
-   - Find the RIGHT side (after =)
-   - Find ALL terms on each side
-   - Only THEN evaluate correctness
-
-3. **MULTI-LINE SOLUTIONS**: Physics/math work often spans multiple lines:
-   - Line 1: Formula or setup (e.g., F = ma)
-   - Line 2: Substitution (e.g., F = 10 × 5)
-   - Line 3: Answer (e.g., F = 50N)
-   - READ ALL LINES as ONE solution before judging
-
-4. **VARIABLE TRACKING**: Create a mental dictionary:
-   - When you see "m = 10kg", record: m → 10kg
-   - When you see "F = 50N", record: F → 50N
-   - When variables appear later, CONNECT them to definitions
-
-5. **HEBREW + MATH (Mixed Content)**:
-   - Hebrew TEXT reads RIGHT-TO-LEFT
-   - BUT mathematical equations ALWAYS read LEFT-TO-RIGHT
-   - Example: "כוח: F = 50N" → Hebrew label "כוח" (force) + LTR math "F = 50N"
-   - The label is RTL, the equation is LTR - both are correct together
-
-**FRAGMENT DETECTION - CRITICAL:**
-If you're about to judge something that looks incomplete, STOP:
-- "= 50" alone → INCOMPLETE, find what equals 50
-- "× 5 × 10" alone → INCOMPLETE, find the full expression
-- "F =" alone → INCOMPLETE, find the value
-- Single number "42" → What is this answering?
-
-NEVER mark something wrong based on a fragment. Find the COMPLETE expression first.
-
-### CRITICAL ACCURACY RULES (READ CAREFULLY):
-1. **VERIFY BEFORE JUDGING**: For ANY math/calculation problem, COMPUTE THE ANSWER YOURSELF before deciding if the student is correct. Show your calculation explicitly.
-2. **DOUBLE-CHECK HANDWRITING**: Handwritten math is hard to read. If an answer LOOKS wrong, re-read it carefully - you may have misread a digit or symbol. Common confusions: 4↔9, 1↔7, 6↔0, 5↔S, 2↔Z, y²↔y⁴, +↔×, ÷↔+, -↔=
-3. **NEVER CONTRADICT YOURSELF**: Do NOT say "incorrect" and then change my mind. Verify FIRST, then state your conclusion ONCE.
-4. **ANSWER IS KING**: If the student's final answer matches the correct answer, the problem is 100% CORRECT. Do NOT penalize for messy work, unclear steps, or presentation style when the answer is right.
-5. **STYLE ≠ ERRORS**: Feedback about work organization, notation clarity, or presentation should NEVER reduce the grade. Only actual WRONG ANSWERS reduce the grade.
-6. **ONE PROBLEM AT A TIME**: Analyze each problem separately before making any overall judgment
-7. **ASSUME COMPETENCE**: When in doubt, interpret ambiguous handwriting in the way that makes the answer correct. Students usually get problems right.
-8. **NO FALSE NEGATIVES**: It's worse to mark a correct answer as wrong than to miss an error. If uncertain, favor the student.
-
-### MATH VERIFICATION EXAMPLES:
-**Example 1 - Simple Arithmetic:**
-- Question: 24 + 38 = ?
-- Student wrote: 62
-- MY CALCULATION: 24 + 38 = 62 ✓
-- Result: CORRECT (student answer matches my calculation)
-
-**Example 2 - Misread Handwriting:**
-- Question: 7 × 8 = ?
-- Student wrote: what looks like "54" but could be "56"
-- MY CALCULATION: 7 × 8 = 56
-- Result: Check if "54" might actually be "56" (4 and 6 look similar in handwriting). Give benefit of doubt → CORRECT
-
-**Example 3 - Algebra:**
-- Question: Solve 2x + 5 = 13
-- Student wrote: x = 4
-- MY CALCULATION: 2x = 13 - 5 = 8, x = 8/2 = 4 ✓
-- Result: CORRECT
-
-**Example 4 - Multi-step with error:**
-- Question: Find the area of a rectangle 5cm × 8cm
-- Student wrote: 5 + 8 = 13 cm²
-- MY CALCULATION: Area = length × width = 5 × 8 = 40 cm²
-- Result: INCORRECT (student added instead of multiplied, fundamental error, severity: major)
-
-**Example 5 - Physics Multi-Line Solution (CORRECT READING):**
-- Question: Find friction force. Given: m=5kg, μ=0.3, g=10m/s²
-- Student wrote across 3 lines:
-  Line 1: Ff = μ × N = μ × mg
-  Line 2: Ff = 0.3 × 5 × 10
-  Line 3: Ff = 15N
-- MY READING: This is ONE complete solution spanning 3 lines
-- MY CALCULATION: Ff = μmg = 0.3 × 5 × 10 = 15N ✓
-- Result: CORRECT (all three lines form one complete, correct solution)
-- WRONG approach: Looking at "× 5 × 10" alone and thinking it's incomplete
-
-**Example 6 - Hebrew Physics Problem:**
-- Student wrote:
-  נתון: m=10kg, a=5m/s²
-  פתרון: F = ma = 10 × 5 = 50N
-  תשובה: 50 ניוטון
-- MY READING:
-  - "נתון" (Given) section defines variables
-  - "פתרון" (Solution) shows complete calculation
-  - "תשובה" (Answer) confirms 50 Newton
-- MY CALCULATION: F = 10 × 5 = 50N ✓
-- Result: CORRECT (Hebrew labels + LTR math, all correct)
+### CRITICAL ACCURACY RULES:
+1. **VERIFY BEFORE JUDGING**: COMPUTE THE ANSWER YOURSELF before deciding if the student is correct
+2. **DOUBLE-CHECK HANDWRITING**: Common confusions: 4↔9, 1↔7, 6↔0, 5↔S, 2↔Z
+3. **ANSWER IS KING**: If the final answer matches, the problem is CORRECT
+4. **STYLE ≠ ERRORS**: Presentation issues should NEVER reduce the grade
+5. **ASSUME COMPETENCE**: When in doubt, favor the student
+6. **NO FALSE NEGATIVES**: Better to miss an error than mark correct as wrong
 
 ### ANALYSIS STEPS:
-**STEP 1**: Extract ALL problems/questions from the task image. List them.
-
-**STEP 2**: For EACH problem:
-  a) What is the question asking?
-  b) What answer did the student provide? (Read handwriting VERY carefully - if unclear, consider multiple interpretations)
-  c) COMPUTE the correct answer yourself (show your calculation)
-  d) Does student's answer = correct answer?
-     - If handwriting is ambiguous, assume the interpretation that makes it correct
-     - Only mark wrong if you're CERTAIN the answer is wrong after re-checking
-  e) If CORRECT → goes in correctPoints (full marks for this problem)
-  f) If WRONG → goes in improvementPoints with "major" severity
-
-**STEP 3**: Count results
-  - X problems correct out of Y total
-  - Calculate: gradeEstimate = (X / Y) × 100
-
+**STEP 1**: Extract ALL problems/questions. List them.
+**STEP 2**: For EACH problem: (a) question, (b) student answer, (c) YOUR calculation, (d) compare, (e/f) classify correct/incorrect
+**STEP 3**: Count X/Y correct, calculate grade
 **STEP 4**: Generate feedback JSON
 
-### SEVERITY GUIDE FOR improvementPoints:
-- **ONLY include problems with WRONG ANSWERS in improvementPoints**
-- "moderate": Wrong answer but showed correct approach/method
-- "major": Completely wrong answer, fundamental misunderstanding, missing problems
+### SEVERITY GUIDE:
+- "moderate": Wrong answer but correct approach
+- "major": Completely wrong, fundamental misunderstanding
 
-**DO NOT include in improvementPoints:**
-- Style feedback (messy work, unclear notation) when answer is correct
-- Presentation issues when answer is correct
-- "Could be clearer" type feedback when answer is correct
-These can go in "suggestions" instead, but should NOT affect the grade.
-
-Return your analysis as JSON in this exact format:
+Return analysis as JSON:
 {
-  "subject": "The academic subject (e.g., Math, Science, History)",
-  "topic": "The specific topic within the subject",
-  "taskText": "The extracted text of the homework task/question",
-  "answerText": "Summary of what the student wrote/answered",
+  "subject": "subject",
+  "topic": "topic",
+  "taskText": "task text",
+  "answerText": "student answer summary",
   "feedback": {
     "gradeLevel": "excellent" | "good" | "needs_improvement" | "incomplete",
-    "gradeEstimate": "A grade like 85/100 - MUST match your correctPoints/improvementPoints ratio!",
-    "summary": "2-3 sentence overall assessment. State X/Y problems correct.",
-    "correctPoints": [
-      {
-        "title": "Problem X - Correct",
-        "description": "The student correctly solved [problem]. Their answer of [X] is correct because [reason].",
-        "region": { "x": 25, "y": 30, "width": 20, "height": 15 }
-      }
-    ],
-    "improvementPoints": [
-      {
-        "title": "Problem X - Calculation Error",
-        "description": "The correct answer is [X], but the student wrote [Y]. Here's how to solve it: [explanation]",
-        "severity": "major",
-        "region": { "x": 60, "y": 45, "width": 25, "height": 20 }
-      }
-    ],
-    "suggestions": [
-      "Specific actionable suggestions for improvement"
-    ],
-    "teacherStyleNotes": "If teacher reviews were provided, notes on how this matches/differs from teacher expectations. Null if no reviews provided.",
-    "expectationComparison": "If teacher reviews were provided, how this work compares to what the teacher typically expects. Null if no reviews provided.",
-    "encouragement": "A positive, encouraging message for the student"
+    "gradeEstimate": "X/100",
+    "summary": "X/Y correct. Assessment.",
+    "correctPoints": [{ "title": "...", "description": "...", "region": { "x": 0, "y": 0, "width": 0, "height": 0 } }],
+    "improvementPoints": [{ "title": "...", "description": "...", "severity": "major", "region": { "x": 0, "y": 0, "width": 0, "height": 0 } }],
+    "suggestions": ["..."],
+    "teacherStyleNotes": null,
+    "expectationComparison": null,
+    "encouragement": "..."
   }
 }
-
-### IMPORTANT - VISUAL ANNOTATIONS (region field):
-- The "region" field identifies WHERE on the STUDENT'S ANSWER IMAGE this feedback point applies
-- Use percentage-based coordinates (0-100): x=0 is left edge, x=100 is right edge; y=0 is top, y=100 is bottom
-- Width and height define a bounding box around the relevant area
-- Provide a region for EVERY correctPoint and improvementPoint where you can identify the specific location
-
-### FINAL CHECK BEFORE RESPONDING:
-□ Did I read each line COMPLETELY from edge to edge (not fragments)?
-□ Did I detect Hebrew content and read labels RTL but math LTR?
-□ Did I track variable definitions across the page?
-□ Did I read multi-line solutions as ONE complete calculation?
-□ Did I verify each calculation myself before marking correct/incorrect?
-□ Did I double-check handwriting for any answer I'm marking as wrong?
-□ Does my gradeEstimate match the ratio of correctPoints to total problems?
-□ Are improvementPoints ONLY for wrong answers (not style issues)?
-□ Did I NOT say "incorrect" and then change my mind in the same response?
-□ Are ALL problems accounted for (either in correctPoints or improvementPoints)?
-□ If all answers are correct, is my grade 95-100%?
-□ Am I NOT marking something wrong based on a fragment I misread?
-`,
-    })
-
-    console.log('[Checker] Sending request to Claude (streaming with retry)...')
-
-    // Use streaming with retry to handle transient Safari/network issues
-    let response: Anthropic.Message | null = null
-    let lastError: Error | null = null
-
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        // Use streaming to prevent connection timeouts on mobile
-        // The stream keeps data flowing, preventing TCP/browser timeouts
-        const stream = client.messages.stream({
-          model: AI_MODEL,
-          max_tokens: MAX_TOKENS,
-          messages: [{ role: 'user', content }],
-        })
-
-        // Consume the stream to keep data flowing (prevents connection timeouts)
-        // We don't need to collect the text since finalMessage() gives us everything
-        for await (const event of stream) {
-          // Just iterate to consume the stream - this keeps the connection alive
-          void event
-        }
-
-        // Get the final message for metadata
-        response = await stream.finalMessage()
-        console.log('[Checker] Response received, tokens used:', response.usage?.output_tokens)
-        break // Success - exit retry loop
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error))
-
-        // Check if we should retry
-        if (!isRetryableError(error) || attempt === MAX_RETRIES) {
-          console.error(`[Checker] Attempt ${attempt}/${MAX_RETRIES} failed (not retrying):`, lastError.message)
-          throw error
-        }
-
-        // Exponential backoff: 1s, 2s, 4s
-        const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1)
-        console.warn(`[Checker] Attempt ${attempt}/${MAX_RETRIES} failed: ${lastError.message}. Retrying in ${delay}ms...`)
-        await new Promise(resolve => setTimeout(resolve, delay))
-      }
-    }
-
-    if (!response) {
-      throw lastError || new Error('Failed to get response from AI')
-    }
-
-    // Parse response and apply consistency validation
-    const result = parseCheckerResponse(response)
-
-    // Ensure grade matches feedback items (fixes discrepancy issues)
-    return ensureGradeConsistency(result)
-  } catch (error) {
-    // Detailed error logging for debugging mobile vs desktop issues
-    console.error('[Homework Checker] analyzeHomework error:', {
-      message: error instanceof Error ? error.message : String(error),
-      name: error instanceof Error ? error.name : 'Unknown',
-      stack: error instanceof Error ? error.stack : undefined,
-      cause: error instanceof Error ? (error as Error & { cause?: unknown }).cause : undefined,
-    })
-
-    // Check for timeout errors and provide specific messages
-    const errorMessage = error instanceof Error ? error.message.toLowerCase() : ''
-    const errorName = error instanceof Error ? error.name : ''
-
-    if (errorMessage.includes('timeout') || errorName === 'AbortError' || errorMessage.includes('timed out')) {
-      throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_IMG_003, 'Analysis took too long. Please try again with clearer images.', 'CheckerEngine/ImageMode/Timeout'))
-    }
-
-    if (errorMessage.includes('overloaded') || errorMessage.includes('529')) {
-      throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_API_002, 'Our AI is busy right now. Please try again in a moment.', 'CheckerEngine/API/Overloaded'))
-    }
-
-    // Re-throw the original error for the route to handle
-    // If it already has a code, keep it; otherwise wrap it
-    if (error instanceof Error && error.message.startsWith('[')) {
-      throw error
-    }
-    throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_IMG_002, error instanceof Error ? error.message : 'Analysis failed', 'CheckerEngine/ImageMode/Unknown'))
-  }
+`
 }
 
 // ============================================================================

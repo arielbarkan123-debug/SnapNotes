@@ -63,7 +63,7 @@ export default function BulkDeleteBar({
   return (
     <>
       {/* Sticky bar */}
-      <div className="sticky bottom-0 sm:bottom-4 z-40 mx-auto max-w-2xl">
+      <div className="sticky bottom-0 max-md:bottom-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom,0px))] sm:bottom-4 z-40 mx-auto max-w-2xl">
         <div className="flex items-center justify-between gap-3 px-4 py-3 bg-gray-900 dark:bg-gray-700 text-white rounded-t-xl sm:rounded-xl shadow-lg">
           <span className="text-sm font-medium">
             {t('selected', { count })}
@@ -71,14 +71,14 @@ export default function BulkDeleteBar({
           <div className="flex items-center gap-2">
             <button
               onClick={allSelected ? onDeselectAll : onSelectAll}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-300 hover:text-white bg-gray-800 dark:bg-gray-600 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-500 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] text-xs font-medium text-gray-300 hover:text-white bg-gray-800 dark:bg-gray-600 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-500 transition-colors"
             >
               {allSelected ? <Square className="w-3.5 h-3.5" /> : <CheckSquare className="w-3.5 h-3.5" />}
               {allSelected ? t('deselectAll') : t('selectAll')}
             </button>
             <button
               onClick={() => setShowConfirm(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
               {t('deleteSelected')}

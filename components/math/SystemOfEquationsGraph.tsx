@@ -67,7 +67,10 @@ export function SystemOfEquationsGraph({
   language = 'en',
   initialStep,
 }: SystemOfEquationsGraphProps) {
-  const { equations, solution, title } = data
+  // Defensive defaults for AI-generated data
+  const equations = Array.isArray(data.equations) ? data.equations : []
+  const solution = data.solution
+  const title = data.title
 
   // Build step definitions
   const stepDefs = useMemo(() => {
@@ -221,7 +224,7 @@ export function SystemOfEquationsGraph({
                   y1={gl.y1}
                   x2={gl.x2}
                   y2={gl.y2}
-                  stroke="#e5e7eb"
+                  className="stroke-gray-200 dark:stroke-gray-700"
                   strokeWidth={1}
                 />
               ))}
@@ -232,7 +235,7 @@ export function SystemOfEquationsGraph({
                 y1={toSvgY(0)}
                 x2={PADDING + plotW}
                 y2={toSvgY(0)}
-                stroke="#374151"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 variants={lineDrawVariants}
               />
@@ -242,7 +245,7 @@ export function SystemOfEquationsGraph({
                 y1={PADDING}
                 x2={toSvgX(0)}
                 y2={PADDING + plotH}
-                stroke="#374151"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 variants={lineDrawVariants}
               />
@@ -255,7 +258,7 @@ export function SystemOfEquationsGraph({
                   y={toSvgY(0) + 16}
                   textAnchor="middle"
                   fontSize={10}
-                  fill="#6b7280"
+                  className="fill-gray-500 dark:fill-gray-400"
                 >
                   {x}
                 </text>
@@ -267,7 +270,7 @@ export function SystemOfEquationsGraph({
                   y={toSvgY(y) + 4}
                   textAnchor="end"
                   fontSize={10}
-                  fill="#6b7280"
+                  className="fill-gray-500 dark:fill-gray-400"
                 >
                   {y}
                 </text>
@@ -403,7 +406,7 @@ export function SystemOfEquationsGraph({
                 cy={toSvgY(solution.y)}
                 r={6}
                 fill={primaryColor}
-                stroke="white"
+                className="stroke-white dark:stroke-gray-900"
                 strokeWidth={2}
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}

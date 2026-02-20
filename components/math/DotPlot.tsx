@@ -58,7 +58,11 @@ export function DotPlot({
   language = 'en',
   initialStep,
 }: DotPlotProps) {
-  const { data: values, min, max, title, xAxisLabel, highlightValue } = data
+  // Defensive defaults for AI-generated data
+  const values = Array.isArray(data.data) ? data.data : []
+  const min = data.min ?? 0
+  const max = data.max ?? (min + 1)
+  const { title, xAxisLabel, highlightValue } = data
 
   // Count frequency of each value
   const frequencyMap = useMemo(() => {
@@ -173,7 +177,7 @@ export function DotPlot({
                 y1={lineY}
                 x2={width - padding.right}
                 y2={lineY}
-                stroke="#374151"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 strokeLinecap="round"
                 initial="hidden"
@@ -191,7 +195,7 @@ export function DotPlot({
                       y1={lineY - 4}
                       x2={x}
                       y2={lineY + 4}
-                      stroke="#374151"
+                      className="stroke-gray-700 dark:stroke-gray-300"
                       strokeWidth={diagram.lineWeight * 0.8}
                       initial="hidden"
                       animate="visible"
@@ -219,7 +223,7 @@ export function DotPlot({
                   x={width / 2}
                   y={lineY + 35}
                   textAnchor="middle"
-                  fill="#6b7280"
+                  className="fill-gray-500 dark:fill-gray-400"
                   fontSize={11}
                   fontWeight={500}
                   initial="hidden"
@@ -265,7 +269,7 @@ export function DotPlot({
                         cy={lineY - dotRadius - 4 - dotIdx * dotSpacing}
                         r={dotRadius}
                         fill={isHighlighted ? '#ef4444' : primaryColor}
-                        stroke="white"
+                        className="stroke-white dark:stroke-gray-900"
                         strokeWidth={1}
                       />
                     ))}

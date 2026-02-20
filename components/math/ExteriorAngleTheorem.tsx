@@ -244,8 +244,7 @@ export function ExteriorAngleTheorem({
                     y1={verts[i].y}
                     x2={verts[j].x}
                     y2={verts[j].y}
-                    stroke="#374151"
-                    className="dark:stroke-gray-300"
+                    className="stroke-gray-700 dark:stroke-gray-300"
                     strokeWidth={diagram.lineWeight}
                     strokeLinecap="round"
                     initial="hidden"

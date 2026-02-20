@@ -128,9 +128,9 @@ export function FactoringDiagram({
     b,
     c,
     factoredForm,
-    steps,
     errors,
   } = data
+  const steps = Array.isArray(data.steps) ? data.steps : []
 
   const hasErrors = !!(errors && errors.length > 0)
 

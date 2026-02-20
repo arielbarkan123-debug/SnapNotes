@@ -61,18 +61,17 @@ export function BoxPlot({
   language = 'en',
   initialStep,
 }: BoxPlotProps) {
-  const {
-    min: dataMin,
-    q1,
-    median,
-    q3,
-    max: dataMax,
-    outliers,
-    title,
-    showLabels: _dataShowLabels,
-  } = data
+  // Defensive defaults for AI-generated data
+  const dataMin = data.min ?? 0
+  const q1 = data.q1 ?? 0
+  const median = data.median ?? 0
+  const q3 = data.q3 ?? 0
+  const dataMax = data.max ?? 0
+  const outliers = Array.isArray(data.outliers) ? data.outliers : []
+  const title = data.title
+  const _dataShowLabels = data.showLabels
 
-  const hasOutliers = outliers && outliers.length > 0
+  const hasOutliers = outliers.length > 0
 
   // Build step definitions
   const stepDefs = useMemo(() => {
@@ -177,7 +176,7 @@ export function BoxPlot({
                 y1={lineY}
                 x2={width - padding.right}
                 y2={lineY}
-                stroke="#374151"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 strokeLinecap="round"
                 initial="hidden"
@@ -191,7 +190,7 @@ export function BoxPlot({
                     y1={lineY - 4}
                     x2={scaleX(tick)}
                     y2={lineY + 4}
-                    stroke="#374151"
+                    className="stroke-gray-700 dark:stroke-gray-300"
                     strokeWidth={1}
                     initial="hidden"
                     animate="visible"
@@ -201,7 +200,7 @@ export function BoxPlot({
                     x={scaleX(tick)}
                     y={lineY + 18}
                     textAnchor="middle"
-                    fill="#6b7280"
+                    className="fill-gray-500 dark:fill-gray-400"
                     fontSize={10}
                     initial="hidden"
                     animate="visible"
@@ -372,7 +371,7 @@ export function BoxPlot({
                 x={scaleX(dataMin)}
                 y={boxCenterY - boxHeight / 2 - 8}
                 textAnchor="middle"
-                fill="#6b7280"
+                className="fill-gray-500 dark:fill-gray-400"
                 fontSize={10}
                 initial="hidden"
                 animate="visible"
@@ -431,7 +430,7 @@ export function BoxPlot({
                 x={scaleX(dataMax)}
                 y={boxCenterY - boxHeight / 2 - 8}
                 textAnchor="middle"
-                fill="#6b7280"
+                className="fill-gray-500 dark:fill-gray-400"
                 fontSize={10}
                 initial="hidden"
                 animate="visible"
@@ -445,7 +444,7 @@ export function BoxPlot({
                 x={(scaleX(q1) + scaleX(q3)) / 2}
                 y={boxCenterY + boxHeight / 2 + 28}
                 textAnchor="middle"
-                fill="#9ca3af"
+                className="fill-gray-400 dark:fill-gray-500"
                 fontSize={9}
                 initial="hidden"
                 animate="visible"

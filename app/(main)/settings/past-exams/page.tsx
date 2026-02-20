@@ -1,15 +1,28 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { usePastExamTemplates, PAST_EXAMS_CACHE_KEY } from '@/hooks'
 import { mutate } from 'swr'
+import { createClient } from '@/lib/supabase/client'
 import type { PastExamTemplate, AnalysisStatus } from '@/types/past-exam'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { ToastContainer, type Toast } from '@/components/ui/Toast'
 
+// =============================================================================
+// Types
+// =============================================================================
+
+interface UserSubject {
+  id: string
+  label: string
+}
+
+// =============================================================================
 // Icons
+// =============================================================================
+
 function ArrowLeftIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -83,7 +96,30 @@ function ClockIcon({ className }: { className?: string }) {
   )
 }
 
-// Status Badge Component
+// =============================================================================
+// Helper Functions
+// =============================================================================
+
+/** Convert subject ID to display label */
+function formatSubjectLabel(subjectId: string): string {
+  // Convert "biology-hl" to "Biology HL", "math-5" to "Math 5"
+  return subjectId
+    .split('-')
+    .map((part, i) => {
+      if (i === 0) {
+        return part.charAt(0).toUpperCase() + part.slice(1)
+      }
+      // Keep HL/SL uppercase, numbers as-is
+      if (part.match(/^(hl|sl)$/i)) return part.toUpperCase()
+      return part
+    })
+    .join(' ')
+}
+
+// =============================================================================
+// Components
+// =============================================================================
+
 function StatusBadge({ status, t }: { status: AnalysisStatus; t: ReturnType<typeof useTranslations<'pastExams'>> }) {
   const config = {
     pending: { icon: ClockIcon, color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300', label: t('statusPending') },
@@ -102,7 +138,6 @@ function StatusBadge({ status, t }: { status: AnalysisStatus; t: ReturnType<type
   )
 }
 
-// Template Card Component
 function TemplateCard({
   template,
   t,
@@ -135,6 +170,15 @@ function TemplateCard({
         </div>
         <StatusBadge status={template.analysis_status} t={t} />
       </div>
+
+      {/* Subject Badge */}
+      {template.subject_id && (
+        <div className="mb-3">
+          <span className="inline-flex px-2 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded text-xs font-medium">
+            {formatSubjectLabel(template.subject_id)}
+          </span>
+        </div>
+      )}
 
       {/* Analysis Results */}
       {analysis && template.analysis_status === 'completed' && (
@@ -207,24 +251,88 @@ function TemplateCard({
   )
 }
 
-// Upload Modal Component
+function SubjectTabs({
+  subjects,
+  selectedSubject,
+  onSelect,
+  templateCounts,
+  limit,
+}: {
+  subjects: UserSubject[]
+  selectedSubject: string | null
+  onSelect: (subjectId: string | null) => void
+  templateCounts: Record<string, number>
+  limit: number
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 mb-6">
+      <button
+        onClick={() => onSelect(null)}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          selectedSubject === null
+            ? 'bg-violet-600 text-white'
+            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+        }`}
+      >
+        All
+      </button>
+      {subjects.map((subject) => {
+        const count = templateCounts[subject.id] || 0
+        return (
+          <button
+            key={subject.id}
+            onClick={() => onSelect(subject.id)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+              selectedSubject === subject.id
+                ? 'bg-violet-600 text-white'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+          >
+            {subject.label}
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+              selectedSubject === subject.id
+                ? 'bg-violet-500 text-white'
+                : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400'
+            }`}>
+              {count}/{limit}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function UploadModal({
   isOpen,
   onClose,
   onUpload,
+  subjects,
+  selectedSubject,
   t,
 }: {
   isOpen: boolean
   onClose: () => void
-  onUpload: (file: File, title: string, description: string) => Promise<void>
+  onUpload: (file: File, title: string, description: string, subjectId: string) => Promise<void>
+  subjects: UserSubject[]
+  selectedSubject: string | null
   t: ReturnType<typeof useTranslations<'pastExams'>>
 }) {
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [subjectId, setSubjectId] = useState(selectedSubject || '')
   const [isUploading, setIsUploading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Update subject when modal opens with a selected subject
+  useEffect(() => {
+    if (isOpen && selectedSubject) {
+      setSubjectId(selectedSubject)
+    }
+  }, [isOpen, selectedSubject])
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -258,18 +366,39 @@ function UploadModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file) return
+    setError(null)
+
+    if (!file) {
+      setError(t('errors.noFile'))
+      return
+    }
+
+    if (!subjectId) {
+      setError(t('errors.noSubject'))
+      return
+    }
 
     setIsUploading(true)
     try {
-      await onUpload(file, title || file.name, description)
+      await onUpload(file, title || file.name, description, subjectId)
       onClose()
       setFile(null)
       setTitle('')
       setDescription('')
+      setSubjectId('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('errors.uploadFailed'))
     } finally {
       setIsUploading(false)
     }
+  }
+
+  const handleClose = () => {
+    onClose()
+    setFile(null)
+    setTitle('')
+    setDescription('')
+    setError(null)
   }
 
   if (!isOpen) return null
@@ -282,9 +411,35 @@ function UploadModal({
         </h2>
 
         <form onSubmit={handleSubmit}>
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Subject Selector */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {t('uploadModal.subjectLabel')}
+            </label>
+            <select
+              value={subjectId}
+              onChange={(e) => setSubjectId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+              required
+            >
+              <option value="">{t('uploadModal.selectSubject')}</option>
+              {subjects.map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Drop Zone */}
           <div
-            className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+            className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
               dragActive
                 ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20'
                 : 'border-gray-300 dark:border-gray-600 hover:border-violet-400'
@@ -350,7 +505,7 @@ function UploadModal({
           <div className="flex gap-3 mt-6">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isUploading}
               className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
@@ -358,7 +513,7 @@ function UploadModal({
             </button>
             <button
               type="submit"
-              disabled={!file || isUploading}
+              disabled={!file || !subjectId || isUploading}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-400 text-white rounded-lg transition-colors"
             >
               {isUploading ? (
@@ -377,15 +532,95 @@ function UploadModal({
   )
 }
 
+// =============================================================================
 // Main Page Component
+// =============================================================================
+
 export default function PastExamsPage() {
   const t = useTranslations('pastExams')
-  const { templates, count, limit, canUpload, isLoading, error } = usePastExamTemplates()
+  const supabase = createClient()
+
+  // User subjects state
+  const [userSubjects, setUserSubjects] = useState<UserSubject[]>([])
+  const [loadingSubjects, setLoadingSubjects] = useState(true)
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null)
+
+  // Template counts per subject
+  const [templateCounts, setTemplateCounts] = useState<Record<string, number>>({})
+
+  // Fetch templates (filtered by selected subject)
+  const { templates, count: _count, limit, canUpload, isLoading, error } = usePastExamTemplates(
+    selectedSubject || undefined
+  )
+
+  // UI state
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [analyzingId, setAnalyzingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [toasts, setToasts] = useState<Toast[]>([])
+
+  // Load user subjects
+  useEffect(() => {
+    async function loadSubjects() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data: profile } = await supabase
+          .from('user_learning_profile')
+          .select('subjects')
+          .eq('user_id', user.id)
+          .single()
+
+        const subjectIds = (profile?.subjects || []) as string[]
+        const subjects: UserSubject[] = subjectIds.map(id => ({
+          id,
+          label: formatSubjectLabel(id),
+        }))
+
+        setUserSubjects(subjects)
+      } catch (err) {
+        console.error('Failed to load subjects:', err)
+      } finally {
+        setLoadingSubjects(false)
+      }
+    }
+
+    loadSubjects()
+  }, [supabase])
+
+  // Load template counts per subject
+  useEffect(() => {
+    async function loadCounts() {
+      if (userSubjects.length === 0) return
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        // Get all templates and count by subject
+        const { data: allTemplates } = await supabase
+          .from('past_exam_templates')
+          .select('subject_id')
+          .eq('user_id', user.id)
+
+        if (allTemplates) {
+          const counts: Record<string, number> = {}
+          allTemplates.forEach(t => {
+            if (t.subject_id) {
+              counts[t.subject_id] = (counts[t.subject_id] || 0) + 1
+            }
+          })
+          setTemplateCounts(counts)
+        }
+      } catch (err) {
+        console.error('Failed to load counts:', err)
+      }
+    }
+
+    loadCounts()
+  }, [supabase, userSubjects, templates])
 
   // Toast helpers
   const addToast = useCallback((type: Toast['type'], message: string) => {
@@ -397,10 +632,11 @@ export default function PastExamsPage() {
     setToasts(prev => prev.filter(t => t.id !== id))
   }, [])
 
-  const handleUpload = async (file: File, title: string, description: string) => {
+  const handleUpload = async (file: File, title: string, description: string, subjectId: string) => {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('title', title)
+    formData.append('subjectId', subjectId)
     if (description) formData.append('description', description)
 
     const response = await fetch('/api/past-exams', {
@@ -408,16 +644,27 @@ export default function PastExamsPage() {
       body: formData,
     })
 
+    const data = await response.json()
+
     if (!response.ok) {
-      const data = await response.json()
       throw new Error(data.error || t('errors.uploadFailed'))
     }
 
-    // Refresh the list
+    // Refresh the list (all templates and filtered)
     await mutate(PAST_EXAMS_CACHE_KEY)
+    if (selectedSubject) {
+      await mutate(`${PAST_EXAMS_CACHE_KEY}?subjectId=${encodeURIComponent(selectedSubject)}`)
+    }
+
+    // Update counts
+    setTemplateCounts(prev => ({
+      ...prev,
+      [subjectId]: (prev[subjectId] || 0) + 1,
+    }))
+
+    addToast('success', t('uploadSuccess'))
 
     // Start analysis automatically
-    const data = await response.json()
     if (data.template?.id) {
       handleAnalyze(data.template.id)
     }
@@ -431,6 +678,7 @@ export default function PastExamsPage() {
     if (!confirmDeleteId) return
 
     const id = confirmDeleteId
+    const templateToDelete = templates.find(t => t.id === id)
     setConfirmDeleteId(null)
     setDeletingId(id)
 
@@ -444,6 +692,18 @@ export default function PastExamsPage() {
       }
 
       await mutate(PAST_EXAMS_CACHE_KEY)
+      if (selectedSubject) {
+        await mutate(`${PAST_EXAMS_CACHE_KEY}?subjectId=${encodeURIComponent(selectedSubject)}`)
+      }
+
+      // Update counts
+      if (templateToDelete?.subject_id) {
+        setTemplateCounts(prev => ({
+          ...prev,
+          [templateToDelete.subject_id!]: Math.max(0, (prev[templateToDelete.subject_id!] || 0) - 1),
+        }))
+      }
+
       addToast('success', t('deleteSuccess'))
     } catch (err) {
       console.error('Delete error:', err)
@@ -466,19 +726,24 @@ export default function PastExamsPage() {
       }
 
       await mutate(PAST_EXAMS_CACHE_KEY)
+      if (selectedSubject) {
+        await mutate(`${PAST_EXAMS_CACHE_KEY}?subjectId=${encodeURIComponent(selectedSubject)}`)
+      }
     } catch (err) {
       console.error('Analysis error:', err)
-      await mutate(PAST_EXAMS_CACHE_KEY) // Refresh to show error state
+      await mutate(PAST_EXAMS_CACHE_KEY)
     } finally {
       setAnalyzingId(null)
     }
   }
 
+  const pageLoading = loadingSubjects || isLoading
+
   return (
     <div className="min-h-screen bg-transparent">
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <Link
             href="/settings"
             className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4 transition-colors"
@@ -495,7 +760,7 @@ export default function PastExamsPage() {
 
             <button
               onClick={() => setShowUploadModal(true)}
-              disabled={!canUpload}
+              disabled={!canUpload || userSubjects.length === 0}
               className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
             >
               <PlusIcon className="w-5 h-5" />
@@ -503,19 +768,37 @@ export default function PastExamsPage() {
             </button>
           </div>
 
-          {/* Template Count */}
+          {/* Per-subject limit info */}
           <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-            {t('templateCount', { count, max: limit })}
-            {!canUpload && (
-              <span className="text-yellow-600 dark:text-yellow-400 ms-2">
-                ({t('uploadDisabled')})
-              </span>
-            )}
+            {t('perSubjectLimit', { limit })}
           </div>
         </div>
 
+        {/* Subject Tabs */}
+        {!loadingSubjects && userSubjects.length > 0 && (
+          <SubjectTabs
+            subjects={userSubjects}
+            selectedSubject={selectedSubject}
+            onSelect={setSelectedSubject}
+            templateCounts={templateCounts}
+            limit={limit}
+          />
+        )}
+
+        {/* No subjects warning */}
+        {!loadingSubjects && userSubjects.length === 0 && (
+          <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
+            <p className="text-yellow-700 dark:text-yellow-300 text-sm">
+              {t('noSubjectsWarning')}{' '}
+              <Link href="/settings" className="underline hover:no-underline">
+                {t('goToSettings')}
+              </Link>
+            </p>
+          </div>
+        )}
+
         {/* Loading State */}
-        {isLoading && (
+        {pageLoading && (
           <div className="flex items-center justify-center py-12">
             <SpinnerIcon className="w-8 h-8 text-violet-600" />
           </div>
@@ -529,25 +812,29 @@ export default function PastExamsPage() {
         )}
 
         {/* Empty State */}
-        {!isLoading && !error && templates.length === 0 && (
+        {!pageLoading && !error && templates.length === 0 && (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700">
             <DocumentIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{t('noTemplates')}</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              {selectedSubject ? t('noTemplatesForSubject') : t('noTemplates')}
+            </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-sm mx-auto">
               {t('noTemplatesDescription')}
             </p>
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium transition-colors"
-            >
-              <PlusIcon className="w-5 h-5" />
-              {t('uploadFirst')}
-            </button>
+            {userSubjects.length > 0 && (
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium transition-colors"
+              >
+                <PlusIcon className="w-5 h-5" />
+                {t('uploadFirst')}
+              </button>
+            )}
           </div>
         )}
 
         {/* Templates Grid */}
-        {!isLoading && !error && templates.length > 0 && (
+        {!pageLoading && !error && templates.length > 0 && (
           <div className="space-y-4">
             {templates.map((template) => (
               <TemplateCard
@@ -568,6 +855,8 @@ export default function PastExamsPage() {
           isOpen={showUploadModal}
           onClose={() => setShowUploadModal(false)}
           onUpload={handleUpload}
+          subjects={userSubjects}
+          selectedSubject={selectedSubject}
           t={t}
         />
 

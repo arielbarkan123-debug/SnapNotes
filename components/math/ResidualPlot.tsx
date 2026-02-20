@@ -57,7 +57,8 @@ export function ResidualPlot({
   language = 'en',
   initialStep,
 }: ResidualPlotProps) {
-  const { residuals, showZeroLine = true, showPattern = false, title } = data
+  const { showZeroLine = true, showPattern = false, title } = data
+  const residuals = Array.isArray(data.residuals) ? data.residuals : []
 
   // Build step definitions
   const stepDefs = useMemo(() => {
@@ -111,9 +112,11 @@ export function ResidualPlot({
   // Determine data extents
   const predictedValues = residuals.map((r) => r.predicted)
   const residualValues = residuals.map((r) => r.residual)
-  const xMin = Math.min(...predictedValues)
-  const xMax = Math.max(...predictedValues)
-  const yAbsMax = Math.max(Math.abs(Math.min(...residualValues)), Math.abs(Math.max(...residualValues)))
+  const xMin = predictedValues.length > 0 ? Math.min(...predictedValues) : 0
+  const xMax = predictedValues.length > 0 ? Math.max(...predictedValues) : 1
+  const yAbsMax = residualValues.length > 0
+    ? Math.max(Math.abs(Math.min(...residualValues)), Math.abs(Math.max(...residualValues)))
+    : 1
   const yMin = -yAbsMax * 1.2
   const yMax = yAbsMax * 1.2
   const xRange = xMax - xMin || 1

@@ -57,7 +57,12 @@ export function SampleSpaceDiagram({
   language = 'en',
   initialStep,
 }: SampleSpaceDiagramProps) {
-  const { event1, event2, favorableOutcomes, title } = data
+  // Defensive defaults for AI-generated data
+  const event1 = data.event1 ?? { label: '', outcomes: [] }
+  const event2 = data.event2 ?? { label: '', outcomes: [] }
+  const event1Outcomes: string[] = Array.isArray(event1.outcomes) ? event1.outcomes : []
+  const event2Outcomes: string[] = Array.isArray(event2.outcomes) ? event2.outcomes : []
+  const { favorableOutcomes, title } = data
 
   const hasFavorable = !!(favorableOutcomes && favorableOutcomes.length > 0)
 
@@ -100,8 +105,8 @@ export function SampleSpaceDiagram({
   const stepLabel = language === 'he' ? currentStepDef?.labelHe : currentStepDef?.label
 
   // Grid layout calculations
-  const rows = event1.outcomes.length
-  const cols = event2.outcomes.length
+  const rows = event1Outcomes.length
+  const cols = event2Outcomes.length
   const svgWidth = width
   const svgHeight = height
   const headerHeight = 50
@@ -163,7 +168,7 @@ export function SampleSpaceDiagram({
               </text>
 
               {/* Column headers */}
-              {event2.outcomes.map((outcome, j) => (
+              {event2Outcomes.map((outcome, j) => (
                 <motion.text
                   key={`col-${j}`}
                   x={gridX + j * cellWidth + cellWidth / 2}
@@ -194,7 +199,7 @@ export function SampleSpaceDiagram({
               </text>
 
               {/* Row headers */}
-              {event1.outcomes.map((outcome, i) => (
+              {event1Outcomes.map((outcome, i) => (
                 <motion.text
                   key={`row-${i}`}
                   x={headerWidth}
@@ -219,7 +224,7 @@ export function SampleSpaceDiagram({
                   y1={gridY + i * cellHeight}
                   x2={gridX + cols * cellWidth}
                   y2={gridY + i * cellHeight}
-                  stroke="#d1d5db"
+                  className="stroke-gray-300 dark:stroke-gray-600"
                   strokeWidth={1}
                 />
               ))}
@@ -230,7 +235,7 @@ export function SampleSpaceDiagram({
                   y1={gridY}
                   x2={gridX + j * cellWidth}
                   y2={gridY + rows * cellHeight}
-                  stroke="#d1d5db"
+                  className="stroke-gray-300 dark:stroke-gray-600"
                   strokeWidth={1}
                 />
               ))}
@@ -247,8 +252,8 @@ export function SampleSpaceDiagram({
               animate={isCurrent('cells') ? 'spotlight' : 'visible'}
               variants={spotlight}
             >
-              {event1.outcomes.map((rowOutcome, i) =>
-                event2.outcomes.map((colOutcome, j) => (
+              {event1Outcomes.map((rowOutcome, i) =>
+                event2Outcomes.map((colOutcome, j) => (
                   <motion.text
                     key={`cell-${i}-${j}`}
                     x={gridX + j * cellWidth + cellWidth / 2}
@@ -278,8 +283,8 @@ export function SampleSpaceDiagram({
                 animate={isCurrent('highlight') ? 'spotlight' : 'visible'}
                 variants={spotlight}
               >
-                {event1.outcomes.map((rowOutcome, i) =>
-                  event2.outcomes.map((colOutcome, j) => {
+                {event1Outcomes.map((rowOutcome, i) =>
+                  event2Outcomes.map((colOutcome, j) => {
                     if (!isFavorable(rowOutcome, colOutcome)) return null
                     return (
                       <motion.rect

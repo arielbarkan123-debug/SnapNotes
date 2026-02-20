@@ -57,7 +57,9 @@ export function MultiplicationArray({
   language = 'en',
   initialStep,
 }: MultiplicationArrayProps) {
-  const { rows, columns, color, highlightRow, highlightColumn, title } = data
+  const { color, highlightRow, highlightColumn, title } = data
+  const rows = data.rows ?? 1
+  const columns = data.columns ?? 1
 
   const stepDefs = useMemo(() => [
     { id: 'grid', label: STEP_LABELS.grid.en, labelHe: STEP_LABELS.grid.he },

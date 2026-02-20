@@ -130,7 +130,7 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
               </nav>
               <button
                 onClick={() => setIsSearchOpen(true)}
-                className="p-2 text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 aria-label={t('nav.search')}
                 title={t('nav.search')}
               >
@@ -172,14 +172,14 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
             <div className="flex md:hidden items-center gap-2">
               <button
                 onClick={() => setIsSearchOpen(true)}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400"
+                className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400"
                 aria-label={t('nav.search')}
               >
                 <Search className="w-5 h-5" />
               </button>
               <Link
                 href="/profile"
-                className="p-2 text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400"
+                className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400"
                 aria-label={t('nav.profile')}
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -188,7 +188,7 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
               </Link>
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                 aria-label={t('nav.toggleMenu')}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

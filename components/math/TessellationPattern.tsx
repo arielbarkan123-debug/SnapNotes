@@ -292,7 +292,7 @@ export function TessellationPattern({
                   key={`base-${i}`}
                   points={tile.points}
                   fill={tile.color}
-                  stroke="white"
+                  className="stroke-white dark:stroke-gray-900"
                   strokeWidth={1.5}
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -341,7 +341,7 @@ export function TessellationPattern({
                   key={`row-${i}`}
                   points={tile.points}
                   fill={tile.color}
-                  stroke="white"
+                  className="stroke-white dark:stroke-gray-900"
                   strokeWidth={1.5}
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -371,7 +371,7 @@ export function TessellationPattern({
                   key={`tile-${i}`}
                   points={tile.points}
                   fill={tile.color}
-                  stroke="white"
+                  className="stroke-white dark:stroke-gray-900"
                   strokeWidth={1.5}
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}

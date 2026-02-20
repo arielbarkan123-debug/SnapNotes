@@ -37,5 +37,14 @@
   "statusCompleted": "completed",
   "statusInProgress": "in progress",
   "statusExpired": "expired",
-  "statusPending": "pending"
+  "statusPending": "pending",
+
+  "pastExamTemplates": {
+    "title": "Past Exam Templates",
+    "description": "Using past exams helps generate questions in a similar style",
+    "templatesAvailable": "{count} template(s) available",
+    "noTemplates": "No past exam templates",
+    "addTemplates": "Add templates",
+    "manageTemplates": "Manage templates"
+  }
 }

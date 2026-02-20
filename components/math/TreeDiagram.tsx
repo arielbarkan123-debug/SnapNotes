@@ -105,7 +105,8 @@ export function TreeDiagram({
   language = 'en',
   initialStep,
 }: TreeDiagramProps) {
-  const { root, showProbabilities = true, title, errorHighlight } = data
+  const { showProbabilities = true, title, errorHighlight } = data
+  const root = data.root ?? { id: 'root', label: '', children: [] }
 
   const treeDepth = useMemo(() => getTreeDepth(root), [root])
 

@@ -185,14 +185,13 @@ export function TransformationsComposition({
   language = 'en',
   initialStep,
 }: TransformationsCompositionProps) {
-  const {
-    originalShape,
-    transformations,
-    finalShape,
-    showIntermediate = true,
-    showOrder = true,
-    title,
-  } = data
+  // Defensive defaults for AI-generated data
+  const originalShape = Array.isArray(data.originalShape) ? data.originalShape : []
+  const transformations = Array.isArray(data.transformations) ? data.transformations : []
+  const finalShape = Array.isArray(data.finalShape) ? data.finalShape : undefined
+  const showIntermediate = data.showIntermediate ?? true
+  const showOrder = data.showOrder ?? true
+  const title = data.title
 
   // ---------------------------------------------------------------------------
   // Compute intermediate shapes by applying transformations sequentially
@@ -398,7 +397,7 @@ export function TransformationsComposition({
             refY="3"
             orient="auto"
           >
-            <polygon points="0 0, 8 3, 0 6" fill="#9ca3af" />
+            <polygon points="0 0, 8 3, 0 6" className="fill-gray-400 dark:fill-gray-500" />
           </marker>
         </defs>
 
@@ -508,7 +507,7 @@ export function TransformationsComposition({
                   cy={toSvgY(p.y)}
                   r={4}
                   fill={primaryColor}
-                  stroke="white"
+                  className="stroke-white dark:stroke-gray-900"
                   strokeWidth={1.5}
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -586,7 +585,7 @@ export function TransformationsComposition({
                       <motion.line
                         x1={arrow.x1} y1={arrow.y1}
                         x2={arrow.x2} y2={arrow.y2}
-                        stroke="#9ca3af"
+                        className="stroke-gray-400 dark:stroke-gray-500"
                         strokeWidth={1.5}
                         strokeDasharray="5 3"
                         markerEnd="url(#tc-arrowhead)"
@@ -647,7 +646,7 @@ export function TransformationsComposition({
                           cy={toSvgY(p.y)}
                           r={3.5}
                           fill={color}
-                          stroke="white"
+                          className="stroke-white dark:stroke-gray-900"
                           strokeWidth={1.5}
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}

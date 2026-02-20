@@ -5,6 +5,9 @@ import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from 
 import { getSession, recordAnswer } from '@/lib/practice'
 import type { AnswerQuestionRequest } from '@/lib/practice/types'
 
+// Allow 90 seconds for AI evaluation on short_answer/fill_blank questions
+export const maxDuration = 90
+
 // =============================================================================
 // POST /api/practice/session/[sessionId]/answer - Record an answer
 // =============================================================================

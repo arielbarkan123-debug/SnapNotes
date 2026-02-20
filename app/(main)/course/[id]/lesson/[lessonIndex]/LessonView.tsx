@@ -552,7 +552,7 @@ export default function LessonView({
     return (
       <div className="min-h-screen bg-transparent flex flex-col">
         {/* Retry Header */}
-        <header className="sticky top-0 z-30 bg-amber-500 text-white shadow-sm">
+        <header className="sticky top-14 md:top-0 z-30 bg-amber-500 text-white shadow-sm">
           <div className="container mx-auto px-3 xs:px-4 py-2 xs:py-3 max-w-4xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 xs:gap-3">
@@ -610,13 +610,13 @@ export default function LessonView({
   return (
     <div className="min-h-screen bg-transparent flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+      <header className="sticky top-14 md:top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="container mx-auto px-4 py-3 max-w-4xl">
           <div className="flex items-center gap-4 mb-3">
             {/* Exit button */}
             <button
               onClick={handleExit}
-              className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-w-[44px] min-h-[44px]"
               aria-label="Exit lesson"
             >
               <svg className="w-6 h-6 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -693,8 +693,7 @@ export default function LessonView({
       {/* Footer with continue button - only show for non-question steps */}
       {!isQuestion && (
         <footer
-          className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+          className="sticky bottom-0 max-md:bottom-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom,0px))] bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg"
         >
           <div className="container mx-auto px-3 xs:px-4 py-3 xs:py-4 max-w-4xl">
             <button
@@ -741,8 +740,7 @@ export default function LessonView({
       {!isQuestion && (
         <button
           onClick={() => setShowHelp(true)}
-          className="fixed bottom-28 xs:bottom-24 right-3 xs:right-4 md:bottom-8 md:right-8 w-11 h-11 xs:w-12 xs:h-12 bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-300 rounded-full shadow-lg flex items-center justify-center hover:bg-violet-200 dark:hover:bg-violet-900 transition-all hover:scale-110 z-40"
-          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+          className="fixed bottom-[calc(128px+env(safe-area-inset-bottom,0px))] md:bottom-8 end-3 xs:end-4 md:end-8 w-11 h-11 xs:w-12 xs:h-12 bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-300 rounded-full shadow-lg flex items-center justify-center hover:bg-violet-200 dark:hover:bg-violet-900 transition-all hover:scale-110 z-40"
           aria-label={t('getHelp')}
           title={t('needHelpPressF9')}
           type="button"
@@ -762,8 +760,7 @@ export default function LessonView({
       {!isQuestion && !isChatOpen && (
         <button
           onClick={() => setIsChatOpen(true)}
-          className="fixed bottom-44 xs:bottom-40 right-3 xs:right-4 md:bottom-24 md:right-8 w-11 h-11 xs:w-12 xs:h-12 bg-violet-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-violet-700 transition-all hover:scale-110 z-40"
-          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+          className="fixed bottom-[calc(184px+env(safe-area-inset-bottom,0px))] md:bottom-24 end-3 xs:end-4 md:end-8 w-11 h-11 xs:w-12 xs:h-12 bg-violet-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-violet-700 transition-all hover:scale-110 z-40"
           aria-label={t('askAI')}
           title={t('askAI')}
         >

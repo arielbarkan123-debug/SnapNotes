@@ -5,9 +5,11 @@
  * Extracts key points, formulas, questions, and important explanations
  * and formats them for spaced repetition review.
  *
+ * Uses AI batch generation for high-quality questions, with regex fallback.
  * Supports both new `steps` format and legacy format for backwards compatibility.
  */
 
+import Anthropic from '@anthropic-ai/sdk'
 import type {
   GeneratedCourse,
   Formula,
@@ -35,6 +37,11 @@ import {
   createMultipleChoiceBack,
   createTrueFalseBack,
 } from '@/types/srs'
+
+import {
+  classifyTopicType,
+  type TopicType,
+} from '@/lib/ai/content-classifier'
 
 // =============================================================================
 // Concept Mapping Types
@@ -68,31 +75,341 @@ const _MAX_FRONT_WORDS = 30
 /** Maximum words for card back (answers) */
 const MAX_BACK_WORDS = 200
 
+/** AI model for batch question generation */
+const AI_MODEL = 'claude-sonnet-4-5-20250929'
+
+// =============================================================================
+// Quality Filter
+// =============================================================================
+
+/**
+ * Check if a generated question meets minimum quality standards.
+ * Rejects garbage patterns like "What does when", questions under 5 words, etc.
+ * Supports both English and Hebrew questions.
+ */
+export function isQuestionQualityAcceptable(question: string): boolean {
+  if (!question || typeof question !== 'string') return false
+
+  const trimmed = question.trim()
+
+  // Check for Hebrew content (has Hebrew characters)
+  const hasHebrew = /[\u0590-\u05FF]/.test(trimmed)
+
+  // Too short - allow fewer "words" for Hebrew since it's more compact
+  // Hebrew uses spaces differently and words can be longer
+  const wordCount = trimmed.split(/\s+/).length
+  const minWords = hasHebrew ? 3 : 5
+  if (wordCount < minWords) return false
+
+  // Missing question mark (for questions, not imperative "Solve:" style)
+  // English imperatives
+  const englishImperativeStyle = /^(solve|calculate|convert|simplify|evaluate|find|compute|determine):/i.test(trimmed)
+  // Hebrew imperatives: פתור, חשב, המר, פשט, מצא, קבע, הסבר, השלם, חלק, השווה, תאר, הגדר, נתח, הוכח, בדוק
+  const hebrewImperativeStyle = /^(פתור|חשב|המר|פשט|מצא|קבע|הסבר|השלם|חלק|השווה|תאר|הגדר|נתח|הוכח|בדוק):/i.test(trimmed)
+
+  const isImperativeStyle = englishImperativeStyle || hebrewImperativeStyle
+
+  // Hebrew questions starting with מה/מי/איך/למה/מדוע/כיצד/האם/כמה/איזה/אילו are valid even without ?
+  const hebrewQuestionWord = hasHebrew && /^(מה|מי|איך|למה|מדוע|כיצד|האם|כמה|איזה|אילו)\s/i.test(trimmed)
+
+  if (!isImperativeStyle && !hebrewQuestionWord && !trimmed.endsWith('?')) return false
+
+  // Garbage patterns from bad regex extraction (English only - Hebrew garbage patterns differ)
+  const garbagePatterns = [
+    /^what does when\b/i,
+    /^what is when\b/i,
+    /^what does \w+ do\?$/i, // Too generic single-word subject like "What does comparing do?"
+    /^what is a key point about/i, // Default fallback — not useful
+    /^what does do\b/i,
+    /^what is \?$/i,
+    /^explain:?\s*$/i,
+  ]
+
+  // Only check English garbage patterns for English questions
+  if (!hasHebrew) {
+    for (const pattern of garbagePatterns) {
+      if (pattern.test(trimmed)) return false
+    }
+  }
+
+  return true
+}
+
+// =============================================================================
+// AI Batch Question Generation
+// =============================================================================
+
+interface ContentItem {
+  index: number
+  type: 'key_point' | 'explanation'
+  content: string
+  sectionTitle: string
+}
+
+/** Max items per AI batch to avoid token overflow */
+const BATCH_SIZE = 15
+
+/**
+ * Generate high-quality questions for a batch of content items using AI.
+ * Splits large batches into groups of BATCH_SIZE and runs them in parallel.
+ * Returns a map from item index to generated question string.
+ */
+async function generateQuestionsFromContentBatch(
+  items: ContentItem[],
+  courseTitle: string,
+  topicType: TopicType,
+  language: 'en' | 'he' = 'en'
+): Promise<Map<number, string>> {
+  const result = new Map<number, string>()
+
+  if (items.length === 0) return result
+
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) {
+    console.warn('[CardGenerator] No ANTHROPIC_API_KEY, falling back to regex generation')
+    return result
+  }
+
+  // Split items into batches of BATCH_SIZE
+  const batches: ContentItem[][] = []
+  for (let i = 0; i < items.length; i += BATCH_SIZE) {
+    batches.push(items.slice(i, i + BATCH_SIZE))
+  }
+
+  // Run all batches in parallel
+  const batchPromises = batches.map(batch =>
+    generateSingleBatch(batch, courseTitle, topicType, language, apiKey)
+  )
+
+  const batchResults = await Promise.allSettled(batchPromises)
+
+  // Merge results from all batches
+  for (const batchResult of batchResults) {
+    if (batchResult.status === 'fulfilled') {
+      for (const [key, value] of batchResult.value) {
+        result.set(key, value)
+      }
+    }
+    // Rejected batches are silently skipped — fallback will handle those items
+  }
+
+  return result
+}
+
+/**
+ * Generate questions for a single batch of content items (max ~15 items).
+ */
+async function generateSingleBatch(
+  items: ContentItem[],
+  courseTitle: string,
+  topicType: TopicType,
+  language: 'en' | 'he',
+  apiKey: string
+): Promise<Map<number, string>> {
+  const result = new Map<number, string>()
+
+  // Build Hebrew language instruction if needed
+  const hebrewInstruction = language === 'he' ? `
+## Language Requirement - CRITICAL
+Generate ALL questions in Hebrew (עברית).
+- Every question must be written in Hebrew
+- Keep mathematical notation standard (numbers, symbols, formulas)
+- Use proper Hebrew educational terminology
+- For math: "חשב:", "פתור:", "המר:", "פשט:"
+- For concepts: "מה הוא...", "הסבר מדוע...", "כיצד..."
+` : ''
+
+  // Build the AI prompt based on topic type
+  let formatInstructions: string
+  if (topicType === 'computational') {
+    formatInstructions = language === 'he'
+      ? `צור בעיות חישוב אמיתיות, לא שאלות אוצר מילים.
+דוגמאות טובות: "פתור: מה הסכום של 3/4 + 1/2?", "חשב 25% מ-80", "המר 0.75 לשבר", "פשט: 12/18"
+דוגמאות גרועות: "מה המשמעות של השוואה?", "הסבר את המושג שברים"
+כל שאלה צריכה לדרוש חישוב כדי לענות.`
+      : `Generate ACTUAL MATH PROBLEMS, not vocabulary questions.
+GOOD examples: "Solve: What is 3/4 + 1/2?", "Calculate 25% of 80", "Convert 0.75 to a fraction", "Simplify: 12/18"
+BAD examples: "What does comparing mean?", "Explain the concept of fractions", "What is a key point about percentages?"
+Each question should require COMPUTATION to answer.`
+  } else if (topicType === 'conceptual') {
+    formatInstructions = language === 'he'
+      ? `צור שאלות הבנה שבודקות ידע של מושגים.
+דוגמאות טובות: "מה התפקיד העיקרי של המיטוכונדריה?", "הסבר מדוע חזיתות חמות גורמות לשינויי מזג אוויר הדרגתיים"
+דוגמאות גרועות: "מה זה כשמשווים?", "מה נקודה מרכזית לגבי ביולוגיה?"
+כל שאלה צריכה לבדוק הבנה של המושג.`
+      : `Generate understanding questions that test knowledge of concepts.
+GOOD examples: "What is the main function of mitochondria?", "Explain why warm fronts cause gradual weather changes", "How does natural selection drive evolution?"
+BAD examples: "What does when comparing do?", "What is a key point about biology?"
+Each question should test understanding of the concept.`
+  } else {
+    formatInstructions = language === 'he'
+      ? `צור תערובת של בעיות חישוב (לפחות 50%) ושאלות הבנה.
+לתוכן מתמטי: "פתור: ...", "חשב: ...", "המר: ..."
+לתוכן מושגי: "הסבר ...", "מה הוא ...", "מדוע ..."
+לעולם אל תיצור שאלות מעורפלות כמו "מה נקודה מרכזית לגבי X?"`
+      : `Generate a mix of computational problems (at least 50%) and understanding questions.
+For math/numeric content: "Solve: ...", "Calculate ...", "Convert ..."
+For conceptual content: "Explain ...", "What is ...", "Why does ..."
+NEVER generate vague questions like "What is a key point about X?"`
+  }
+
+  const itemList = items.map((item, i) =>
+    `[${i}] (${item.type}) Section: "${item.sectionTitle}"\nContent: ${item.content.slice(0, 300)}`
+  ).join('\n\n')
+
+  const prompt = `You are generating flashcard questions for a course titled "${courseTitle}".
+${hebrewInstruction}
+
+${formatInstructions}
+
+Generate ONE clear, specific question for each content item below. Return ONLY a JSON array of objects with "index" (matching the [N] number) and "question" fields.
+
+Content items:
+${itemList}
+
+Return JSON array like: [{"index": 0, "question": "..."}, {"index": 1, "question": "..."}]`
+
+  try {
+    const client = new Anthropic({ apiKey })
+    const response = await client.messages.create({
+      model: AI_MODEL,
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }],
+    })
+
+    const text = response.content.find(b => b.type === 'text')
+    if (!text || text.type !== 'text') return result
+
+    const jsonMatch = text.text.match(/\[[\s\S]*\]/)
+    if (!jsonMatch) return result
+
+    const parsed = JSON.parse(jsonMatch[0]) as Array<{ index: number; question: string }>
+
+    for (const entry of parsed) {
+      if (typeof entry.index === 'number' && typeof entry.question === 'string') {
+        const actualItem = items[entry.index]
+        if (actualItem && isQuestionQualityAcceptable(entry.question)) {
+          result.set(actualItem.index, entry.question)
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[CardGenerator] AI batch generation failed for batch, will use fallback:', error)
+  }
+
+  return result
+}
+
+/**
+ * Regenerate a single card's question using AI.
+ * Used for lazy on-the-fly regeneration of bad cards during review.
+ *
+ * @param front - Current (bad) question text
+ * @param back - Card answer/content
+ * @param courseTitle - Course title for context
+ * @param language - Language for the question (defaults to detecting from content)
+ */
+export async function regenerateCardQuestion(
+  front: string,
+  back: string,
+  courseTitle: string,
+  language?: 'en' | 'he'
+): Promise<string | null> {
+  try {
+    const apiKey = process.env.ANTHROPIC_API_KEY
+    if (!apiKey) return null
+
+    const topicType = classifyTopicType(back, courseTitle)
+
+    // Auto-detect Hebrew if not specified (check if content contains Hebrew characters)
+    const isHebrew = language === 'he' || (
+      !language && /[\u0590-\u05FF]/.test(back)
+    )
+
+    let style: string
+    let languageInstruction = ''
+
+    if (isHebrew) {
+      languageInstruction = '\n\nIMPORTANT: Generate the question in Hebrew (עברית). Use proper Hebrew educational terminology.'
+      style = topicType === 'computational'
+        ? 'בעיית חישוב אמיתית (למשל: "פתור: ...", "חשב: ...")'
+        : 'שאלת הבנה ברורה'
+    } else {
+      style = topicType === 'computational'
+        ? 'an actual math problem to solve (e.g., "Solve: ...", "Calculate: ...")'
+        : 'a clear understanding question'
+    }
+
+    const client = new Anthropic({ apiKey })
+    const response = await client.messages.create({
+      model: AI_MODEL,
+      max_tokens: 200,
+      messages: [{
+        role: 'user',
+        content: `The following flashcard has a bad question. Generate ${style} for this answer content.${languageInstruction}
+
+Course: "${courseTitle}"
+Current bad question: "${front}"
+Answer/content: "${back.slice(0, 500)}"
+
+Return ONLY the new question text, nothing else.`,
+      }],
+    })
+
+    const text = response.content.find(b => b.type === 'text')
+    if (!text || text.type !== 'text') return null
+
+    const newQuestion = text.text.trim()
+    return isQuestionQualityAcceptable(newQuestion) ? newQuestion : null
+  } catch (error) {
+    console.error('[CardGenerator] Single card regeneration failed:', error)
+    return null
+  }
+}
+
 // =============================================================================
 // Main Generator Function
 // =============================================================================
 
 /**
+ * Options for card generation
+ */
+export interface CardGenerationOptions {
+  conceptMappings?: ConceptMapping
+  language?: 'en' | 'he'
+}
+
+/**
  * Generate review cards from a course's content
  *
- * Extracts reviewable content from sections and creates flashcards:
- * - Questions → Direct from embedded questions in course
- * - Key points → Q: "What is [topic]?" A: The key point
- * - Formulas → Q: "What is the formula for [topic]?" A: Formula + explanation
- * - Explanations → Q: Generated question A: Explanation content
- *
- * Supports both new `steps` format and legacy format.
+ * Uses AI batch generation for key_point and explanation cards,
+ * with regex fallback if AI is unavailable.
  *
  * @param course - The generated course content
  * @param courseId - The course's database ID
- * @param conceptMappings - Optional concept mappings from content_concepts table
+ * @param options - Optional generation options (conceptMappings, language)
  * @returns Array of ReviewCardInsert objects ready for database insertion
  */
-export function generateCardsFromCourse(
+export async function generateCardsFromCourse(
   course: GeneratedCourse & { sections?: CourseSection[]; lessons?: CourseSection[]; keyConcepts?: string[] },
   courseId: string,
-  conceptMappings?: ConceptMapping
-): ReviewCardInsert[] {
+  options?: CardGenerationOptions | ConceptMapping
+): Promise<ReviewCardInsert[]> {
+  // Support both old signature (ConceptMapping) and new signature (options object)
+  let conceptMappings: ConceptMapping | undefined
+  let language: 'en' | 'he' = 'en'
+
+  if (options) {
+    if (options instanceof Map) {
+      // Old signature: conceptMappings directly
+      conceptMappings = options
+    } else {
+      // New signature: options object
+      conceptMappings = options.conceptMappings
+      language = options.language || 'en'
+    }
+  }
+
   const cards: ReviewCardInsert[] = []
 
   // Handle both "sections" (AI response) and "lessons" (normalized)
@@ -103,59 +420,98 @@ export function generateCardsFromCourse(
     return cards
   }
 
-  // Process each section (lesson)
+  // Classify the course topic type for AI question generation
+  const courseTitle = course.title || 'Course'
+  const topicType = classifyTopicType(courseTitle)
+
+  // Collect all items that need AI-generated questions across all sections
+  const allContentItems: ContentItem[] = []
+  // Track where each item belongs for card assembly after AI generation
+  interface CardSlot {
+    courseId: string
+    lessonIndex: number
+    stepIndex: number
+    cardType: CardType
+    back: string
+    conceptIds?: string[]
+    contentItemGlobalIndex: number // index into allContentItems
+  }
+  const pendingSlots: CardSlot[] = []
+
+  // Process each section (lesson) — first pass: collect content for AI batch
   lessonsData.forEach((section: CourseSection, lessonIndex: number) => {
     if (!section) return
 
     let stepIndex = 0
     const sectionTitle = section.title || `Section ${lessonIndex + 1}`
 
-    // Check if section uses steps format
+    // Process steps format
     if (section.steps && Array.isArray(section.steps) && section.steps.length > 0) {
-      // Extract from steps
-      const stepsCards = generateCardsFromSteps(
+      const { directCards, contentItems, slots } = collectFromSteps(
         section.steps,
         sectionTitle,
         courseId,
         lessonIndex,
-        conceptMappings
+        conceptMappings,
+        allContentItems.length
       )
-      cards.push(...stepsCards)
-      stepIndex += stepsCards.length
+      cards.push(...directCards)
+      allContentItems.push(...contentItems)
+      pendingSlots.push(...slots)
+      stepIndex += directCards.length + contentItems.length
     }
 
-    // Also check for legacy format fields
-    // Generate cards from key points (legacy)
+    // Legacy key points
     if (section.keyPoints && Array.isArray(section.keyPoints) && section.keyPoints.length > 0) {
-      const keyPointCards = generateKeyPointCardsLegacy(
-        section.keyPoints,
-        sectionTitle,
-        courseId,
-        lessonIndex,
-        stepIndex,
-        conceptMappings
-      )
-      cards.push(...keyPointCards)
-      stepIndex += keyPointCards.length
+      section.keyPoints.forEach((keyPoint, kpIndex) => {
+        const si = stepIndex + kpIndex
+        const conceptIds = getConceptIds(lessonIndex, si, conceptMappings)
+        const globalIdx = allContentItems.length
+        allContentItems.push({
+          index: globalIdx,
+          type: 'key_point',
+          content: keyPoint,
+          sectionTitle,
+        })
+        pendingSlots.push({
+          courseId,
+          lessonIndex,
+          stepIndex: si,
+          cardType: 'flashcard' as CardType,
+          back: keyPoint,
+          conceptIds,
+          contentItemGlobalIndex: globalIdx,
+        })
+      })
+      stepIndex += section.keyPoints.length
     }
 
-    // Generate card from main explanation (legacy, if substantial)
+    // Legacy explanation
     if (section.explanation && typeof section.explanation === 'string') {
-      const explanationCard = generateExplanationCardLegacy(
-        section.explanation,
-        sectionTitle,
-        courseId,
-        lessonIndex,
-        stepIndex,
-        conceptMappings
-      )
-      if (explanationCard) {
-        cards.push(explanationCard)
+      const wordCount = section.explanation.split(/\s+/).length
+      if (wordCount >= MIN_EXPLANATION_WORDS) {
+        const conceptIds = getConceptIds(lessonIndex, stepIndex, conceptMappings)
+        const globalIdx = allContentItems.length
+        allContentItems.push({
+          index: globalIdx,
+          type: 'explanation',
+          content: section.explanation,
+          sectionTitle,
+        })
+        pendingSlots.push({
+          courseId,
+          lessonIndex,
+          stepIndex,
+          cardType: 'short_answer' as CardType,
+          back: truncateText(section.explanation, MAX_BACK_WORDS),
+          conceptIds,
+          contentItemGlobalIndex: globalIdx,
+        })
         stepIndex += 1
       }
     }
 
-    // Generate cards from formulas (same in both formats)
+    // Formulas (no AI needed — formula questions use dedicated template)
     if (section.formulas && Array.isArray(section.formulas) && section.formulas.length > 0) {
       const formulaCards = generateFormulaCards(
         section.formulas,
@@ -170,12 +526,52 @@ export function generateCardsFromCourse(
     }
   })
 
-  // Generate cards from key concepts (course-level)
+  // AI batch generation for all pending content items
+  let aiQuestions = new Map<number, string>()
+  if (allContentItems.length > 0) {
+    aiQuestions = await generateQuestionsFromContentBatch(
+      allContentItems,
+      courseTitle,
+      topicType,
+      language
+    )
+  }
+
+  // Assemble pending cards with AI questions or regex fallback
+  for (const slot of pendingSlots) {
+    const item = allContentItems[slot.contentItemGlobalIndex]
+    let question = aiQuestions.get(item.index)
+
+    // Fallback to regex if AI didn't produce a question for this item
+    if (!question) {
+      if (slot.cardType === 'flashcard') {
+        question = generateQuestionFromKeyPointFallback(item.content, item.sectionTitle)
+      } else {
+        question = generateQuestionFromContentFallback(item.content, item.sectionTitle)
+      }
+      // Apply quality filter to fallback too
+      if (!isQuestionQualityAcceptable(question)) {
+        question = `Review this concept from "${item.sectionTitle}":`
+      }
+    }
+
+    cards.push({
+      course_id: slot.courseId,
+      lesson_index: slot.lessonIndex,
+      step_index: slot.stepIndex,
+      card_type: slot.cardType,
+      front: question,
+      back: slot.back,
+      concept_ids: slot.conceptIds,
+    })
+  }
+
+  // Course-level key concepts
   const keyConcepts = course.keyConcepts || []
   if (keyConcepts.length > 0) {
     const conceptCards = generateConceptCards(
       keyConcepts,
-      course.title || 'Course',
+      courseTitle,
       courseId,
       0,
       cards.length
@@ -238,25 +634,42 @@ function getConceptIds(
 }
 
 // =============================================================================
-// New Format: Steps-based Card Generation
+// Steps-based Card Collection (for AI batch)
 // =============================================================================
 
-/**
- * Generate cards from the steps array (new format)
- * Directly uses embedded questions and extracts key points
- * Creates interactive card types (multiple_choice, true_false, fill_blank) when applicable
- */
-// Extended step type to handle legacy AI formats that may have 'question' and 'correctIndex' fields
+// Extended step type to handle legacy AI formats
 type ExtendedStep = LessonStep & { question?: string; correctIndex?: number }
 
-function generateCardsFromSteps(
+interface CollectedSteps {
+  directCards: ReviewCardInsert[]
+  contentItems: ContentItem[]
+  slots: Array<{
+    courseId: string
+    lessonIndex: number
+    stepIndex: number
+    cardType: CardType
+    back: string
+    conceptIds?: string[]
+    contentItemGlobalIndex: number
+  }>
+}
+
+/**
+ * Collect cards from steps — question-type steps produce direct cards,
+ * key_point and explanation steps produce content items for AI batch.
+ */
+function collectFromSteps(
   steps: LessonStep[],
   sectionTitle: string,
   courseId: string,
   lessonIndex: number,
-  conceptMappings?: ConceptMapping
-): ReviewCardInsert[] {
-  const cards: ReviewCardInsert[] = []
+  conceptMappings: ConceptMapping | undefined,
+  globalIndexStart: number
+): CollectedSteps {
+  const directCards: ReviewCardInsert[] = []
+  const contentItems: ContentItem[] = []
+  const slots: CollectedSteps['slots'] = []
+  let nextGlobalIndex = globalIndexStart
 
   steps.forEach((rawStep: LessonStep, index: number) => {
     const step = rawStep as ExtendedStep
@@ -264,24 +677,21 @@ function generateCardsFromSteps(
     const conceptIds = getConceptIds(lessonIndex, index, conceptMappings)
 
     if (stepType === 'question') {
-      // Embedded questions become interactive cards
-      // Handle both normalized format (content) and AI format (question)
+      // Question steps are handled directly (no AI needed)
       const questionText = step.content || step.question || ''
       const correctIndex = step.correct_answer ?? step.correctIndex ?? 0
       const options = step.options || []
 
       if (questionText && options.length > 0) {
-        // Determine card type based on options
         const cardType = determineQuestionCardType(options)
 
         if (cardType === 'true_false') {
-          // True/False question
           const isTrue = options[correctIndex]?.toLowerCase().includes('true')
           const trueFalseData: TrueFalseData = {
             correct: isTrue,
             explanation: step.explanation,
           }
-          cards.push({
+          directCards.push({
             course_id: courseId,
             lesson_index: lessonIndex,
             step_index: index,
@@ -291,13 +701,12 @@ function generateCardsFromSteps(
             concept_ids: conceptIds,
           })
         } else {
-          // Multiple choice question (default)
           const mcData: MultipleChoiceData = {
             options: options,
             correctIndex: correctIndex,
             explanation: step.explanation,
           }
-          cards.push({
+          directCards.push({
             course_id: courseId,
             lesson_index: lessonIndex,
             step_index: index,
@@ -309,44 +718,55 @@ function generateCardsFromSteps(
         }
       }
     } else if (stepType === 'key_point') {
-      // Key points become flashcards
       const content = step.content || ''
       if (content && content.length > 10) {
-        cards.push({
-          course_id: courseId,
-          lesson_index: lessonIndex,
-          step_index: index,
-          card_type: 'flashcard' as CardType,
-          front: generateQuestionFromKeyPoint(content, sectionTitle),
+        const globalIdx = nextGlobalIndex++
+        contentItems.push({
+          index: globalIdx,
+          type: 'key_point',
+          content,
+          sectionTitle,
+        })
+        slots.push({
+          courseId,
+          lessonIndex,
+          stepIndex: index,
+          cardType: 'flashcard' as CardType,
           back: content,
-          concept_ids: conceptIds,
+          conceptIds,
+          contentItemGlobalIndex: globalIdx,
         })
       }
     } else if (stepType === 'explanation' || stepType === 'summary') {
-      // Substantial explanations become short answer cards
       const content = step.content || ''
       if (content && content.length > 50) {
-        cards.push({
-          course_id: courseId,
-          lesson_index: lessonIndex,
-          step_index: index,
-          card_type: 'short_answer' as CardType,
-          front: generateQuestionFromContent(content, sectionTitle),
+        const globalIdx = nextGlobalIndex++
+        contentItems.push({
+          index: globalIdx,
+          type: 'explanation',
+          content,
+          sectionTitle,
+        })
+        slots.push({
+          courseId,
+          lessonIndex,
+          stepIndex: index,
+          cardType: 'short_answer' as CardType,
           back: truncateText(content, MAX_BACK_WORDS),
-          concept_ids: conceptIds,
+          conceptIds,
+          contentItemGlobalIndex: globalIdx,
         })
       }
     }
   })
 
-  return cards
+  return { directCards, contentItems, slots }
 }
 
 /**
  * Determine the appropriate card type based on question options
  */
 function determineQuestionCardType(options: string[]): CardType {
-  // Check for true/false pattern
   if (options.length === 2) {
     const lowercaseOptions = options.map(o => o.toLowerCase().trim())
     const trueFalsePatterns = [
@@ -368,7 +788,6 @@ function determineQuestionCardType(options: string[]): CardType {
     }
   }
 
-  // Default to multiple choice
   return 'multiple_choice'
 }
 
@@ -382,7 +801,6 @@ function _formatQuestionAnswerFromStep(options: string[], correctIndex: number, 
 
 /**
  * Format a question step into a card answer
- * Includes correct answer and explanation
  */
 function _formatQuestionAnswer(question: Step): string {
   const correctIndex = question.correct_answer ?? 0
@@ -391,39 +809,9 @@ function _formatQuestionAnswer(question: Step): string {
 }
 
 // =============================================================================
-// Legacy Format: Card Type Generators
+// Formula Card Generation (no AI needed)
 // =============================================================================
 
-/**
- * Generate cards from key points (legacy format)
- * Now creates 'flashcard' type instead of legacy 'key_point'
- */
-function generateKeyPointCardsLegacy(
-  keyPoints: string[],
-  sectionTitle: string,
-  courseId: string,
-  lessonIndex: number,
-  startStepIndex: number,
-  conceptMappings?: ConceptMapping
-): ReviewCardInsert[] {
-  return keyPoints.map((keyPoint, index) => {
-    const stepIndex = startStepIndex + index
-    const conceptIds = getConceptIds(lessonIndex, stepIndex, conceptMappings)
-    return {
-      course_id: courseId,
-      lesson_index: lessonIndex,
-      step_index: stepIndex,
-      card_type: 'flashcard' as CardType,
-      front: generateQuestionFromKeyPoint(keyPoint, sectionTitle),
-      back: keyPoint,
-      concept_ids: conceptIds,
-    }
-  })
-}
-
-/**
- * Generate cards from formulas
- */
 function generateFormulaCards(
   formulas: Formula[],
   sectionTitle: string,
@@ -447,43 +835,6 @@ function generateFormulaCards(
   })
 }
 
-/**
- * Generate a card from explanation (legacy format)
- * Only creates card if explanation is substantial
- * Now creates 'short_answer' type instead of legacy 'explanation'
- */
-function generateExplanationCardLegacy(
-  explanation: string,
-  sectionTitle: string,
-  courseId: string,
-  lessonIndex: number,
-  stepIndex: number,
-  conceptMappings?: ConceptMapping
-): ReviewCardInsert | null {
-  const wordCount = explanation.split(/\s+/).length
-
-  // Skip if explanation is too short
-  if (wordCount < MIN_EXPLANATION_WORDS) {
-    return null
-  }
-
-  const conceptIds = getConceptIds(lessonIndex, stepIndex, conceptMappings)
-
-  return {
-    course_id: courseId,
-    lesson_index: lessonIndex,
-    step_index: stepIndex,
-    card_type: 'short_answer' as CardType,
-    front: generateQuestionFromContent(explanation, sectionTitle),
-    back: truncateText(explanation, MAX_BACK_WORDS),
-    concept_ids: conceptIds,
-  }
-}
-
-/**
- * Generate cards from course-level key concepts
- * Now creates 'flashcard' type instead of legacy 'key_point'
- */
 function generateConceptCards(
   keyConcepts: string[],
   courseTitle: string,
@@ -491,7 +842,6 @@ function generateConceptCards(
   lessonIndex: number,
   startStepIndex: number
 ): ReviewCardInsert[] {
-  // Only create cards for first few key concepts to avoid overwhelming
   const conceptsToUse = keyConcepts.slice(0, 5)
 
   return conceptsToUse.map((concept, index) => ({
@@ -505,19 +855,14 @@ function generateConceptCards(
 }
 
 // =============================================================================
-// Question Generation Helpers
+// Regex Fallback Question Generators
 // =============================================================================
 
 /**
- * Generate a question from a key point statement
- *
- * Examples:
- * - "Photosynthesis converts sunlight to energy" →
- *   "What does photosynthesis do?"
- * - "The mitochondria is the powerhouse of the cell" →
- *   "What is the mitochondria?"
+ * Fallback: generate a question from a key point using regex patterns.
+ * Used only when AI batch generation fails.
  */
-function generateQuestionFromKeyPoint(keyPoint: string, topic: string): string {
+function generateQuestionFromKeyPointFallback(keyPoint: string, topic: string): string {
   const lowerKeyPoint = keyPoint.toLowerCase()
 
   // Pattern: "[Subject] is [definition]"
@@ -525,15 +870,10 @@ function generateQuestionFromKeyPoint(keyPoint: string, topic: string): string {
   const isMatch = keyPoint.match(isPattern)
   if (isMatch) {
     const subject = isMatch[1]
-    return `What is ${subject.toLowerCase()}?`
-  }
-
-  // Pattern: "[Subject] [verb]s [action]"
-  const verbPattern = /^(.+?)\s+(\w+s)\s+/i
-  const verbMatch = keyPoint.match(verbPattern)
-  if (verbMatch) {
-    const subject = verbMatch[1]
-    return `What does ${subject.toLowerCase()} do?`
+    // Avoid too-short subjects that produce garbage
+    if (subject.split(/\s+/).length >= 2) {
+      return `What is ${subject.toLowerCase()}?`
+    }
   }
 
   // Pattern: Contains "because" or "due to"
@@ -541,15 +881,53 @@ function generateQuestionFromKeyPoint(keyPoint: string, topic: string): string {
     return `Why is this true: ${truncateText(keyPoint, 15)}...?`
   }
 
-  // Default: Ask about the key point related to the topic
-  return `What is a key point about ${topic}?`
+  // Default: use the topic
+  return `Review this concept from "${topic}":`
 }
 
 /**
- * Generate a question for a formula
+ * Fallback: generate a question from explanation content using regex patterns.
+ * Used only when AI batch generation fails.
  */
+function generateQuestionFromContentFallback(
+  content: string,
+  topic: string
+): string {
+  const sentences = content.split(/[.!?]+/).filter((s) => s.trim().length > 0)
+  const firstSentence = sentences[0]?.trim() || ''
+
+  const subjectMatch = firstSentence.match(/^(?:The\s+)?(.+?)\s+(?:is|are|was|were|has|have)/i)
+
+  if (subjectMatch) {
+    const subject = subjectMatch[1].toLowerCase()
+    if (subject.split(/\s+/).length >= 2 && subject.split(/\s+/).length <= 5) {
+      return `What can you tell me about ${subject}?`
+    }
+  }
+
+  if (firstSentence.toLowerCase().startsWith('in ')) {
+    return `Explain the concept of ${topic}.`
+  }
+
+  return `Explain: ${topic}`
+}
+
+/**
+ * Public wrapper for content question generation (used by external callers).
+ * Falls back to regex when called synchronously.
+ */
+export function generateQuestionFromContent(
+  content: string,
+  topic: string
+): string {
+  return generateQuestionFromContentFallback(content, topic)
+}
+
+// =============================================================================
+// Formula Question Helpers
+// =============================================================================
+
 function generateFormulaQuestion(formula: Formula, topic: string): string {
-  // Try to extract what the formula calculates
   const explanation = formula.explanation.toLowerCase()
 
   if (explanation.includes('calculate')) {
@@ -566,56 +944,17 @@ function generateFormulaQuestion(formula: Formula, topic: string): string {
     }
   }
 
-  // Default question
   return `What is the formula for ${topic}?`
 }
 
-/**
- * Generate a question from explanation content
- *
- * Attempts to identify the main topic and create a relevant question.
- */
-export function generateQuestionFromContent(
-  content: string,
-  topic: string
-): string {
-  const sentences = content.split(/[.!?]+/).filter((s) => s.trim().length > 0)
-  const firstSentence = sentences[0]?.trim() || ''
-
-  // Try to extract the subject from the first sentence
-  const subjectMatch = firstSentence.match(/^(?:The\s+)?(.+?)\s+(?:is|are|was|were|has|have)/i)
-
-  if (subjectMatch) {
-    const subject = subjectMatch[1].toLowerCase()
-    // Avoid questions that are too long
-    if (subject.split(/\s+/).length <= 5) {
-      return `What can you tell me about ${subject}?`
-    }
-  }
-
-  // Pattern: Starts with "In [context]"
-  if (firstSentence.toLowerCase().startsWith('in ')) {
-    return `Explain the concept of ${topic}.`
-  }
-
-  // Default: Ask to explain the topic
-  return `Explain: ${topic}`
+function formatFormulaAnswer(formula: Formula): string {
+  return `**Formula:** ${formula.formula}\n\n**Explanation:** ${formula.explanation}`
 }
 
 // =============================================================================
 // Formatting Helpers
 // =============================================================================
 
-/**
- * Format a formula for the answer side of a card
- */
-function formatFormulaAnswer(formula: Formula): string {
-  return `**Formula:** ${formula.formula}\n\n**Explanation:** ${formula.explanation}`
-}
-
-/**
- * Truncate text to a maximum number of words
- */
 function truncateText(text: string, maxWords: number): string {
   const words = text.split(/\s+/)
   if (words.length <= maxWords) {
@@ -630,30 +969,22 @@ function truncateText(text: string, maxWords: number): string {
 
 /**
  * Count total cards that would be generated from a course
- * Useful for showing user how many cards they'll get
- * Supports both new steps format and legacy format
  */
 export function estimateCardCount(course: GeneratedCourse & { sections?: CourseSection[]; lessons?: CourseSection[]; keyConcepts?: string[] }): number {
   let count = 0
 
-  // Handle both "sections" and "lessons"
   const lessonsData = course.lessons || course.sections || []
 
   lessonsData.forEach((section: CourseSection) => {
-    // Check for new steps format
     if (section.steps && Array.isArray(section.steps) && section.steps.length > 0) {
-      // Count questions and key_points from steps
       section.steps.forEach((step) => {
         if (step.type === 'question' || step.type === 'key_point') {
           count += 1
         }
       })
     } else {
-      // Legacy format
-      // Key points
       count += section.keyPoints?.length || 0
 
-      // Explanation (if substantial)
       if (section.explanation) {
         const wordCount = section.explanation.split(/\s+/).length
         if (wordCount >= MIN_EXPLANATION_WORDS) {
@@ -662,11 +993,9 @@ export function estimateCardCount(course: GeneratedCourse & { sections?: CourseS
       }
     }
 
-    // Formulas (same in both formats)
     count += section.formulas?.length || 0
   })
 
-  // Key concepts (max 5 from first section) - legacy format only
   if (course.keyConcepts && Array.isArray(course.keyConcepts)) {
     count += Math.min(course.keyConcepts.length, 5)
   }
@@ -676,8 +1005,6 @@ export function estimateCardCount(course: GeneratedCourse & { sections?: CourseS
 
 /**
  * Get a summary of card types that would be generated
- * Supports both new steps format and legacy format
- * Uses new card types: flashcard, multiple_choice, true_false, short_answer, formula
  */
 export function getCardTypeSummary(
   course: GeneratedCourse & { sections?: CourseSection[]; lessons?: CourseSection[]; keyConcepts?: string[] }
@@ -690,11 +1017,9 @@ export function getCardTypeSummary(
     formula: 0,
   }
 
-  // Handle both "sections" and "lessons"
   const lessonsData = course.lessons || course.sections || []
 
   lessonsData.forEach((section: CourseSection) => {
-    // Check for new steps format
     if (section.steps && Array.isArray(section.steps) && section.steps.length > 0) {
       section.steps.forEach((step) => {
         if (step.type === 'question') {
@@ -715,7 +1040,6 @@ export function getCardTypeSummary(
         }
       })
     } else {
-      // Legacy format
       summary.flashcard = (summary.flashcard || 0) + (section.keyPoints?.length || 0)
 
       if (section.explanation) {
@@ -726,13 +1050,11 @@ export function getCardTypeSummary(
       }
     }
 
-    // Formulas (same in both formats)
     if (section.formulas) {
       summary.formula = (summary.formula || 0) + section.formulas.length
     }
   })
 
-  // Key concepts count as flashcard - legacy format only
   if (course.keyConcepts && Array.isArray(course.keyConcepts)) {
     summary.flashcard = (summary.flashcard || 0) + Math.min(course.keyConcepts.length, 5)
   }
@@ -750,6 +1072,8 @@ const cardGenerator = {
   estimateCardCount,
   getCardTypeSummary,
   buildConceptMapping,
+  isQuestionQualityAcceptable,
+  regenerateCardQuestion,
 }
 
 export default cardGenerator

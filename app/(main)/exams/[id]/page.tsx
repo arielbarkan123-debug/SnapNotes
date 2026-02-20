@@ -550,7 +550,7 @@ export default function TakeExamPage() {
   return (
     <div className="min-h-screen bg-transparent">
       {/* Header with timer */}
-      <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-10">
+      <div className="sticky top-14 md:top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-10">
         <div className="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
           <button onClick={() => setShowNav(!showNav)} className="text-sm text-gray-600 dark:text-gray-400">
             Q{currentQuestion + 1}/{questions.length}
@@ -587,7 +587,7 @@ export default function TakeExamPage() {
                   <button
                     key={q.id}
                     onClick={() => { setCurrentQuestion(i); setShowNav(false) }}
-                    className={`w-10 h-10 rounded-lg text-sm font-medium transition
+                    className={`w-11 h-11 rounded-lg text-sm font-medium transition
                       ${isCurrent ? 'ring-2 ring-violet-600' : ''}
                       ${isMarked ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
                         qAnswered ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :

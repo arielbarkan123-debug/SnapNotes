@@ -397,8 +397,7 @@ export default function DashboardContent({ initialCourses, userName }: Dashboard
         {/* Mobile FAB */}
         <button
           onClick={() => setIsUploadModalOpen(true)}
-          className="sm:hidden fixed bottom-20 end-4 w-14 h-14 bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white rounded-full shadow-lg flex items-center justify-center z-40 transition-colors"
-          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+          className="sm:hidden fixed bottom-[calc(72px+env(safe-area-inset-bottom,0px))] end-4 w-14 h-14 bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white rounded-full shadow-lg flex items-center justify-center z-40 transition-colors"
           aria-label={t('uploadNotebook')}
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

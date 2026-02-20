@@ -243,13 +243,12 @@ export default function PracticePage() {
   // ==========================================================================
 
   const startPractice = useCallback(async () => {
-    if (courses.length === 0) return
+    if (courses.length === 0 || selectedCourseIds.length === 0) return
 
     setError(null)
 
     try {
-      // Build course filter (empty = all courses)
-      const courseFilter = selectedCourseIds.length > 0 ? selectedCourseIds : courses.map(c => c.id)
+      const courseFilter = selectedCourseIds
 
       // Fetch questions for practice
       const response = await fetch('/api/practice/generate', {
@@ -325,7 +324,7 @@ export default function PracticePage() {
       // Track practice session started
       trackFeature('practice_started', {
         questionCount: practiceCards.length,
-        courseCount: selectedCourseIds.length || courses.length,
+        courseCount: selectedCourseIds.length,
       })
 
       // Start study session tracking
@@ -349,7 +348,7 @@ export default function PracticePage() {
   }
 
   const selectAllCourses = () => {
-    setSelectedCourseIds([])
+    setSelectedCourseIds(courses.map(c => c.id))
   }
 
   // ==========================================================================
@@ -951,7 +950,7 @@ export default function PracticePage() {
                   <button
                     onClick={selectAllCourses}
                     className={`text-sm ${
-                      selectedCourseIds.length === 0
+                      selectedCourseIds.length === courses.length
                         ? 'text-violet-600 dark:text-violet-400 font-medium'
                         : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                     }`}
@@ -961,18 +960,16 @@ export default function PracticePage() {
                 </div>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {courses.map(course => {
-                    const isSelected = selectedCourseIds.length === 0 || selectedCourseIds.includes(course.id)
+                    const isSelected = selectedCourseIds.includes(course.id)
 
                     return (
                       <button
                         key={course.id}
                         onClick={() => toggleCourse(course.id)}
                         className={`w-full text-start p-3 rounded-xl transition-all flex items-center gap-3 ${
-                          isSelected && selectedCourseIds.length > 0
+                          isSelected
                             ? 'bg-violet-50 dark:bg-violet-900/30 border-2 border-violet-500'
-                            : selectedCourseIds.length === 0
-                              ? 'bg-gray-50 dark:bg-gray-800 border-2 border-transparent'
-                              : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 opacity-60'
+                            : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 opacity-60'
                         }`}
                       >
                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
@@ -1013,7 +1010,8 @@ export default function PracticePage() {
               {/* Start Button */}
               <button
                 onClick={startPractice}
-                className="w-full py-4 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-semibold rounded-xl transition-all text-lg shadow-lg"
+                disabled={selectedCourseIds.length === 0}
+                className="w-full py-4 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-semibold rounded-xl transition-all text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {t('startPractice')}
               </button>
@@ -1259,7 +1257,7 @@ export default function PracticePage() {
       </div>
 
       {/* Action Buttons - sticky at bottom for mobile visibility */}
-      <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-900 pt-2 pb-4 border-t border-gray-100 dark:border-gray-800">
+      <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-900 pt-2 pb-4 max-md:pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-gray-100 dark:border-gray-800">
         <div className="max-w-2xl mx-auto px-4">
         {(() => {
           // For interactive cards that have been answered

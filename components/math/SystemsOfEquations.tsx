@@ -91,7 +91,10 @@ export function SystemsOfEquations({
   subject = 'math',
   complexity = 'middle_school',
 }: SystemsOfEquationsProps) {
-  const { equation1, equation2, variables, method, solutions, steps, title } = data
+  const { equation1, equation2, method, title } = data
+  const variables = Array.isArray(data.variables) ? data.variables : []
+  const solutions = data.solutions ?? {}
+  const steps = Array.isArray(data.steps) ? data.steps : []
   const reducedMotion = prefersReducedMotion()
   void animationDuration // reserved for future animation customization
 
@@ -104,7 +107,7 @@ export function SystemsOfEquations({
     language,
   })
 
-  const progressPercent = ((diagram.currentStep + 1) / diagram.totalSteps) * 100
+  const progressPercent = diagram.totalSteps > 0 ? ((diagram.currentStep + 1) / diagram.totalSteps) * 100 : 0
   const isComplete = diagram.currentStep >= steps.length - 1
 
   const visibleSteps = useMemo(() => steps.filter((s) => s.step <= diagram.currentStep), [steps, diagram.currentStep])
@@ -527,9 +530,9 @@ export function SystemsOfEquations({
               ))}
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
-              {language === 'he' 
-                ? `נקודת החיתוך: (${solutions[variables[0]]}, ${solutions[variables[1]]})`
-                : `Intersection point: (${solutions[variables[0]]}, ${solutions[variables[1]]})`
+              {language === 'he'
+                ? `נקודת החיתוך: (${solutions[variables[0]] ?? '?'}, ${solutions[variables[1]] ?? '?'})`
+                : `Intersection point: (${solutions[variables[0]] ?? '?'}, ${solutions[variables[1]] ?? '?'})`
               }
             </p>
           </motion.div>

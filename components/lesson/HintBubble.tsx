@@ -129,13 +129,13 @@ export default function HintBubble({
               <span className={`text-xs ${getTextColor()} opacity-70`}>{t('wasThisHelpful')}</span>
               <button
                 onClick={() => handleFeedback(true)}
-                className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+                className="px-3 py-2 text-xs rounded-full bg-green-100 text-green-700 hover:bg-green-200 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
                 {t('yes')}
               </button>
               <button
                 onClick={() => handleFeedback(false)}
-                className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                className="px-3 py-2 text-xs rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
                 {t('no')}
               </button>
@@ -146,7 +146,7 @@ export default function HintBubble({
         {/* Dismiss button */}
         <button
           onClick={handleDismiss}
-          className={`flex-shrink-0 p-1 rounded-full hover:bg-black/5 transition-colors ${getTextColor()} opacity-50 hover:opacity-100`}
+          className={`flex-shrink-0 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-black/5 transition-colors ${getTextColor()} opacity-50 hover:opacity-100`}
           aria-label={t('dismissHint')}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

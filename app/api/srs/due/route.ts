@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes, logError } from '@/lib/api/errors'
+import { isQuestionQualityAcceptable, regenerateCardQuestion } from '@/lib/srs'
 import type { ReviewCard, ReviewSession } from '@/types'
 
 // =============================================================================
@@ -82,6 +83,56 @@ export async function GET(): Promise<NextResponse> {
     // Apply interleaving if enabled
     if (shouldInterleave && allCards.length > 1) {
       allCards = interleaveCards(allCards)
+    }
+
+    // Lazy regeneration: fire-and-forget — don't block the response
+    // Cards with bad questions get a generic fallback in the response,
+    // and the AI regeneration updates them in DB for next time.
+    const cardsNeedingRegeneration = allCards
+      .filter(card => !isQuestionQualityAcceptable(card.front))
+      .slice(0, 5)
+
+    if (cardsNeedingRegeneration.length > 0) {
+      // Provide immediate fallback text for bad cards in the current response
+      for (const card of cardsNeedingRegeneration) {
+        card.front = `Review: ${card.back.slice(0, 80)}...`
+      }
+
+      // Fire-and-forget: regenerate in background without blocking response
+      // The regenerated questions will be available on the next review fetch
+      const userId = user.id
+      const courseIds = [...new Set(cardsNeedingRegeneration.map(c => c.course_id))]
+      void (async () => {
+        try {
+          const { data: courses } = await supabase
+            .from('courses')
+            .select('id, title')
+            .in('id', courseIds)
+
+          const courseTitleMap = new Map(courses?.map(c => [c.id, c.title]) || [])
+
+          const regenerationPromises = cardsNeedingRegeneration.map(async (card) => {
+            try {
+              const courseTitle = courseTitleMap.get(card.course_id) || 'Course'
+              const newQuestion = await regenerateCardQuestion(card.front, card.back, courseTitle)
+
+              if (newQuestion) {
+                await supabase
+                  .from('review_cards')
+                  .update({ front: newQuestion, updated_at: new Date().toISOString() })
+                  .eq('id', card.id)
+                  .eq('user_id', userId)
+              }
+            } catch (err) {
+              console.error('[SRS:due] Background regeneration failed for card', card.id, err)
+            }
+          })
+
+          await Promise.allSettled(regenerationPromises)
+        } catch (err) {
+          console.error('[SRS:due] Background regeneration setup failed:', err)
+        }
+      })()
     }
 
     const response: ReviewSession = {

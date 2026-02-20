@@ -49,6 +49,7 @@ const STEP_LABELS: Record<string, { en: string; he: string }> = {
 // ---------------------------------------------------------------------------
 
 function normalPDF(x: number, mean: number, std: number): number {
+  if (std <= 0) return 0
   const coefficient = 1 / (std * Math.sqrt(2 * Math.PI))
   const exponent = -0.5 * Math.pow((x - mean) / std, 2)
   return coefficient * Math.exp(exponent)
@@ -68,17 +69,18 @@ export function SamplingDistribution({
   language = 'en',
   initialStep,
 }: SamplingDistributionProps) {
-  const {
-    populationMean,
-    populationStd,
-    sampleSize,
-    numSamples,
-    sampleMeans = [],
-    showCLT = false,
-    title,
-  } = data
+  // Defensive defaults for AI-generated data
+  const populationMean = data.populationMean ?? 0
+  const populationStd = data.populationStd ?? 1
+  const sampleSize = data.sampleSize ?? 1
+  const numSamples = data.numSamples ?? 1
+  const sampleMeans = Array.isArray(data.sampleMeans) ? data.sampleMeans : []
+  const showCLT = data.showCLT ?? false
+  const title = data.title
 
-  const standardError = populationStd / Math.sqrt(sampleSize)
+  const safeSampleSize = sampleSize <= 0 ? 1 : sampleSize
+  const safePopStd = populationStd <= 0 ? 1 : populationStd
+  const standardError = safePopStd / Math.sqrt(safeSampleSize)
 
   // Build step definitions
   const stepDefs = useMemo(() => {

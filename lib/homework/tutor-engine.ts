@@ -16,6 +16,7 @@ import type {
 // Old diagram-generator imports removed — engine is now the only diagram source
 import { validateSchema, autoCorrectDiagram, type DiagramType as VisualDiagramType, type StructuredDiagram, SCHEMA_VERSION } from '@/lib/visual-learning'
 import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
+import { classifyTopicType, inferDifficultyFromTopic, resolveEffectiveLanguageLevel, type TopicType } from '@/lib/ai/content-classifier'
 
 // ============================================================================
 // Configuration
@@ -505,7 +506,7 @@ IMPORTANT: Long division must show EVERY step including when the divisor doesn't
 /**
  * Build the complete system prompt with optional language and grade context
  */
-function buildSocraticTutorSystem(language?: 'en' | 'he', grade?: string, studySystem?: string): string {
+function buildSocraticTutorSystem(language?: 'en' | 'he', grade?: string, studySystem?: string, contentDifficulty?: number, topicType?: TopicType): string {
   const languageInstruction = buildLanguageInstruction(language)
 
   let gradeInstruction = ''
@@ -516,7 +517,50 @@ function buildSocraticTutorSystem(language?: 'en' | 'he', grade?: string, studyS
     gradeInstruction = `\n\n## Student Profile\nThis student is at ${parts.join(', ')}. Adjust your explanation complexity, vocabulary, and examples to be appropriate for this level.`
   }
 
-  return SOCRATIC_TUTOR_SYSTEM_BASE + gradeInstruction + languageInstruction
+  // Content-adaptive language complexity
+  let languageLevelInstruction = ''
+  if (contentDifficulty) {
+    // Map grade to education level string for language resolution
+    let educationLevel: string | undefined
+    if (grade) {
+      const gradeNum = parseInt(grade)
+      if (!isNaN(gradeNum)) {
+        if (gradeNum <= 6) educationLevel = 'elementary'
+        else if (gradeNum <= 9) educationLevel = 'middle_school'
+        else if (gradeNum <= 12) educationLevel = 'high_school'
+        else educationLevel = 'university'
+      }
+    }
+    const languageLevel = resolveEffectiveLanguageLevel(educationLevel, contentDifficulty)
+    languageLevelInstruction = `\n\n## Language Complexity — IMPORTANT
+Content difficulty: ${contentDifficulty}/5. Use ${languageLevel.level}-appropriate language.
+${languageLevel.vocabularyInstructions}
+${languageLevel.sentenceComplexity}`
+  }
+
+  // Topic-type pedagogical approach
+  let pedagogicalApproach = ''
+  if (topicType === 'computational') {
+    pedagogicalApproach = `\n\n## Pedagogical Approach: COMPUTATIONAL
+- Guide through calculation steps: "What operation should we use here?"
+- Ask for specific values: "What numbers do we need to work with?"
+- Verify each step: "What do you get when you multiply those?"
+- Focus on method over answer: correct process matters most`
+  } else if (topicType === 'conceptual') {
+    pedagogicalApproach = `\n\n## Pedagogical Approach: CONCEPTUAL
+- Ask probing questions: "Why does this happen?" "What would change if...?"
+- Check for understanding beyond definitions: "Can you explain this in your own words?"
+- Connect to real-world examples: "Where do you see this in everyday life?"
+- Encourage reasoning chains: "So if A is true, what does that tell us about B?"`
+  } else if (topicType === 'mixed') {
+    pedagogicalApproach = `\n\n## Pedagogical Approach: MIXED
+- Balance computation with understanding
+- For calculation parts: guide through steps, ask for specific values
+- For conceptual parts: ask probing questions, encourage explanation
+- Connect the math to the meaning: "What does this number represent?"`
+  }
+
+  return SOCRATIC_TUTOR_SYSTEM_BASE + gradeInstruction + languageLevelInstruction + pedagogicalApproach + languageInstruction
 }
 
 const INITIAL_GREETING_PROMPT = `The student has just uploaded their homework question. Generate a warm, encouraging opening message.
@@ -565,10 +609,18 @@ export async function generateInitialGreeting(context: TutorContext): Promise<Tu
     .replace('{comfortLevel}', context.session.comfort_level || 'unknown')
     .replace('{initialAttempt}', context.session.initial_attempt || 'none provided')
 
+  // Infer content difficulty and topic type for language/pedagogy adaptation
+  const contentDifficulty = context.questionAnalysis.difficultyEstimate ||
+    inferDifficultyFromTopic(context.questionAnalysis.topic)
+  const topicType = classifyTopicType(
+    context.questionAnalysis.topic,
+    context.questionAnalysis.subject
+  )
+
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
-    system: buildSocraticTutorSystem(context.language, context.grade, context.studySystem),
+    system: buildSocraticTutorSystem(context.language, context.grade, context.studySystem, contentDifficulty, topicType),
     messages: [{ role: 'user', content: prompt }],
   })
 
@@ -666,10 +718,18 @@ export async function generateTutorResponse(
       })
     : Promise.resolve(undefined)
 
+  // Infer content difficulty and topic type for language/pedagogy adaptation
+  const contentDifficulty = context.questionAnalysis.difficultyEstimate ||
+    inferDifficultyFromTopic(context.questionAnalysis.topic)
+  const topicType = classifyTopicType(
+    context.questionAnalysis.topic,
+    context.questionAnalysis.subject
+  )
+
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
-    system: buildSocraticTutorSystem(context.language, context.grade, context.studySystem),
+    system: buildSocraticTutorSystem(context.language, context.grade, context.studySystem, contentDifficulty, topicType),
     messages,
   })
 

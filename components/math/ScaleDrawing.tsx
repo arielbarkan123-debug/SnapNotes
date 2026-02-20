@@ -260,7 +260,7 @@ export function ScaleDrawing({
                 y1={30}
                 x2={rightCx - 60}
                 y2={30}
-                stroke="#9ca3af"
+                className="stroke-gray-400 dark:stroke-gray-500"
                 strokeWidth={2}
                 markerEnd="url(#scale-arrow)"
                 initial={{ opacity: 0 }}
@@ -276,7 +276,7 @@ export function ScaleDrawing({
                   refY="3.5"
                   orient="auto"
                 >
-                  <polygon points="0 0, 10 3.5, 0 7" fill="#9ca3af" />
+                  <polygon points="0 0, 10 3.5, 0 7" className="fill-gray-400 dark:fill-gray-500" />
                 </marker>
               </defs>
 
@@ -374,7 +374,7 @@ export function ScaleDrawing({
                     y1={y1}
                     x2={rightCx - 70}
                     y2={y1}
-                    stroke="#d1d5db"
+                    className="stroke-gray-300 dark:stroke-gray-600"
                     strokeWidth={1}
                     strokeDasharray="4 3"
                     initial={{ opacity: 0 }}

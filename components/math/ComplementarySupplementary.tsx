@@ -235,8 +235,7 @@ export function ComplementarySupplementary({
                 y1={vy}
                 x2={ray1End.x}
                 y2={ray1End.y}
-                stroke="#374151"
-                className="dark:stroke-gray-300"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 strokeLinecap="round"
                 initial="hidden"
@@ -250,8 +249,7 @@ export function ComplementarySupplementary({
                 y1={vy}
                 x2={ray2End.x}
                 y2={ray2End.y}
-                stroke="#374151"
-                className="dark:stroke-gray-300"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 strokeLinecap="round"
                 initial="hidden"
@@ -265,8 +263,7 @@ export function ComplementarySupplementary({
                 y1={vy}
                 x2={ray3End.x}
                 y2={ray3End.y}
-                stroke="#374151"
-                className="dark:stroke-gray-300"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 strokeLinecap="round"
                 initial="hidden"
@@ -281,8 +278,7 @@ export function ComplementarySupplementary({
                   y1={vy}
                   x2={vx - rayLength * 0.3}
                   y2={vy}
-                  stroke="#374151"
-                  className="dark:stroke-gray-300"
+                  className="stroke-gray-700 dark:stroke-gray-300"
                   strokeWidth={diagram.lineWeight}
                   strokeLinecap="round"
                   strokeDasharray="6 4"
@@ -319,8 +315,7 @@ export function ComplementarySupplementary({
                 <motion.path
                   d={rightAngleSquare}
                   fill="none"
-                  stroke="#6b7280"
-                  className="dark:stroke-gray-400"
+                  className="stroke-gray-500 dark:stroke-gray-400"
                   strokeWidth={1.5}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}

@@ -292,7 +292,7 @@ export function RationalFunctionGraph({
                   y1={l.y1}
                   x2={l.x2}
                   y2={l.y2}
-                  stroke={l.major ? '#374151' : '#e5e7eb'}
+                  className={l.major ? 'stroke-gray-700 dark:stroke-gray-300' : 'stroke-gray-200 dark:stroke-gray-700'}
                   strokeWidth={l.major ? diagram.lineWeight : 0.5}
                 />
               ))}
@@ -301,8 +301,8 @@ export function RationalFunctionGraph({
                 const { sx: ox, sy: oy } = mapToSVG(0, 0, domain, range, width, height, padding)
                 return (
                   <>
-                    <text x={width - padding + 8} y={oy + 4} fontSize={12} fill="#6b7280">x</text>
-                    <text x={ox + 6} y={padding - 8} fontSize={12} fill="#6b7280">y</text>
+                    <text x={width - padding + 8} y={oy + 4} fontSize={12} className="fill-gray-500 dark:fill-gray-400">x</text>
+                    <text x={ox + 6} y={padding - 8} fontSize={12} className="fill-gray-500 dark:fill-gray-400">y</text>
                   </>
                 )
               })()}
@@ -312,7 +312,7 @@ export function RationalFunctionGraph({
                 if (v === 0) return null
                 const { sx, sy } = mapToSVG(v, 0, domain, range, width, height, padding)
                 return (
-                  <text key={`xtick-${v}`} x={sx} y={sy + 14} textAnchor="middle" fontSize={10} fill="#9ca3af">
+                  <text key={`xtick-${v}`} x={sx} y={sy + 14} textAnchor="middle" fontSize={10} className="fill-gray-400 dark:fill-gray-500">
                     {v}
                   </text>
                 )
@@ -322,7 +322,7 @@ export function RationalFunctionGraph({
                 if (v === 0) return null
                 const { sx, sy } = mapToSVG(0, v, domain, range, width, height, padding)
                 return (
-                  <text key={`ytick-${v}`} x={sx - 10} y={sy + 4} textAnchor="end" fontSize={10} fill="#9ca3af">
+                  <text key={`ytick-${v}`} x={sx - 10} y={sy + 4} textAnchor="end" fontSize={10} className="fill-gray-400 dark:fill-gray-500">
                     {v}
                   </text>
                 )
@@ -418,7 +418,7 @@ export function RationalFunctionGraph({
                     cy={sy}
                     r={4}
                     fill={primaryColor}
-                    stroke="white"
+                    className="stroke-white dark:stroke-gray-900"
                     strokeWidth={1.5}
                   />
                 )
@@ -444,7 +444,7 @@ export function RationalFunctionGraph({
                       cx={sx}
                       cy={sy}
                       r={5}
-                      fill="white"
+                      className="fill-white dark:fill-gray-900"
                       stroke={accentColor}
                       strokeWidth={diagram.lineWeight}
                     />

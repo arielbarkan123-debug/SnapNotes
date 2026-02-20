@@ -112,14 +112,24 @@ const HINT_LEVELS = {
  * Generate a hint at the specified level
  */
 export async function generateHint(context: HintContext): Promise<HintResponse> {
-  const { requestedLevel, questionAnalysis, referenceAnalysis, previousHints, language } = context
+  const { requestedLevel, questionAnalysis, referenceAnalysis, previousHints, language, topicType } = context
   const client = getAnthropicClient()
 
   const levelConfig = HINT_LEVELS[requestedLevel]
   const languageInstruction = buildLanguageInstruction(language)
 
+  // Build topic-type instruction
+  let topicTypeInstruction = ''
+  if (topicType === 'computational') {
+    topicTypeInstruction = `\nHINT STYLE: This is a COMPUTATIONAL problem. Focus hints on calculation steps, formulas, and numeric reasoning. Guide toward specific operations.\n`
+  } else if (topicType === 'conceptual') {
+    topicTypeInstruction = `\nHINT STYLE: This is a CONCEPTUAL problem. Focus hints on understanding, key terms, and reasoning. Ask "why" and "how" questions.\n`
+  } else if (topicType === 'mixed') {
+    topicTypeInstruction = `\nHINT STYLE: This problem has both computational and conceptual aspects. Balance hints between calculation guidance and conceptual understanding.\n`
+  }
+
   // Build the prompt
-  let prompt = `${languageInstruction}HOMEWORK QUESTION:
+  let prompt = `${languageInstruction}${topicTypeInstruction}HOMEWORK QUESTION:
 ${questionAnalysis.questionText}
 
 TOPIC: ${questionAnalysis.topic}
@@ -158,7 +168,7 @@ Return JSON:
     messages: [{ role: 'user', content: prompt }],
   })
 
-  return parseHintResponse(response, requestedLevel)
+  return parseHintResponse(response, requestedLevel, topicType)
 }
 
 /**
@@ -238,11 +248,12 @@ export function shouldEncourageAttempt(
 
 function parseHintResponse(
   response: Anthropic.Message,
-  level: HintLevel
+  level: HintLevel,
+  topicType?: 'computational' | 'conceptual' | 'mixed'
 ): HintResponse {
   const textContent = response.content.find((b) => b.type === 'text')
   if (!textContent || textContent.type !== 'text') {
-    return getDefaultHint(level)
+    return getDefaultHint(level, topicType)
   }
 
   const text = textContent.text
@@ -271,14 +282,34 @@ function parseHintResponse(
   }
 }
 
-function getDefaultHint(level: HintLevel): HintResponse {
-  const defaults: Record<HintLevel, string> = {
+function getDefaultHint(level: HintLevel, topicType?: 'computational' | 'conceptual' | 'mixed'): HintResponse {
+  const computationalDefaults: Record<HintLevel, string> = {
+    1: "Think about what formula or operation you need here. What mathematical tool applies?",
+    2: "Start by identifying the values you have. What numbers are given and what are you solving for?",
+    3: "Let me show you a similar calculation to help illustrate the method.",
+    4: "Let's work through the calculation together, step by step.",
+    5: "Here's the complete solution with all calculation steps explained.",
+  }
+
+  const conceptualDefaults: Record<HintLevel, string> = {
+    1: "Think about the key concept behind this question. What principle is being tested?",
+    2: "What are the main ideas or terms related to this topic? Start by recalling those.",
+    3: "Let me show you a similar concept explained in a different context.",
+    4: "Let's break down the key ideas together. What do you understand so far?",
+    5: "Here's a complete explanation with the reasoning behind each point.",
+  }
+
+  const generalDefaults: Record<HintLevel, string> = {
     1: "Think about what concept or formula might apply here. What does this problem remind you of?",
     2: "Let's start with the basics. What's the first thing you need to identify or set up?",
     3: "Let me show you a similar problem to help illustrate the approach.",
     4: "Let's work through this together, step by step.",
     5: "Here's the complete solution with explanations.",
   }
+
+  const defaults = topicType === 'computational' ? computationalDefaults
+    : topicType === 'conceptual' ? conceptualDefaults
+    : generalDefaults
 
   return {
     hintLevel: level,

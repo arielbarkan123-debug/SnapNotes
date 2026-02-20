@@ -191,7 +191,8 @@ export function Base10Blocks({
   onStepComplete,
   stepConfig,
 }: Base10BlocksProps) {
-  const { number, showDecomposition, title } = data
+  const { showDecomposition, title } = data
+  const number = data.number ?? 0
 
   // Decompose number
   const decomposition = useMemo(() => {

@@ -10,9 +10,10 @@ import type {
 import { generateTutorResponse, checkForSolution } from '@/lib/homework/tutor-engine'
 import { addMessage, updateProgress, getRecentMessages } from '@/lib/homework/session-manager'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { loadUserProfile } from '@/lib/user-profile'
 
-// Allow 60 seconds for chat response generation
-export const maxDuration = 60
+// Allow 120 seconds — engine diagram generation can take 10-60s on top of AI response
+export const maxDuration = 120
 
 // ============================================================================
 // POST - Send a message to the tutor
@@ -93,6 +94,21 @@ export async function POST(
     const questionAnalysis = buildQuestionAnalysis(homeworkSession)
     const referenceAnalysis = buildReferenceAnalysis(homeworkSession)
 
+    // Load user profile for language/grade/studySystem
+    let userLanguage: 'en' | 'he' | undefined
+    let userGrade: string | undefined
+    let userStudySystem: string | undefined
+    try {
+      const profile = await loadUserProfile(supabase, user.id)
+      if (profile) {
+        userLanguage = profile.language as 'en' | 'he'
+        userGrade = profile.grade || undefined
+        userStudySystem = profile.studySystem
+      }
+    } catch {
+      // Continue without profile data
+    }
+
     const context: TutorContext = {
       session: sessionAfterStudentMsg,
       questionAnalysis,
@@ -100,6 +116,9 @@ export async function POST(
       recentMessages: getRecentMessages(sessionAfterStudentMsg, 10),
       hintsUsed: sessionAfterStudentMsg.hints_used || 0,
       currentProgress: calculateProgress(sessionAfterStudentMsg),
+      language: userLanguage,
+      grade: userGrade,
+      studySystem: userStudySystem,
     }
 
     // Step 3: Generate Socratic tutor response

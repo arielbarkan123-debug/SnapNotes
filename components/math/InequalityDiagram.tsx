@@ -104,13 +104,13 @@ export function InequalityDiagram({
   initialStep,
 }: InequalityDiagramProps) {
   const {
-    boundaryValue,
     finalOperator,
     solution,
     intervalNotation,
     title,
     errors,
   } = data
+  const boundaryValue = data.boundaryValue ?? 0
 
   const bounds = data.numberLineBounds || {
     min: Math.min(-5, boundaryValue - 5),

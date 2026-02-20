@@ -1,8 +1,11 @@
 'use client'
 
 /**
- * Renders an engine-generated diagram image (E2B LaTeX, Matplotlib, TikZ, or Recraft)
- * with optional overlay labels (used by the Recraft pipeline for anatomy/science diagrams).
+ * Renders an engine-generated diagram image (E2B LaTeX, Matplotlib, TikZ, or Recraft).
+ *
+ * Note on Recraft pipeline: Labels are now composited directly into the image via TikZ
+ * before being returned. Recraft NEVER generates text - all text comes from TikZ.
+ * The overlay prop is kept for backwards compatibility but Recraft no longer uses it.
  */
 
 interface OverlayLabel {

@@ -127,6 +127,8 @@ export interface NumberLineInterval {
   startInclusive: boolean
   endInclusive: boolean
   color?: string
+  /** Optional label displayed above the interval (e.g. distance annotation) */
+  label?: string
 }
 
 /**

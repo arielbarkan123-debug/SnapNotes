@@ -452,7 +452,7 @@ export function TriangleGeometry({
                   y={pos.y}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  fill="#6b7280"
+                  className="fill-gray-500 dark:fill-gray-400"
                   fontSize={10}
                   initial="hidden"
                   animate="visible"

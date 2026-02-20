@@ -152,7 +152,7 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
             </Link>
             <button
               onClick={toggleCollapsed}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-white/10 transition-colors"
+              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-white/10 transition-colors"
               aria-label="Close sidebar"
             >
               <PanelLeftClose className="w-5 h-5 rtl:scale-x-[-1]" />
@@ -230,7 +230,7 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
       {/* Desktop Collapsed - Hamburger Button */}
       <button
         onClick={toggleCollapsed}
-        className={`hidden md:flex fixed top-5 start-5 z-50 items-center justify-center w-10 h-10 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-lg border border-gray-200/50 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-all duration-300 ${
+        className={`hidden md:flex fixed top-5 start-5 z-50 items-center justify-center w-11 h-11 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-lg border border-gray-200/50 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-all duration-300 ${
           isCollapsed ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'
         }`}
         aria-label="Open sidebar"
@@ -253,14 +253,14 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsSearchOpen(true)}
-              className="p-2 text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400"
+              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400"
               aria-label={t('nav.search')}
             >
               <Search className="w-5 h-5" />
             </button>
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
               aria-label={t('nav.toggleMenu')}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -368,9 +368,6 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
           <BottomNavLink href="/progress" icon="📊" label={t('nav.progress')} active={isActive('/progress')} />
         </div>
       </nav>
-
-      {/* Spacer for bottom nav */}
-      <div className="h-14 xs:h-16 md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
 
       {/* Global Search */}
       <GlobalSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />

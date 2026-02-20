@@ -72,7 +72,9 @@ export function PolynomialGraph({
   language = 'en',
   initialStep,
 }: PolynomialGraphProps) {
-  const { coefficients, expression, zeros, turningPoints, endBehavior, title } = data
+  // Defensive defaults for AI-generated data
+  const coefficients = Array.isArray(data.coefficients) ? data.coefficients : [1, 0, 0]
+  const { expression, zeros, turningPoints, endBehavior, title } = data
 
   const domain = data.domain ?? { min: -5, max: 5 }
 
@@ -245,7 +247,7 @@ export function PolynomialGraph({
                     cy={toSvgY(0)}
                     r={5}
                     fill={diagram.colors.accent}
-                    stroke="white"
+                    className="stroke-white dark:stroke-gray-900"
                     strokeWidth={2}
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
@@ -308,7 +310,7 @@ export function PolynomialGraph({
                     cy={toSvgY(tp.y)}
                     r={5}
                     fill={diagram.colors.primary}
-                    stroke="white"
+                    className="stroke-white dark:stroke-gray-900"
                     strokeWidth={2}
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}

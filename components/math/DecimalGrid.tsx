@@ -56,7 +56,9 @@ export function DecimalGrid({
   language = 'en',
   initialStep,
 }: DecimalGridProps) {
-  const { value, gridSize, showFractionEquivalent, highlightCells, title } = data
+  const { showFractionEquivalent, highlightCells, title } = data
+  const value = data.value ?? 0
+  const gridSize = data.gridSize ?? 100
 
   // Grid dimensions: gridSize 10 = 10x1, gridSize 100 = 10x10
   const cols = 10
@@ -85,7 +87,7 @@ export function DecimalGrid({
 
   // GCD for simplification
   const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b))
-  const divisor = gcd(Math.abs(fractionNumerator), fractionDenominator)
+  const divisor = gcd(Math.abs(fractionNumerator), fractionDenominator) || 1
   const simplifiedNum = fractionNumerator / divisor
   const simplifiedDen = fractionDenominator / divisor
 

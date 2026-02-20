@@ -35,8 +35,11 @@ export {
   estimateCardCount,
   getCardTypeSummary,
   buildConceptMapping,
+  isQuestionQualityAcceptable,
+  regenerateCardQuestion,
   type ConceptMapping,
   type ContentConceptRow,
+  type CardGenerationOptions,
   default as cardGenerator,
 } from './card-generator'
 

@@ -242,11 +242,11 @@ export function ParametricCurve({
         <g data-testid="pc-grid" opacity={0.15}>
           {Array.from({ length: 11 }, (_, i) => {
             const x = padding + (i / 10) * plotW
-            return <line key={`gv${i}`} x1={x} y1={padding} x2={x} y2={padding + plotH} stroke="#6b7280" strokeWidth={0.5} />
+            return <line key={`gv${i}`} x1={x} y1={padding} x2={x} y2={padding + plotH} className="stroke-gray-500 dark:stroke-gray-400" strokeWidth={0.5} />
           })}
           {Array.from({ length: 11 }, (_, i) => {
             const y = padding + (i / 10) * plotH
-            return <line key={`gh${i}`} x1={padding} y1={y} x2={padding + plotW} y2={y} stroke="#6b7280" strokeWidth={0.5} />
+            return <line key={`gh${i}`} x1={padding} y1={y} x2={padding + plotW} y2={y} className="stroke-gray-500 dark:stroke-gray-400" strokeWidth={0.5} />
           })}
         </g>
 
@@ -405,7 +405,7 @@ export function ParametricCurve({
                     cy={pt.svgY}
                     r={5}
                     fill={accentColor}
-                    stroke="white"
+                    className="stroke-white dark:stroke-gray-900"
                     strokeWidth={2}
                   />
                   <text

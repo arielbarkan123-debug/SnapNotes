@@ -208,8 +208,7 @@ export function AngleTypes({
                       y1={cy}
                       x2={ray1End.x}
                       y2={ray1End.y}
-                      stroke="#374151"
-                      className="dark:stroke-gray-300"
+                      className="stroke-gray-700 dark:stroke-gray-300"
                       strokeWidth={diagram.lineWeight}
                       initial="hidden"
                       animate="visible"
@@ -221,8 +220,7 @@ export function AngleTypes({
                       y1={cy}
                       x2={ray2End.x}
                       y2={ray2End.y}
-                      stroke="#374151"
-                      className="dark:stroke-gray-300"
+                      className="stroke-gray-700 dark:stroke-gray-300"
                       strokeWidth={diagram.lineWeight}
                       initial="hidden"
                       animate="visible"

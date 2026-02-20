@@ -385,7 +385,7 @@ export function LongDivisionDiagram({
                             <div className="flex-shrink-0" style={{ width: 16 }} />
                             <div className="flex">
                               {dividendStr.split('').map((_, ci) => {
-                                const productStr = row.product!.toString()
+                                const productStr = (row.product ?? 0).toString()
                                 const endCol = row.position
                                 const startCol = endCol - productStr.length + 1
                                 const digitIndex = ci - startCol

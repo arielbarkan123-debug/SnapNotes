@@ -77,7 +77,9 @@ export function BinomialDistribution({
   language = 'en',
   initialStep,
 }: BinomialDistributionProps) {
-  const { n, p, highlightK, showMean = false, showStd = false, title } = data
+  const { highlightK, showMean = false, showStd = false, title } = data
+  const n = data.n ?? 1
+  const p = data.p ?? 0.5
 
   // Compute probabilities for k = 0..n
   const probabilities = useMemo(() => {

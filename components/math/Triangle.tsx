@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { TriangleData, TriangleErrorHighlight } from '@/types'
 import { useDiagramBase } from '@/hooks/useDiagramBase'
@@ -13,6 +13,7 @@ import {
   labelAppearVariants,
 } from '@/lib/diagram-animations'
 import { SVGPoint, SVGLabel, SVGLine } from '@/components/math/shared'
+import { InlineMath } from '@/components/ui/MathRenderer'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -44,7 +45,35 @@ const STEP_LABELS: Record<string, { en: string; he: string }> = {
   sides: { en: 'Label the sides', he: 'סימון הצלעות' },
   angles: { en: 'Show the angles', he: 'הצגת הזוויות' },
   special: { en: 'Show special lines', he: 'הצגת קווים מיוחדים' },
+  formulas: { en: 'Formulas & Properties', he: 'נוסחאות ותכונות' },
   errors: { en: 'Show corrections', he: 'הצגת תיקונים' },
+}
+
+// ---------------------------------------------------------------------------
+// FormulaRow — small helper for each formula entry
+// ---------------------------------------------------------------------------
+
+function FormulaRow({
+  label,
+  color,
+  children,
+}: {
+  label: string
+  color: string
+  children: ReactNode
+}) {
+  return (
+    <div className="flex items-start gap-2">
+      <span
+        className="inline-block mt-0.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
+        style={{ backgroundColor: color }}
+      />
+      <div className="min-w-0">
+        <span className="font-medium text-gray-700 dark:text-gray-300">{label}: </span>
+        <span className="text-gray-800 dark:text-gray-200">{children}</span>
+      </div>
+    </div>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -98,6 +127,7 @@ export function Triangle({
     if (hasSides) defs.push({ id: 'sides', label: STEP_LABELS.sides.en, labelHe: STEP_LABELS.sides.he })
     if (hasAngles) defs.push({ id: 'angles', label: STEP_LABELS.angles.en, labelHe: STEP_LABELS.angles.he })
     if (hasSpecial) defs.push({ id: 'special', label: STEP_LABELS.special.en, labelHe: STEP_LABELS.special.he })
+    defs.push({ id: 'formulas', label: STEP_LABELS.formulas.en, labelHe: STEP_LABELS.formulas.he })
     if (hasErrors) defs.push({ id: 'errors', label: STEP_LABELS.errors.en, labelHe: STEP_LABELS.errors.he })
     return defs
   }, [hasSides, hasAngles, hasSpecial, hasErrors])
@@ -133,8 +163,8 @@ export function Triangle({
           role="img"
           aria-label="Triangle diagram - insufficient data"
         >
-          <rect width={width} height={height} fill="#f9fafb" rx={8} />
-          <text x={width / 2} y={height / 2} textAnchor="middle" fill="#9ca3af" fontSize={14}>
+          <rect width={width} height={height} fill="#f9fafb" className="dark:fill-gray-800" rx={8} />
+          <text x={width / 2} y={height / 2} textAnchor="middle" className="fill-gray-400 dark:fill-gray-500" fontSize={14}>
             Insufficient vertex data
           </text>
         </svg>
@@ -207,25 +237,55 @@ export function Triangle({
     y: transformedVertices.reduce((sum, v) => sum + v.y, 0) / 3,
   }
 
-  // Draw angle arc
-  const drawAngleArc = (vertexLabel: string, arcRadius: number = 20): string => {
+  // Compute the interior angle bisector direction at a vertex.
+  // Returns the midAngle (in radians) that points toward the triangle interior.
+  const getInteriorBisector = (vertexLabel: string): { a1: number; a2: number; midAngle: number } | null => {
     const vertex = getVertex(vertexLabel)
-    if (!vertex) return ''
+    if (!vertex) return null
     const vertexIndex = vertices.findIndex((v) => v.label === vertexLabel)
     const prevIndex = (vertexIndex + 2) % 3
     const nextIndex = (vertexIndex + 1) % 3
     const prev = transformedVertices[prevIndex]
     const next = transformedVertices[nextIndex]
-    const angle1 = Math.atan2(prev.y - vertex.y, prev.x - vertex.x)
-    const angle2 = Math.atan2(next.y - vertex.y, next.x - vertex.x)
-    const startX = vertex.x + arcRadius * Math.cos(angle1)
-    const startY = vertex.y + arcRadius * Math.sin(angle1)
-    const endX = vertex.x + arcRadius * Math.cos(angle2)
-    const endY = vertex.y + arcRadius * Math.sin(angle2)
-    let angleDiff = angle2 - angle1
-    if (angleDiff < 0) angleDiff += 2 * Math.PI
-    const largeArc = angleDiff > Math.PI ? 1 : 0
-    return `M ${startX} ${startY} A ${arcRadius} ${arcRadius} 0 ${largeArc} 1 ${endX} ${endY}`
+    const a1 = Math.atan2(prev.y - vertex.y, prev.x - vertex.x)
+    const a2 = Math.atan2(next.y - vertex.y, next.x - vertex.x)
+    // Compute midAngle as the bisector of the interior angle.
+    // The two candidate bisectors are (a1+a2)/2 and (a1+a2)/2 + PI.
+    // Choose the one pointing toward the triangle centroid (triCenter).
+    let mid = (a1 + a2) / 2
+    const testX = vertex.x + Math.cos(mid)
+    const testY = vertex.y + Math.sin(mid)
+    const distToCenter = Math.hypot(testX - triCenter.x, testY - triCenter.y)
+    const testX2 = vertex.x + Math.cos(mid + Math.PI)
+    const testY2 = vertex.y + Math.sin(mid + Math.PI)
+    const distToCenter2 = Math.hypot(testX2 - triCenter.x, testY2 - triCenter.y)
+    if (distToCenter2 < distToCenter) {
+      mid += Math.PI
+    }
+    return { a1, a2, midAngle: mid }
+  }
+
+  // Draw angle arc — always through the interior angle
+  const drawAngleArc = (vertexLabel: string, arcRadius: number = 20): string => {
+    const vertex = getVertex(vertexLabel)
+    if (!vertex) return ''
+    const bisector = getInteriorBisector(vertexLabel)
+    if (!bisector) return ''
+    const { a1, a2 } = bisector
+    const startX = vertex.x + arcRadius * Math.cos(a1)
+    const startY = vertex.y + arcRadius * Math.sin(a1)
+    const endX = vertex.x + arcRadius * Math.cos(a2)
+    const endY = vertex.y + arcRadius * Math.sin(a2)
+    // Determine the correct sweep direction so the arc goes through the interior.
+    // The interior bisector midAngle points inward. We sweep from a1 to a2:
+    // Check which sweep direction (CW=0 or CCW=1) passes through midAngle.
+    let diff = a2 - a1
+    if (diff < 0) diff += 2 * Math.PI
+    // If diff > PI, the CCW sweep from a1 to a2 is the reflex arc.
+    // We want the shorter arc (interior angle < 180 for any triangle vertex).
+    const largeArc = 0 // Triangle interior angles are always < 180
+    const sweep = diff < Math.PI ? 1 : 0
+    return `M ${startX} ${startY} A ${arcRadius} ${arcRadius} 0 ${largeArc} ${sweep} ${endX} ${endY}`
   }
 
   // Draw right angle marker
@@ -433,20 +493,35 @@ export function Triangle({
                 const vertex = getVertex(angle.vertex)
                 if (!vertex) return null
 
+                // Adaptive arc radius: scale with triangle size but cap at 20px
+                const vIdx = vertices.findIndex((v) => v.label === angle.vertex)
+                const pIdx = (vIdx + 2) % 3
+                const nIdx = (vIdx + 1) % 3
+                const shortestArm = Math.min(
+                  Math.hypot(transformedVertices[pIdx].x - vertex.x, transformedVertices[pIdx].y - vertex.y),
+                  Math.hypot(transformedVertices[nIdx].x - vertex.x, transformedVertices[nIdx].y - vertex.y),
+                )
+                const adaptiveArcRadius = Math.max(10, Math.min(20, shortestArm * 0.2))
                 const arcPath = angle.rightAngle
-                  ? drawRightAngle(angle.vertex)
-                  : drawAngleArc(angle.vertex)
+                  ? drawRightAngle(angle.vertex, Math.max(8, Math.min(15, shortestArm * 0.15)))
+                  : drawAngleArc(angle.vertex, adaptiveArcRadius)
 
-                // Angle label position (inside the angle)
+                // Angle label position — always inside the triangle
+                const bisector = getInteriorBisector(angle.vertex)
+                // Compute a safe label distance: at least 22px but adapt to
+                // the triangle size so labels don't fly outside small triangles.
                 const vertexIndex = vertices.findIndex((v) => v.label === angle.vertex)
                 const prevIndex = (vertexIndex + 2) % 3
                 const nextIndex = (vertexIndex + 1) % 3
                 const prev = transformedVertices[prevIndex]
                 const next = transformedVertices[nextIndex]
-                const a1 = Math.atan2(prev.y - vertex.y, prev.x - vertex.x)
-                const a2 = Math.atan2(next.y - vertex.y, next.x - vertex.x)
-                const midAngle = (a1 + a2) / 2
-                const labelDist = 30
+                const armLen = Math.min(
+                  Math.hypot(prev.x - vertex.x, prev.y - vertex.y),
+                  Math.hypot(next.x - vertex.x, next.y - vertex.y),
+                )
+                // Label sits at ~30% of the shortest arm, clamped between 22-40px
+                const labelDist = Math.max(22, Math.min(40, armLen * 0.3))
+                const midAngle = bisector?.midAngle ?? 0
                 const labelX = vertex.x + labelDist * Math.cos(midAngle)
                 const labelY = vertex.y + labelDist * Math.sin(midAngle)
 
@@ -590,6 +665,127 @@ export function Triangle({
           )}
         </AnimatePresence>
       </svg>
+
+      {/* ── Formulas & Properties (HTML below SVG) ─────────── */}
+      <AnimatePresence>
+        {isVisible('formulas') && (
+          <motion.div
+            data-testid="tri-formulas"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+            className="mt-3 rounded-xl p-4 border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900"
+          >
+            <h4
+              className="text-sm font-semibold mb-3 flex items-center gap-1.5"
+              style={{ color: diagram.colors.primary }}
+            >
+              <span>{language === 'he' ? 'נוסחאות ותכונות' : 'Formulas & Properties'}</span>
+            </h4>
+
+            <div className="space-y-2.5 text-sm">
+              {/* Area = ½ × base × height (always shown) */}
+              <FormulaRow
+                label={language === 'he' ? 'שטח' : 'Area'}
+                color={diagram.colors.primary}
+              >
+                <InlineMath>{'A = \\tfrac{1}{2} \\times base \\times height'}</InlineMath>
+                {(() => {
+                  // If numeric sides and a right angle, compute area
+                  const rightAngle = angles.find(a => a.rightAngle)
+                  if (rightAngle && sides.length >= 2) {
+                    const rightVertex = rightAngle.vertex
+                    const adjSides = sides.filter(s => s.from === rightVertex || s.to === rightVertex)
+                    const nums = adjSides.map(s => s.length ? parseFloat(s.length) : NaN).filter(n => !isNaN(n))
+                    if (nums.length === 2) {
+                      const area = (nums[0] * nums[1]) / 2
+                      return (
+                        <span className="block mt-0.5 text-xs opacity-80">
+                          <InlineMath>{`= \\tfrac{1}{2} \\times ${nums[0]} \\times ${nums[1]} = ${Number.isInteger(area) ? area : area.toFixed(2)}`}</InlineMath>
+                        </span>
+                      )
+                    }
+                  }
+                  return null
+                })()}
+              </FormulaRow>
+
+              {/* Perimeter: P = a + b + c (if sides data available with numeric values) */}
+              {(() => {
+                const numericSides = sides
+                  .map(s => ({ label: `${s.from}${s.to}`, val: s.length ? parseFloat(s.length) : NaN }))
+                  .filter(s => !isNaN(s.val))
+                if (numericSides.length >= 3) {
+                  const perimeter = numericSides.slice(0, 3).reduce((sum, s) => sum + s.val, 0)
+                  return (
+                    <FormulaRow
+                      label={language === 'he' ? 'היקף' : 'Perimeter'}
+                      color={diagram.colors.primary}
+                    >
+                      <InlineMath>{'P = a + b + c'}</InlineMath>
+                      <span className="block mt-0.5 text-xs opacity-80">
+                        <InlineMath>{`= ${numericSides.slice(0, 3).map(s => s.val).join(' + ')} = ${Number.isInteger(perimeter) ? perimeter : perimeter.toFixed(2)}`}</InlineMath>
+                      </span>
+                    </FormulaRow>
+                  )
+                }
+                return null
+              })()}
+
+              {/* Pythagorean Theorem: a² + b² = c² (if any angle is 90°) */}
+              {angles.some(a => a.rightAngle) && (
+                <FormulaRow
+                  label={language === 'he' ? 'משפט פיתגורס' : 'Pythagorean Theorem'}
+                  color={diagram.colors.accent}
+                >
+                  <InlineMath>{'a^2 + b^2 = c^2'}</InlineMath>
+                  {(() => {
+                    // Show numeric verification if we have 3 numeric sides
+                    const nums = sides.map(s => s.length ? parseFloat(s.length) : NaN).filter(n => !isNaN(n))
+                    if (nums.length >= 3) {
+                      const sorted = [...nums].sort((a, b) => a - b)
+                      const [a, b, c] = sorted
+                      const lhs = a * a + b * b
+                      const rhs = c * c
+                      const check = Math.abs(lhs - rhs) < 0.01
+                      return (
+                        <span className="block mt-0.5 text-xs opacity-80">
+                          <InlineMath>{`${a}^2 + ${b}^2 = ${c}^2`}</InlineMath>
+                          <span className="mx-1">{' '}</span>
+                          <InlineMath>{`${a * a} + ${b * b} = ${c * c}`}</InlineMath>
+                          {check && <span className="ml-1 text-green-600 dark:text-green-400">{' '}&#10003;</span>}
+                        </span>
+                      )
+                    }
+                    return null
+                  })()}
+                </FormulaRow>
+              )}
+
+              {/* Law of Sines: a/sin(A) = b/sin(B) = c/sin(C) (if angles data) */}
+              {hasAngles && (
+                <FormulaRow
+                  label={language === 'he' ? 'חוק הסינוסים' : 'Law of Sines'}
+                  color={diagram.colors.primary}
+                >
+                  <InlineMath>{'\\frac{a}{\\sin A} = \\frac{b}{\\sin B} = \\frac{c}{\\sin C}'}</InlineMath>
+                </FormulaRow>
+              )}
+
+              {/* Law of Cosines: c² = a² + b² − 2ab·cos(C) (if angles data) */}
+              {hasAngles && (
+                <FormulaRow
+                  label={language === 'he' ? 'חוק הקוסינוסים' : 'Law of Cosines'}
+                  color={diagram.colors.primary}
+                >
+                  <InlineMath>{'c^2 = a^2 + b^2 - 2ab \\cos C'}</InlineMath>
+                </FormulaRow>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Step Controls */}
       {stepDefs.length > 1 && (

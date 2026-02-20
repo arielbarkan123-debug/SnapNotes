@@ -60,7 +60,9 @@ export function LogarithmicGraph({
   language = 'en',
   initialStep,
 }: LogarithmicGraphProps) {
-  const { base, asymptote, expression, title, keyPoints } = data
+  const { expression, title, keyPoints } = data
+  const base = data.base && data.base > 0 && data.base !== 1 ? data.base : 10
+  const asymptote = data.asymptote ?? 0
   const coefficient = data.coefficient ?? 1
 
   const domain = data.domain ?? { min: asymptote - 0.5, max: asymptote + 10 }
@@ -126,8 +128,8 @@ export function LogarithmicGraph({
   let yMax = Math.max(...yValues) + 1
   if (yMax - yMin < 4) { yMin -= 2; yMax += 2 }
 
-  const xRange = domain.max - domain.min
-  const yRange = yMax - yMin
+  const xRange = (domain.max - domain.min) || 1
+  const yRange = (yMax - yMin) || 1
 
   const toSvgX = (val: number) => pad.left + ((val - domain.min) / xRange) * plotW
   const toSvgY = (val: number) => pad.top + ((yMax - val) / yRange) * plotH
@@ -267,7 +269,7 @@ export function LogarithmicGraph({
                     cy={toSvgY(pt.y)}
                     r={5}
                     fill={diagram.colors.primary}
-                    stroke="white"
+                    className="stroke-white dark:stroke-gray-900"
                     strokeWidth={2}
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}

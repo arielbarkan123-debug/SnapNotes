@@ -88,7 +88,12 @@ export function EquationSteps({
   language = 'en',
   initialStep,
 }: EquationStepsProps) {
-  const { variable, solution, steps, title, errorHighlight } = data
+  // Defensive defaults for AI-generated data
+  const variable = data.variable ?? 'x'
+  const solution = data.solution
+  const steps = Array.isArray(data.steps) ? data.steps : []
+  const title = data.title
+  const errorHighlight = data.errorHighlight
 
   const hasErrors = !!(
     errorHighlight?.message ||

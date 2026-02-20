@@ -57,7 +57,12 @@ export function StemAndLeafPlot({
   language = 'en',
   initialStep,
 }: StemAndLeafPlotProps) {
-  const { stems, title, stemLabel, leafLabel, key } = data
+  // Defensive defaults for AI-generated data
+  const stems = Array.isArray(data.stems) ? data.stems : []
+  const title = data.title
+  const stemLabel = data.stemLabel
+  const leafLabel = data.leafLabel
+  const key = data.key
 
   // Compute dynamic height based on stem count
   const rowHeight = 28
@@ -173,7 +178,7 @@ export function StemAndLeafPlot({
                 y1={padding.top + 2}
                 x2={dividerX}
                 y2={headerHeight + stems.length * rowHeight + padding.top}
-                stroke="#374151"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 initial={{ pathLength: 0, opacity: 0 }}
                 animate={{ pathLength: 1, opacity: 1 }}
@@ -186,7 +191,7 @@ export function StemAndLeafPlot({
                 y1={headerHeight + padding.top - 8}
                 x2={width - padding.right}
                 y2={headerHeight + padding.top - 8}
-                stroke="#e5e7eb"
+                className="stroke-gray-200 dark:stroke-gray-700"
                 strokeWidth={1}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -253,7 +258,7 @@ export function StemAndLeafPlot({
             >
               {stems.map((row, stemIdx) => (
                 <motion.g key={`leaves-row-${stemIdx}`}>
-                  {row.leaves.map((leaf, leafIdx) => (
+                  {(Array.isArray(row.leaves) ? row.leaves : []).map((leaf, leafIdx) => (
                     <motion.text
                       key={`leaf-${stemIdx}-${leafIdx}`}
                       x={leafStartX + leafIdx * leafCharWidth}
@@ -284,7 +289,7 @@ export function StemAndLeafPlot({
             x={width / 2}
             y={computedHeight - padding.bottom - 2}
             textAnchor="middle"
-            fill="#6b7280"
+            className="fill-gray-500 dark:fill-gray-400"
             fontSize={10}
             initial="hidden"
             animate="visible"

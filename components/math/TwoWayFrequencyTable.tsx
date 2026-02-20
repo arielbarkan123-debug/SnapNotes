@@ -203,7 +203,7 @@ export function TwoWayFrequencyTable({
                 y={offsetY + HEADER_HEIGHT + HEADER_HEIGHT / 2 + 4}
                 textAnchor="middle"
                 fontSize={11}
-                fill="#6b7280"
+                className="fill-gray-500 dark:fill-gray-400"
                 fontWeight={500}
               >
                 {columnLabel}
@@ -219,7 +219,7 @@ export function TwoWayFrequencyTable({
                     height={HEADER_HEIGHT * 2}
                     fill={primaryColor}
                     opacity={0.1}
-                    stroke="#e5e7eb"
+                    className="stroke-gray-200 dark:stroke-gray-700"
                     strokeWidth={1}
                   />
                   <text
@@ -244,7 +244,7 @@ export function TwoWayFrequencyTable({
                     width={COL_WIDTH}
                     height={HEADER_HEIGHT * 2}
                     fill={MARGINAL_BG}
-                    stroke="#e5e7eb"
+                    className="stroke-gray-200 dark:stroke-gray-700"
                     strokeWidth={1}
                   />
                   <text
@@ -269,7 +269,7 @@ export function TwoWayFrequencyTable({
                     width={ROW_LABEL_WIDTH}
                     height={CELL_HEIGHT}
                     fill={r % 2 === 0 ? '#f9fafb' : 'white'}
-                    stroke="#e5e7eb"
+                    className={`${r % 2 === 0 ? 'dark:fill-gray-800' : 'dark:fill-gray-900'} stroke-gray-200 dark:stroke-gray-700`}
                     strokeWidth={1}
                   />
                   <text
@@ -294,7 +294,7 @@ export function TwoWayFrequencyTable({
                     width={ROW_LABEL_WIDTH}
                     height={CELL_HEIGHT}
                     fill={MARGINAL_BG}
-                    stroke="#e5e7eb"
+                    className="stroke-gray-200 dark:stroke-gray-700"
                     strokeWidth={1}
                   />
                   <text
@@ -374,7 +374,7 @@ export function TwoWayFrequencyTable({
                 const cellY = offsetY + HEADER_HEIGHT * 2 + r * CELL_HEIGHT
                 return (
                   <g key={`rt-${r}`}>
-                    <rect x={cellX} y={cellY} width={COL_WIDTH} height={CELL_HEIGHT} fill={MARGINAL_BG} stroke="#e5e7eb" strokeWidth={1} />
+                    <rect x={cellX} y={cellY} width={COL_WIDTH} height={CELL_HEIGHT} fill={MARGINAL_BG} className="stroke-gray-200 dark:stroke-gray-700" strokeWidth={1} />
                     <motion.text
                       x={cellX + COL_WIDTH / 2}
                       y={cellY + CELL_HEIGHT / 2 + 4}
@@ -396,7 +396,7 @@ export function TwoWayFrequencyTable({
                 const cellY = offsetY + HEADER_HEIGHT * 2 + numRows * CELL_HEIGHT
                 return (
                   <g key={`ct-${c}`}>
-                    <rect x={cellX} y={cellY} width={COL_WIDTH} height={CELL_HEIGHT} fill={MARGINAL_BG} stroke="#e5e7eb" strokeWidth={1} />
+                    <rect x={cellX} y={cellY} width={COL_WIDTH} height={CELL_HEIGHT} fill={MARGINAL_BG} className="stroke-gray-200 dark:stroke-gray-700" strokeWidth={1} />
                     <motion.text
                       x={cellX + COL_WIDTH / 2}
                       y={cellY + CELL_HEIGHT / 2 + 4}
@@ -421,7 +421,7 @@ export function TwoWayFrequencyTable({
                   height={CELL_HEIGHT}
                   fill={primaryColor}
                   opacity={0.15}
-                  stroke="#e5e7eb"
+                  className="stroke-gray-200 dark:stroke-gray-700"
                   strokeWidth={1}
                 />
                 <motion.text

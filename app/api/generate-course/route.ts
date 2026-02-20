@@ -191,7 +191,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       try {
         const { data: profile } = await supabase
           .from('user_learning_profile')
-          .select('education_level, study_system, study_goal, learning_styles, language')
+          .select('education_level, study_system, study_goal, learning_styles, language, grade')
           .eq('user_id', user.id)
           .single()
 
@@ -202,6 +202,7 @@ export async function POST(request: NextRequest): Promise<Response> {
             studyGoal: profile.study_goal || 'general_learning',
             learningStyles: profile.learning_styles || ['practice'],
             language: profile.language || 'en',
+            grade: profile.grade || undefined,
           }
         }
       } catch {
@@ -525,7 +526,8 @@ export async function POST(request: NextRequest): Promise<Response> {
       let cardsGenerated = 0
 
       try {
-        const cards = generateCardsFromCourse(generatedCourse, course.id)
+        const cardLanguage = (userContext?.language === 'he' ? 'he' : 'en') as 'en' | 'he'
+        const cards = await generateCardsFromCourse(generatedCourse, course.id, { language: cardLanguage })
 
         if (cards.length > 0) {
           const cardsWithUser = cards.map((card) => ({

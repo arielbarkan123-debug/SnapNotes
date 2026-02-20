@@ -46,9 +46,10 @@ export function RatioTable({
   language = 'en',
   initialStep,
 }: RatioTableProps) {
-  const { columns, highlightRow, highlightColumn, showEquivalence, title } = data
+  const { highlightRow, highlightColumn, showEquivalence, title } = data
+  const columns = Array.isArray(data.columns) ? data.columns : []
 
-  const numRows = columns.length > 0 ? columns[0].values.length : 0
+  const numRows = columns.length > 0 && Array.isArray(columns[0]?.values) ? columns[0].values.length : 0
 
   // Build step definitions: header + one step per column of values
   const stepDefs = useMemo(() => {

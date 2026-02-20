@@ -137,10 +137,11 @@ export function CountingObjectsArray({
   onStepComplete,
   stepConfig,
 }: CountingObjectsArrayProps) {
-  const { objects, operation, total, title, groupSize = 5 } = data
+  const { operation, total, title, groupSize = 5 } = data
+  const objects = Array.isArray(data.objects) ? data.objects : []
 
   // Determine total object count
-  const totalObjects = objects.reduce((sum, g) => sum + g.count, 0)
+  const totalObjects = objects.reduce((sum, g) => sum + (g.count ?? 0), 0)
 
   // Compute columns for grid layout
   const cols = Math.min(groupSize, 10)

@@ -16,6 +16,13 @@ import {
   getAgeGroupConfig,
   getAppropriateQuestionTypes,
 } from '@/lib/learning/age-config'
+import {
+  classifyTopicType,
+  inferDifficultyFromTopic,
+  resolveEffectiveLanguageLevel,
+  type TopicType,
+} from '@/lib/ai/content-classifier'
+import { isQuestionQualityAcceptable } from '@/lib/srs'
 
 // -----------------------------------------------------------------------------
 // Constants
@@ -48,15 +55,22 @@ const COGNITIVE_LEVEL_DESCRIPTIONS: Record<CognitiveLevel, string> = {
 // -----------------------------------------------------------------------------
 
 /**
- * Build age-specific instructions for question generation
+ * Build age-specific instructions for question generation.
+ * Optionally receives topicType and contentDifficulty to override
+ * vocabulary and format for content-appropriate questions.
  */
-function buildAgeSpecificQuestionInstructions(educationLevel?: string): string {
-  if (!educationLevel) return ''
+function buildAgeSpecificQuestionInstructions(
+  educationLevel?: string,
+  topicType?: TopicType,
+  contentDifficulty?: number
+): string {
+  let instructions = ''
 
-  const config = getAgeGroupConfig(educationLevel)
+  if (educationLevel) {
+    const config = getAgeGroupConfig(educationLevel)
 
-  const ageInstructions: Record<string, string> = {
-    elementary: `
+    const ageInstructions: Record<string, string> = {
+      elementary: `
 ## Age-Appropriate Instructions (Elementary, Ages 6-12)
 - Use SIMPLE vocabulary - words a child would know
 - Keep question sentences SHORT (max 15 words)
@@ -66,7 +80,7 @@ function buildAgeSpecificQuestionInstructions(educationLevel?: string): string {
 - Avoid complex reasoning or abstract thinking
 - Use encouraging language`,
 
-    middle_school: `
+      middle_school: `
 ## Age-Appropriate Instructions (Middle School, Ages 11-14)
 - Use clear, accessible language
 - Introduce technical terms when needed with context
@@ -75,7 +89,7 @@ function buildAgeSpecificQuestionInstructions(educationLevel?: string): string {
 - Balance recall with understanding questions
 - Avoid overly abstract or theoretical questions`,
 
-    high_school: `
+      high_school: `
 ## Age-Appropriate Instructions (High School, Ages 14-18)
 - Use age-appropriate academic vocabulary
 - Include application and analysis questions
@@ -84,7 +98,7 @@ function buildAgeSpecificQuestionInstructions(educationLevel?: string): string {
 - Include some multi-step reasoning
 - Focus on exam preparation relevance`,
 
-    university: `
+      university: `
 ## Age-Appropriate Instructions (University, Ages 18-22)
 - Use academic and technical terminology
 - Include analysis, evaluation, and synthesis questions
@@ -93,7 +107,7 @@ function buildAgeSpecificQuestionInstructions(educationLevel?: string): string {
 - Reference theoretical frameworks where appropriate
 - Challenge critical thinking abilities`,
 
-    professional: `
+      professional: `
 ## Age-Appropriate Instructions (Professional/Adult, Ages 22+)
 - Use professional/technical terminology
 - Focus on practical application scenarios
@@ -101,9 +115,39 @@ function buildAgeSpecificQuestionInstructions(educationLevel?: string): string {
 - Test ability to apply knowledge to real situations
 - Efficient, practical question design
 - Avoid trivial recall questions`,
+    }
+
+    instructions = ageInstructions[config.id] || ''
   }
 
-  return ageInstructions[config.id] || ''
+  // Override with content-adaptive language if contentDifficulty is provided
+  if (contentDifficulty) {
+    const languageLevel = resolveEffectiveLanguageLevel(educationLevel, contentDifficulty)
+    instructions += `
+## Content-Adaptive Language (Difficulty ${contentDifficulty}/5)
+${languageLevel.vocabularyInstructions}
+${languageLevel.sentenceComplexity}`
+  }
+
+  // Add topic-type-specific question format instructions
+  if (topicType === 'computational') {
+    instructions += `
+## Question Format: COMPUTATIONAL
+- Generate problems to solve, not definitions to recall
+- Include numeric computation in every question
+- For elementary: small numbers, one operation (e.g., "What is 3/4 + 1/2?")
+- For middle school: multi-step, mixed operations (e.g., "Convert 0.375 to a fraction and simplify")
+- For high school: algebraic expressions, equations (e.g., "Solve: 2x² - 5x + 3 = 0")
+- NEVER ask "What does X mean?" for math topics`
+  } else if (topicType === 'mixed') {
+    instructions += `
+## Question Format: MIXED
+- Mix computational problems (50%+) with understanding questions
+- Include actual calculations and problem-solving
+- Balance "Solve: ..." questions with "Explain why ..." questions`
+  }
+
+  return instructions
 }
 
 /**
@@ -203,11 +247,31 @@ function buildGenerationPrompt(
       ? `Difficulty range: ${ageConfig.difficultyRange.min} to ${ageConfig.difficultyRange.max} (on 1-10 scale, convert to 1-5 for output)`
       : 'Vary difficulty levels from 1 (easy) to 5 (hard)'
 
-  // Add age-specific instructions
-  const ageInstructions = buildAgeSpecificQuestionInstructions(request.educationLevel)
+  // Classify topic type and content difficulty for content-appropriate questions
+  const topicType = classifyTopicType(courseContent)
+  const contentDifficulty = inferDifficultyFromTopic(courseContent)
+
+  // Add age-specific instructions with topic type and content difficulty
+  const ageInstructions = buildAgeSpecificQuestionInstructions(
+    request.educationLevel,
+    topicType,
+    contentDifficulty
+  )
   const bloomWeights = getBloomWeights(request.educationLevel)
 
-  return `You are an expert educational content creator. Generate ${request.count} practice questions based on the following course content.${ageInstructions}
+  // Build Hebrew language instruction if needed
+  const hebrewInstruction = request.language === 'he' ? `
+
+## Language Requirement - CRITICAL
+Generate ALL content in Hebrew (עברית).
+- All questions must be in Hebrew
+- All answer options must be in Hebrew
+- All explanations must be in Hebrew
+- Keep mathematical notation standard (numbers, symbols)
+- Use proper Hebrew educational terminology
+` : ''
+
+  return `You are an expert educational content creator. Generate ${request.count} practice questions based on the following course content.${hebrewInstruction}${ageInstructions}
 
 ## Question Types to Generate:
 ${typeDescriptions}
@@ -456,13 +520,15 @@ export async function generatePracticeQuestions(
 
     const questions = JSON.parse(jsonStr) as GeneratedQuestion[]
 
-    // Validate and clean questions
-    return questions.map((q) => ({
-      ...q,
-      difficulty_level: Math.max(1, Math.min(5, q.difficulty_level)) as DifficultyLevel,
-      cognitive_level: validateCognitiveLevel(q.cognitive_level),
-      tags: q.tags || [],
-    }))
+    // Validate, clean, and quality-filter questions
+    return questions
+      .filter((q) => isQuestionQualityAcceptable(q.question_text))
+      .map((q) => ({
+        ...q,
+        difficulty_level: Math.max(1, Math.min(5, q.difficulty_level)) as DifficultyLevel,
+        cognitive_level: validateCognitiveLevel(q.cognitive_level),
+        tags: q.tags || [],
+      }))
   } catch (error) {
     console.error('Failed to parse generated questions:', error)
     throw new Error('Failed to generate valid questions')

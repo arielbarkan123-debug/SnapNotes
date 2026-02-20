@@ -1535,6 +1535,7 @@ export type MathDiagramType =
   | 'confidence_interval'
   | 'hypothesis_test'
   // Physics
+  | 'fbd'
   | 'free_body_diagram'
   // Geometry (Step-synced)
   | 'triangle_geometry'
@@ -1562,6 +1563,8 @@ export type MathDiagramType =
   | 'trapezoid'
   // Utility
   | 'math_table'
+  // Engine-generated image diagram (E2B/TikZ/Recraft pipeline)
+  | 'engine_image'
 
 export type MathDiagramData =
   // Core types
@@ -1681,6 +1684,22 @@ export type MathDiagramData =
   | ParallelogramData
   | RhombusData
   | TrapezoidData
+  // Engine-generated image diagram
+  | EngineDiagramData
+
+export /** Data for engine-generated image diagrams (E2B LaTeX, Matplotlib, TikZ, Recraft) */
+interface EngineDiagramData {
+  imageUrl: string
+  pipeline?: string
+  overlay?: Array<{
+    text: string
+    x: number
+    y: number
+    targetX: number
+    targetY: number
+  }>
+  qaVerdict?: string
+}
 
 export interface MathDiagramState {
   /** Type of diagram */

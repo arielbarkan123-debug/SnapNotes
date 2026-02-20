@@ -605,7 +605,7 @@ export function InteractiveGrapher({
                 <g>
                   <line x1={xToSvg(tracePoint.x)} y1={padding.top} x2={xToSvg(tracePoint.x)} y2={padding.top + plotHeight} stroke={tracedEquation.color} strokeWidth={1} strokeDasharray="4,4" opacity={0.5} />
                   <line x1={padding.left} y1={yToSvg(tracePoint.y)} x2={padding.left + plotWidth} y2={yToSvg(tracePoint.y)} stroke={tracedEquation.color} strokeWidth={1} strokeDasharray="4,4" opacity={0.5} />
-                  <circle cx={xToSvg(tracePoint.x)} cy={yToSvg(tracePoint.y)} r={6} fill={tracedEquation.color} stroke="white" strokeWidth={2} />
+                  <circle cx={xToSvg(tracePoint.x)} cy={yToSvg(tracePoint.y)} r={6} fill={tracedEquation.color} className="stroke-white dark:stroke-gray-900" strokeWidth={2} />
                   <g transform={`translate(${xToSvg(tracePoint.x) + 10}, ${yToSvg(tracePoint.y) - 10})`}>
                     <rect x={0} y={-20} width={100} height={26} rx={4} fill="rgba(0,0,0,0.8)" />
                     <text x={50} y={-3} textAnchor="middle" fill="white" fontSize={11} fontFamily="monospace">

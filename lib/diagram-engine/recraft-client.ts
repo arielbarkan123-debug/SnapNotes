@@ -23,7 +23,8 @@ export interface RecraftGenerateParams {
   size?: RecraftSize
   format?: RecraftFormat
   negative_prompt?: string
-  no_text?: boolean
+  // no_text is ALWAYS enforced - Recraft must NEVER generate text
+  // Text labels are added via TikZ compositing instead
 }
 
 export interface RecraftImage {
@@ -56,23 +57,25 @@ export async function generateRecraftImage(
   const effectiveStyle =
     params.format === 'svg' ? 'vector_illustration' : params.style
 
+  // CRITICAL: Recraft must NEVER generate text. Text is added via TikZ only.
+  // Always enforce no_text control and negative prompt for text-related terms.
+  const textNegativePrompt = 'text, labels, letters, words, numbers, writing, annotations, captions, watermark, signature, title, heading, typography';
+  const combinedNegativePrompt = params.negative_prompt
+    ? `${params.negative_prompt}, ${textNegativePrompt}`
+    : textNegativePrompt;
+
   const body: Record<string, unknown> = {
     prompt: params.prompt,
     model: 'recraftv3',
     style: effectiveStyle,
     response_format: 'url',
+    // ALWAYS enforce no text generation
+    controls: { no_text: true },
+    negative_prompt: combinedNegativePrompt,
   }
 
   if (params.size) {
     body.size = params.size
-  }
-
-  if (params.negative_prompt) {
-    body.negative_prompt = params.negative_prompt
-  }
-
-  if (params.no_text) {
-    body.controls = { no_text: true }
   }
 
   const controller = new AbortController()

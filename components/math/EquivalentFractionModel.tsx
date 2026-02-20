@@ -73,7 +73,9 @@ export function EquivalentFractionModel({
   language = 'en',
   initialStep,
 }: EquivalentFractionModelProps) {
-  const { fraction1, fraction2, showAlignment, modelType = 'bar', title } = data
+  const { showAlignment, modelType = 'bar', title } = data
+  const fraction1 = data.fraction1 ?? { numerator: 0, denominator: 1 }
+  const fraction2 = data.fraction2 ?? { numerator: 0, denominator: 1 }
 
   const isCircle = modelType === 'circle' || modelType === 'both'
   const isBar = modelType === 'bar' || modelType === 'both'

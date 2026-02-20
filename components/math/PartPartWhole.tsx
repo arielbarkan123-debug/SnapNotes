@@ -60,7 +60,10 @@ export function PartPartWhole({
   onStepComplete,
   stepConfig,
 }: PartPartWholeProps) {
-  const { whole, part1, part2, showParts, title, labels } = data
+  const { showParts, title, labels } = data
+  const whole = data.whole ?? 0
+  const part1 = data.part1 ?? 0
+  const part2 = data.part2 ?? 0
 
   // Step definitions
   const stepDefs = useMemo(

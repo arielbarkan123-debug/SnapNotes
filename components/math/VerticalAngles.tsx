@@ -265,8 +265,7 @@ export function VerticalAngles({
                 y1={line1Start.y}
                 x2={line1End.x}
                 y2={line1End.y}
-                stroke="#374151"
-                className="dark:stroke-gray-300"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 strokeLinecap="round"
                 initial="hidden"
@@ -280,8 +279,7 @@ export function VerticalAngles({
                 y1={line2Start.y}
                 x2={line2End.x}
                 y2={line2End.y}
-                stroke="#374151"
-                className="dark:stroke-gray-300"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 strokeLinecap="round"
                 initial="hidden"

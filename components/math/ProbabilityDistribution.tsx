@@ -58,7 +58,9 @@ export function ProbabilityDistribution({
   language = 'en',
   initialStep,
 }: ProbabilityDistributionProps) {
-  const { outcomes, expectedValue, title } = data
+  // Defensive defaults for AI-generated data
+  const outcomes = Array.isArray(data.outcomes) ? data.outcomes : []
+  const { expectedValue, title } = data
 
   const hasExpected = expectedValue !== undefined
 

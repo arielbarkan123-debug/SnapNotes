@@ -183,7 +183,7 @@ export function PythagoreanTheoremDiagram({
               <motion.polygon
                 points={`${triAx},${triAy} ${triBx},${triBy} ${triCx},${triCy}`}
                 fill="none"
-                stroke="#374151"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 strokeLinejoin="round"
                 variants={lineDrawVariants}
@@ -196,7 +196,7 @@ export function PythagoreanTheoremDiagram({
                 width={12}
                 height={12}
                 fill="none"
-                stroke="#6b7280"
+                className="stroke-gray-500 dark:stroke-gray-400"
                 strokeWidth={1.5}
               />
 

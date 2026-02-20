@@ -135,6 +135,8 @@ export interface ExamAnalysis {
 export interface PastExamTemplate {
   id: string
   user_id: string
+  /** Subject identifier (e.g., "biology-hl", "math-5"). NULL means unassigned/general. */
+  subject_id: string | null
   title: string
   description: string | null
   file_url: string
@@ -153,6 +155,8 @@ export interface PastExamTemplate {
 export interface CreatePastExamRequest {
   title?: string
   description?: string
+  /** Subject identifier (e.g., "biology-hl", "math-5") */
+  subjectId?: string
 }
 
 export interface PastExamTemplatesResponse {
@@ -160,6 +164,10 @@ export interface PastExamTemplatesResponse {
   templates: PastExamTemplate[]
   count: number
   limit: number
+  /** Count per subject for the filtered subject (if subjectId query param provided) */
+  subjectCount?: number
+  /** The subject being filtered (if subjectId query param provided) */
+  filteredSubject?: string | null
 }
 
 export interface PastExamUploadResponse {
@@ -177,6 +185,8 @@ export interface PastExamAnalyzeResponse {
 // Database insert type (without id and timestamps)
 export interface PastExamTemplateInsert {
   user_id: string
+  /** Subject identifier (e.g., "biology-hl", "math-5") */
+  subject_id?: string | null
   title: string
   description?: string | null
   file_url: string

@@ -124,7 +124,8 @@ export function PictureGraph({
   onStepComplete,
   stepConfig,
 }: PictureGraphProps) {
-  const { categories, title, symbolValue = 1, showKey } = data
+  const { title, symbolValue = 1, showKey } = data
+  const categories = Array.isArray(data.categories) ? data.categories : []
 
   // Step definitions
   const stepDefs = useMemo(

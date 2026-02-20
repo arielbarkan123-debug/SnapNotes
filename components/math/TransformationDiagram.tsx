@@ -74,7 +74,10 @@ export function TransformationDiagram({
   language = 'en',
   initialStep,
 }: TransformationDiagramProps) {
-  const { original, transformed, transformationType, title } = data
+  // Defensive defaults for AI-generated data
+  const original = Array.isArray(data.original) ? data.original : []
+  const transformed = Array.isArray(data.transformed) ? data.transformed : []
+  const { transformationType, title } = data
 
   // Build step definitions
   const stepDefs = useMemo(() => [
@@ -197,7 +200,7 @@ export function TransformationDiagram({
         {/* Arrow marker */}
         <defs>
           <marker id="td-arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-            <polygon points="0 0, 8 3, 0 6" fill="#9ca3af" />
+            <polygon points="0 0, 8 3, 0 6" className="fill-gray-400 dark:fill-gray-500" />
           </marker>
         </defs>
 
@@ -211,12 +214,12 @@ export function TransformationDiagram({
               variants={spotlight}
             >
               {gridLines.map((gl, i) => (
-                <line key={`g-${i}`} x1={gl.x1} y1={gl.y1} x2={gl.x2} y2={gl.y2} stroke="#e5e7eb" strokeWidth={1} />
+                <line key={`g-${i}`} x1={gl.x1} y1={gl.y1} x2={gl.x2} y2={gl.y2} className="stroke-gray-200 dark:stroke-gray-700" strokeWidth={1} />
               ))}
               {/* X axis */}
-              <motion.line x1={PADDING} y1={toSvgY(0)} x2={PADDING + plotW} y2={toSvgY(0)} stroke="#374151" strokeWidth={diagram.lineWeight} variants={lineDrawVariants} />
+              <motion.line x1={PADDING} y1={toSvgY(0)} x2={PADDING + plotW} y2={toSvgY(0)} className="stroke-gray-700 dark:stroke-gray-300" strokeWidth={diagram.lineWeight} variants={lineDrawVariants} />
               {/* Y axis */}
-              <motion.line x1={toSvgX(0)} y1={PADDING} x2={toSvgX(0)} y2={PADDING + plotH} stroke="#374151" strokeWidth={diagram.lineWeight} variants={lineDrawVariants} />
+              <motion.line x1={toSvgX(0)} y1={PADDING} x2={toSvgX(0)} y2={PADDING + plotH} className="stroke-gray-700 dark:stroke-gray-300" strokeWidth={diagram.lineWeight} variants={lineDrawVariants} />
               {/* Axis labels */}
               <text x={PADDING + plotW - 5} y={toSvgY(0) - 8} textAnchor="end" fontSize={12} className="fill-gray-700 dark:fill-gray-300" fontWeight={600}>x</text>
               <text x={toSvgX(0) + 10} y={PADDING + 12} textAnchor="start" fontSize={12} className="fill-gray-700 dark:fill-gray-300" fontWeight={600}>y</text>
@@ -249,7 +252,7 @@ export function TransformationDiagram({
                   cy={toSvgY(p.y)}
                   r={4}
                   fill={primaryColor}
-                  stroke="white"
+                  className="stroke-white dark:stroke-gray-900"
                   strokeWidth={1.5}
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -276,7 +279,7 @@ export function TransformationDiagram({
                   y1={arr.y1}
                   x2={arr.x2}
                   y2={arr.y2}
-                  stroke="#9ca3af"
+                  className="stroke-gray-400 dark:stroke-gray-500"
                   strokeWidth={1.5}
                   strokeDasharray="5 3"
                   markerEnd="url(#td-arrowhead)"
@@ -336,7 +339,7 @@ export function TransformationDiagram({
                   cy={toSvgY(p.y)}
                   r={4}
                   fill={accentColor}
-                  stroke="white"
+                  className="stroke-white dark:stroke-gray-900"
                   strokeWidth={1.5}
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}

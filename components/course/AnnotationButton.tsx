@@ -63,7 +63,7 @@ export default function AnnotationButton({ annotation, onSave, onDelete }: Annot
       <button
         onClick={() => setIsOpen(true)}
         className={`
-          inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all
+          inline-flex items-center gap-1 px-3 py-2 min-h-[44px] rounded-lg text-xs font-medium transition-all
           ${hasAnnotation
             ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400'
             : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -102,7 +102,7 @@ export default function AnnotationButton({ annotation, onSave, onDelete }: Annot
           <button
             onClick={() => toggleFlag('confusing')}
             className={`
-              inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors
+              inline-flex items-center gap-1 px-3 py-2 min-h-[44px] rounded-lg text-xs font-medium transition-colors
               ${flagType === 'confusing'
                 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700'
                 : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent'
@@ -115,7 +115,7 @@ export default function AnnotationButton({ annotation, onSave, onDelete }: Annot
           <button
             onClick={() => toggleFlag('important')}
             className={`
-              inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors
+              inline-flex items-center gap-1 px-3 py-2 min-h-[44px] rounded-lg text-xs font-medium transition-colors
               ${flagType === 'important'
                 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-700'
                 : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent'
@@ -131,14 +131,14 @@ export default function AnnotationButton({ annotation, onSave, onDelete }: Annot
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsOpen(false)}
-            className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 px-2 py-1"
+            className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 px-3 py-2 min-h-[44px] flex items-center justify-center"
           >
             {t('cancel') || 'Cancel'}
           </button>
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="inline-flex items-center gap-1 px-3 py-1 bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1 px-3 py-2 min-h-[44px] bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
           >
             {showSaved ? (
               <>

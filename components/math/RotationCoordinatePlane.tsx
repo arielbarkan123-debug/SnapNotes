@@ -264,14 +264,14 @@ export function RotationCoordinatePlane({
               {/* Axis arrows */}
               <motion.polygon
                 points={`${scaleX(0)},${padding.top - 6} ${scaleX(0) - 4},${padding.top + 2} ${scaleX(0) + 4},${padding.top + 2}`}
-                fill="#6b7280"
+                className="fill-gray-500 dark:fill-gray-400"
                 initial="hidden"
                 animate="visible"
                 variants={labelAppearVariants}
               />
               <motion.polygon
                 points={`${width - padding.right + 6},${scaleY(0)} ${width - padding.right - 2},${scaleY(0) - 4} ${width - padding.right - 2},${scaleY(0) + 4}`}
-                fill="#6b7280"
+                className="fill-gray-500 dark:fill-gray-400"
                 initial="hidden"
                 animate="visible"
                 variants={labelAppearVariants}
@@ -346,7 +346,7 @@ export function RotationCoordinatePlane({
                     cy={scaleY(v.y)}
                     r={4}
                     fill={primaryColor}
-                    stroke="white"
+                    className="stroke-white dark:stroke-gray-900"
                     strokeWidth={1}
                   />
                   <motion.text
@@ -372,7 +372,7 @@ export function RotationCoordinatePlane({
                     cy={scaleY(centerOfRotation.y)}
                     r={5}
                     fill="#ef4444"
-                    stroke="white"
+                    className="stroke-white dark:stroke-gray-900"
                     strokeWidth={1.5}
                   />
                   <motion.text
@@ -469,7 +469,7 @@ export function RotationCoordinatePlane({
                     cy={scaleY(v.y)}
                     r={4}
                     fill={accentColor}
-                    stroke="white"
+                    className="stroke-white dark:stroke-gray-900"
                     strokeWidth={1}
                   />
                   {showPrime && (

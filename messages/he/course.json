@@ -20,6 +20,7 @@
   "generatingLessons": "מייצר שיעורים נוספים...",
   "generatingProgress": "{ready} מתוך {total} שיעורים מוכנים",
   "addMaterial": "הוסף חומר",
+  "materialAdded": "החומר נוסף בהצלחה!",
   "generating": "מייצר...",
   "mistakes": {
     "whereYouWentWrong": "איפה טעית",

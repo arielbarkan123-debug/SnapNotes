@@ -481,6 +481,47 @@ export function NumberLine({
                         strokeWidth={2}
                       />
                     )}
+                    {/* Interval label with bracket annotation */}
+                    {interval.label && (
+                      <motion.g
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3, duration: 0.4 }}
+                      >
+                        {/* Left bracket arm */}
+                        <line
+                          x1={sx} y1={lineY - 12}
+                          x2={sx} y2={lineY - 22}
+                          stroke={interval.color || diagram.colors.primary}
+                          strokeWidth={1.5}
+                        />
+                        {/* Horizontal bracket line */}
+                        <line
+                          x1={sx} y1={lineY - 22}
+                          x2={ex} y2={lineY - 22}
+                          stroke={interval.color || diagram.colors.primary}
+                          strokeWidth={1.5}
+                        />
+                        {/* Right bracket arm */}
+                        <line
+                          x1={ex} y1={lineY - 12}
+                          x2={ex} y2={lineY - 22}
+                          stroke={interval.color || diagram.colors.primary}
+                          strokeWidth={1.5}
+                        />
+                        {/* Label text centered above bracket */}
+                        <SVGLabel
+                          x={(sx + ex) / 2}
+                          y={lineY - 28}
+                          text={interval.label}
+                          textAnchor="middle"
+                          fontSize={fontSize.small}
+                          fontWeight={600}
+                          color={interval.color || diagram.colors.primary}
+                          animate={false}
+                        />
+                      </motion.g>
+                    )}
                   </motion.g>
                 )
               })}
@@ -517,7 +558,7 @@ export function NumberLine({
                 return (
                   <g key={`correct-point-${index}`} data-testid={`nl-correct-${point.value}`}>
                     <circle cx={x} cy={lineY} r={8} fill="#22C55E" opacity={0.2} />
-                    <circle cx={x} cy={lineY} r={5} fill="#22C55E" stroke="white" strokeWidth={1} />
+                    <circle cx={x} cy={lineY} r={5} fill="#22C55E" className="stroke-white dark:stroke-gray-900" strokeWidth={1} />
                     <path
                       d={`M ${x - 3} ${lineY} L ${x - 1} ${lineY + 2} L ${x + 3} ${lineY - 2}`}
                       stroke="white" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round"

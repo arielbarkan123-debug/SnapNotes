@@ -70,7 +70,10 @@ export function BarGraph({
   language = 'en',
   initialStep,
 }: BarGraphProps) {
-  const { categories, title, scale, orientation = 'vertical', yAxisLabel, xAxisLabel } = data
+  // Defensive defaults for AI-generated data
+  const categories = Array.isArray(data.categories) ? data.categories : []
+  const { title, orientation = 'vertical', yAxisLabel, xAxisLabel } = data
+  const scale = data.scale ?? 1
 
   const isVertical = orientation === 'vertical'
 
@@ -175,7 +178,7 @@ export function BarGraph({
                       y1={y}
                       x2={padding.left + chartWidth}
                       y2={y}
-                      stroke="#e5e7eb"
+                      className="stroke-gray-200 dark:stroke-gray-700"
                       strokeWidth={1}
                       strokeDasharray={i === 0 ? 'none' : '4,4'}
                       initial="hidden"
@@ -192,7 +195,7 @@ export function BarGraph({
                       y1={padding.top}
                       x2={x}
                       y2={padding.top + chartHeight}
-                      stroke="#e5e7eb"
+                      className="stroke-gray-200 dark:stroke-gray-700"
                       strokeWidth={1}
                       strokeDasharray={i === 0 ? 'none' : '4,4'}
                       initial="hidden"

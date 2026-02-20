@@ -73,10 +73,13 @@ export function ProbabilityTree({
   language = 'en',
   initialStep,
 }: ProbabilityTreeProps) {
-  const { levels, outcomes, title, highlightPath } = data
+  // Defensive defaults for AI-generated data
+  const levels = Array.isArray(data.levels) ? data.levels : []
+  const outcomes = Array.isArray(data.outcomes) ? data.outcomes : []
+  const { title, highlightPath } = data
 
   const hasSecondLevel = levels.length >= 2
-  const hasOutcomes = !!(outcomes && outcomes.length > 0)
+  const hasOutcomes = outcomes.length > 0
 
   // Build step definitions
   const stepDefs = useMemo(() => {
@@ -364,7 +367,7 @@ export function ProbabilityTree({
                 animate={isCurrent('outcomes') ? 'spotlight' : 'visible'}
                 variants={spotlight}
               >
-                {outcomes!.map((outcome, i) => {
+                {outcomes.map((outcome, i) => {
                   const y = level2Positions[i]?.y ?? (30 + i * 30)
                   return (
                     <motion.g
@@ -378,9 +381,9 @@ export function ProbabilityTree({
                         y={y - 6}
                         textAnchor="middle"
                         fontSize={10}
-                        fill="#6b7280"
+                        className="fill-gray-500 dark:fill-gray-400"
                       >
-                        {outcome.path.join(', ')}
+                        {Array.isArray(outcome.path) ? outcome.path.join(', ') : ''}
                       </text>
                       <text
                         x={outcomeX}

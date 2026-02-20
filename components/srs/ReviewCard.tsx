@@ -202,7 +202,7 @@ export default function ReviewCard({ card, onShowAnswer, isAnswerShown, onAnswer
             </span>
             <button
               onClick={() => setShowHelp(true)}
-              className="p-1.5 text-gray-400 hover:text-violet-500 dark:hover:text-violet-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-violet-500 dark:hover:text-violet-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               aria-label="Get help"
               type="button"
             >

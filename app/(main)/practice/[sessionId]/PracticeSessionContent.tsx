@@ -202,7 +202,11 @@ function QuestionCard({ question, onAnswer, isSubmitting }: QuestionCardProps) {
         }
         className="w-full py-3 px-4 bg-violet-600 hover:bg-violet-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors"
       >
-        {isSubmitting ? 'Checking...' : 'Submit Answer'}
+        {isSubmitting
+          ? (question.question_type === 'short_answer' || question.question_type === 'fill_blank')
+            ? 'Evaluating answer...'
+            : 'Checking...'
+          : 'Submit Answer'}
       </button>
     </div>
   )
@@ -216,12 +220,14 @@ interface ResultCardProps {
   question: PracticeQuestion
   isCorrect: boolean
   userAnswer: string
+  evaluationFeedback?: string
+  evaluationMethod?: string
   onNext: () => void
   onDifficultyFeedback?: (feedback: 'too_easy' | 'too_hard') => void
   questionIndex?: number
 }
 
-function ResultCard({ question, isCorrect, userAnswer, onNext, onDifficultyFeedback, questionIndex = 0 }: ResultCardProps) {
+function ResultCard({ question, isCorrect, userAnswer, evaluationFeedback, evaluationMethod, onNext, onDifficultyFeedback, questionIndex = 0 }: ResultCardProps) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card p-6 border border-gray-200 dark:border-gray-700">
       {/* Result Badge */}
@@ -240,6 +246,13 @@ function ResultCard({ question, isCorrect, userAnswer, onNext, onDifficultyFeedb
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
         {question.question_text}
       </h2>
+
+      {/* Evaluation Feedback — only for fuzzy/AI where it adds value */}
+      {evaluationFeedback && (evaluationMethod === 'fuzzy' || evaluationMethod === 'ai') && (
+        <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 mb-4">
+          <p className="text-sm text-blue-700 dark:text-blue-300">{evaluationFeedback}</p>
+        </div>
+      )}
 
       {/* Answer Comparison */}
       <div className="space-y-3 mb-6">
@@ -355,7 +368,7 @@ function SessionComplete({ session: _session, answeredCount, correctCount }: Ses
 export default function PracticeSessionContent({
   session,
   questions,
-  answers,
+  answers: _answers,
 }: PracticeSessionContentProps) {
   const router = useRouter()
   const { error: showError } = useToast()
@@ -371,6 +384,7 @@ export default function PracticeSessionContent({
   const [view, setView] = useState<SessionView>('question')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [lastResult, setLastResult] = useState<AnswerQuestionResponse | null>(null)
+  const [lastUserAnswer, setLastUserAnswer] = useState<string>('')
   const [answeredCount, setAnsweredCount] = useState(session.questions_answered)
   const [correctCount, setCorrectCount] = useState(session.questions_correct)
   const [hasTrackedView, setHasTrackedView] = useState(false)
@@ -423,6 +437,7 @@ export default function PracticeSessionContent({
       if (!currentQuestion || isSubmitting) return
 
       setIsSubmitting(true)
+      setLastUserAnswer(answer)
       const responseTime = Date.now() - startTimeRef.current
 
       try {
@@ -597,9 +612,9 @@ export default function PracticeSessionContent({
           <ResultCard
             question={currentQuestion}
             isCorrect={lastResult.isCorrect}
-            userAnswer={
-              answers.find((a) => a.question_index === currentIndex)?.user_answer || ''
-            }
+            userAnswer={lastUserAnswer}
+            evaluationFeedback={lastResult.evaluationFeedback}
+            evaluationMethod={lastResult.evaluationMethod}
             onNext={handleNext}
             onDifficultyFeedback={handleDifficultyFeedback}
             questionIndex={currentIndex}

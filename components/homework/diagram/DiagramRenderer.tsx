@@ -6,7 +6,8 @@ import { MathDiagramRenderer } from '@/components/math'
 import { ChemistryDiagramRenderer } from '@/components/chemistry'
 import { BiologyDiagramRenderer } from '@/components/biology'
 import { GeometryDiagramRenderer } from '@/components/geometry'
-import { type DiagramState, isPhysicsDiagram, isMathDiagram, isChemistryDiagram, isBiologyDiagram, isGeometryDiagram, getDiagramTypeName, MATH_DIAGRAM_TYPES, PHYSICS_DIAGRAM_TYPES, CHEMISTRY_DIAGRAM_TYPES, BIOLOGY_DIAGRAM_TYPES, GEOMETRY_DIAGRAM_TYPES } from './types'
+import { type DiagramState, isPhysicsDiagram, isMathDiagram, isChemistryDiagram, isBiologyDiagram, isGeometryDiagram, getDiagramTypeName, MATH_DIAGRAM_TYPES, PHYSICS_DIAGRAM_TYPES, CHEMISTRY_DIAGRAM_TYPES, BIOLOGY_DIAGRAM_TYPES, GEOMETRY_DIAGRAM_TYPES, ENGINE_DIAGRAM_TYPES } from './types'
+import EngineDiagramImage from './EngineDiagramImage'
 import type { SubjectKey } from '@/lib/diagram-theme'
 import type { VisualComplexityLevel } from '@/lib/visual-complexity'
 
@@ -20,6 +21,7 @@ const ALL_KNOWN_TYPES = [
   ...CHEMISTRY_DIAGRAM_TYPES,
   ...BIOLOGY_DIAGRAM_TYPES,
   ...GEOMETRY_DIAGRAM_TYPES,
+  ...ENGINE_DIAGRAM_TYPES,
 ]
 
 /**
@@ -316,6 +318,28 @@ export default function DiagramRenderer({
         />
       </DiagramErrorBoundary>
     )
+  }
+
+  // Engine-generated image diagram (E2B LaTeX, Matplotlib, TikZ, Recraft)
+  if (diagramType === 'engine_image') {
+    const engineData = (diagram as Record<string, unknown>).data as {
+      imageUrl?: string
+      pipeline?: string
+      overlay?: Array<{ text: string; x: number; y: number; targetX: number; targetY: number }>
+      qaVerdict?: string
+    } | undefined
+    if (engineData?.imageUrl) {
+      return (
+        <DiagramErrorBoundary diagramType={diagramType} diagramData={engineData} onError={onRenderError}>
+          <EngineDiagramImage
+            imageUrl={engineData.imageUrl}
+            pipeline={engineData.pipeline}
+            overlay={engineData.overlay}
+            qaVerdict={engineData.qaVerdict}
+          />
+        </DiagramErrorBoundary>
+      )
+    }
   }
 
   // Fallback for unknown/unsupported diagram types

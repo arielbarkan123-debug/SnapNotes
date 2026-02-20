@@ -69,7 +69,9 @@ export function ScaledBarGraph({
   language = 'en',
   initialStep,
 }: ScaledBarGraphProps) {
-  const { data: barData, scale, title, yAxisLabel, xAxisLabel, showGridLines = true } = data
+  const { title, yAxisLabel, xAxisLabel, showGridLines = true } = data
+  const barData = Array.isArray(data.data) ? data.data : []
+  const scale = data.scale || 1
 
   const stepDefs = useMemo(() => [
     { id: 'axes', label: STEP_LABELS.axes.en, labelHe: STEP_LABELS.axes.he },
@@ -165,7 +167,7 @@ export function ScaledBarGraph({
                     y1={y}
                     x2={padding.left + chartWidth}
                     y2={y}
-                    stroke="#e5e7eb"
+                    className="stroke-gray-200 dark:stroke-gray-700"
                     strokeWidth={1}
                     strokeDasharray={i === 0 ? 'none' : '4,4'}
                     initial="hidden"

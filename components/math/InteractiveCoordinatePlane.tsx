@@ -546,7 +546,7 @@ export function InteractiveCoordinatePlane({
                       cy={svgY}
                       r={isActive ? pointRadius + 4 : isHovered ? pointRadius + 2 : pointRadius}
                       fill={point.color || diagram.colors.primary}
-                      stroke="white"
+                      className="stroke-white dark:stroke-gray-900"
                       strokeWidth={diagram.lineWeight - 1}
                     />
 

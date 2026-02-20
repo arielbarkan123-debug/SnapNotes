@@ -256,13 +256,13 @@ export function ConicSections({
                 const { sy: gy } = svgCoord(0, v, cx, cy, scale)
                 return (
                   <g key={`grid-${v}`}>
-                    <line x1={gx} y1={0} x2={gx} y2={height} stroke={v === 0 ? '#374151' : '#e5e7eb'} strokeWidth={v === 0 ? diagram.lineWeight : 0.5} />
-                    <line x1={0} y1={gy} x2={width} y2={gy} stroke={v === 0 ? '#374151' : '#e5e7eb'} strokeWidth={v === 0 ? diagram.lineWeight : 0.5} />
+                    <line x1={gx} y1={0} x2={gx} y2={height} className={v === 0 ? 'stroke-gray-700 dark:stroke-gray-300' : 'stroke-gray-200 dark:stroke-gray-700'} strokeWidth={v === 0 ? diagram.lineWeight : 0.5} />
+                    <line x1={0} y1={gy} x2={width} y2={gy} className={v === 0 ? 'stroke-gray-700 dark:stroke-gray-300' : 'stroke-gray-200 dark:stroke-gray-700'} strokeWidth={v === 0 ? diagram.lineWeight : 0.5} />
                   </g>
                 )
               })}
-              <text x={width - 10} y={cy + 14} fontSize={12} fill="#6b7280">x</text>
-              <text x={cx + 8} y={14} fontSize={12} fill="#6b7280">y</text>
+              <text x={width - 10} y={cy + 14} fontSize={12} className="fill-gray-500 dark:fill-gray-400">x</text>
+              <text x={cx + 8} y={14} fontSize={12} className="fill-gray-500 dark:fill-gray-400">y</text>
             </motion.g>
           )}
         </AnimatePresence>

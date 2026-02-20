@@ -9,6 +9,7 @@ import { type Course, type UserProgress, type GeneratedCourse, type Lesson } fro
 import { ChatTutor } from '@/components/chat/ChatTutor'
 import { useCourseMastery } from '@/hooks'
 import { useGenerationStatus } from '@/hooks/useGenerationStatus'
+import { useToast } from '@/contexts/ToastContext'
 
 const UploadModal = dynamic(() => import('@/components/upload/upload-modal/UploadModal'), { ssr: false })
 const ExportCourseButton = dynamic(() => import('@/components/export/ExportCourseButton'), { ssr: false })
@@ -24,6 +25,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
   const t = useTranslations('lesson')
   const tc = useTranslations('course')
   const router = useRouter()
+  const { success: showSuccess } = useToast()
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false)
 
@@ -88,7 +90,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
         v7
       </div>
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+      <header className="sticky top-14 md:top-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="container mx-auto px-4 py-4 max-w-4xl">
           {/* Back link + Add Material */}
           <div className="flex items-center justify-between mb-3">
@@ -281,7 +283,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
       {!isChatOpen && (
         <button
           onClick={() => setIsChatOpen(true)}
-          className="fixed bottom-20 md:bottom-6 right-4 z-50 bg-violet-600 text-white p-3 xs:p-4 rounded-full shadow-lg hover:bg-violet-700 transition-all hover:scale-105 flex items-center gap-2 min-h-[48px] min-w-[48px]"
+          className="fixed bottom-20 md:bottom-6 end-4 z-50 bg-violet-600 text-white p-3 xs:p-4 rounded-full shadow-lg hover:bg-violet-700 transition-all hover:scale-105 flex items-center gap-2 min-h-[48px] min-w-[48px]"
           style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
           aria-label={t('askAI')}
         >
@@ -309,6 +311,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
         courseTitle={generatedCourse?.title || course.title || ''}
         onMaterialAdded={() => {
           router.refresh()
+          showSuccess(tc('materialAdded'))
         }}
       />
     </div>

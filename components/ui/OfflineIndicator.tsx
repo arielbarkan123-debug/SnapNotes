@@ -39,7 +39,7 @@ export function OfflineIndicator() {
   // Show offline banner
   if (!isOnline) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-amber-500 text-white px-4 py-2 flex items-center justify-center gap-2 shadow-lg">
+      <div className="fixed bottom-0 md:bottom-0 left-0 right-0 z-50 bg-amber-500 text-white px-4 py-2 flex items-center justify-center gap-2 shadow-lg max-md:bottom-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom,0px))]">
         <WifiOff className="w-4 h-4" />
         <span className="text-sm font-medium">
           {t('offline')} {t('offlineDescription')}
@@ -51,7 +51,7 @@ export function OfflineIndicator() {
   // Show "reconnected" message
   if (showReconnected) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-green-500 text-white px-4 py-2 flex items-center justify-center gap-2 shadow-lg animate-fade-in">
+      <div className="fixed bottom-0 md:bottom-0 left-0 right-0 z-50 bg-green-500 text-white px-4 py-2 flex items-center justify-center gap-2 shadow-lg animate-fade-in max-md:bottom-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom,0px))]">
         <Wifi className="w-4 h-4" />
         <span className="text-sm font-medium">
           {t('backOnline')}

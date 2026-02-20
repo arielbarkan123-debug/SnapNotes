@@ -58,7 +58,8 @@ export function FractionNumberLine({
   language = 'en',
   initialStep,
 }: FractionNumberLineProps) {
-  const { fractions, min, max, denominator, showTickMarks = true, title } = data
+  const { min, max, denominator, showTickMarks = true, title } = data
+  const fractions = Array.isArray(data.fractions) ? data.fractions : []
 
   const stepDefs = useMemo(() => [
     { id: 'line', label: STEP_LABELS.line.en, labelHe: STEP_LABELS.line.he },
@@ -293,7 +294,7 @@ export function FractionNumberLine({
                       cy={lineY}
                       r={6}
                       fill={pointColor}
-                      stroke="white"
+                      className="stroke-white dark:stroke-gray-900"
                       strokeWidth={2}
                     />
                   </motion.g>

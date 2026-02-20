@@ -196,7 +196,7 @@ export function SlopeTriangle({
                   y1={gl.y1}
                   x2={gl.x2}
                   y2={gl.y2}
-                  stroke="#e5e7eb"
+                  className="stroke-gray-200 dark:stroke-gray-700"
                   strokeWidth={1}
                 />
               ))}
@@ -207,7 +207,7 @@ export function SlopeTriangle({
                 y1={toSvgY(0)}
                 x2={PADDING + plotW}
                 y2={toSvgY(0)}
-                stroke="#374151"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 variants={lineDrawVariants}
               />
@@ -217,7 +217,7 @@ export function SlopeTriangle({
                 y1={PADDING}
                 x2={toSvgX(0)}
                 y2={PADDING + plotH}
-                stroke="#374151"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 variants={lineDrawVariants}
               />
@@ -244,7 +244,7 @@ export function SlopeTriangle({
                 cy={toSvgY(point1.y)}
                 r={5}
                 fill={primaryColor}
-                stroke="white"
+                className="stroke-white dark:stroke-gray-900"
                 strokeWidth={2}
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
@@ -268,7 +268,7 @@ export function SlopeTriangle({
                 cy={toSvgY(point2.y)}
                 r={5}
                 fill={accentColor}
-                stroke="white"
+                className="stroke-white dark:stroke-gray-900"
                 strokeWidth={2}
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
@@ -381,7 +381,7 @@ export function SlopeTriangle({
                 width={8}
                 height={8}
                 fill="none"
-                stroke="#6b7280"
+                className="stroke-gray-500 dark:stroke-gray-400"
                 strokeWidth={1}
               />
             </motion.g>

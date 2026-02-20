@@ -346,7 +346,7 @@ export default function HomeworkResultsPage() {
     return (
       <div className="min-h-screen flex flex-col">
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+        <header className="sticky top-14 md:top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
           <div className="container mx-auto px-4 py-4 max-w-2xl">
             <div className="flex items-center gap-3">
               <Link
@@ -523,7 +523,7 @@ export default function HomeworkResultsPage() {
   return (
     <div className="min-h-screen bg-transparent">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+      <header className="sticky top-14 md:top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="container mx-auto px-4 py-4 max-w-2xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

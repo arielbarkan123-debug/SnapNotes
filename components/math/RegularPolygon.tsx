@@ -188,6 +188,7 @@ export function RegularPolygon({
   }, [vertices, cx, cy])
 
   // Interior angle arc path (at first vertex, between last side and first side)
+  // The arc must sweep through the interior of the polygon (toward the center).
   const interiorAngleArc = useMemo(() => {
     if (vertices.length < 2) return ''
     const v = vertices[0]
@@ -201,12 +202,26 @@ export function RegularPolygon({
     const endX = v.x + r * Math.cos(a2)
     const endY = v.y + r * Math.sin(a2)
 
-    let sweep = a2 - a1
-    if (sweep < 0) sweep += 2 * Math.PI
-    const largeArc = sweep > Math.PI ? 1 : 0
+    // Interior angles of regular polygons are always < 180, so largeArc = 0.
+    // Choose sweep direction so the arc passes through the interior (toward center).
+    // Test both sweep directions and pick the one whose midpoint is closer to center.
+    let diff = a2 - a1
+    if (diff < 0) diff += 2 * Math.PI
+    // sweep=1 (CCW) midpoint angle:
+    const midCCW = a1 + diff / 2
+    // sweep=0 (CW) midpoint angle:
+    const midCW = a1 - (2 * Math.PI - diff) / 2
+    const midCCWx = v.x + r * Math.cos(midCCW)
+    const midCCWy = v.y + r * Math.sin(midCCW)
+    const midCWx = v.x + r * Math.cos(midCW)
+    const midCWy = v.y + r * Math.sin(midCW)
+    const distCCW = Math.hypot(midCCWx - cx, midCCWy - cy)
+    const distCW = Math.hypot(midCWx - cx, midCWy - cy)
+    // The arc closer to center is the interior one
+    const sweepFlag = distCCW < distCW ? 1 : 0
 
-    return `M ${startX} ${startY} A ${r} ${r} 0 ${largeArc} 1 ${endX} ${endY}`
-  }, [vertices, n])
+    return `M ${startX} ${startY} A ${r} ${r} 0 0 ${sweepFlag} ${endX} ${endY}`
+  }, [vertices, n, cx, cy])
 
   const viewBox = `0 0 ${width} ${height}`
 
@@ -385,7 +400,7 @@ export function RegularPolygon({
                     y1={cy}
                     x2={vertices[0].x}
                     y2={vertices[0].y}
-                    stroke="#6b7280"
+                    className="stroke-gray-500 dark:stroke-gray-400"
                     strokeWidth={1}
                     strokeDasharray="4 2"
                     initial="hidden"
@@ -397,7 +412,7 @@ export function RegularPolygon({
                     y1={cy}
                     x2={vertices[1].x}
                     y2={vertices[1].y}
-                    stroke="#6b7280"
+                    className="stroke-gray-500 dark:stroke-gray-400"
                     strokeWidth={1}
                     strokeDasharray="4 2"
                     initial="hidden"
@@ -414,19 +429,30 @@ export function RegularPolygon({
                     animate="visible"
                     variants={lineDrawVariants}
                   />
-                  <motion.text
-                    x={cx}
-                    y={cy - 35}
-                    textAnchor="middle"
-                    fill="#f59e0b"
-                    fontSize={10}
-                    fontWeight={500}
-                    initial="hidden"
-                    animate="visible"
-                    variants={labelAppearVariants}
-                  >
-                    {centralAngle.toFixed(1)}°
-                  </motion.text>
+                  {/* Central angle label — positioned along the bisector of the central angle */}
+                  {(() => {
+                    const ca1 = Math.atan2(vertices[0].y - cy, vertices[0].x - cx)
+                    const ca2 = Math.atan2(vertices[1].y - cy, vertices[1].x - cx)
+                    let caDiff = ca2 - ca1
+                    if (caDiff < 0) caDiff += 2 * Math.PI
+                    const caMid = ca1 + caDiff / 2
+                    return (
+                      <motion.text
+                        x={cx + 35 * Math.cos(caMid)}
+                        y={cy + 35 * Math.sin(caMid)}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill="#f59e0b"
+                        fontSize={10}
+                        fontWeight={500}
+                        initial="hidden"
+                        animate="visible"
+                        variants={labelAppearVariants}
+                      >
+                        {centralAngle.toFixed(1)}°
+                      </motion.text>
+                    )
+                  })()}
                 </>
               )}
               {/* Interior angle */}
@@ -442,15 +468,32 @@ export function RegularPolygon({
                     variants={lineDrawVariants}
                   />
                   {(() => {
+                    // Position the interior angle label INSIDE the polygon.
+                    // The interior bisector direction is from vertex toward center.
                     const v = vertices[0]
-                    const dx = v.x - cx
-                    const dy = v.y - cy
-                    const len = Math.sqrt(dx * dx + dy * dy) || 1
+                    const prev = vertices[n - 1]
+                    const next = vertices[1]
+                    // Compute bisector of the two edges at this vertex
+                    const a1 = Math.atan2(prev.y - v.y, prev.x - v.x)
+                    const a2 = Math.atan2(next.y - v.y, next.x - v.x)
+                    let mid = (a1 + a2) / 2
+                    // Choose the bisector direction that points toward center
+                    const testX = v.x + Math.cos(mid)
+                    const testY = v.y + Math.sin(mid)
+                    const distToCenter = Math.hypot(testX - cx, testY - cy)
+                    const testX2 = v.x + Math.cos(mid + Math.PI)
+                    const testY2 = v.y + Math.sin(mid + Math.PI)
+                    const distToCenter2 = Math.hypot(testX2 - cx, testY2 - cy)
+                    if (distToCenter2 < distToCenter) {
+                      mid += Math.PI
+                    }
+                    const labelDist = 32
                     return (
                       <motion.text
-                        x={v.x + (dx / len) * 35}
-                        y={v.y + (dy / len) * 35}
+                        x={v.x + Math.cos(mid) * labelDist}
+                        y={v.y + Math.sin(mid) * labelDist}
                         textAnchor="middle"
+                        dominantBaseline="middle"
                         fill="#22c55e"
                         fontSize={10}
                         fontWeight={500}

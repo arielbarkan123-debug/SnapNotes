@@ -76,7 +76,13 @@ export function FractionCircle({
   language = 'en',
   initialStep,
 }: FractionCircleProps) {
-  const { numerator, denominator, showLabel, color, compareTo, title } = data
+  // Defensive defaults for AI-generated data
+  const numerator = data.numerator ?? 0
+  const denominator = data.denominator ?? 1
+  const showLabel = data.showLabel
+  const color = data.color
+  const compareTo = data.compareTo
+  const title = data.title
 
   const hasComparison = !!compareTo
 
@@ -122,10 +128,12 @@ export function FractionCircle({
   const compCy = mainCy
   const compRadius = radius
 
-  const sliceAngle = 360 / Math.max(denominator, 1)
+  const safeDenominator = denominator === 0 ? 1 : denominator
+  const sliceAngle = 360 / safeDenominator
 
   // Comparison slice angle
-  const compSliceAngle = compareTo ? 360 / Math.max(compareTo.denominator, 1) : 0
+  const compDenom = compareTo?.denominator ?? 1
+  const compSliceAngle = compareTo ? 360 / Math.max(compDenom, 1) : 0
 
   // ---------------------------------------------------------------------------
   // Render a single fraction circle
@@ -318,7 +326,7 @@ export function FractionCircle({
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.3 }}
                 >
-                  {numerator / denominator === (compareTo?.numerator ?? 0) / (compareTo?.denominator ?? 1) ? '=' : numerator / denominator > (compareTo?.numerator ?? 0) / (compareTo?.denominator ?? 1) ? '>' : '<'}
+                  {numerator / safeDenominator === (compareTo?.numerator ?? 0) / Math.max(compareTo?.denominator ?? 1, 1) ? '=' : numerator / safeDenominator > (compareTo?.numerator ?? 0) / Math.max(compareTo?.denominator ?? 1, 1) ? '>' : '<'}
                 </motion.text>
               )}
             </motion.g>

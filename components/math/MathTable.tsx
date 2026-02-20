@@ -17,7 +17,8 @@ interface MathTableProps {
  * Used for value tables, sign tables, and pattern tables
  */
 export function MathTable({ data, className = '', subject: _subject = 'math', complexity: _complexity = 'middle_school' }: MathTableProps) {
-  const { rows, title, caption } = data
+  const { title, caption } = data
+  const rows = Array.isArray(data.rows) ? data.rows : []
 
   if (!rows.length) return null
 
@@ -52,10 +53,11 @@ export function MathTable({ data, className = '', subject: _subject = 'math', co
                 ]
 
                 // Check if content contains LaTeX (has $ or \ or common math symbols)
+                const cellContent = cell.content ?? ''
                 const hasLatex =
-                  cell.content.includes('$') ||
-                  cell.content.includes('\\') ||
-                  /[√∫∑∏≤≥±×÷]/.test(cell.content)
+                  cellContent.includes('$') ||
+                  cellContent.includes('\\') ||
+                  /[√∫∑∏≤≥±×÷]/.test(cellContent)
 
                 return (
                   <CellTag
@@ -64,9 +66,9 @@ export function MathTable({ data, className = '', subject: _subject = 'math', co
                     style={cell.color ? { color: cell.color } : undefined}
                   >
                     {hasLatex ? (
-                      <MathRenderer math={cell.content.replace(/\$/g, '')} />
+                      <MathRenderer math={cellContent.replace(/\$/g, '')} />
                     ) : (
-                      <span className="text-sm">{cell.content}</span>
+                      <span className="text-sm">{cellContent}</span>
                     )}
                   </CellTag>
                 )

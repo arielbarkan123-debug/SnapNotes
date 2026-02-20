@@ -179,6 +179,12 @@ export interface AnswerQuestionResponse {
   isCorrect: boolean
   correctAnswer: string
   explanation: string | null
+  /** Evaluation score 0-100 (for short_answer/fill_blank) */
+  evaluationScore?: number
+  /** Feedback from the evaluator (for short_answer/fill_blank) */
+  evaluationFeedback?: string
+  /** Method used: 'numeric' | 'exact' | 'fuzzy' | 'ai' */
+  evaluationMethod?: string
   sessionProgress: {
     questionsAnswered: number
     questionsCorrect: number
@@ -231,6 +237,8 @@ export interface GenerateQuestionsRequest {
   /** Education level for age-appropriate question generation */
   educationLevel?: 'elementary' | 'middle_school' | 'high_school' | 'university' | 'graduate' | 'professional'
   depth?: 'surface' | 'standard' | 'deep' | 'exhaustive'
+  /** Language for generated questions */
+  language?: 'en' | 'he'
 }
 
 export interface GeneratedQuestion {

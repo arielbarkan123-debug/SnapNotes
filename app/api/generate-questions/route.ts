@@ -5,6 +5,8 @@ import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum
 import type { StudySystem } from '@/lib/curriculum/types'
 import { getAnthropicApiKey } from '@/lib/env'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { classifyTopicType, inferDifficultyFromTopic, resolveEffectiveLanguageLevel } from '@/lib/ai/content-classifier'
+import { isQuestionQualityAcceptable } from '@/lib/srs'
 
 // Allow 90 seconds for question generation (Claude API with curriculum context)
 export const maxDuration = 90
@@ -82,7 +84,7 @@ export async function POST(request: NextRequest) {
     let curriculumSection = ''
     const { data: userProfile } = await supabase
       .from('user_learning_profile')
-      .select('study_system, subjects, subject_levels, exam_format, language')
+      .select('study_system, grade, subjects, subject_levels, exam_format, language')
       .eq('user_id', user.id)
       .single()
 
@@ -96,6 +98,7 @@ export async function POST(request: NextRequest) {
           subjects: userProfile.subjects || [],
           subjectLevels: userProfile.subject_levels || {},
           examFormat: userProfile.exam_format as 'match_real' | 'inspired_by' | undefined,
+          grade: userProfile.grade || undefined,
         },
         contentSample: lessonContent || courseContext || topic, // Use content to detect subject
         purpose: 'practice',
@@ -114,9 +117,59 @@ Generate ALL content in Hebrew (עברית).
 - Use proper Hebrew educational terminology
 ` : ''
 
+    // Classify topic type and language level for content-appropriate questions
+    const topicContent = topic || lessonContent || courseContext || ''
+    const topicType = classifyTopicType(topicContent)
+    const contentDifficulty = inferDifficultyFromTopic(topicContent)
+
+    // Safe grade parsing: handle "K", "Pre-K", non-numeric grades, and numeric grades
+    let profileLevel: string | undefined
+    if (userProfile?.grade) {
+      const gradeStr = userProfile.grade.toString().trim().toLowerCase()
+      if (gradeStr === 'k' || gradeStr === 'pre-k' || gradeStr === 'kindergarten') {
+        profileLevel = 'elementary'
+      } else {
+        const gradeNum = parseInt(gradeStr, 10)
+        if (!isNaN(gradeNum)) {
+          profileLevel = gradeNum <= 6 ? 'elementary' : gradeNum <= 9 ? 'middle_school' : 'high_school'
+        }
+        // If parseInt fails (e.g., "Reception", "Year 1"), leave undefined → defaults to middle in resolver
+      }
+    }
+
+    const languageLevel = resolveEffectiveLanguageLevel(profileLevel, contentDifficulty)
+
+    // Build topic-type-specific instructions
+    let topicTypeInstructions = ''
+    if (topicType === 'computational') {
+      topicTypeInstructions = `
+## Question Format — CRITICAL
+GENERATE ACTUAL MATH PROBLEMS, NOT VOCABULARY QUESTIONS.
+GOOD: "Solve: What is 25% of 80?", "Convert 3/4 to a percentage", "Calculate: 2/3 + 5/6"
+BAD: "What does comparing mean?", "Explain the concept of fractions"
+Every question MUST require computation or problem-solving to answer.
+`
+    } else if (topicType === 'mixed') {
+      topicTypeInstructions = `
+## Question Format
+Mix computational problems (at least 50%) with understanding questions.
+For math content: "Solve: ...", "Calculate: ...", "Convert: ..."
+For conceptual content: "Explain ...", "What is ...", "Why does ..."
+`
+    }
+
+    // Build language level instruction
+    const languageLevelInstruction = `
+## Language Complexity
+Content difficulty: ${contentDifficulty}/5. Use ${languageLevel.level}-appropriate language.
+${languageLevel.vocabularyInstructions}
+`
+
     // Build prompt for question generation with curriculum awareness
     const systemPrompt = `You are an educational AI that generates practice questions. Generate questions that test understanding, not just memorization.
 ${hebrewInstruction}
+${topicTypeInstructions}
+${languageLevelInstruction}
 ${curriculumSection ? `## Curriculum Context
 ${curriculumSection}
 
@@ -184,7 +237,7 @@ Return JSON in this exact format:
 
     const questions: GeneratedQuestion[] = parsed.questions || []
 
-    // Validate questions
+    // Validate questions (structural + quality)
     const validQuestions = questions.filter(q =>
       q.question &&
       q.options &&
@@ -192,7 +245,8 @@ Return JSON in this exact format:
       q.options.length >= 2 &&
       typeof q.correct_answer === 'number' &&
       q.correct_answer >= 0 &&
-      q.correct_answer < q.options.length
+      q.correct_answer < q.options.length &&
+      isQuestionQualityAcceptable(q.question)
     )
 
     return NextResponse.json({

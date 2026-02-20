@@ -311,7 +311,12 @@ export function FBD({
   language = 'en',
   initialStep,
 }: FBDProps) {
-  const { object, forces, title, showForceMagnitudes = false, stepConfig: dataStepConfig } = data
+  // Defensive defaults for AI-generated data
+  const object = data.object ?? { type: 'block' as const }
+  const forces = Array.isArray(data.forces) ? data.forces : []
+  const title = data.title
+  const showForceMagnitudes = data.showForceMagnitudes ?? false
+  const dataStepConfig = data.stepConfig
 
   // Determine object center in SVG coords
   const cx = width / 2

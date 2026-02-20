@@ -207,8 +207,7 @@ export function InscribedAngleTheorem({
                 cy={cy}
                 r={r}
                 fill="none"
-                stroke="#374151"
-                className="dark:stroke-gray-400"
+                className="stroke-gray-700 dark:stroke-gray-400"
                 strokeWidth={diagram.lineWeight}
                 initial="hidden"
                 animate="visible"

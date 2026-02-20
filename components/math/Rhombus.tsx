@@ -329,7 +329,7 @@ export function Rhombus({
               <motion.path
                 d={`M ${cx + 8} ${cy} L ${cx + 8} ${cy - 8} L ${cx} ${cy - 8}`}
                 fill="none"
-                stroke="#6b7280"
+                className="stroke-gray-500 dark:stroke-gray-400"
                 strokeWidth={diagram.lineWeight * 0.5}
                 initial="hidden"
                 animate="visible"

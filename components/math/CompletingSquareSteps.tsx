@@ -314,7 +314,7 @@ export function CompletingSquareSteps({
             >
               <InlineMath>{normalizeToLatex(vertexForm)}</InlineMath>
             </motion.div>
-            {solutions.length > 0 && (
+            {solutions && solutions.length > 0 && (
               <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
                 {language === 'he'
                   ? (solutions.length > 1 ? '\u05E4\u05EA\u05E8\u05D5\u05E0\u05D5\u05EA:' : '\u05E4\u05EA\u05E8\u05D5\u05DF:')

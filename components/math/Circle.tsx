@@ -448,6 +448,17 @@ export function Circle({
                 const vertex = transform(inscribedAngle.vertex.x, inscribedAngle.vertex.y)
                 const arcStart = pointOnCircle(inscribedAngle.arc.start)
                 const arcEnd = pointOnCircle(inscribedAngle.arc.end)
+                // Compute label position inside the inscribed angle.
+                // The bisector direction from vertex toward the midpoint of the two
+                // arc endpoints points into the interior of the inscribed angle.
+                const midArcX = (arcStart.x + arcEnd.x) / 2
+                const midArcY = (arcStart.y + arcEnd.y) / 2
+                const toMidDx = midArcX - vertex.x
+                const toMidDy = midArcY - vertex.y
+                const toMidLen = Math.hypot(toMidDx, toMidDy) || 1
+                const inscLabelDist = 22
+                const inscLabelX = vertex.x + (toMidDx / toMidLen) * inscLabelDist
+                const inscLabelY = vertex.y + (toMidDy / toMidLen) * inscLabelDist
                 return (
                   <motion.g
                     initial={{ opacity: 0 }}
@@ -477,8 +488,10 @@ export function Circle({
                     <circle cx={arcEnd.x} cy={arcEnd.y} r={4} fill="#10B981" />
                     {inscribedAngle.label && (
                       <motion.text
-                        x={vertex.x - 15}
-                        y={vertex.y + 15}
+                        x={inscLabelX}
+                        y={inscLabelY}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
                         style={{ fill: '#10B981', fontSize: 12 }}
                         initial="hidden"
                         animate="visible"

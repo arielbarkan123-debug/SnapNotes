@@ -1,14 +1,14 @@
 /**
  * Past Exam Templates API
- * GET: List user's past exam templates
- * POST: Upload a new past exam template
+ * GET: List user's past exam templates (optionally filtered by subject)
+ * POST: Upload a new past exam template for a specific subject
  */
 
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { PastExamTemplate, PastExamTemplatesResponse, PastExamUploadResponse, PastExamFileType } from '@/types/past-exam'
 
-const MAX_TEMPLATES = 3
+const MAX_TEMPLATES_PER_SUBJECT = 3
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024 // 20MB
 
 // Allowed MIME types
@@ -26,9 +26,11 @@ const ALLOWED_MIME_TYPES: Record<string, PastExamFileType> = {
 
 /**
  * GET /api/past-exams
- * List all past exam templates for the authenticated user
+ * List past exam templates for the authenticated user
+ * Query params:
+ *   - subjectId: Filter templates by subject (optional)
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
 
@@ -45,12 +47,23 @@ export async function GET() {
       )
     }
 
-    // Fetch templates
-    const { data: templates, error: fetchError } = await supabase
+    // Get optional subject filter from query params
+    const { searchParams } = new URL(request.url)
+    const subjectId = searchParams.get('subjectId')
+
+    // Build query
+    let query = supabase
       .from('past_exam_templates')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
+
+    // Apply subject filter if provided
+    if (subjectId) {
+      query = query.eq('subject_id', subjectId)
+    }
+
+    const { data: templates, error: fetchError } = await query
 
     if (fetchError) {
       console.error('Error fetching past exam templates:', fetchError)
@@ -60,11 +73,19 @@ export async function GET() {
       )
     }
 
+    // Calculate subject-specific count if filtering by subject
+    let subjectCount: number | undefined
+    if (subjectId) {
+      subjectCount = templates?.length || 0
+    }
+
     const response: PastExamTemplatesResponse = {
       success: true,
       templates: templates as PastExamTemplate[],
       count: templates?.length || 0,
-      limit: MAX_TEMPLATES,
+      limit: MAX_TEMPLATES_PER_SUBJECT,
+      subjectCount,
+      filteredSubject: subjectId || undefined,
     }
 
     return NextResponse.json(response)
@@ -80,6 +101,11 @@ export async function GET() {
 /**
  * POST /api/past-exams
  * Upload a new past exam template
+ * Form data:
+ *   - file: The exam file (required)
+ *   - title: Template title (optional, defaults to filename)
+ *   - description: Template description (optional)
+ *   - subjectId: Subject identifier e.g., "biology-hl" (required)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -98,28 +124,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check template limit (initial check - we'll also handle race condition at insert time)
-    const { count, error: countError } = await supabase
-      .from('past_exam_templates')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-
-    if (countError) {
-      console.error('Error counting templates:', countError)
-      return NextResponse.json(
-        { success: false, error: 'Failed to check template limit' },
-        { status: 500 }
-      )
-    }
-
-    // Early rejection if already at limit (but race condition still possible)
-    if ((count || 0) >= MAX_TEMPLATES) {
-      return NextResponse.json(
-        { success: false, error: `Maximum ${MAX_TEMPLATES} templates allowed` },
-        { status: 400 }
-      )
-    }
-
     // Parse form data with error handling
     let formData: FormData
     try {
@@ -134,10 +138,41 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null
     const title = (formData.get('title') as string) || ''
     const description = (formData.get('description') as string) || null
+    const subjectId = (formData.get('subjectId') as string) || null
 
     if (!file) {
       return NextResponse.json(
         { success: false, error: 'No file provided' },
+        { status: 400 }
+      )
+    }
+
+    if (!subjectId) {
+      return NextResponse.json(
+        { success: false, error: 'Subject is required' },
+        { status: 400 }
+      )
+    }
+
+    // Check per-subject template limit
+    const { count, error: countError } = await supabase
+      .from('past_exam_templates')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('subject_id', subjectId)
+
+    if (countError) {
+      console.error('Error counting templates:', countError)
+      return NextResponse.json(
+        { success: false, error: 'Failed to check template limit' },
+        { status: 500 }
+      )
+    }
+
+    // Early rejection if already at limit for this subject
+    if ((count || 0) >= MAX_TEMPLATES_PER_SUBJECT) {
+      return NextResponse.json(
+        { success: false, error: `Maximum ${MAX_TEMPLATES_PER_SUBJECT} templates allowed per subject` },
         { status: 400 }
       )
     }
@@ -200,6 +235,7 @@ export async function POST(request: NextRequest) {
     // Create database record
     const templateData = {
       user_id: user.id,
+      subject_id: subjectId,
       title: title || file.name,
       description,
       file_url: urlData.signedUrl,
@@ -225,10 +261,11 @@ export async function POST(request: NextRequest) {
         .from('past_exam_templates')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
+        .eq('subject_id', subjectId)
 
-      if ((currentCount || 0) >= MAX_TEMPLATES) {
+      if ((currentCount || 0) >= MAX_TEMPLATES_PER_SUBJECT) {
         return NextResponse.json(
-          { success: false, error: `Maximum ${MAX_TEMPLATES} templates allowed. Please delete an existing template first.` },
+          { success: false, error: `Maximum ${MAX_TEMPLATES_PER_SUBJECT} templates allowed per subject. Please delete an existing template first.` },
           { status: 400 }
         )
       }

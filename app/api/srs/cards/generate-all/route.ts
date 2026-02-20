@@ -37,6 +37,15 @@ export async function POST(): Promise<NextResponse> {
       })
     }
 
+    // Get user's language preference for card generation
+    const { data: userProfile } = await supabase
+      .from('user_learning_profile')
+      .select('language')
+      .eq('user_id', user.id)
+      .single()
+
+    const language = (userProfile?.language === 'he' ? 'he' : 'en') as 'en' | 'he'
+
     let totalCreated = 0
     let coursesProcessed = 0
 
@@ -66,9 +75,10 @@ export async function POST(): Promise<NextResponse> {
       })
 
       // Generate cards from course content
-      const generatedCards = generateCardsFromCourse(
+      const generatedCards = await generateCardsFromCourse(
         course.generated_course,
-        course.id
+        course.id,
+        { language }
       )
 
       console.log(`Generated ${generatedCards.length} cards for course ${course.id}`)

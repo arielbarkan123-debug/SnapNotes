@@ -1,0 +1,367 @@
+/**
+ * Tests for WorkTogetherModal component
+ */
+
+import React from 'react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+
+// Mock fetch
+global.fetch = jest.fn()
+
+// Mock next-intl
+jest.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => {
+    const translations: Record<string, string> = {
+      workTogether: 'Work Together',
+      workTogetherDesc: 'Get step-by-step help',
+      workTogetherWith: 'Work together on this question',
+      closeWorkTogether: 'Close',
+      askTutor: 'Ask your tutor...',
+      tutorThinking: 'Thinking...',
+      sendMessage: 'Send',
+      viewDiagram: 'View Diagram',
+      getHint: 'Get a hint',
+      showSolution: 'Show solution',
+      understandBetter: 'Help me understand',
+      expand: 'Expand',
+    }
+    return translations[key] || key
+  },
+  useLocale: () => 'en',
+}))
+
+// Mock the diagram components
+jest.mock('@/components/homework/diagram/DiagramRenderer', () => {
+  return function MockDiagramRenderer() {
+    return <div data-testid="diagram-renderer">Diagram</div>
+  }
+})
+
+jest.mock('@/components/diagrams/FullScreenDiagramView', () => {
+  return function MockFullScreenDiagramView({ isOpen }: { isOpen: boolean }) {
+    return isOpen ? <div data-testid="fullscreen-diagram">Fullscreen</div> : null
+  }
+})
+
+jest.mock('@/components/homework/diagram', () => ({
+  getLatestDiagram: jest.fn().mockReturnValue(null),
+}))
+
+// Import after mocking
+import WorkTogetherModal from '@/components/practice/WorkTogetherModal'
+
+const renderComponent = (ui: React.ReactElement) => render(ui)
+
+const mockQuestion = {
+  question: 'What is 2 + 2?',
+  correctAnswer: '4',
+  explanation: 'Basic addition',
+  courseId: 'course-1',
+  lessonIndex: 0,
+  lessonTitle: 'Math Basics',
+  cardType: 'multiple_choice',
+}
+
+describe('WorkTogetherModal', () => {
+  const defaultProps = {
+    isOpen: true,
+    onClose: jest.fn(),
+    question: mockQuestion,
+    userAnswer: '3',
+    wasCorrect: false,
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        response: {
+          message: 'Let me help you understand this!',
+          pedagogicalIntent: 'guide_next_step',
+        },
+      }),
+    })
+  })
+
+  describe('Rendering', () => {
+    it('renders nothing when isOpen is false', () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} isOpen={false} />)
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('renders dialog when isOpen is true', () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+
+    it('renders the Work Together header', () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      expect(screen.getByText('Work Together')).toBeInTheDocument()
+    })
+
+    it('renders the question', () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      expect(screen.getByText('What is 2 + 2?')).toBeInTheDocument()
+    })
+
+    it('shows user answer when wasCorrect is false', () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      expect(screen.getByText(/Your answer: 3/)).toBeInTheDocument()
+    })
+
+    it('renders input field', () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      expect(screen.getByPlaceholderText('Ask your tutor...')).toBeInTheDocument()
+    })
+
+    it('renders hint buttons', () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      expect(screen.getByText('Concept')).toBeInTheDocument()
+      expect(screen.getByText('Strategy')).toBeInTheDocument()
+      expect(screen.getByText('Example')).toBeInTheDocument()
+      expect(screen.getByText('Guide')).toBeInTheDocument()
+      expect(screen.getByText('Answer')).toBeInTheDocument()
+    })
+
+    it('shows initial tutor message', async () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      await waitFor(() => {
+        expect(screen.getByText(/Let's work through this together/)).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('User Interactions', () => {
+    it('calls onClose when close button is clicked', () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      const closeButton = screen.getByLabelText('Close')
+      fireEvent.click(closeButton)
+      expect(defaultProps.onClose).toHaveBeenCalledTimes(1)
+    })
+
+    it('calls onClose when clicking backdrop', () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      const backdrop = screen.getByRole('dialog').parentElement
+      if (backdrop) {
+        fireEvent.click(backdrop)
+        expect(defaultProps.onClose).toHaveBeenCalled()
+      }
+    })
+
+    it('allows typing in the input field', () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      const input = screen.getByPlaceholderText('Ask your tutor...')
+      fireEvent.change(input, { target: { value: 'I need help' } })
+      expect(input).toHaveValue('I need help')
+    })
+
+    it('sends message when form is submitted', async () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      const input = screen.getByPlaceholderText('Ask your tutor...')
+
+      fireEvent.change(input, { target: { value: 'Can you help?' } })
+      fireEvent.submit(input.closest('form')!)
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/practice/tutor',
+          expect.objectContaining({
+            method: 'POST',
+          })
+        )
+      })
+    })
+
+    it('sends message when Enter is pressed', async () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      const input = screen.getByPlaceholderText('Ask your tutor...')
+
+      fireEvent.change(input, { target: { value: 'Help me' } })
+      fireEvent.keyDown(input, { key: 'Enter', shiftKey: false })
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalled()
+      })
+    })
+
+    it('does not send message when Shift+Enter is pressed', () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      const input = screen.getByPlaceholderText('Ask your tutor...')
+
+      fireEvent.change(input, { target: { value: 'Help me' } })
+      fireEvent.keyDown(input, { key: 'Enter', shiftKey: true })
+
+      expect(global.fetch).not.toHaveBeenCalled()
+    })
+
+    it('clears input after sending message', async () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      const input = screen.getByPlaceholderText('Ask your tutor...')
+
+      fireEvent.change(input, { target: { value: 'Can you help?' } })
+      fireEvent.submit(input.closest('form')!)
+
+      await waitFor(() => {
+        expect(input).toHaveValue('')
+      })
+    })
+  })
+
+  describe('Hint Buttons', () => {
+    it('requests hint when hint button is clicked', async () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+
+      const conceptButton = screen.getByText('Concept')
+      fireEvent.click(conceptButton)
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/practice/tutor',
+          expect.objectContaining({
+            body: expect.stringContaining('"hintLevel":1'),
+          })
+        )
+      })
+    })
+
+    it('disables hint buttons while loading', async () => {
+      ;(global.fetch as jest.Mock).mockImplementation(
+        () => new Promise((resolve) => setTimeout(resolve, 100))
+      )
+
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+
+      const conceptText = screen.getByText('Concept')
+      const conceptButton = conceptText.closest('button')!
+      fireEvent.click(conceptButton)
+
+      // Buttons should be disabled while loading
+      await waitFor(() => {
+        expect(conceptButton).toBeDisabled()
+      })
+    })
+  })
+
+  describe('Error Handling', () => {
+    it('shows error message when fetch fails', async () => {
+      // Use 'Server error' instead of 'Network error' to avoid triggering retry logic
+      // (retry logic is triggered when error message includes 'fetch' or 'network')
+      ;(global.fetch as jest.Mock).mockRejectedValue(new Error('Server error'))
+
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+
+      // Wait for initial render
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Ask your tutor...')).toBeInTheDocument()
+      })
+
+      const input = screen.getByPlaceholderText('Ask your tutor...')
+
+      await act(async () => {
+        fireEvent.change(input, { target: { value: 'Help' } })
+        fireEvent.submit(input.closest('form')!)
+      })
+
+      // First verify fetch was actually called
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalled()
+      })
+
+      // Then wait for the error message with sufficient time
+      await waitFor(
+        () => {
+          // Check for error in either the alert banner or the conversation
+          const errorMessages = screen.queryAllByText(/something went wrong/i)
+          expect(errorMessages.length).toBeGreaterThan(0)
+        },
+        { timeout: 5000 }
+      )
+    })
+  })
+
+  describe('RTL Support', () => {
+    it('sets dir attribute to ltr for English', () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      const dialog = screen.getByRole('dialog')
+      expect(dialog).toHaveAttribute('dir', 'ltr')
+    })
+  })
+
+  describe('Conversation Flow', () => {
+    it('adds user message to conversation', async () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      const input = screen.getByPlaceholderText('Ask your tutor...')
+
+      fireEvent.change(input, { target: { value: 'My question' } })
+      fireEvent.submit(input.closest('form')!)
+
+      await waitFor(() => {
+        expect(screen.getByText('My question')).toBeInTheDocument()
+      })
+    })
+
+    it('adds tutor response to conversation', async () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      const input = screen.getByPlaceholderText('Ask your tutor...')
+
+      fireEvent.change(input, { target: { value: 'Help me' } })
+      fireEvent.submit(input.closest('form')!)
+
+      await waitFor(() => {
+        expect(screen.getByText('Let me help you understand this!')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Accessibility', () => {
+    it('has proper aria-modal attribute', () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true')
+    })
+
+    it('has proper aria-labelledby attribute', () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      expect(screen.getByRole('dialog')).toHaveAttribute('aria-labelledby', 'work-together-title')
+    })
+
+    it('has proper aria-describedby attribute', () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      expect(screen.getByRole('dialog')).toHaveAttribute('aria-describedby', 'work-together-question')
+    })
+
+    it('has a log role for conversation', () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      expect(screen.getByRole('log')).toBeInTheDocument()
+    })
+
+    it('has hint buttons with proper role group', () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      expect(screen.getByRole('group', { name: /hint levels/i })).toBeInTheDocument()
+    })
+
+    it('has alert role for error messages', async () => {
+      ;(global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'))
+
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      const input = screen.getByPlaceholderText('Ask your tutor...')
+
+      fireEvent.change(input, { target: { value: 'Help' } })
+      fireEvent.submit(input.closest('form')!)
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toBeInTheDocument()
+      })
+    })
+
+    it('focuses input on open', async () => {
+      renderComponent(<WorkTogetherModal {...defaultProps} />)
+      const input = screen.getByPlaceholderText('Ask your tutor...')
+
+      await waitFor(() => {
+        expect(document.activeElement).toBe(input)
+      }, { timeout: 200 })
+    })
+  })
+})

@@ -281,7 +281,7 @@ export function TapeDiagramRatio({
                 y1={tape1Y}
                 x2={padding.left + totalUnits * unitWidth + 10}
                 y2={tape2Y + tapeHeight}
-                stroke="#6b7280"
+                className="stroke-gray-500 dark:stroke-gray-400"
                 strokeWidth={1.5}
                 initial="hidden"
                 animate="visible"
@@ -292,7 +292,7 @@ export function TapeDiagramRatio({
                 y1={tape1Y}
                 x2={padding.left + totalUnits * unitWidth + 10}
                 y2={tape1Y}
-                stroke="#6b7280"
+                className="stroke-gray-500 dark:stroke-gray-400"
                 strokeWidth={1.5}
                 initial="hidden"
                 animate="visible"
@@ -303,7 +303,7 @@ export function TapeDiagramRatio({
                 y1={tape2Y + tapeHeight}
                 x2={padding.left + totalUnits * unitWidth + 10}
                 y2={tape2Y + tapeHeight}
-                stroke="#6b7280"
+                className="stroke-gray-500 dark:stroke-gray-400"
                 strokeWidth={1.5}
                 initial="hidden"
                 animate="visible"
@@ -407,7 +407,7 @@ export function TapeDiagramRatio({
                   x={width / 2}
                   y={height - 8}
                   textAnchor="middle"
-                  fill="#6b7280"
+                  className="fill-gray-500 dark:fill-gray-400"
                   fontSize={11}
                   initial="hidden"
                   animate="visible"

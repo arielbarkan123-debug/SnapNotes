@@ -253,25 +253,32 @@ export function TriangleCongruence({
   language = 'en',
   initialStep,
 }: TriangleCongruenceProps) {
-  const {
-    triangle1,
-    triangle2,
-    criterion,
-    correspondingParts,
-    showCongruenceMarks = true,
-    title,
-  } = data
+  // Defensive defaults for AI-generated data
+  const defaultTriangle = { vertices: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0.5, y: 1 }], sides: [0, 0, 0], angles: [60, 60, 60], labels: ['A', 'B', 'C'] }
+  const triangle1 = data.triangle1 ?? defaultTriangle
+  const triangle2 = data.triangle2 ?? defaultTriangle
+  const criterion = data.criterion ?? 'SSS'
+  const correspondingParts = Array.isArray(data.correspondingParts) ? data.correspondingParts : []
+  const showCongruenceMarks = data.showCongruenceMarks ?? true
+  const title = data.title
+  const t1Vertices = Array.isArray(triangle1.vertices) && triangle1.vertices.length >= 3 ? triangle1.vertices : defaultTriangle.vertices
+  const t2Vertices = Array.isArray(triangle2.vertices) && triangle2.vertices.length >= 3 ? triangle2.vertices : defaultTriangle.vertices
+  const t1Sides = Array.isArray(triangle1.sides) ? triangle1.sides : [0, 0, 0]
+  const t2Sides = Array.isArray(triangle2.sides) ? triangle2.sides : [0, 0, 0]
+  const t1Angles = Array.isArray(triangle1.angles) ? triangle1.angles : [60, 60, 60]
+  const t2Angles = Array.isArray(triangle2.angles) ? triangle2.angles : [60, 60, 60]
+
 
   // Fit triangles into left/right halves of the viewBox
   const gap = 20
   const halfW = (width - gap) / 2
   const verts1 = useMemo(
-    () => fitTriangle(triangle1.vertices, 0, 30, halfW, height - 80),
-    [triangle1.vertices, halfW, height]
+    () => fitTriangle(t1Vertices, 0, 30, halfW, height - 80),
+    [t1Vertices, halfW, height]
   )
   const verts2 = useMemo(
-    () => fitTriangle(triangle2.vertices, halfW + gap, 30, halfW, height - 80),
-    [triangle2.vertices, halfW, gap, height]
+    () => fitTriangle(t2Vertices, halfW + gap, 30, halfW, height - 80),
+    [t2Vertices, halfW, gap, height]
   )
 
   const centroid1 = useMemo(() => centroid(verts1), [verts1])
@@ -478,7 +485,7 @@ export function TriangleCongruence({
                     animate="visible"
                     variants={labelAppearVariants}
                   >
-                    {triangle1.sides[i]}
+                    {t1Sides[i]}
                   </motion.text>
                 )
               })}
@@ -510,7 +517,7 @@ export function TriangleCongruence({
                       animate="visible"
                       variants={labelAppearVariants}
                     >
-                      {triangle1.angles[i]}°
+                      {t1Angles[i]}°
                     </motion.text>
                   </motion.g>
                 )
@@ -535,7 +542,7 @@ export function TriangleCongruence({
                     animate="visible"
                     variants={labelAppearVariants}
                   >
-                    {triangle2.sides[i]}
+                    {t2Sides[i]}
                   </motion.text>
                 )
               })}
@@ -567,7 +574,7 @@ export function TriangleCongruence({
                       animate="visible"
                       variants={labelAppearVariants}
                     >
-                      {triangle2.angles[i]}°
+                      {t2Angles[i]}°
                     </motion.text>
                   </motion.g>
                 )

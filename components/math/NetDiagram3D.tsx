@@ -277,7 +277,7 @@ export function NetDiagram3D({
                 y={svgHeight - 20}
                 textAnchor="middle"
                 fontSize={13}
-                fill="#6b7280"
+                className="fill-gray-500 dark:fill-gray-400"
               >
                 {language === 'he' ? 'גוף תלת-ממדי' : '3D Shape'}
               </text>

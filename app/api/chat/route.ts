@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     let curriculumSection = ''
     const { data: userProfile } = await supabase
       .from('user_learning_profile')
-      .select('study_system, subjects, subject_levels, education_level, language')
+      .select('study_system, grade, subjects, subject_levels, education_level, language')
       .eq('user_id', user.id)
       .maybeSingle()
 
@@ -110,7 +110,8 @@ export async function POST(request: NextRequest) {
       const curriculumContext = await buildChatContext(
         userProfile.study_system as StudySystem,
         userProfile.subjects || [],
-        courseContext // Use course content to detect subject
+        courseContext, // Use course content to detect subject
+        userProfile.grade || undefined
       )
       curriculumSection = formatContextForPrompt(curriculumContext)
     }
@@ -167,7 +168,7 @@ Use this curriculum context to:
 ${courseContext}
 
 ` : ''}## Explanation Style
-Education Level: ${educationLevel}
+Education Level: ${educationLevel}${userProfile?.grade ? `\nStudent Grade: ${userProfile.grade}` : ''}
 ${depthGuidance[educationLevel] || depthGuidance.high_school}
 
 ## Rules:

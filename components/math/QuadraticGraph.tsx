@@ -61,22 +61,27 @@ export function QuadraticGraph({
   language = 'en',
   initialStep,
 }: QuadraticGraphProps) {
-  const { a, b, c, expression, title } = data
+  // Defensive defaults for AI-generated data
+  const a = data.a ?? 1
+  const b = data.b ?? 0
+  const c = data.c ?? 0
+  const { expression, title } = data
 
-  // Calculate vertex
+  // Calculate vertex (guard against a=0)
+  const safeA = a === 0 ? 1 : a
   const vertex = data.vertex ?? {
-    x: -b / (2 * a),
-    y: a * (-b / (2 * a)) ** 2 + b * (-b / (2 * a)) + c,
+    x: -b / (2 * safeA),
+    y: safeA * (-b / (2 * safeA)) ** 2 + b * (-b / (2 * safeA)) + c,
   }
   const axisOfSymmetry = data.axisOfSymmetry ?? vertex.x
 
   // Calculate roots using quadratic formula
-  const discriminant = b * b - 4 * a * c
+  const discriminant = b * b - 4 * safeA * c
   const roots = data.roots ?? (
     discriminant >= 0
       ? discriminant === 0
-        ? [-b / (2 * a)]
-        : [(-b - Math.sqrt(discriminant)) / (2 * a), (-b + Math.sqrt(discriminant)) / (2 * a)]
+        ? [-b / (2 * safeA)]
+        : [(-b - Math.sqrt(discriminant)) / (2 * safeA), (-b + Math.sqrt(discriminant)) / (2 * safeA)]
       : []
   )
 
@@ -327,7 +332,7 @@ export function QuadraticGraph({
                 cy={toSvgY(vertex.y)}
                 r={6}
                 fill={diagram.colors.primary}
-                stroke="white"
+                className="stroke-white dark:stroke-gray-900"
                 strokeWidth={2}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -420,7 +425,7 @@ export function QuadraticGraph({
                     cy={toSvgY(0)}
                     r={5}
                     fill={diagram.colors.accent}
-                    stroke="white"
+                    className="stroke-white dark:stroke-gray-900"
                     strokeWidth={2}
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}

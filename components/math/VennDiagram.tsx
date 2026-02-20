@@ -183,7 +183,7 @@ export function VennDiagram({
             width={svgWidth - 20}
             height={svgHeight - 20}
             fill="none"
-            stroke="#9ca3af"
+            className="stroke-gray-400 dark:stroke-gray-500"
             strokeWidth={1}
             strokeDasharray="6 3"
             rx={8}
@@ -341,7 +341,7 @@ export function VennDiagram({
             textAnchor="end"
             fontSize={13}
             fontWeight={600}
-            fill="#6b7280"
+            className="fill-gray-500 dark:fill-gray-400"
           >
             U
           </text>

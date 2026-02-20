@@ -152,7 +152,15 @@ export function PolynomialOperations({
   subject = 'math',
   complexity = 'middle_school',
 }: PolynomialOperationsProps) {
-  const { polynomial1: _polynomial1, polynomial2: _polynomial2, operation, result, terms1, terms2, resultTerms, variable = 'x', steps, title } = data
+  // Defensive defaults for AI-generated data
+  const operation = data.operation ?? 'add'
+  const result = data.result ?? ''
+  const terms1 = Array.isArray(data.terms1) ? data.terms1 : []
+  const terms2 = Array.isArray(data.terms2) ? data.terms2 : []
+  const resultTerms = Array.isArray(data.resultTerms) ? data.resultTerms : []
+  const variable = data.variable ?? 'x'
+  const steps = Array.isArray(data.steps) ? data.steps : []
+  const title = data.title
   const reducedMotion = prefersReducedMotion()
   void animationDuration // reserved for future animation customization
 

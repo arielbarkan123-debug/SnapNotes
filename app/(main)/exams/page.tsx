@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { useExams, useCourses, EXAMS_CACHE_KEY } from '@/hooks'
+import { usePastExamTemplates } from '@/hooks/usePastExamTemplates'
 import { useSWRConfig } from 'swr'
 
 export default function ExamsPage() {
@@ -14,6 +16,7 @@ export default function ExamsPage() {
   // SWR hooks for data fetching with caching
   const { exams, isLoading: examsLoading, error: examsError } = useExams()
   const { courses, isLoading: coursesLoading, error: coursesError } = useCourses()
+  const { count: templateCount, isLoading: templatesLoading } = usePastExamTemplates()
 
   // Local state for UI
   const [showCreate, setShowCreate] = useState(false)
@@ -261,6 +264,40 @@ export default function ExamsPage() {
                   <span>5 {t('minLabel')}</span>
                   <span>120 {t('minLabel')}</span>
                 </div>
+              </div>
+
+              {/* Past Exam Templates Section */}
+              <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
+                      {t('pastExamTemplates.title')}
+                    </span>
+                  </div>
+                  {templatesLoading ? (
+                    <span className="text-xs text-gray-400">...</span>
+                  ) : templateCount > 0 ? (
+                    <Link
+                      href="/settings/past-exams"
+                      className="text-xs text-violet-600 dark:text-violet-400 hover:underline"
+                    >
+                      {t('pastExamTemplates.templatesAvailable', { count: templateCount })}
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/settings/past-exams"
+                      className="text-xs text-violet-600 dark:text-violet-400 hover:underline"
+                    >
+                      {t('pastExamTemplates.addTemplates')}
+                    </Link>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {t('pastExamTemplates.description')}
+                </p>
               </div>
 
               <button

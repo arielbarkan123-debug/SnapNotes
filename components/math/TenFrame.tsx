@@ -58,7 +58,9 @@ export function TenFrame({
   onStepComplete,
   stepConfig,
 }: TenFrameProps) {
-  const { filled, total, color, showSecondFrame, title, highlightFilled = [] } = data
+  const { color, showSecondFrame, title, highlightFilled = [] } = data
+  const filled = data.filled ?? 0
+  const total = data.total ?? 10
 
   // Layout for 2x5 grid(s)
   const frameCount = total === 20 || showSecondFrame ? 2 : 1

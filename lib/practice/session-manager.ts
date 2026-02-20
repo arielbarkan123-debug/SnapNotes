@@ -15,6 +15,7 @@ import type {
   AnswerQuestionResponse,
 } from './types'
 import { selectExistingQuestions } from './question-generator'
+import { evaluateAnswer } from '@/lib/evaluation/answer-checker'
 
 // -----------------------------------------------------------------------------
 // Session Creation
@@ -213,8 +214,50 @@ export async function recordAnswer(
     throw new Error('Question not found')
   }
 
+  // Get user once — reused for language detection and concept mastery
+  const { data: { user } } = await supabase.auth.getUser()
+
   // Determine if correct based on question type
-  const isCorrect = checkAnswer(question, userAnswer)
+  let isCorrect: boolean
+  let evaluationScore: number | undefined
+  let evaluationFeedback: string | undefined
+  let evaluationMethod: string | undefined
+
+  const useFullEvaluation =
+    question.question_type === 'short_answer' ||
+    question.question_type === 'fill_blank'
+
+  if (useFullEvaluation) {
+    // Fetch user language for AI feedback
+    let userLanguage = 'en'
+    if (user) {
+      try {
+        const { data: profile } = await supabase
+          .from('user_learning_profile')
+          .select('language')
+          .eq('user_id', user.id)
+          .single()
+        userLanguage = profile?.language || 'en'
+      } catch {
+        // Continue with default language
+      }
+    }
+
+    // Use multi-layer evaluation (numeric → exact → fuzzy → AI)
+    const evalResult = await evaluateAnswer({
+      question: question.question_text,
+      expectedAnswer: question.correct_answer,
+      userAnswer,
+      language: userLanguage,
+    })
+    isCorrect = evalResult.isCorrect
+    evaluationScore = evalResult.score
+    evaluationFeedback = evalResult.feedback
+    evaluationMethod = evalResult.evaluationMethod
+  } else {
+    // Simple exact match for multiple_choice, true_false, etc.
+    isCorrect = checkAnswer(question, userAnswer)
+  }
 
   // Record the answer
   const { error: answerError } = await supabase
@@ -263,15 +306,12 @@ export async function recordAnswer(
   })
 
   // Update concept mastery if question has a concept
-  if (question.primary_concept_id) {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await updateConceptMasteryFromPractice(
-        user.id,
-        question.primary_concept_id,
-        isCorrect
-      )
-    }
+  if (question.primary_concept_id && user) {
+    await updateConceptMasteryFromPractice(
+      user.id,
+      question.primary_concept_id,
+      isCorrect
+    )
   }
 
   // Calculate progress
@@ -285,6 +325,9 @@ export async function recordAnswer(
     isCorrect,
     correctAnswer: question.correct_answer,
     explanation: question.explanation,
+    evaluationScore,
+    evaluationFeedback,
+    evaluationMethod,
     sessionProgress: {
       questionsAnswered: session.questions_answered,
       questionsCorrect: session.questions_correct,
@@ -297,30 +340,14 @@ export async function recordAnswer(
   }
 }
 
+/**
+ * Simple exact-match checker for multiple_choice, true_false, matching, sequence.
+ * For short_answer and fill_blank, use evaluateAnswer() from the shared utility.
+ */
 function checkAnswer(question: PracticeQuestion, userAnswer: string): boolean {
   const correctAnswer = question.correct_answer.toLowerCase().trim()
   const answer = userAnswer.toLowerCase().trim()
-
-  switch (question.question_type) {
-    case 'multiple_choice':
-      return answer === correctAnswer
-    case 'true_false':
-      return answer === correctAnswer
-    case 'fill_blank':
-      // More lenient matching for fill in the blank
-      return answer === correctAnswer || correctAnswer.includes(answer)
-    case 'short_answer':
-      // For short answer, check if key terms match
-      return answer === correctAnswer || correctAnswer.includes(answer)
-    case 'matching':
-      // Matching would need special handling based on options structure
-      return answer === correctAnswer
-    case 'sequence':
-      // Sequence would compare arrays
-      return answer === correctAnswer
-    default:
-      return answer === correctAnswer
-  }
+  return answer === correctAnswer
 }
 
 async function updateConceptMasteryFromPractice(

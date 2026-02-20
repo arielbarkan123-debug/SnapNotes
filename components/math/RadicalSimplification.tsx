@@ -149,7 +149,16 @@ export function RadicalSimplification({
   subject = 'math',
   complexity = 'middle_school',
 }: RadicalSimplificationProps) {
-  const { originalExpression: _originalExpression, radicand, index, primeFactors, extracted, remaining, simplifiedForm, steps, method, title } = data
+  // Defensive defaults for AI-generated data
+  const radicand = data.radicand ?? 1
+  const index = data.index ?? 2
+  const primeFactors = Array.isArray(data.primeFactors) ? data.primeFactors : []
+  const extracted = data.extracted ?? 1
+  const remaining = data.remaining ?? 1
+  const simplifiedForm = data.simplifiedForm ?? ''
+  const steps = Array.isArray(data.steps) ? data.steps : []
+  const method = data.method ?? 'prime_factorization'
+  const title = data.title
   const reducedMotion = prefersReducedMotion()
   void animationDuration // reserved for future animation customization
 
@@ -332,9 +341,11 @@ export function RadicalSimplification({
               {/* Factors being extracted */}
               {primeFactors.map((factor, idx) => {
                 const colors = getPrimeColor(factor.base)
-                const canExtract = factor.exponent >= index
-                const extractCount = Math.floor(factor.exponent / index)
-                const _remainCount = factor.exponent % index
+                const safeExponent = factor.exponent ?? 0
+                const safeIndex = index === 0 ? 2 : index
+                const canExtract = safeExponent >= safeIndex
+                const extractCount = Math.floor(safeExponent / safeIndex)
+                const _remainCount = safeExponent % safeIndex
 
                 return (
                   <motion.div
@@ -377,7 +388,7 @@ export function RadicalSimplification({
                         }}
                       >
                         <div className="flex gap-1">
-                          {Array(factor.exponent).fill(0).map((_, i) => (
+                          {Array(Math.max(0, safeExponent)).fill(0).map((_, i) => (
                             <motion.span
                               key={`f-${idx}-${i}`}
                               className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold"

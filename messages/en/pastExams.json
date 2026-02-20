@@ -5,9 +5,14 @@
   "uploadButton": "Upload Past Exam",
   "uploadDisabled": "Maximum 3 templates reached",
   "templateCount": "{count} of {max} templates",
+  "perSubjectLimit": "Up to {limit} templates per subject",
   "noTemplates": "No past exam templates yet",
+  "noTemplatesForSubject": "No templates for this subject yet",
   "noTemplatesDescription": "Upload a past exam to help the AI generate questions in a similar style",
   "uploadFirst": "Upload Your First Template",
+  "noSubjectsWarning": "No subjects configured. Add subjects in settings first.",
+  "goToSettings": "Go to Settings",
+  "uploadSuccess": "Template uploaded successfully",
 
   "statusPending": "Pending Analysis",
   "statusAnalyzing": "Analyzing...",
@@ -31,6 +36,8 @@
 
   "uploadModal": {
     "title": "Upload Past Exam",
+    "subjectLabel": "Subject",
+    "selectSubject": "Select a subject",
     "dragDrop": "Drag & drop or click to select",
     "fileTypes": "PDF, PowerPoint, Word, or Image",
     "maxSize": "Max 20MB",
@@ -59,10 +66,12 @@
   },
 
   "errors": {
-    "limitReached": "You can only have up to 3 past exam templates",
+    "limitReached": "You can only have up to 3 past exam templates per subject",
     "uploadFailed": "Failed to upload template",
     "analysisFailed": "Analysis failed. Please try again.",
     "deleteFailed": "Failed to delete template",
-    "fetchFailed": "Failed to load templates"
+    "fetchFailed": "Failed to load templates",
+    "noFile": "Please select a file",
+    "noSubject": "Please select a subject"
   }
 }

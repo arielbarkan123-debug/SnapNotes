@@ -194,7 +194,7 @@ function HintButtons({
             onClick={() => onRequestHint(level)}
             disabled={disabled}
             className={`
-              flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap
+              flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap min-h-[44px]
               transition-colors disabled:opacity-50 disabled:cursor-not-allowed
               ${level === 5
                 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50'
@@ -405,7 +405,7 @@ export default function TutoringChat({
             <button
               type="submit"
               disabled={!input.trim() || isLoading}
-              className="w-10 h-10 flex items-center justify-center rounded-xl bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-11 h-11 flex items-center justify-center rounded-xl bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />

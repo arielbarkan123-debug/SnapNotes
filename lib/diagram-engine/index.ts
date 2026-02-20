@@ -1,7 +1,8 @@
 import { SYSTEM_PROMPT } from './system-prompt';
 import { executeCode, detectMode, type RenderMode } from './e2b-executor';
 import { generateTikzDiagram } from './tikz-executor';
-import { generateRecraftDiagram, type OverlayLabel } from './recraft-executor';
+import { generateRecraftDiagram } from './recraft-executor';
+import type { OverlayLabel } from './recraft-executor';
 import { routeQuestion, type Pipeline } from './router';
 import Anthropic from '@anthropic-ai/sdk';
 
@@ -369,7 +370,7 @@ async function generateRecraftWithQA(
       imageUrl: recraftResult.imageUrl,
       pipeline: 'recraft',
       attempts: qaRound + 1,
-      overlay: recraftResult.overlay,
+      // Note: Labels are now composited via TikZ, not returned as overlay
       qaVerdict: qaRound > 0 ? 'pass-after-retry' : 'pass',
     };
   }

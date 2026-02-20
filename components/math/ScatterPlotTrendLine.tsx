@@ -65,7 +65,8 @@ export function ScatterPlotTrendLine({
   language = 'en',
   initialStep,
 }: ScatterPlotTrendLineProps) {
-  const { points, trendLine, xLabel, yLabel, title } = data
+  const points = Array.isArray(data.points) ? data.points : []
+  const { trendLine, xLabel, yLabel, title } = data
 
   // Build step definitions
   const stepDefs = useMemo(() => {
@@ -159,10 +160,12 @@ export function ScatterPlotTrendLine({
   // Trend line endpoints
   const trendLineEndpoints = useMemo(() => {
     if (!trendLine) return null
+    const slope = trendLine.slope ?? 0
+    const intercept = trendLine.yIntercept ?? 0
     const x1 = xMin
-    const y1 = trendLine.slope * x1 + trendLine.yIntercept
+    const y1 = slope * x1 + intercept
     const x2 = xMax
-    const y2 = trendLine.slope * x2 + trendLine.yIntercept
+    const y2 = slope * x2 + intercept
     return { x1: toSvgX(x1), y1: toSvgY(y1), x2: toSvgX(x2), y2: toSvgY(y2) }
   }, [trendLine, xMin, xMax])
 
@@ -217,10 +220,10 @@ export function ScatterPlotTrendLine({
             >
               {/* Grid */}
               {xTicks.map((x) => (
-                <line key={`gx-${x}`} x1={toSvgX(x)} y1={PADDING} x2={toSvgX(x)} y2={PADDING + plotH} stroke="#e5e7eb" strokeWidth={1} />
+                <line key={`gx-${x}`} x1={toSvgX(x)} y1={PADDING} x2={toSvgX(x)} y2={PADDING + plotH} className="stroke-gray-200 dark:stroke-gray-700" strokeWidth={1} />
               ))}
               {yTicks.map((y) => (
-                <line key={`gy-${y}`} x1={PADDING} y1={toSvgY(y)} x2={PADDING + plotW} y2={toSvgY(y)} stroke="#e5e7eb" strokeWidth={1} />
+                <line key={`gy-${y}`} x1={PADDING} y1={toSvgY(y)} x2={PADDING + plotW} y2={toSvgY(y)} className="stroke-gray-200 dark:stroke-gray-700" strokeWidth={1} />
               ))}
 
               {/* X axis */}
@@ -229,7 +232,7 @@ export function ScatterPlotTrendLine({
                 y1={toSvgY(0)}
                 x2={PADDING + plotW}
                 y2={toSvgY(0)}
-                stroke="#374151"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 variants={lineDrawVariants}
               />
@@ -239,19 +242,19 @@ export function ScatterPlotTrendLine({
                 y1={PADDING}
                 x2={toSvgX(0)}
                 y2={PADDING + plotH}
-                stroke="#374151"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 variants={lineDrawVariants}
               />
 
               {/* Tick labels */}
               {xTicks.map((x) => (
-                <text key={`xt-${x}`} x={toSvgX(x)} y={toSvgY(0) + 16} textAnchor="middle" fontSize={10} fill="#6b7280">
+                <text key={`xt-${x}`} x={toSvgX(x)} y={toSvgY(0) + 16} textAnchor="middle" fontSize={10} className="fill-gray-500 dark:fill-gray-400">
                   {Number.isInteger(x) ? x : x.toFixed(1)}
                 </text>
               ))}
               {yTicks.map((y) => (
-                <text key={`yt-${y}`} x={toSvgX(0) - 8} y={toSvgY(y) + 4} textAnchor="end" fontSize={10} fill="#6b7280">
+                <text key={`yt-${y}`} x={toSvgX(0) - 8} y={toSvgY(y) + 4} textAnchor="end" fontSize={10} className="fill-gray-500 dark:fill-gray-400">
                   {Number.isInteger(y) ? y : y.toFixed(1)}
                 </text>
               ))}
@@ -339,6 +342,7 @@ export function ScatterPlotTrendLine({
                 height={trendLine.rSquared !== undefined ? 44 : 26}
                 rx={6}
                 fill="white"
+                className="dark:fill-gray-800"
                 stroke={primaryColor}
                 strokeWidth={1}
                 opacity={0.95}
@@ -353,19 +357,19 @@ export function ScatterPlotTrendLine({
                 fontWeight={600}
                 variants={labelAppearVariants}
               >
-                y = {trendLine.slope.toFixed(2)}x {trendLine.yIntercept >= 0 ? '+' : ''} {trendLine.yIntercept.toFixed(2)}
+                y = {(trendLine.slope ?? 0).toFixed(2)}x {(trendLine.yIntercept ?? 0) >= 0 ? '+' : ''} {(trendLine.yIntercept ?? 0).toFixed(2)}
               </motion.text>
               {trendLine.rSquared !== undefined && (
                 <motion.text
                   data-testid="sptl-r-squared"
                   x={PADDING + 16}
                   y={PADDING + 44}
-                  fill="#6b7280"
+                  className="fill-gray-500 dark:fill-gray-400"
                   fontSize={11}
                   fontWeight={500}
                   variants={labelAppearVariants}
                 >
-                  R² = {trendLine.rSquared.toFixed(4)}
+                  R² = {(trendLine.rSquared ?? 0).toFixed(4)}
                 </motion.text>
               )}
             </motion.g>

@@ -12,7 +12,12 @@ interface SVGLabelProps {
   fontWeight?: number | string
   color?: string
   textAnchor?: 'start' | 'middle' | 'end'
+  /** Background fill color behind the text (for legibility over grids).
+   *  Pass a single color string or use backgroundClassName for dark-mode support. */
   background?: string
+  /** Optional dark-mode background color. When provided, SVGLabel renders two
+   *  rects: one visible in light mode and one in dark mode using CSS classes. */
+  backgroundDark?: string
   padding?: number
   rotate?: number
   animate?: boolean
@@ -29,6 +34,7 @@ export function SVGLabel({
   color,
   textAnchor = 'middle',
   background,
+  backgroundDark,
   padding: pad = 4,
   rotate,
   animate = true,
@@ -52,7 +58,20 @@ export function SVGLabel({
         animate={animate ? 'visible' : undefined}
         variants={animate ? labelAppearVariants : undefined}
       >
-        <rect x={rx} y={ry} width={estW} height={estH} rx={3} fill={background} />
+        {/* Background rect — light mode */}
+        <rect
+          x={rx} y={ry} width={estW} height={estH} rx={3}
+          fill={background}
+          className={backgroundDark ? 'dark:hidden' : undefined}
+        />
+        {/* Background rect — dark mode (only rendered if backgroundDark is set) */}
+        {backgroundDark && (
+          <rect
+            x={rx} y={ry} width={estW} height={estH} rx={3}
+            fill={backgroundDark}
+            className="hidden dark:block"
+          />
+        )}
         <text x={x} y={y} textAnchor={textAnchor}
           style={{ fontSize, fontWeight, fill: color }}
           className={color ? className : (className ?? 'fill-gray-700 dark:fill-gray-300')}>

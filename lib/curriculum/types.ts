@@ -292,6 +292,7 @@ export interface ContextBuilderOptions {
     subjectLevels?: Record<string, string>
     examFormat?: ExamFormat
     educationLevel?: string
+    grade?: string
   }
   contentSample?: string // For subject/topic detection
   specificSubject?: string // If already known

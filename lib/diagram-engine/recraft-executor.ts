@@ -1,9 +1,13 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { Sandbox } from '@e2b/code-interpreter';
 import { generateRecraftImage, type RecraftStyle } from './recraft-client';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 });
+
+// Custom E2B template ID with texlive-full pre-installed
+const LATEX_TEMPLATE_ID = process.env.E2B_LATEX_TEMPLATE_ID || undefined;
 
 export interface OverlayLabel {
   text: string;
@@ -15,7 +19,7 @@ export interface OverlayLabel {
 
 export interface RecraftResult {
   imageUrl: string;
-  overlay?: OverlayLabel[];
+  // Note: overlay is no longer returned - labels are composited via TikZ
 }
 
 export interface RecraftError {
@@ -172,7 +176,7 @@ export async function generateRecraftDiagram(
 
   console.log(`[Recraft] Prompt: ${cleanPrompt.slice(0, 120)}...`);
 
-  // Step 2: Generate image with Recraft
+  // Step 2: Generate image with Recraft (no_text is ALWAYS enforced in the client)
   let imageUrl: string;
   try {
     const image = await generateRecraftImage({
@@ -180,8 +184,7 @@ export async function generateRecraftDiagram(
       style,
       size: '1024x1024',
       format: 'png',
-      no_text: true,
-      negative_prompt: 'text, labels, letters, words, numbers, writing, annotations, captions, watermark, signature, title, heading',
+      // Note: no_text and negative_prompt for text are now enforced in recraft-client.ts
     });
     imageUrl = image.url;
   } catch (err) {
@@ -190,8 +193,8 @@ export async function generateRecraftDiagram(
     };
   }
 
-  // Step 3: Claude Vision labels
-  let overlay: OverlayLabel[] | undefined;
+  // Step 3: Claude Vision identifies label positions
+  let labels: OverlayLabel[] | undefined;
   try {
     const imageResponse = await fetch(imageUrl);
     const imageBuffer = await imageResponse.arrayBuffer();
@@ -234,15 +237,27 @@ export async function generateRecraftDiagram(
       if (arrayMatch) jsonStr = arrayMatch[0];
       const parsed = JSON.parse(jsonStr) as OverlayLabel[];
       if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].text) {
-        overlay = parsed;
+        labels = parsed;
       }
     }
   } catch (err) {
-    console.error('Vision overlay error:', err);
+    console.error('Vision labeling error:', err);
     // Still return the image without labels
   }
 
-  return { imageUrl, overlay };
+  // Step 4: Composite labels using TikZ (text is ONLY added via TikZ, never by Recraft)
+  if (labels && labels.length > 0) {
+    console.log(`[Recraft] Compositing ${labels.length} labels via TikZ...`);
+    const compositedUrl = await compositeWithTikzLabels(imageUrl, labels);
+    if (compositedUrl) {
+      console.log('[Recraft] TikZ composite successful');
+      return { imageUrl: compositedUrl };
+    }
+    console.log('[Recraft] TikZ composite failed, returning base image without labels');
+  }
+
+  // Return base image if no labels or compositing failed
+  return { imageUrl };
 }
 
 function buildFallbackPrompt(question: string, is3D: boolean): string {
@@ -250,4 +265,169 @@ function buildFallbackPrompt(question: string, is3D: boolean): string {
     return `Photorealistic 3D cutaway model of ${question}, showing internal structure with distinct colors for each component, studio lighting, pure white background`.slice(0, 950);
   }
   return `Clean 2D digital illustration of ${question}, flat style, bold outlines, distinct colors for each component, white background`.slice(0, 950);
+}
+
+/**
+ * Escape special LaTeX characters in label text.
+ */
+function escapeLatex(text: string): string {
+  return text
+    .replace(/\\/g, '\\textbackslash{}')
+    .replace(/&/g, '\\&')
+    .replace(/%/g, '\\%')
+    .replace(/\$/g, '\\$')
+    .replace(/#/g, '\\#')
+    .replace(/_/g, '\\_')
+    .replace(/\{/g, '\\{')
+    .replace(/\}/g, '\\}')
+    .replace(/~/g, '\\textasciitilde{}')
+    .replace(/\^/g, '\\textasciicircum{}');
+}
+
+/**
+ * Composite a Recraft image with TikZ-rendered labels using E2B.
+ * Downloads the Recraft image, creates TikZ overlay with labels, compiles to PNG.
+ */
+async function compositeWithTikzLabels(
+  imageUrl: string,
+  labels: OverlayLabel[]
+): Promise<string | null> {
+  if (!LATEX_TEMPLATE_ID) {
+    console.error('[TikZ Composite] E2B_LATEX_TEMPLATE_ID not set');
+    return null;
+  }
+
+  if (!labels || labels.length === 0) {
+    console.log('[TikZ Composite] No labels to add');
+    return null;
+  }
+
+  const sandbox = await Sandbox.create(LATEX_TEMPLATE_ID, { timeoutMs: 120000 });
+
+  try {
+    // Wait for sandbox kernel to be ready
+    await sandbox.runCode('print("ready")', { timeoutMs: 30000 });
+
+    // Download the Recraft image to the sandbox
+    const downloadResult = await sandbox.runCode(
+      `import urllib.request
+import os
+
+url = "${imageUrl}"
+output_path = "/tmp/recraft_base.png"
+
+try:
+    urllib.request.urlretrieve(url, output_path)
+    print(f"Downloaded: {os.path.getsize(output_path)} bytes")
+except Exception as e:
+    print(f"DOWNLOAD_ERROR: {e}")`,
+      { timeoutMs: 30000 }
+    );
+
+    const downloadOutput = downloadResult.logs.stdout.join('');
+    if (downloadOutput.includes('DOWNLOAD_ERROR')) {
+      console.error('[TikZ Composite] Failed to download Recraft image:', downloadOutput);
+      return null;
+    }
+
+    // Generate TikZ code for labels
+    // Coordinates are in percentage (0-100), convert to cm on a 10x10 grid
+    const labelNodes = labels.map((label, i) => {
+      const labelX = (label.x / 100) * 10;
+      const labelY = 10 - (label.y / 100) * 10; // Flip Y axis (TikZ origin is bottom-left)
+      const targetX = (label.targetX / 100) * 10;
+      const targetY = 10 - (label.targetY / 100) * 10;
+      const escapedText = escapeLatex(label.text);
+
+      return `
+    % Label ${i + 1}: ${label.text}
+    \\draw[line width=0.4pt, color=gray!70] (${targetX.toFixed(2)}, ${targetY.toFixed(2)}) -- (${labelX.toFixed(2)}, ${labelY.toFixed(2)});
+    \\fill[color=gray!70] (${targetX.toFixed(2)}, ${targetY.toFixed(2)}) circle (0.06);
+    \\node[fill=white, fill opacity=0.85, text opacity=1, inner sep=1.5pt, font=\\scriptsize\\sffamily] at (${labelX.toFixed(2)}, ${labelY.toFixed(2)}) {${escapedText}};`;
+    }).join('\n');
+
+    const tikzCode = `\\documentclass[border=0pt]{standalone}
+\\usepackage{tikz}
+\\usepackage{graphicx}
+\\begin{document}
+\\begin{tikzpicture}
+    % Include the Recraft base image
+    \\node[anchor=south west, inner sep=0] at (0,0) {\\includegraphics[width=10cm, height=10cm]{/tmp/recraft_base.png}};
+
+    % Add labels with leader lines
+${labelNodes}
+\\end{tikzpicture}
+\\end{document}`;
+
+    // Write the TikZ file
+    await sandbox.files.write('/tmp/diagram.tex', tikzCode);
+
+    // Compile with pdflatex
+    const compileResult = await sandbox.runCode(
+      `import subprocess
+import os
+
+os.chdir('/tmp')
+result = subprocess.run(
+    ['pdflatex', '-interaction=nonstopmode', '-halt-on-error', 'diagram.tex'],
+    capture_output=True, text=True, timeout=30
+)
+
+if result.returncode != 0:
+    lines = result.stdout.split('\\n')
+    error_lines = [l for l in lines if l.startswith('!') or 'Error' in l or 'Undefined' in l or l.startswith('l.')]
+    error_msg = '\\n'.join(error_lines[:15]) if error_lines else result.stdout[-2000:]
+    print(f"LATEX_ERROR: {error_msg}")
+else:
+    print("COMPILE_OK")`,
+      { timeoutMs: 30000 }
+    );
+
+    const compileOutput = compileResult.logs.stdout.join('');
+    if (compileOutput.includes('LATEX_ERROR')) {
+      console.error('[TikZ Composite] LaTeX compilation failed:', compileOutput);
+      return null;
+    }
+
+    // Convert PDF to PNG
+    const convertResult = await sandbox.runCode(
+      `import subprocess
+import base64
+
+result = subprocess.run([
+    'convert', '-density', '300', '-quality', '100',
+    '-background', 'white', '-alpha', 'remove',
+    '-trim', '+repage',
+    '/tmp/diagram.pdf', '/tmp/diagram.png'
+], capture_output=True, text=True, timeout=30)
+
+if result.returncode != 0:
+    print(f"CONVERT_ERROR: {result.stderr}")
+else:
+    # Read and output base64
+    with open('/tmp/diagram.png', 'rb') as f:
+        data = base64.b64encode(f.read()).decode('utf-8')
+        print(f"BASE64:{data}")`,
+      { timeoutMs: 30000 }
+    );
+
+    const convertOutput = convertResult.logs.stdout.join('');
+    if (convertOutput.includes('CONVERT_ERROR')) {
+      console.error('[TikZ Composite] PDF conversion failed:', convertOutput);
+      return null;
+    }
+
+    const base64Match = convertOutput.match(/BASE64:(.+)/);
+    if (base64Match) {
+      const base64Data = base64Match[1];
+      return `data:image/png;base64,${base64Data}`;
+    }
+
+    return null;
+  } catch (err) {
+    console.error('[TikZ Composite] Error:', err);
+    return null;
+  } finally {
+    await sandbox.kill();
+  }
 }

@@ -33,6 +33,8 @@ export interface UserLearningContext {
   subjects?: string[]
   subjectLevels?: Record<string, string>
   examFormat?: 'match_real' | 'inspired_by'
+  // Student's grade level
+  grade?: string
   // Language preference for content generation
   language?: 'en' | 'he'
 }
@@ -242,6 +244,9 @@ function buildPersonalizationSection(
 
   parts.push(`\n## Student Profile - IMPORTANT: Adapt ALL content to this level`)
   parts.push(getEnhancedEducationDescription(userContext.educationLevel, ageConfig))
+  if (userContext.grade) {
+    parts.push(`**Student Grade:** ${userContext.grade}`)
+  }
 
   // Add age-specific learning design instructions
   parts.push(buildAgeSpecificInstructions(ageConfig))

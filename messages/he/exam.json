@@ -37,5 +37,14 @@
   "statusCompleted": "הושלם",
   "statusInProgress": "בתהליך",
   "statusExpired": "פג תוקף",
-  "statusPending": "ממתין"
+  "statusPending": "ממתין",
+
+  "pastExamTemplates": {
+    "title": "תבניות מבחנים קודמים",
+    "description": "שימוש במבחנים קודמים מסייע ביצירת שאלות בסגנון דומה",
+    "templatesAvailable": "{count} תבניות זמינות",
+    "noTemplates": "אין תבניות מבחנים קודמים",
+    "addTemplates": "הוסף תבניות",
+    "manageTemplates": "נהל תבניות"
+  }
 }

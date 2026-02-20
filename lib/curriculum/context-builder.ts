@@ -79,7 +79,7 @@ export async function buildCurriculumContext(
 
   const systemData = await loadSystemOverview(userProfile.studySystem)
   if (systemData) {
-    result.tier1 = formatSystemOverview(systemData, tokenBudget.tier1)
+    result.tier1 = formatSystemOverview(systemData, tokenBudget.tier1, userProfile.grade)
     metadata.tokenEstimate.tier1 = estimateTokens(result.tier1)
     if (includeRawData) {
       result.raw = { ...result.raw, system: systemData }
@@ -167,13 +167,19 @@ export async function buildCurriculumContext(
 // Formatters
 // =============================================================================
 
-function formatSystemOverview(system: SystemOverview, maxTokens: number): string {
+function formatSystemOverview(system: SystemOverview, maxTokens: number, grade?: string): string {
   const parts: string[] = []
 
   // System header
   parts.push(`### ${system.name}`)
   parts.push(system.description)
   parts.push('')
+
+  // Student grade level
+  if (grade) {
+    parts.push(`**Student Grade:** ${grade}`)
+    parts.push('')
+  }
 
   // Grading
   parts.push(`**Grading:** ${system.grading.scale}`)
@@ -200,7 +206,7 @@ function formatSystemOverview(system: SystemOverview, maxTokens: number): string
 function formatSubjectOverview(
   subject: SubjectOverview,
   maxTokens: number,
-  _examFormat?: string // Reserved for future use to customize output based on format
+  examFormat?: string
 ): string {
   const parts: string[] = []
 
@@ -234,6 +240,15 @@ function formatSubjectOverview(
     }
   }
   parts.push('')
+
+  // Exam format instruction
+  if (examFormat === 'match_real') {
+    parts.push('**Exam Format:** Match Real — Generate questions that match the **exact format** of real exams (structure, timing, mark allocation).')
+    parts.push('')
+  } else if (examFormat === 'inspired_by') {
+    parts.push('**Exam Format:** Flexible — Generate questions **inspired by** the curriculum but with flexible format. Focus on concepts over exam structure.')
+    parts.push('')
+  }
 
   // Topic list (abbreviated)
   parts.push('**Topics:**')
@@ -352,10 +367,11 @@ function truncateToTokens(text: string, maxTokens: number): string {
 export async function buildCourseContext(
   studySystem: StudySystem,
   subjects?: string[],
-  contentSample?: string
+  contentSample?: string,
+  grade?: string
 ): Promise<CurriculumContext> {
   return buildCurriculumContext({
-    userProfile: { studySystem, subjects },
+    userProfile: { studySystem, subjects, grade },
     contentSample,
     purpose: 'course',
   })
@@ -369,10 +385,11 @@ export async function buildExamContext(
   subjects: string[],
   subjectLevels?: Record<string, string>,
   examFormat?: 'match_real' | 'inspired_by',
-  contentSample?: string
+  contentSample?: string,
+  grade?: string
 ): Promise<CurriculumContext> {
   return buildCurriculumContext({
-    userProfile: { studySystem, subjects, subjectLevels, examFormat },
+    userProfile: { studySystem, subjects, subjectLevels, examFormat, grade },
     contentSample,
     purpose: 'exam',
   })
@@ -384,10 +401,11 @@ export async function buildExamContext(
 export async function buildChatContext(
   studySystem: StudySystem,
   subjects?: string[],
-  contentSample?: string
+  contentSample?: string,
+  grade?: string
 ): Promise<CurriculumContext> {
   return buildCurriculumContext({
-    userProfile: { studySystem, subjects },
+    userProfile: { studySystem, subjects, grade },
     contentSample,
     purpose: 'chat',
   })

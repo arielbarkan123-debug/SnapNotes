@@ -6,6 +6,10 @@
   --background: #ffffff;
   --foreground: #171717;
 
+  --bottom-nav-height: 56px;
+  --mobile-header-height: 56px;
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+
   --aurora-violet: #8B5CF6;
   --aurora-violet-light: #A78BFA;
   --aurora-violet-dark: #7C3AED;
@@ -324,12 +328,24 @@ body {
 }
 
 @media (max-width: 767px) {
+  main.sidebar-main {
+    padding-bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 16px);
+  }
   .main-with-sidebar {
     margin-inline-start: 0;
     padding: 16px;
-    padding-bottom: 100px;
+    padding-bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 16px);
   }
 }
+
+/* Mobile viewport height fix for Safari address bar */
+@supports (height: 100dvh) {
+  .min-h-screen { min-height: 100dvh; }
+  .h-screen { height: 100dvh; }
+}
+
+/* Touch target minimum size utility */
+.touch-target { min-height: 44px; min-width: 44px; }
 
 /* Fade Slide In Animation */
 @keyframes fadeSlideIn {

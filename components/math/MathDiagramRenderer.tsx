@@ -330,6 +330,7 @@ export function MathDiagramRenderer({
   const renderDiagram = () => {
     const commonProps = {
       currentStep,
+      initialStep: currentStep,
       stepConfig: diagram.stepConfig as MathDiagramStepConfig[],
       onStepComplete: handleStepComplete,
       animationDuration: animate ? animationDuration : 0,
@@ -345,38 +346,44 @@ export function MathDiagramRenderer({
       // ====================================================================
 
       case 'long_division':
+        // Self-managing: has own useDiagramBase + DiagramStepControls
         return (
           <LongDivisionDiagram
             data={diagram.data as LongDivisionData}
             width={width || 620}
-            height={height || 450}
-            totalSteps={calculatedTotalSteps}
-            showStepCounter={false}
-            {...commonProps}
+            className="diagram-content"
+            subject={subject}
+            complexity={complexity}
+            language={language}
+            initialStep={currentStep}
           />
         )
 
       case 'equation':
+        // Self-managing: has own useDiagramBase + DiagramStepControls
         return (
           <EquationSteps
             data={diagram.data as EquationData}
             width={width || 400}
-            height={height || 350}
-            totalSteps={calculatedTotalSteps}
-            showStepCounter={false}
-            {...commonProps}
+            className="diagram-content"
+            subject={subject}
+            complexity={complexity}
+            language={language}
+            initialStep={currentStep}
           />
         )
 
       case 'fraction':
+        // Self-managing: has own useDiagramBase + DiagramStepControls
         return (
           <FractionOperation
             data={diagram.data as FractionOperationData}
             width={width || 400}
-            height={height || 350}
-            totalSteps={calculatedTotalSteps}
-            showStepCounter={false}
-            {...commonProps}
+            className="diagram-content"
+            subject={subject}
+            complexity={complexity}
+            language={language}
+            initialStep={currentStep}
           />
         )
 
@@ -411,26 +418,30 @@ export function MathDiagramRenderer({
         )
 
       case 'factoring':
+        // Self-managing: has own useDiagramBase + DiagramStepControls
         return (
           <FactoringDiagram
             data={diagram.data as unknown as FactoringData}
             width={width || 420}
-            height={height || 400}
-            totalSteps={calculatedTotalSteps}
-            showStepCounter={false}
-            {...commonProps}
+            className="diagram-content"
+            subject={subject}
+            complexity={complexity}
+            language={language}
+            initialStep={currentStep}
           />
         )
 
       case 'completing_square':
+        // Self-managing: has own useDiagramBase + DiagramStepControls
         return (
           <CompletingSquareSteps
             data={diagram.data as unknown as CompletingSquareData}
             width={width || 440}
-            height={height || 450}
-            totalSteps={calculatedTotalSteps}
-            showStepCounter={false}
-            {...commonProps}
+            className="diagram-content"
+            subject={subject}
+            complexity={complexity}
+            language={language}
+            initialStep={currentStep}
           />
         )
 
@@ -795,6 +806,7 @@ export function MathDiagramRenderer({
             subject={subject}
             complexity={complexity}
             language={language}
+            initialStep={currentStep}
           />
         )
 
@@ -1166,6 +1178,7 @@ export function MathDiagramRenderer({
           />
         )
 
+      case 'fbd':
       case 'free_body_diagram':
         return (
           <FBD
@@ -1554,6 +1567,7 @@ export function MathDiagramRenderer({
         derivative_tangent_line: 'Derivative & Tangent Line',
         sequence_diagram: 'Sequence Diagram',
         sampling_distribution: 'Sampling Distribution',
+        fbd: 'Free Body Diagram',
         free_body_diagram: 'Free Body Diagram',
         // Geometry
         rotation_coordinate_plane: 'Rotation',
@@ -1666,6 +1680,7 @@ export function MathDiagramRenderer({
         derivative_tangent_line: 'נגזרת וקו משיק',
         sequence_diagram: 'דיאגרמת סדרה',
         sampling_distribution: 'התפלגות דגימה',
+        fbd: 'דיאגרמת גוף חופשי',
         free_body_diagram: 'דיאגרמת גוף חופשי',
         // Geometry
         rotation_coordinate_plane: 'סיבוב',

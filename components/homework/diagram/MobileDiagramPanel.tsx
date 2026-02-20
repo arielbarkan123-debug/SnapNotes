@@ -24,7 +24,7 @@ export default function MobileDiagramPanel({
   const isAutoAdvance = 'evolutionMode' in diagram && diagram.evolutionMode === 'auto-advance'
 
   return (
-    <div className="lg:hidden fixed bottom-20 right-4 z-50">
+    <div className="lg:hidden fixed bottom-[calc(72px+env(safe-area-inset-bottom,0px))] end-4 z-50">
       {/* Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -47,7 +47,7 @@ export default function MobileDiagramPanel({
 
       {/* Popup Panel */}
       {isOpen && (
-        <div className="absolute bottom-16 right-0 w-[calc(100vw-2rem)] max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="absolute bottom-16 end-0 w-[calc(100vw-2rem)] max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">

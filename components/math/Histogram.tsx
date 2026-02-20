@@ -58,9 +58,11 @@ export function Histogram({
   language = 'en',
   initialStep,
 }: HistogramProps) {
-  const { bins, title, xAxisLabel, yAxisLabel } = data
+  // Defensive defaults for AI-generated data
+  const bins = Array.isArray(data.bins) ? data.bins : []
+  const { title, xAxisLabel, yAxisLabel } = data
 
-  const maxCount = Math.max(...bins.map((b) => b.count), 1)
+  const maxCount = Math.max(...bins.map((b) => b.count ?? 0), 1)
 
   // Build step definitions
   const stepDefs = useMemo(() => [
@@ -103,7 +105,7 @@ export function Histogram({
   const originX = padding.left
   const originY = height - padding.bottom
 
-  const barWidth = plotWidth / bins.length
+  const barWidth = bins.length > 0 ? plotWidth / bins.length : plotWidth
 
   // Y-axis ticks
   const yTicks = useMemo(() => {
@@ -158,7 +160,7 @@ export function Histogram({
                 y1={padding.top}
                 x2={originX}
                 y2={originY}
-                stroke="#374151"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 initial="hidden"
                 animate="visible"
@@ -171,7 +173,7 @@ export function Histogram({
                 y1={originY}
                 x2={originX + plotWidth}
                 y2={originY}
-                stroke="#374151"
+                className="stroke-gray-700 dark:stroke-gray-300"
                 strokeWidth={diagram.lineWeight}
                 initial="hidden"
                 animate="visible"
@@ -186,7 +188,7 @@ export function Histogram({
                     y1={scaleY(tick)}
                     x2={originX}
                     y2={scaleY(tick)}
-                    stroke="#374151"
+                    className="stroke-gray-700 dark:stroke-gray-300"
                     strokeWidth={1}
                     initial="hidden"
                     animate="visible"
@@ -198,7 +200,7 @@ export function Histogram({
                     y1={scaleY(tick)}
                     x2={originX + plotWidth}
                     y2={scaleY(tick)}
-                    stroke="#e5e7eb"
+                    className="stroke-gray-200 dark:stroke-gray-700"
                     strokeWidth={0.5}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -208,7 +210,7 @@ export function Histogram({
                     x={originX - 8}
                     y={scaleY(tick) + 4}
                     textAnchor="end"
-                    fill="#6b7280"
+                    className="fill-gray-500 dark:fill-gray-400"
                     fontSize={10}
                     initial="hidden"
                     animate="visible"
@@ -225,7 +227,7 @@ export function Histogram({
                   x={12}
                   y={originY / 2 + padding.top / 2}
                   textAnchor="middle"
-                  fill="#6b7280"
+                  className="fill-gray-500 dark:fill-gray-400"
                   fontSize={11}
                   fontWeight={500}
                   transform={`rotate(-90, 12, ${originY / 2 + padding.top / 2})`}
@@ -243,7 +245,7 @@ export function Histogram({
                   x={originX + plotWidth / 2}
                   y={height - 5}
                   textAnchor="middle"
-                  fill="#6b7280"
+                  className="fill-gray-500 dark:fill-gray-400"
                   fontSize={11}
                   fontWeight={500}
                   initial="hidden"

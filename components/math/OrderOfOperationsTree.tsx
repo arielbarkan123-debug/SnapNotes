@@ -58,7 +58,8 @@ export function OrderOfOperationsTree({
   language = 'en',
   initialStep,
 }: OrderOfOperationsTreeProps) {
-  const { expression, steps, title } = data
+  const { expression, title } = data
+  const steps = Array.isArray(data.steps) ? data.steps : []
 
   // Steps: step 0 = show expression, steps 1..N = each operation, final = final answer
   const totalOperationSteps = steps.length

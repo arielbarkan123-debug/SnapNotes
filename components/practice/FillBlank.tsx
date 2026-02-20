@@ -230,9 +230,8 @@ function normalizeString(str: string): string {
   return str
     .toLowerCase()
     .trim()
+    .replace(/[.,!?;:'"()[\]{}\u2018\u2019\u201C\u201D]/g, '') // Remove punctuation + curly quotes
     .replace(/\s+/g, ' ') // Normalize whitespace
-    .replace(/['']/g, "'") // Normalize quotes
-    .replace(/[""]/g, '"')
 }
 
 /**

@@ -185,7 +185,8 @@ export async function PATCH(
     try {
       // Create a temporary course object with only new lessons for card generation
       const tempCourse = { ...updatedCourse, lessons: newLessons }
-      const cards = generateCardsFromCourse(tempCourse, courseId)
+      const cardLanguage = (userContext?.language === 'he' ? 'he' : 'en') as 'en' | 'he'
+      const cards = await generateCardsFromCourse(tempCourse, courseId, { language: cardLanguage })
       if (cards.length > 0) {
         const cardsWithUser = cards.map((card) => ({
           ...card,
