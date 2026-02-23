@@ -143,6 +143,10 @@ export interface PracticeSessionQuestion {
   response_time_ms: number | null
   // Hints
   hint_used: boolean
+  // AI Evaluation (for short_answer/fill_blank)
+  evaluation_score: number | null
+  evaluation_feedback: string | null
+  evaluation_method: string | null
   // Timestamps
   created_at: string
 }
@@ -183,7 +187,7 @@ export interface AnswerQuestionResponse {
   evaluationScore?: number
   /** Feedback from the evaluator (for short_answer/fill_blank) */
   evaluationFeedback?: string
-  /** Method used: 'numeric' | 'exact' | 'fuzzy' | 'ai' */
+  /** Method used: 'numeric' | 'exact' | 'fuzzy' | 'ai' | 'fuzzy_fallback' */
   evaluationMethod?: string
   sessionProgress: {
     questionsAnswered: number

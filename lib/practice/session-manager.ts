@@ -16,6 +16,8 @@ import type {
 } from './types'
 import { selectExistingQuestions } from './question-generator'
 import { evaluateAnswer } from '@/lib/evaluation/answer-checker'
+import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
+import type { StudySystem } from '@/lib/curriculum/types'
 
 // -----------------------------------------------------------------------------
 // Session Creation
@@ -228,18 +230,57 @@ export async function recordAnswer(
     question.question_type === 'fill_blank'
 
   if (useFullEvaluation) {
-    // Fetch user language for AI feedback
+    // Fetch user profile for language + curriculum context
     let userLanguage = 'en'
+    let curriculumContextString = ''
+    let courseContext = ''
+
     if (user) {
       try {
         const { data: profile } = await supabase
           .from('user_learning_profile')
-          .select('language')
+          .select('language, study_system, subjects, subject_levels, education_level, grade')
           .eq('user_id', user.id)
           .single()
         userLanguage = profile?.language || 'en'
+
+        // Build curriculum context if user has a study system set
+        if (profile?.study_system && profile.study_system !== 'general') {
+          try {
+            const currContext = await buildCurriculumContext({
+              userProfile: {
+                studySystem: profile.study_system as StudySystem,
+                subjects: profile.subjects || undefined,
+                subjectLevels: profile.subject_levels || undefined,
+                educationLevel: profile.education_level || undefined,
+                grade: profile.grade || undefined,
+              },
+              contentSample: question.question_text,
+              purpose: 'evaluation',
+            })
+            curriculumContextString = formatContextForPrompt(currContext)
+          } catch {
+            // Non-critical: continue without curriculum context
+          }
+        }
       } catch {
         // Continue with default language
+      }
+    }
+
+    // Fetch course context if question is linked to a course
+    if (question.course_id) {
+      try {
+        const { data: course } = await supabase
+          .from('courses')
+          .select('title, description, key_concepts')
+          .eq('id', question.course_id)
+          .single()
+        if (course) {
+          courseContext = `Course: ${course.title}${course.description ? `\n${course.description}` : ''}${course.key_concepts?.length ? `\nKey Concepts: ${course.key_concepts.join(', ')}` : ''}`
+        }
+      } catch {
+        // Non-critical: continue without course context
       }
     }
 
@@ -248,6 +289,8 @@ export async function recordAnswer(
       question: question.question_text,
       expectedAnswer: question.correct_answer,
       userAnswer,
+      context: courseContext || undefined,
+      curriculumContext: curriculumContextString || undefined,
       language: userLanguage,
     })
     isCorrect = evalResult.isCorrect
@@ -259,7 +302,7 @@ export async function recordAnswer(
     isCorrect = checkAnswer(question, userAnswer)
   }
 
-  // Record the answer
+  // Record the answer (including evaluation details for analytics)
   const { error: answerError } = await supabase
     .from('practice_session_questions')
     .upsert(
@@ -271,6 +314,9 @@ export async function recordAnswer(
         is_correct: isCorrect,
         answered_at: new Date().toISOString(),
         response_time_ms: responseTimeMs || null,
+        evaluation_score: evaluationScore ?? null,
+        evaluation_feedback: evaluationFeedback ?? null,
+        evaluation_method: evaluationMethod ?? null,
       },
       { onConflict: 'session_id,question_index' }
     )

@@ -149,5 +149,11 @@
   "practiceWeakAreas": "Practice Weak Areas",
   "noMistakes": "Perfect session! No mistakes to review.",
   "explanationLabel": "Explanation",
-  "quitSessionConfirm": "Are you sure you want to quit this session?"
+  "quitSessionConfirm": "Are you sure you want to quit this session?",
+  "fillInTheBlank": "Fill in the blank...",
+  "submitAnswer": "Submit Answer",
+  "checking": "Checking...",
+  "aiGraded": "AI graded",
+  "partiallyCorrect": "Partially Correct",
+  "referenceAnswer": "Reference answer:"
 }

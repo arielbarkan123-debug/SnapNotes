@@ -27,7 +27,7 @@ export interface EvaluationResult {
   isCorrect: boolean
   score: number // 0-100
   feedback: string
-  evaluationMethod: 'numeric' | 'exact' | 'fuzzy' | 'ai'
+  evaluationMethod: 'numeric' | 'exact' | 'fuzzy' | 'ai' | 'fuzzy_fallback'
 }
 
 // =============================================================================
@@ -187,6 +187,31 @@ export function fuzzyMatch(
 // =============================================================================
 
 /**
+ * Detect if a question is asking for an explanation/description (open-ended conceptual)
+ */
+function isExplanationQuestion(question: string): boolean {
+  const lowerQ = question.toLowerCase()
+  return (
+    lowerQ.startsWith('explain') ||
+    lowerQ.startsWith('describe') ||
+    lowerQ.startsWith('why ') ||
+    lowerQ.startsWith('how does') ||
+    lowerQ.startsWith('how do') ||
+    lowerQ.startsWith('what is the difference') ||
+    lowerQ.startsWith('compare') ||
+    lowerQ.includes('explain:') ||
+    lowerQ.includes('describe:') ||
+    // Hebrew equivalents
+    lowerQ.includes('הסבר') ||
+    lowerQ.includes('תאר') ||
+    lowerQ.includes('למה ') ||
+    lowerQ.includes('מדוע') ||
+    lowerQ.includes('כיצד') ||
+    lowerQ.includes('השווה')
+  )
+}
+
+/**
  * Evaluate answer using Claude AI
  */
 export async function evaluateWithAI(
@@ -206,6 +231,8 @@ export async function evaluateWithAI(
 
   const client = new Anthropic({ apiKey })
 
+  const isExplanation = isExplanationQuestion(question)
+
   const curriculumInstructions = curriculumContext
     ? `
 ${curriculumContext}
@@ -222,49 +249,68 @@ Use the curriculum context above to:
     : ''
 
   let gradingRubric = ''
-  if (topicType === 'computational') {
+  if (isExplanation || topicType === 'conceptual') {
+    gradingRubric = `
+Grading Rubric (Explanation/Conceptual):
+- The "Expected Answer" below is a REFERENCE answer, not the only correct answer
+- The student does NOT need to match it word-for-word or cover every point
+- Evaluate whether the student demonstrates genuine understanding of the core concept
+- Key concepts present and used correctly = high score
+- Correct reasoning with different wording = CORRECT
+- Partial understanding = PARTIAL CREDIT (40-70)
+- Vague but on-topic = low partial credit (20-40)
+- Be generous: if the student clearly "gets it", mark correct even if brief
+- Feedback should be constructive: tell the student what they got right AND what they could add`
+  } else if (topicType === 'computational') {
     gradingRubric = `
 Grading Rubric (Computational):
 - Numeric precision: answer must match expected value (minor rounding OK)
 - Correct method: partial credit if approach is right but calculation has errors
 - Show-work style: credit for correct intermediate steps even if final answer is wrong
 - Units matter: missing or wrong units = partial credit only`
-  } else if (topicType === 'conceptual') {
-    gradingRubric = `
-Grading Rubric (Conceptual):
-- Understanding: does the student demonstrate grasp of the concept?
-- Key terms: are essential vocabulary/terms used correctly?
-- Reasoning quality: is the explanation logical and well-structured?
-- Be generous with alternative wording that shows understanding`
   } else if (topicType === 'mixed') {
     gradingRubric = `
 Grading Rubric (Mixed):
 - Check both numerical accuracy AND conceptual understanding
 - Partial credit for correct reasoning with calculation errors
 - Partial credit for correct numbers without understanding shown`
-  }
-
-  const prompt = `You are grading a student's answer.${curriculumContext ? ' Apply curriculum-specific grading criteria.' : ' Be generous with partial credit.'}${hebrewInstruction}
-${curriculumInstructions}${gradingRubric}
-Question: ${question}
-Expected Answer: ${expectedAnswer}
-Student's Answer: ${userAnswer}
-${context ? `Context: ${context}` : ''}
-
-Evaluate if the student's answer is correct. Consider:
+  } else {
+    gradingRubric = `
+Grading Rubric (General):
 - Same meaning with different words = CORRECT
 - Key concepts present = PARTIAL CREDIT
 - Minor typos/spelling = IGNORE
-- Empty or completely wrong = INCORRECT
+- Be generous with partial credit for understanding shown`
+  }
+
+  const prompt = `You are grading a student's answer.${curriculumContext ? ' Apply curriculum-specific grading criteria.' : ''}${hebrewInstruction}
+${curriculumInstructions}${gradingRubric}
+
+Question: ${question}
+${isExplanation ? 'Reference Answer (one possible correct answer):' : 'Expected Answer:'} ${expectedAnswer}
+Student's Answer: ${userAnswer}
+${context ? `Context: ${context}` : ''}
+
+${isExplanation
+    ? `This is an explanation question. Grade based on conceptual understanding, not exact wording.
+A short answer that shows understanding can still be correct.`
+    : `Evaluate if the student's answer is correct. Consider:
+- Same meaning with different words = CORRECT
+- Key concepts present = PARTIAL CREDIT
+- Minor typos/spelling = IGNORE
+- Empty or completely wrong = INCORRECT`}
 ${curriculumContext ? '- Apply curriculum command terms and assessment objectives' : ''}
 
 Respond with ONLY valid JSON (no markdown):
-{"correct":true/false,"score":0-100,"feedback":"one brief sentence${language === 'he' ? ' in Hebrew' : ''}"}`
+{"correct":true/false,"score":0-100,"feedback":"${isExplanation ? '1-2 sentences: what was right and what could be improved' : 'one brief sentence'}${language === 'he' ? ' in Hebrew' : ''}"}`
+
+  // More tokens for explanation questions to allow detailed feedback
+  const maxTokens = isExplanation || topicType === 'conceptual' ? 400 : 200
 
   try {
     const response = await client.messages.create({
       model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 150,
+      max_tokens: maxTokens,
       messages: [{ role: 'user', content: prompt }]
     })
 
@@ -283,6 +329,11 @@ Respond with ONLY valid JSON (no markdown):
       feedback: result.feedback || (result.correct ? 'Correct!' : 'Not quite right.')
     }
   } catch (error) {
+    console.error('[evaluateWithAI] AI evaluation failed:', {
+      error: error instanceof Error ? error.message : String(error),
+      question: question.substring(0, 100),
+      hasApiKey: !!process.env.ANTHROPIC_API_KEY,
+    })
     throw error
   }
 }
@@ -398,17 +449,33 @@ export async function evaluateAnswer(params: EvaluateAnswerParams): Promise<Eval
       feedback: aiResult.feedback,
       evaluationMethod: 'ai',
     }
-  } catch {
-    // If AI fails, fall back to fuzzy result
-    const partialScore = Math.round(fuzzyResult.similarity * 100)
-    const isPartial = fuzzyResult.similarity >= 0.6
+  } catch (error) {
+    // Log the failure so we can diagnose in Vercel logs
+    console.error('[evaluateAnswer] AI evaluation failed, falling back to fuzzy:', {
+      error: error instanceof Error ? error.message : String(error),
+      question: question.substring(0, 80),
+      hasApiKey: !!process.env.ANTHROPIC_API_KEY,
+    })
 
-    if (isPartial) {
+    // Fall back to fuzzy result with distinct method tag
+    // Respect the same 85% threshold as normal fuzzy matching
+    const partialScore = Math.round(fuzzyResult.similarity * 100)
+
+    if (fuzzyResult.similarity >= 0.85) {
+      return {
+        isCorrect: true,
+        score: partialScore,
+        feedback: 'Correct! (minor spelling differences accepted)',
+        evaluationMethod: 'fuzzy_fallback',
+      }
+    }
+
+    if (fuzzyResult.similarity >= 0.6) {
       return {
         isCorrect: false,
         score: partialScore,
         feedback: 'Partially correct. Review the expected answer.',
-        evaluationMethod: 'fuzzy',
+        evaluationMethod: 'fuzzy_fallback',
       }
     }
 
@@ -416,7 +483,7 @@ export async function evaluateAnswer(params: EvaluateAnswerParams): Promise<Eval
       isCorrect: false,
       score: Math.round(fuzzyResult.similarity * 50),
       feedback: 'Not quite. Compare with the correct answer.',
-      evaluationMethod: 'fuzzy',
+      evaluationMethod: 'fuzzy_fallback',
     }
   }
 }

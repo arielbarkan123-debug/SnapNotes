@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { type SubmitExamRequest, type MatchingPair, type SubQuestion } from '@/types'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { evaluateAnswer } from '@/lib/evaluation/answer-checker'
+
+// Allow extra time for AI evaluation of open-ended questions
+export const maxDuration = 120
 
 function calculateGrade(percentage: number): string {
   if (percentage >= 90) return 'A'
@@ -160,6 +164,19 @@ export async function POST(
       return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to load questions')
     }
 
+    // Fetch user language for AI evaluation
+    let userLanguage = 'en'
+    try {
+      const { data: profile } = await supabase
+        .from('user_learning_profile')
+        .select('language')
+        .eq('user_id', user.id)
+        .single()
+      userLanguage = profile?.language || 'en'
+    } catch {
+      // Continue with default
+    }
+
     let score = 0
     // Calculate total points from all questions
     const totalPoints = questions.reduce((sum, q) => sum + (q.points || 1), 0)
@@ -167,12 +184,26 @@ export async function POST(
     // Collect question updates for batch execution
     const questionUpdates: Array<{ questionId: string; updateData: Record<string, unknown> }> = []
 
-    for (const question of questions) {
+    // Phase 1: Grade non-AI questions synchronously, collect AI questions
+    interface PendingAIQuestion {
+      questionIndex: number
+      questionId: string
+      userAnswer: string
+      correctAnswer: string
+      acceptableAnswers: string[] | null
+      questionText: string
+      points: number
+    }
+    const pendingAIQuestions: PendingAIQuestion[] = []
+
+    for (let qi = 0; qi < questions.length; qi++) {
+      const question = questions[qi]
       const answer = answers.find(a => a.questionId === question.id)
       let userAnswerToStore: string | null = null
       let isCorrect: boolean | null = null
       let pointsEarned = 0
       let updatedSubQuestions: SubQuestion[] | null = null
+      let deferToAI = false
 
       switch (question.question_type) {
         case 'multiple_choice':
@@ -191,8 +222,17 @@ export async function POST(
           const userAnswer = answer?.answer || null
           userAnswerToStore = userAnswer
           if (userAnswer) {
-            isCorrect = checkTextAnswer(userAnswer, question.correct_answer, question.acceptable_answers)
-            if (isCorrect) pointsEarned = question.points
+            // Defer to AI evaluation for accurate grading
+            deferToAI = true
+            pendingAIQuestions.push({
+              questionIndex: qi,
+              questionId: question.id,
+              userAnswer,
+              correctAnswer: question.correct_answer,
+              acceptableAnswers: question.acceptable_answers,
+              questionText: question.question_text,
+              points: question.points,
+            })
           }
           break
         }
@@ -248,24 +288,63 @@ export async function POST(
         }
       }
 
-      score += pointsEarned
+      if (!deferToAI) {
+        score += pointsEarned
 
-      // Build update object
-      const updateData: Record<string, unknown> = {
-        user_answer: userAnswerToStore,
-        is_correct: userAnswerToStore !== null ? isCorrect : null,
+        const updateData: Record<string, unknown> = {
+          user_answer: userAnswerToStore,
+          is_correct: userAnswerToStore !== null ? isCorrect : null,
+        }
+        if (updatedSubQuestions) {
+          updateData.sub_questions = updatedSubQuestions
+        }
+        questionUpdates.push({ questionId: question.id, updateData })
       }
+    }
 
-      // Update sub_questions with graded results for passage_based
-      if (updatedSubQuestions) {
-        updateData.sub_questions = updatedSubQuestions
+    // Phase 2: Evaluate AI questions in parallel
+    if (pendingAIQuestions.length > 0) {
+      const aiResults = await Promise.allSettled(
+        pendingAIQuestions.map(pq =>
+          evaluateAnswer({
+            question: pq.questionText,
+            expectedAnswer: pq.correctAnswer,
+            userAnswer: pq.userAnswer,
+            acceptableAnswers: pq.acceptableAnswers || [],
+            language: userLanguage,
+          })
+        )
+      )
+
+      for (let i = 0; i < pendingAIQuestions.length; i++) {
+        const pq = pendingAIQuestions[i]
+        const result = aiResults[i]
+
+        let isCorrect: boolean
+        let pointsEarned: number
+
+        if (result.status === 'fulfilled') {
+          isCorrect = result.value.isCorrect
+          // Partial credit: scale points by AI score
+          pointsEarned = Math.round((result.value.score / 100) * pq.points)
+        } else {
+          // Safety net: evaluateAnswer() internally catches AI failures and returns
+          // fuzzy_fallback results, so this branch should rarely be reached. It exists
+          // to handle unexpected errors (e.g., out-of-memory, unhandled rejection).
+          console.error('[Exam Submit] evaluateAnswer rejected unexpectedly:', pq.questionId, result.reason)
+          isCorrect = checkTextAnswer(pq.userAnswer, pq.correctAnswer, pq.acceptableAnswers)
+          pointsEarned = isCorrect ? pq.points : 0
+        }
+
+        score += pointsEarned
+        questionUpdates.push({
+          questionId: pq.questionId,
+          updateData: {
+            user_answer: pq.userAnswer,
+            is_correct: isCorrect,
+          },
+        })
       }
-
-      // Collect update promises instead of awaiting in loop
-      questionUpdates.push({
-        questionId: question.id,
-        updateData,
-      })
     }
 
     // Execute all question updates with Promise.allSettled for transaction safety

@@ -85,6 +85,7 @@ interface QuestionCardProps {
 }
 
 function QuestionCard({ question, onAnswer, isSubmitting }: QuestionCardProps) {
+  const tp = useTranslations('practice')
   const [selectedAnswer, setSelectedAnswer] = useState<string>('')
   const [textAnswer, setTextAnswer] = useState('')
 
@@ -169,23 +170,31 @@ function QuestionCard({ question, onAnswer, isSubmitting }: QuestionCardProps) {
         </div>
       )}
 
-      {(question.question_type === 'fill_blank' || question.question_type === 'short_answer') && (
+      {question.question_type === 'fill_blank' && (
         <div className="mb-6">
           <input
             type="text"
             value={textAnswer}
             onChange={(e) => setTextAnswer(e.target.value)}
-            placeholder={
-              question.question_type === 'fill_blank'
-                ? 'Fill in the blank...'
-                : 'Type your answer...'
-            }
+            placeholder={tp('fillInTheBlank')}
             className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !isSubmitting) {
                 handleSubmit()
               }
             }}
+          />
+        </div>
+      )}
+
+      {question.question_type === 'short_answer' && (
+        <div className="mb-6">
+          <textarea
+            rows={4}
+            value={textAnswer}
+            onChange={(e) => setTextAnswer(e.target.value)}
+            placeholder={tp('typeYourAnswer')}
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-y"
           />
         </div>
       )}
@@ -204,9 +213,14 @@ function QuestionCard({ question, onAnswer, isSubmitting }: QuestionCardProps) {
       >
         {isSubmitting
           ? (question.question_type === 'short_answer' || question.question_type === 'fill_blank')
-            ? 'Evaluating answer...'
-            : 'Checking...'
-          : 'Submit Answer'}
+            ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                {tp('aiCheckingAnswer')}
+              </span>
+            )
+            : tp('checking')
+          : tp('submitAnswer')}
       </button>
     </div>
   )
@@ -222,24 +236,33 @@ interface ResultCardProps {
   userAnswer: string
   evaluationFeedback?: string
   evaluationMethod?: string
+  evaluationScore?: number
   onNext: () => void
   onDifficultyFeedback?: (feedback: 'too_easy' | 'too_hard') => void
   questionIndex?: number
 }
 
-function ResultCard({ question, isCorrect, userAnswer, evaluationFeedback, evaluationMethod, onNext, onDifficultyFeedback, questionIndex = 0 }: ResultCardProps) {
+function ResultCard({ question, isCorrect, userAnswer, evaluationFeedback, evaluationMethod, evaluationScore, onNext, onDifficultyFeedback, questionIndex = 0 }: ResultCardProps) {
+  const tp = useTranslations('practice')
+  // Determine display state: correct, partial credit, or incorrect
+  const isPartialCredit = !isCorrect && evaluationScore !== undefined && evaluationScore >= 30
+  const badgeConfig = isCorrect
+    ? { bg: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300', icon: '\u2713', label: tp('correct') }
+    : isPartialCredit
+      ? { bg: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300', icon: '~', label: tp('partiallyCorrect') }
+      : { bg: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300', icon: '\u2717', label: tp('incorrect') }
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card p-6 border border-gray-200 dark:border-gray-700">
       {/* Result Badge */}
       <div
-        className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 ${
-          isCorrect
-            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-        }`}
+        className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 ${badgeConfig.bg}`}
       >
-        <span className="text-xl">{isCorrect ? '✓' : '✗'}</span>
-        <span className="font-medium">{isCorrect ? 'Correct!' : 'Incorrect'}</span>
+        <span className="text-xl">{badgeConfig.icon}</span>
+        <span className="font-medium">{badgeConfig.label}</span>
+        {evaluationScore !== undefined && evaluationScore > 0 && evaluationScore < 100 && (
+          <span className="text-sm opacity-75">({evaluationScore}%)</span>
+        )}
       </div>
 
       {/* Question */}
@@ -247,23 +270,48 @@ function ResultCard({ question, isCorrect, userAnswer, evaluationFeedback, evalu
         {question.question_text}
       </h2>
 
-      {/* Evaluation Feedback — only for fuzzy/AI where it adds value */}
-      {evaluationFeedback && (evaluationMethod === 'fuzzy' || evaluationMethod === 'ai') && (
-        <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 mb-4">
-          <p className="text-sm text-blue-700 dark:text-blue-300">{evaluationFeedback}</p>
+      {/* Evaluation Feedback — show for AI, fuzzy, and fuzzy_fallback */}
+      {evaluationFeedback && (evaluationMethod === 'fuzzy' || evaluationMethod === 'ai' || evaluationMethod === 'fuzzy_fallback') && (
+        <div className={`p-3 rounded-lg mb-4 ${
+          evaluationMethod === 'ai'
+            ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+            : 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800'
+        }`}>
+          <p className={`text-sm ${
+            evaluationMethod === 'ai'
+              ? 'text-blue-700 dark:text-blue-300'
+              : 'text-amber-700 dark:text-amber-300'
+          }`}>{evaluationFeedback}</p>
+          {evaluationMethod === 'ai' && (
+            <p className="text-xs text-blue-500 dark:text-blue-400 mt-1 opacity-60">{tp('aiGraded')}</p>
+          )}
         </div>
       )}
 
       {/* Answer Comparison */}
       <div className="space-y-3 mb-6">
         {!isCorrect && (
-          <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-            <p className="text-sm text-red-600 dark:text-red-400 mb-1">Your answer:</p>
-            <p className="font-medium text-red-800 dark:text-red-200">{userAnswer}</p>
+          <div className={`p-3 rounded-lg ${
+            isPartialCredit
+              ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800'
+              : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+          }`}>
+            <p className={`text-sm mb-1 ${
+              isPartialCredit
+                ? 'text-amber-600 dark:text-amber-400'
+                : 'text-red-600 dark:text-red-400'
+            }`}>{tp('yourAnswer')}</p>
+            <p className={`font-medium ${
+              isPartialCredit
+                ? 'text-amber-800 dark:text-amber-200'
+                : 'text-red-800 dark:text-red-200'
+            }`}>{userAnswer}</p>
           </div>
         )}
         <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-          <p className="text-sm text-green-600 dark:text-green-400 mb-1">Correct answer:</p>
+          <p className="text-sm text-green-600 dark:text-green-400 mb-1">
+            {isPartialCredit ? tp('referenceAnswer') : tp('correctAnswerIs')}
+          </p>
           <p className="font-medium text-green-800 dark:text-green-200">
             {question.correct_answer}
           </p>
@@ -274,7 +322,7 @@ function ResultCard({ question, isCorrect, userAnswer, evaluationFeedback, evalu
       {question.explanation && (
         <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 mb-6">
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Explanation
+            {tp('explanationLabel')}
           </h3>
           <p className="text-gray-600 dark:text-gray-400">{question.explanation}</p>
         </div>
@@ -290,7 +338,7 @@ function ResultCard({ question, isCorrect, userAnswer, evaluationFeedback, evalu
         onClick={onNext}
         className="w-full py-3 px-4 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg transition-colors"
       >
-        Next Question
+        {tp('nextQuestion')}
       </button>
     </div>
   )
@@ -615,6 +663,7 @@ export default function PracticeSessionContent({
             userAnswer={lastUserAnswer}
             evaluationFeedback={lastResult.evaluationFeedback}
             evaluationMethod={lastResult.evaluationMethod}
+            evaluationScore={lastResult.evaluationScore}
             onNext={handleNext}
             onDifficultyFeedback={handleDifficultyFeedback}
             questionIndex={currentIndex}
