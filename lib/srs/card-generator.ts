@@ -76,7 +76,7 @@ const _MAX_FRONT_WORDS = 30
 const MAX_BACK_WORDS = 200
 
 /** AI model for batch question generation */
-const AI_MODEL = 'claude-sonnet-4-5-20250929'
+const AI_MODEL = 'claude-sonnet-4-6-20250227'
 
 // =============================================================================
 // Quality Filter
@@ -95,19 +95,28 @@ export function isQuestionQualityAcceptable(question: string): boolean {
   // Check for Hebrew content (has Hebrew characters)
   const hasHebrew = /[\u0590-\u05FF]/.test(trimmed)
 
+  // Question mark at start = RTL corruption or parse error
+  if (trimmed.startsWith('?')) return false
+
   // Too short - allow fewer "words" for Hebrew since it's more compact
   // Hebrew uses spaces differently and words can be longer
   const wordCount = trimmed.split(/\s+/).length
   const minWords = hasHebrew ? 3 : 5
   if (wordCount < minWords) return false
 
+  // Too long — likely regurgitated content, not a real question
+  if (trimmed.length > 120) return false
+
   // Missing question mark (for questions, not imperative "Solve:" style)
   // English imperatives
-  const englishImperativeStyle = /^(solve|calculate|convert|simplify|evaluate|find|compute|determine):/i.test(trimmed)
+  const englishImperativeStyle = /^(solve|calculate|convert|simplify|evaluate|find|compute|determine|explain|review):/i.test(trimmed)
   // Hebrew imperatives: פתור, חשב, המר, פשט, מצא, קבע, הסבר, השלם, חלק, השווה, תאר, הגדר, נתח, הוכח, בדוק
   const hebrewImperativeStyle = /^(פתור|חשב|המר|פשט|מצא|קבע|הסבר|השלם|חלק|השווה|תאר|הגדר|נתח|הוכח|בדוק):/i.test(trimmed)
 
   const isImperativeStyle = englishImperativeStyle || hebrewImperativeStyle
+
+  // Sentence ending with period — not a question (unless imperative or "Review:" style)
+  if (trimmed.endsWith('.') && !isImperativeStyle && !/^(review|explain):/i.test(trimmed)) return false
 
   // Hebrew questions starting with מה/מי/איך/למה/מדוע/כיצד/האם/כמה/איזה/אילו are valid even without ?
   const hebrewQuestionWord = hasHebrew && /^(מה|מי|איך|למה|מדוע|כיצד|האם|כמה|איזה|אילו)\s/i.test(trimmed)
@@ -118,11 +127,14 @@ export function isQuestionQualityAcceptable(question: string): boolean {
   const garbagePatterns = [
     /^what does when\b/i,
     /^what is when\b/i,
-    /^what does \w+ do\?$/i, // Too generic single-word subject like "What does comparing do?"
-    /^what is a key point about/i, // Default fallback — not useful
+    /^what does to\b/i,                        // Fragment: "What does to convert..."
+    /^what is to\b/i,                          // Fragment: "What is to convert..."
+    /^what does \w+ do\?$/i,                   // Too generic single-word subject: "What does comparing do?"
+    /^what is a key point about/i,             // Default fallback — not useful
     /^what does do\b/i,
-    /^what is \?$/i,
+    /^what (is|does|are|do)\s+\?$/i,           // Missing subject: "What is ?"
     /^explain:?\s*$/i,
+    /:\s*(write|find|solve|calculate|determine|identify)\s+the\b/i, // Instruction fragment mixed into question
   ]
 
   // Only check English garbage patterns for English questions
@@ -870,18 +882,30 @@ function generateQuestionFromKeyPointFallback(keyPoint: string, topic: string): 
   const isMatch = keyPoint.match(isPattern)
   if (isMatch) {
     const subject = isMatch[1]
-    // Avoid too-short subjects that produce garbage
-    if (subject.split(/\s+/).length >= 2) {
-      return `What is ${subject.toLowerCase()}?`
+    const subjectWords = subject.split(/\s+/)
+    // Validate: 2-8 words, doesn't start with "to " (infinitive), no colons
+    if (
+      subjectWords.length >= 2 &&
+      subjectWords.length <= 8 &&
+      !subject.toLowerCase().startsWith('to ') &&
+      !subject.includes(':')
+    ) {
+      const candidate = `What is ${subject.toLowerCase()}?`
+      if (isQuestionQualityAcceptable(candidate)) {
+        return candidate
+      }
     }
   }
 
   // Pattern: Contains "because" or "due to"
   if (lowerKeyPoint.includes('because') || lowerKeyPoint.includes('due to')) {
-    return `Why is this true: ${truncateText(keyPoint, 15)}...?`
+    const candidate = `Why is this true: ${truncateText(keyPoint, 15)}...?`
+    if (isQuestionQualityAcceptable(candidate)) {
+      return candidate
+    }
   }
 
-  // Default: use the topic
+  // Default: use the topic (safe fallback — always passes quality filter)
   return `Review this concept from "${topic}":`
 }
 
@@ -900,8 +924,16 @@ function generateQuestionFromContentFallback(
 
   if (subjectMatch) {
     const subject = subjectMatch[1].toLowerCase()
-    if (subject.split(/\s+/).length >= 2 && subject.split(/\s+/).length <= 5) {
-      return `What can you tell me about ${subject}?`
+    if (
+      subject.split(/\s+/).length >= 2 &&
+      subject.split(/\s+/).length <= 5 &&
+      !subject.startsWith('to ') &&
+      !subject.includes(':')
+    ) {
+      const candidate = `What can you tell me about ${subject}?`
+      if (isQuestionQualityAcceptable(candidate)) {
+        return candidate
+      }
     }
   }
 

@@ -90,7 +90,7 @@ export async function GET(): Promise<NextResponse> {
     // and the AI regeneration updates them in DB for next time.
     const cardsNeedingRegeneration = allCards
       .filter(card => !isQuestionQualityAcceptable(card.front))
-      .slice(0, 5)
+      .slice(0, 10)
 
     if (cardsNeedingRegeneration.length > 0) {
       // Provide immediate fallback text for bad cards in the current response

@@ -218,7 +218,7 @@ export default function ReviewCard({ card, onShowAnswer, isAnswerShown, onAnswer
           {/* Front Side (Question) */}
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <p className="text-xl sm:text-2xl font-medium text-gray-900 dark:text-white leading-relaxed">
+              <p dir="auto" className="text-xl sm:text-2xl font-medium text-gray-900 dark:text-white leading-relaxed">
                 {card.front}
               </p>
             </div>
@@ -235,7 +235,7 @@ export default function ReviewCard({ card, onShowAnswer, isAnswerShown, onAnswer
 
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
-                  <div className="text-lg sm:text-xl text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
+                  <div dir="auto" className="text-lg sm:text-xl text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
                     {formatAnswer(card.back, card.card_type)}
                   </div>
                 </div>

@@ -98,6 +98,46 @@ describe('isQuestionQualityAcceptable', () => {
   })
 
   // =========================================================================
+  // New rejection patterns (Feb 2026 fix for broken flashcard questions)
+  // =========================================================================
+
+  describe('rejects newly caught garbage patterns', () => {
+    it('rejects question mark at start (RTL corruption)', () => {
+      expect(isQuestionQualityAcceptable('?What is when a percent')).toBe(false)
+    })
+
+    it('rejects "What does to convert..." fragment', () => {
+      expect(isQuestionQualityAcceptable('What does to convert any percent to a fraction: write the percent value do?')).toBe(false)
+    })
+
+    it('rejects "What is to convert..." fragment', () => {
+      expect(isQuestionQualityAcceptable('What is to convert a number to decimal?')).toBe(false)
+    })
+
+    it('rejects instruction fragment mixed into question', () => {
+      expect(isQuestionQualityAcceptable('What does: write the percent value as a fraction?')).toBe(false)
+    })
+
+    it('rejects excessively long question (over 120 chars)', () => {
+      const longQuestion = 'What is the process of converting a percent greater than one hundred percent into an improper fraction by writing the percent as numerator and one hundred as denominator?'
+      expect(longQuestion.length).toBeGreaterThan(120)
+      expect(isQuestionQualityAcceptable(longQuestion)).toBe(false)
+    })
+
+    it('rejects sentence ending with period (not a question)', () => {
+      expect(isQuestionQualityAcceptable('The answer to this problem is forty two.')).toBe(false)
+    })
+
+    it('still accepts "Review:" style with period', () => {
+      expect(isQuestionQualityAcceptable('Review: this concept from "Percentages":')).toBe(true)
+    })
+
+    it('still accepts "Explain:" style', () => {
+      expect(isQuestionQualityAcceptable('Explain: the concept of fractions and decimals')).toBe(true)
+    })
+  })
+
+  // =========================================================================
   // Edge cases
   // =========================================================================
 
