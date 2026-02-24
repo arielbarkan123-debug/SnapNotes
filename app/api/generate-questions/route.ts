@@ -211,7 +211,7 @@ Return JSON in this exact format:
         : `Generate ${validCount} practice questions based on the lesson content.`
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6-20250227',
       max_tokens: 2048,
       system: systemPrompt,
       messages: [{ role: 'user', content: userMessage }],

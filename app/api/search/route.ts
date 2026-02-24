@@ -254,7 +254,7 @@ async function semanticSearch(
 
   const anthropic = new Anthropic()
   const response = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20250929',
+    model: 'claude-sonnet-4-6-20250227',
     max_tokens: 500,
     messages: [{
       role: 'user',

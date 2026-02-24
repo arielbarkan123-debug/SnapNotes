@@ -36,7 +36,7 @@ function formatAnalyzerError(code: string, message: string, details?: string): s
 // Configuration
 // ============================================================================
 
-const AI_MODEL = 'claude-sonnet-4-5-20250929'
+const AI_MODEL = 'claude-sonnet-4-6-20250227'
 const MAX_TOKENS = 4096
 
 // Initialize Anthropic client (singleton)

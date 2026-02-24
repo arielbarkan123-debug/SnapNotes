@@ -172,7 +172,7 @@ describe('Exams API - POST (Generate Exam)', () => {
                 }),
               },
             ],
-            model: 'claude-sonnet-4-5-20250929',
+            model: 'claude-sonnet-4-6-20250227',
             usage: { input_tokens: 500, output_tokens: 1000 },
           }
         }),

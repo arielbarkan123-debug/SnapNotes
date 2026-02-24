@@ -235,7 +235,7 @@ export async function extractConceptsFromCourse(
 
   // Call Claude
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6-20250227',
     max_tokens: 4000,
     messages: [{ role: 'user', content: prompt }],
   })
@@ -278,7 +278,7 @@ export async function extractConceptsFromCourse(
     metadata: {
       courseId: course.id,
       extractedAt: new Date().toISOString(),
-      modelUsed: 'claude-sonnet-4-5-20250929',
+      modelUsed: 'claude-sonnet-4-6-20250227',
       conceptCount: enrichedConcepts.length,
       mappingCount: parsed.mappings.length,
     },

@@ -28,7 +28,7 @@ import { isQuestionQualityAcceptable } from '@/lib/srs'
 // Constants
 // -----------------------------------------------------------------------------
 
-const ANTHROPIC_MODEL = 'claude-sonnet-4-5-20250929'
+const ANTHROPIC_MODEL = 'claude-sonnet-4-6-20250227'
 
 const QUESTION_TYPE_DESCRIPTIONS: Record<PracticeQuestionType, string> = {
   multiple_choice: '4 options (A-D) with one correct answer',

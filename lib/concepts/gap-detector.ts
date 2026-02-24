@@ -380,7 +380,7 @@ Be concise, supportive, and actionable. Use simple language.`
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-20241022', // Fast model for quick responses
+      model: 'claude-sonnet-4-6-20250227',
       max_tokens: 1000,
       messages: [{ role: 'user', content: prompt }],
     })

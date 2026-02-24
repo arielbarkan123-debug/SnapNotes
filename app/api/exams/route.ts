@@ -33,7 +33,7 @@ interface GeneratedQuestion {
 // Allow 3 minutes for exam generation (Claude API call for complex exams)
 export const maxDuration = 180
 
-const AI_MODEL = 'claude-sonnet-4-5-20250929'
+const AI_MODEL = 'claude-sonnet-4-6-20250227'
 
 export async function GET(request: Request) {
   try {
