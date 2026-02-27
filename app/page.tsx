@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getTranslations } from 'next-intl/server'
 
 // ============================================================================
 // Landing Page - Server Component
@@ -42,7 +43,9 @@ export default async function LandingPage() {
 // Header Component
 // ============================================================================
 
-function Header() {
+async function Header() {
+  const t = await getTranslations('landing')
+
   return (
     <header className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
       <div className="container mx-auto px-4">
@@ -73,13 +76,13 @@ function Header() {
               href="/login"
               className="px-3 sm:px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium transition-colors text-sm sm:text-base"
             >
-              Log In
+              {t('header.logIn')}
             </Link>
             <Link
               href="/signup"
               className="px-4 sm:px-6 py-2 sm:py-2.5 bg-gradient-to-r from-violet-500 to-violet-600 text-white rounded-full hover:from-violet-600 hover:to-violet-700 active:from-violet-700 active:to-violet-800 font-medium transition-colors text-sm sm:text-base"
             >
-              Sign Up
+              {t('header.signUp')}
             </Link>
           </div>
         </nav>
@@ -92,7 +95,9 @@ function Header() {
 // Hero Section
 // ============================================================================
 
-function HeroSection() {
+async function HeroSection() {
+  const t = await getTranslations('landing')
+
   return (
     <section className="relative overflow-hidden py-16 sm:py-24 lg:py-32">
       {/* Background decoration */}
@@ -104,15 +109,14 @@ function HeroSection() {
       <div className="container mx-auto px-4 relative">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
-            Turn Your Notes Into{' '}
+            {t('hero.titleStart')}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-purple-600">
-              Study Courses
+              {t('hero.titleHighlight')}
             </span>
           </h1>
 
           <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 mb-8 sm:mb-10 max-w-2xl mx-auto leading-relaxed">
-            Upload a photo of your notebook. Our AI creates a complete, organized study course in seconds.
-            No more messy notes — just clear, structured learning.
+            {t('hero.description')}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -120,9 +124,9 @@ function HeroSection() {
               href="/signup"
               className="inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-violet-500 to-violet-600 text-white rounded-full hover:from-violet-600 hover:to-violet-700 active:from-violet-700 active:to-violet-800 font-semibold text-lg transition-all shadow-lg shadow-violet-600/25 hover:shadow-xl hover:shadow-violet-600/30"
             >
-              Get Started Free
+              {t('hero.getStarted')}
               <svg
-                className="w-5 h-5 ml-2"
+                className="w-5 h-5 ltr:ml-2 rtl:mr-2 rtl:rotate-180"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -139,7 +143,7 @@ function HeroSection() {
               href="/login"
               className="inline-flex items-center justify-center px-8 py-4 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 font-semibold text-lg transition-all"
             >
-              Log In
+              {t('hero.logIn')}
             </Link>
           </div>
 
@@ -152,7 +156,7 @@ function HeroSection() {
                   <div className="w-3 h-3 rounded-full bg-yellow-400" />
                   <div className="w-3 h-3 rounded-full bg-green-400" />
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">NoteSnap — Your Study Course</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 ltr:ml-2 rtl:mr-2">{t('hero.mockTitle')}</span>
               </div>
               <div className="p-6 sm:p-8">
                 <div className="flex items-start gap-6">
@@ -170,7 +174,7 @@ function HeroSection() {
 
                   {/* Arrow */}
                   <div className="flex-shrink-0 self-center hidden sm:block">
-                    <svg className="w-12 h-12 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-12 h-12 text-violet-400 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
                   </div>
@@ -181,15 +185,15 @@ function HeroSection() {
                       <div className="w-6 h-6 rounded bg-violet-100 dark:bg-violet-900/40" />
                       <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-48" />
                     </div>
-                    <div className="space-y-2 pl-8">
+                    <div className="space-y-2 ltr:pl-8 rtl:pr-8">
                       <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded w-full" />
                       <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded w-5/6" />
                       <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded w-4/5" />
                     </div>
-                    <div className="flex gap-2 pl-8 pt-2">
-                      <span className="px-2 py-1 bg-violet-50 dark:bg-violet-900/30 rounded-full text-xs text-violet-600 dark:text-violet-400">Concept 1</span>
-                      <span className="px-2 py-1 bg-purple-50 dark:bg-purple-900/30 rounded-full text-xs text-purple-600 dark:text-purple-400">Concept 2</span>
-                      <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 rounded-full text-xs text-blue-600 dark:text-blue-400">Concept 3</span>
+                    <div className="flex gap-2 ltr:pl-8 rtl:pr-8 pt-2">
+                      <span className="px-2 py-1 bg-violet-50 dark:bg-violet-900/30 rounded-full text-xs text-violet-600 dark:text-violet-400">{t('hero.concept1')}</span>
+                      <span className="px-2 py-1 bg-purple-50 dark:bg-purple-900/30 rounded-full text-xs text-purple-600 dark:text-purple-400">{t('hero.concept2')}</span>
+                      <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 rounded-full text-xs text-blue-600 dark:text-blue-400">{t('hero.concept3')}</span>
                     </div>
                   </div>
                 </div>
@@ -206,12 +210,14 @@ function HeroSection() {
 // How It Works Section
 // ============================================================================
 
-function HowItWorksSection() {
+async function HowItWorksSection() {
+  const t = await getTranslations('landing')
+
   const steps = [
     {
       number: '1',
-      title: 'Upload Your Notes',
-      description: 'Take a photo of your notebook page or upload an image. Handwritten or typed — we handle both.',
+      title: t('howItWorks.step1Title'),
+      description: t('howItWorks.step1Desc'),
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -221,8 +227,8 @@ function HowItWorksSection() {
     },
     {
       number: '2',
-      title: 'AI Analyzes Content',
-      description: 'Our AI reads your notes, extracts key concepts, formulas, and diagrams automatically.',
+      title: t('howItWorks.step2Title'),
+      description: t('howItWorks.step2Desc'),
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -232,8 +238,8 @@ function HowItWorksSection() {
     },
     {
       number: '3',
-      title: 'Get Your Study Course',
-      description: 'Receive a beautifully organized course with explanations, key points, and a clear structure.',
+      title: t('howItWorks.step3Title'),
+      description: t('howItWorks.step3Desc'),
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -248,10 +254,10 @@ function HowItWorksSection() {
       <div className="container mx-auto px-4">
         <div className="text-center mb-12 sm:mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            How It Works
+            {t('howItWorks.title')}
           </h2>
           <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Three simple steps to transform your handwritten notes into structured study material.
+            {t('howItWorks.subtitle')}
           </p>
         </div>
 
@@ -260,7 +266,7 @@ function HowItWorksSection() {
             <div key={index} className="relative">
               {/* Connector line */}
               {index < steps.length - 1 && (
-                <div className="hidden md:block absolute top-16 left-1/2 w-full h-0.5 bg-gradient-to-r from-gray-200 to-gray-200 dark:from-gray-700 dark:to-gray-700" />
+                <div className="hidden md:block absolute top-16 ltr:left-1/2 rtl:right-1/2 w-full h-0.5 bg-gradient-to-r from-gray-200 to-gray-200 dark:from-gray-700 dark:to-gray-700" />
               )}
 
               <div className="relative bg-gray-50 dark:bg-gray-800 rounded-2xl p-6 sm:p-8 text-center hover:shadow-lg transition-shadow">
@@ -293,7 +299,9 @@ function HowItWorksSection() {
 // Features Section
 // ============================================================================
 
-function FeaturesSection() {
+async function FeaturesSection() {
+  const t = await getTranslations('landing')
+
   const features = [
     {
       icon: (
@@ -301,8 +309,8 @@ function FeaturesSection() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
         </svg>
       ),
-      title: 'Handwriting Recognition',
-      description: 'Works with handwriting, diagrams, and formulas. Our AI understands your unique writing style.',
+      title: t('features.handwritingTitle'),
+      description: t('features.handwritingDesc'),
     },
     {
       icon: (
@@ -310,8 +318,8 @@ function FeaturesSection() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       ),
-      title: 'Instant Processing',
-      description: 'Get your organized study course in seconds, not hours. AI does the heavy lifting for you.',
+      title: t('features.instantTitle'),
+      description: t('features.instantDesc'),
     },
     {
       icon: (
@@ -319,8 +327,8 @@ function FeaturesSection() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
         </svg>
       ),
-      title: 'Clear Explanations',
-      description: 'Each concept is explained clearly with context from your original notes. Better understanding, guaranteed.',
+      title: t('features.explanationsTitle'),
+      description: t('features.explanationsDesc'),
     },
     {
       icon: (
@@ -328,8 +336,8 @@ function FeaturesSection() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
         </svg>
       ),
-      title: 'Organized Structure',
-      description: 'Content is organized into logical sections with key concepts, examples, and summaries.',
+      title: t('features.structureTitle'),
+      description: t('features.structureDesc'),
     },
     {
       icon: (
@@ -337,8 +345,8 @@ function FeaturesSection() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
         </svg>
       ),
-      title: 'Mobile Friendly',
-      description: 'Access your courses anywhere. Take photos from your phone and study on the go.',
+      title: t('features.mobileTitle'),
+      description: t('features.mobileDesc'),
     },
     {
       icon: (
@@ -346,8 +354,8 @@ function FeaturesSection() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
         </svg>
       ),
-      title: 'Private & Secure',
-      description: 'Your notes are yours. We never share your content, and all data is encrypted.',
+      title: t('features.securityTitle'),
+      description: t('features.securityDesc'),
     },
   ]
 
@@ -356,10 +364,10 @@ function FeaturesSection() {
       <div className="container mx-auto px-4">
         <div className="text-center mb-12 sm:mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Everything You Need to Study Smarter
+            {t('features.title')}
           </h2>
           <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Powerful features designed to help you learn more effectively.
+            {t('features.subtitle')}
           </p>
         </div>
 
@@ -390,7 +398,9 @@ function FeaturesSection() {
 // CTA Section
 // ============================================================================
 
-function CTASection() {
+async function CTASection() {
+  const t = await getTranslations('landing')
+
   return (
     <section className="py-16 sm:py-24">
       <div className="container mx-auto px-4">
@@ -403,19 +413,18 @@ function CTASection() {
 
           <div className="relative">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6">
-              Ready to Transform Your Notes?
+              {t('cta.title')}
             </h2>
             <p className="text-lg sm:text-xl text-violet-100 mb-8 max-w-2xl mx-auto">
-              Join students who are already studying smarter with NoteSnap.
-              Get started for free — no credit card required.
+              {t('cta.subtitle')}
             </p>
             <Link
               href="/signup"
               className="inline-flex items-center justify-center px-8 py-4 bg-white text-violet-600 rounded-full hover:bg-gray-100 active:bg-gray-200 font-semibold text-lg transition-all shadow-lg"
             >
-              Start Free Now
+              {t('cta.button')}
               <svg
-                className="w-5 h-5 ml-2"
+                className="w-5 h-5 ltr:ml-2 rtl:mr-2 rtl:rotate-180"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -439,7 +448,8 @@ function CTASection() {
 // Footer
 // ============================================================================
 
-function Footer() {
+async function Footer() {
+  const t = await getTranslations('landing')
   const currentYear = new Date().getFullYear()
 
   return (
@@ -469,19 +479,19 @@ function Footer() {
           {/* Links */}
           <nav className="flex flex-wrap justify-center gap-6 text-sm">
             <Link href="/login" className="hover:text-white transition-colors">
-              Log In
+              {t('footer.logIn')}
             </Link>
             <Link href="/signup" className="hover:text-white transition-colors">
-              Sign Up
+              {t('footer.signUp')}
             </Link>
             <span className="text-gray-600">|</span>
-            <span className="text-gray-500">Privacy Policy</span>
-            <span className="text-gray-500">Terms of Service</span>
+            <span className="text-gray-500">{t('footer.privacy')}</span>
+            <span className="text-gray-500">{t('footer.terms')}</span>
           </nav>
 
           {/* Copyright */}
           <p className="text-sm">
-            &copy; {currentYear} NoteSnap. All rights reserved.
+            {t('footer.copyright', { year: currentYear })}
           </p>
         </div>
       </div>

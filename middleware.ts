@@ -1,14 +1,14 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
-// Routes that require authentication
-const protectedRoutes = ['/dashboard', '/course']
-
 // Auth routes (redirect to dashboard if already authenticated)
 const authRoutes = ['/login', '/signup', '/forgot-password', '/reset-password']
 
-// Public routes that don't require any special handling
+// Public routes that don't require any special handling (auth callback handled separately above)
 const publicRoutes = ['/auth/callback']
+
+// Page routes accessible WITHOUT authentication (deny-by-default for everything else)
+const publicPageRoutes = ['/', '/offline']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -41,28 +41,31 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
-  // Check if the current path is a protected route
-  const isProtectedRoute = protectedRoutes.some(route =>
-    pathname.startsWith(route)
-  )
+  // Skip auth check for API routes (they handle their own auth)
+  if (pathname.startsWith('/api')) {
+    return supabaseResponse
+  }
 
   // Check if the current path is an auth route
   const isAuthRoute = authRoutes.some(route =>
     pathname.startsWith(route)
   )
 
-  // Redirect unauthenticated users to login for protected routes
-  if (isProtectedRoute && !user) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    url.searchParams.set('redirectTo', pathname)
-    return NextResponse.redirect(url)
-  }
-
   // Redirect authenticated users away from auth pages to dashboard
   if (isAuthRoute && user) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
+    return NextResponse.redirect(url)
+  }
+
+  // Check if the current path is a public page route (exact match)
+  const isPublicPage = publicPageRoutes.some(route => pathname === route)
+
+  // Deny-by-default: all non-public, non-auth routes require authentication
+  if (!isPublicPage && !isAuthRoute && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    url.searchParams.set('redirectTo', pathname)
     return NextResponse.redirect(url)
   }
 

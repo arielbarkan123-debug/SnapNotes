@@ -1,0 +1,55 @@
+{
+  "header": {
+    "logIn": "Log In",
+    "signUp": "Sign Up"
+  },
+  "hero": {
+    "titleStart": "Turn Your Notes Into ",
+    "titleHighlight": "Study Courses",
+    "description": "Upload a photo of your notebook. Our AI creates a complete, organized study course in seconds. No more messy notes — just clear, structured learning.",
+    "getStarted": "Get Started Free",
+    "logIn": "Log In",
+    "mockTitle": "NoteSnap — Your Study Course",
+    "concept1": "Concept 1",
+    "concept2": "Concept 2",
+    "concept3": "Concept 3"
+  },
+  "howItWorks": {
+    "title": "How It Works",
+    "subtitle": "Three simple steps to transform your handwritten notes into structured study material.",
+    "step1Title": "Upload Your Notes",
+    "step1Desc": "Take a photo of your notebook page or upload an image. Handwritten or typed — we handle both.",
+    "step2Title": "AI Analyzes Content",
+    "step2Desc": "Our AI reads your notes, extracts key concepts, formulas, and diagrams automatically.",
+    "step3Title": "Get Your Study Course",
+    "step3Desc": "Receive a beautifully organized course with explanations, key points, and a clear structure."
+  },
+  "features": {
+    "title": "Everything You Need to Study Smarter",
+    "subtitle": "Powerful features designed to help you learn more effectively.",
+    "handwritingTitle": "Handwriting Recognition",
+    "handwritingDesc": "Works with handwriting, diagrams, and formulas. Our AI understands your unique writing style.",
+    "instantTitle": "Instant Processing",
+    "instantDesc": "Get your organized study course in seconds, not hours. AI does the heavy lifting for you.",
+    "explanationsTitle": "Clear Explanations",
+    "explanationsDesc": "Each concept is explained clearly with context from your original notes. Better understanding, guaranteed.",
+    "structureTitle": "Organized Structure",
+    "structureDesc": "Content is organized into logical sections with key concepts, examples, and summaries.",
+    "mobileTitle": "Mobile Friendly",
+    "mobileDesc": "Access your courses anywhere. Take photos from your phone and study on the go.",
+    "securityTitle": "Private & Secure",
+    "securityDesc": "Your notes are yours. We never share your content, and all data is encrypted."
+  },
+  "cta": {
+    "title": "Ready to Transform Your Notes?",
+    "subtitle": "Join students who are already studying smarter with NoteSnap. Get started for free — no credit card required.",
+    "button": "Start Free Now"
+  },
+  "footer": {
+    "logIn": "Log In",
+    "signUp": "Sign Up",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "copyright": "© {year} NoteSnap. All rights reserved."
+  }
+}

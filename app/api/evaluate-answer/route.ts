@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
 import { evaluateAnswer } from '@/lib/evaluation/answer-checker'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 // Allow 90 seconds for AI evaluation (Claude API call)
 // Increased to handle slower mobile network connections
@@ -53,46 +54,45 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       )
     }
 
-    // Get user for curriculum context and gap detection
-    let curriculumContextString = ''
-    let userId: string | null = null
+    // MANDATORY: Authenticate user (this endpoint calls Claude API which costs money)
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
+    }
+
+    const userId = user.id
     let userLanguage = 'en'
+    let curriculumContextString = ''
 
+    // OPTIONAL: Fetch curriculum context (graceful failure)
     try {
-      const supabase = await createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      userId = user?.id ?? null
+      const { data: userProfile } = await supabase
+        .from('user_learning_profile')
+        .select('study_system, grade, subjects, subject_levels, exam_format, language')
+        .eq('user_id', user.id)
+        .single()
 
-      if (user) {
-        // Fetch user learning profile
-        const { data: userProfile } = await supabase
-          .from('user_learning_profile')
-          .select('study_system, grade, subjects, subject_levels, exam_format, language')
-          .eq('user_id', user.id)
-          .single()
+      userLanguage = userProfile?.language || 'en'
 
-        // Get user's language preference for AI feedback
-        userLanguage = userProfile?.language || 'en'
+      if (userProfile?.study_system && userProfile.study_system !== 'general' && userProfile.study_system !== 'other') {
+        const curriculumContext = await buildCurriculumContext({
+          userProfile: {
+            studySystem: userProfile.study_system as StudySystem,
+            subjects: userProfile.subjects || [],
+            subjectLevels: userProfile.subject_levels || {},
+            examFormat: userProfile.exam_format as 'match_real' | 'inspired_by' | undefined,
+            grade: userProfile.grade || undefined,
+          },
+          contentSample: context || question,
+          purpose: 'evaluation',
+        })
 
-        if (userProfile?.study_system && userProfile.study_system !== 'general' && userProfile.study_system !== 'other') {
-          // Build curriculum context for evaluation
-          const curriculumContext = await buildCurriculumContext({
-            userProfile: {
-              studySystem: userProfile.study_system as StudySystem,
-              subjects: userProfile.subjects || [],
-              subjectLevels: userProfile.subject_levels || {},
-              examFormat: userProfile.exam_format as 'match_real' | 'inspired_by' | undefined,
-              grade: userProfile.grade || undefined,
-            },
-            contentSample: context || question, // Use question/context to detect subject
-            purpose: 'evaluation',
-          })
-
-          curriculumContextString = formatContextForPrompt(curriculumContext)
-        }
+        curriculumContextString = formatContextForPrompt(curriculumContext)
       }
     } catch {
-      // Silently continue without curriculum context if auth fails
+      // Curriculum context is optional — continue without it
     }
 
     // Use the shared evaluation utility

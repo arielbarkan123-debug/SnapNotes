@@ -310,17 +310,32 @@ export function isExplanationQuestion(question: string): boolean {
 
   // --- "What is/are/was/were" questions ---
   // These are definitional/conceptual when not followed by a numeric expression
+  // or a computational keyword like "answer", "value", "sum", etc.
   // e.g., "What is an inclined plane?" = explanation, "What is 2+2?" = NOT explanation
+  // e.g., "What is the answer to 3+5?" = NOT explanation, "What is the value of x?" = NOT explanation
   const whatPatterns = [
     /^what (?:is|are|was|were) (?:a |an |the |)/,
     /^what does /,
     /^what did /,
   ]
+  const computationalKeywords = [
+    'answer', 'value', 'sum', 'product', 'result', 'total',
+    'difference', 'quotient', 'remainder', 'square root',
+    'area', 'perimeter', 'volume', 'length', 'width', 'height',
+    'distance', 'speed', 'velocity', 'acceleration', 'mass',
+    'weight', 'force', 'probability', 'percentage', 'ratio',
+    'slope', 'intercept', 'derivative', 'integral', 'limit',
+    'gcf', 'gcd', 'lcm', 'median', 'mean', 'mode', 'range',
+  ]
   for (const regex of whatPatterns) {
     if (regex.test(lowerQ)) {
       const afterWhat = lowerQ.replace(regex, '').trim().replace(/[?!.]+$/, '')
       const looksNumeric = /^[\d\s+\-*/^().=]+$/.test(afterWhat)
-      if (!looksNumeric) return true
+      if (looksNumeric) continue
+      // Check if it starts with a computational keyword (asking for a value, not an explanation)
+      const looksComputational = computationalKeywords.some(kw => afterWhat.startsWith(kw))
+      if (looksComputational) continue
+      return true
     }
   }
 
