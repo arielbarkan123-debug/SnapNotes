@@ -7,7 +7,7 @@ import Anthropic from '@anthropic-ai/sdk'
 // Allow 90 seconds for AI help generation (Claude API call)
 export const maxDuration = 90
 
-const AI_MODEL = 'claude-sonnet-4-6-20250227'
+const AI_MODEL = 'claude-sonnet-4-6'
 const MAX_CONTENT_LENGTH = 4000
 
 export async function POST(request: Request): Promise<NextResponse> {

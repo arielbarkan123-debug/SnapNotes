@@ -61,6 +61,10 @@ const CONCEPTUAL_KEYWORDS = [
   'newton\'s law', 'conservation', 'momentum', 'energy transfer',
   'electromagnetic', 'quantum', 'relativity', 'thermodynamics',
   'wave theory', 'particle theory',
+  'free body diagram', 'force', 'acceleration', 'velocity',
+  'friction', 'gravity', 'inertia', 'torque', 'equilibrium',
+  'electric field', 'magnetic field', 'circuit', 'resistance',
+  'wavelength', 'frequency', 'amplitude', 'refraction',
   // Biology
   'cell biology', 'genetics', 'evolution', 'ecosystem', 'photosynthesis',
   'mitosis', 'meiosis', 'dna', 'rna', 'protein synthesis',

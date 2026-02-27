@@ -34,8 +34,8 @@ import { filterForbiddenContent } from './course-validator'
 // ============================================================================
 
 // AI model with environment variable fallback
-const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6-20250227'
-const AI_MODEL_FAST = process.env.ANTHROPIC_MODEL_FAST || 'claude-sonnet-4-6-20250227'
+const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'
+const AI_MODEL_FAST = process.env.ANTHROPIC_MODEL_FAST || 'claude-sonnet-4-6'
 const MAX_TOKENS_EXTRACTION = 4096
 const MAX_TOKENS_GENERATION = 16384  // Increased for large documents (31 slides needs more tokens)
 const MAX_IMAGES_PER_REQUEST = 5 // Claude's recommended limit for optimal performance

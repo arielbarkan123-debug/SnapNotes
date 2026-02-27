@@ -156,7 +156,7 @@ export async function generateRecraftDiagram(
   let cleanPrompt: string;
   try {
     const rewriteMsg = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6-20250227',
+      model: 'claude-sonnet-4-6',
       max_tokens: 400,
       messages: [
         {
@@ -207,7 +207,7 @@ export async function generateRecraftDiagram(
     ) as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
 
     const visionMessage = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6-20250227',
+      model: 'claude-sonnet-4-6',
       max_tokens: 2048,
       messages: [
         {

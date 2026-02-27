@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { MathText } from '@/components/ui/MathRenderer'
 
 // =============================================================================
 // Types
@@ -99,7 +100,7 @@ export default function TrueFalse({
       {/* Statement */}
       <div className="mb-8">
         <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white leading-relaxed text-center">
-          {statement}
+          <MathText>{statement}</MathText>
         </p>
       </div>
 

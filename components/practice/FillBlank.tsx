@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
+import { MathText } from '@/components/ui/MathRenderer'
 
 // =============================================================================
 // Types
@@ -63,7 +64,7 @@ export default function FillBlank({
       return (
         <div className="text-center">
           <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white leading-relaxed mb-4">
-            {sentence}
+            <MathText>{sentence}</MathText>
           </p>
         </div>
       )
@@ -74,7 +75,7 @@ export default function FillBlank({
       <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white leading-relaxed text-center">
         {parts.map((part, index) => (
           <span key={index}>
-            {part}
+            <MathText>{part}</MathText>
             {index < parts.length - 1 && (
               <span
                 className={`inline-block min-w-[120px] mx-1 px-3 py-1 rounded-lg border-2 border-dashed ${

@@ -93,6 +93,88 @@ export function similarityRatio(a: string, b: string): number {
   return 1 - distance / maxLength
 }
 
+// Stop words for keyword extraction (EN + HE)
+const STOP_WORDS = new Set([
+  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+  'should', 'may', 'might', 'shall', 'can', 'need', 'dare', 'ought',
+  'used', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from',
+  'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below',
+  'between', 'out', 'off', 'over', 'under', 'again', 'further', 'then',
+  'once', 'that', 'this', 'these', 'those', 'it', 'its', 'and', 'but',
+  'or', 'nor', 'not', 'so', 'very', 'just', 'about', 'up', 'down',
+  'each', 'every', 'all', 'any', 'both', 'few', 'more', 'most', 'other',
+  'some', 'such', 'no', 'only', 'own', 'same', 'than', 'too', 'also',
+  'we', 'us', 'our', 'you', 'your', 'they', 'them', 'their', 'he', 'him',
+  'his', 'she', 'her', 'who', 'which', 'what', 'when', 'where', 'how',
+  // Hebrew stop words
+  'של', 'את', 'על', 'עם', 'הוא', 'היא', 'הם', 'הן', 'אני', 'אנחנו',
+  'זה', 'זו', 'אלה', 'כי', 'אם', 'גם', 'או', 'לא', 'כל', 'היה',
+  'אל', 'מן', 'לו', 'כמו', 'עד', 'בין', 'אך', 'רק', 'כן', 'אחר',
+])
+
+/**
+ * Calculate keyword overlap score between a student answer and expected answer.
+ * Used as AI fallback for open-ended questions where Levenshtein is useless.
+ *
+ * Uses precision-weighted scoring:
+ * - Precision: what fraction of the student's keywords are found in the expected answer
+ *   (measures: "is what the student wrote relevant/correct?")
+ * - Recall: what fraction of the expected answer's keywords are found in the student answer
+ *   (measures: "how much of the expected content did the student cover?")
+ *
+ * Weighted 70% precision / 30% recall, because a concise correct answer
+ * should score well even if it doesn't cover every point in a long model answer.
+ */
+export function keywordOverlapScore(userAnswer: string, expectedAnswer: string): number {
+  const extractKeywords = (text: string): Set<string> => {
+    const normalized = normalizeText(text)
+    const words = normalized.split(' ').filter(w => w.length > 2 && !STOP_WORDS.has(w))
+    return new Set(words)
+  }
+
+  const expectedKeywords = extractKeywords(expectedAnswer)
+  const userKeywords = extractKeywords(userAnswer)
+
+  if (expectedKeywords.size === 0 || userKeywords.size === 0) return 0
+
+  // Count how many expected keywords appear in student answer (recall)
+  let recallMatches = 0
+  for (const keyword of expectedKeywords) {
+    if (userKeywords.has(keyword)) recallMatches++
+  }
+
+  // Count how many student keywords appear in expected answer (precision)
+  let precisionMatches = 0
+  for (const keyword of userKeywords) {
+    if (expectedKeywords.has(keyword)) precisionMatches++
+  }
+
+  const recall = recallMatches / expectedKeywords.size
+  const precision = precisionMatches / userKeywords.size
+
+  // Weighted score: favor precision (correctness) over recall (coverage)
+  return precision * 0.7 + recall * 0.3
+}
+
+/**
+ * Detect if a question expects a long-form answer based on the expected answer length
+ * and the length ratio between expected and user answers.
+ * When true, fuzzy matching (Levenshtein) should be skipped entirely.
+ */
+export function isLongAnswerQuestion(expectedAnswer: string, userAnswer: string): boolean {
+  const expectedLen = expectedAnswer.trim().length
+  const userLen = userAnswer.trim().length
+
+  // If expected answer is long (>150 chars), it's almost certainly open-ended
+  if (expectedLen > 150) return true
+
+  // If length ratio is extreme (>3:1), Levenshtein will always fail
+  if (userLen > 0 && expectedLen / userLen > 3) return true
+
+  return false
+}
+
 /**
  * Parse a string as a number, handling various formats
  * Returns null if the string is not a valid number
@@ -187,7 +269,8 @@ export function fuzzyMatch(
 // =============================================================================
 
 /**
- * Detect if a question is asking for an explanation/description (open-ended conceptual)
+ * Detect if a question is asking for an explanation/description (open-ended conceptual).
+ * Exported for testing.
  */
 export function isExplanationQuestion(question: string): boolean {
   const lowerQ = question.toLowerCase().trim()
@@ -400,7 +483,7 @@ Respond with ONLY valid JSON (no markdown):
 
   try {
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-6-20250227',
+      model: 'claude-sonnet-4-6',
       max_tokens: maxTokens,
       messages: [{ role: 'user', content: prompt }]
     })
@@ -507,16 +590,25 @@ export async function evaluateAnswer(params: EvaluateAnswerParams): Promise<Eval
     }
   }
 
-  // Layer 2: Fuzzy match
-  const fuzzyResult = fuzzyMatch(userAnswer, expectedAnswer, acceptableAnswers, 0.85)
+  // Detect long-answer / open-ended questions
+  const longAnswer = isLongAnswerQuestion(expectedAnswer, userAnswer)
+  const explanationQ = isExplanationQuestion(question)
 
-  if (fuzzyResult.matches) {
-    const fuzzyScore = Math.round(fuzzyResult.similarity * 100)
-    return {
-      isCorrect: true,
-      score: fuzzyScore,
-      feedback: 'Correct! (minor spelling differences accepted)',
-      evaluationMethod: 'fuzzy',
+  // Layer 2: Fuzzy match — SKIP for long-answer questions (Levenshtein is useless
+  // when expected answer is much longer than student answer)
+  let fuzzyResult: { matches: boolean; similarity: number; matchedAnswer?: string } | null = null
+
+  if (!longAnswer && !explanationQ) {
+    fuzzyResult = fuzzyMatch(userAnswer, expectedAnswer, acceptableAnswers, 0.85)
+
+    if (fuzzyResult.matches) {
+      const fuzzyScore = Math.round(fuzzyResult.similarity * 100)
+      return {
+        isCorrect: true,
+        score: fuzzyScore,
+        feedback: 'Correct! (minor spelling differences accepted)',
+        evaluationMethod: 'fuzzy',
+      }
     }
   }
 
@@ -558,17 +650,48 @@ export async function evaluateAnswer(params: EvaluateAnswerParams): Promise<Eval
     }
   } catch (error) {
     // Log the failure so we can diagnose in Vercel logs
-    console.error('[evaluateAnswer] AI evaluation failed, falling back to fuzzy:', {
+    console.error('[evaluateAnswer] AI evaluation failed, falling back:', {
       error: error instanceof Error ? error.message : String(error),
       question: question.substring(0, 80),
       hasApiKey: !!process.env.ANTHROPIC_API_KEY,
+      isLongAnswer: longAnswer,
+      isExplanation: explanationQ,
     })
 
-    // Fall back to fuzzy result with distinct method tag
-    // Respect the same 85% threshold as normal fuzzy matching
-    const partialScore = Math.round(fuzzyResult.similarity * 100)
+    // For long-answer / explanation questions: use keyword overlap instead of Levenshtein
+    if (longAnswer || explanationQ) {
+      const overlap = keywordOverlapScore(userAnswer, expectedAnswer)
+      const overlapPercent = Math.round(overlap * 100)
 
-    if (fuzzyResult.similarity >= 0.85) {
+      if (overlap >= 0.6) {
+        return {
+          isCorrect: true,
+          score: Math.max(60, overlapPercent),
+          feedback: 'Your answer covers the key concepts. AI grading was unavailable.',
+          evaluationMethod: 'fuzzy_fallback',
+        }
+      }
+      if (overlap >= 0.3) {
+        return {
+          isCorrect: false,
+          score: Math.max(25, overlapPercent),
+          feedback: 'Partially correct. Some key concepts are present. Compare with the model answer.',
+          evaluationMethod: 'fuzzy_fallback',
+        }
+      }
+      return {
+        isCorrect: false,
+        score: Math.max(5, overlapPercent),
+        feedback: 'Review the model answer for key concepts you may have missed.',
+        evaluationMethod: 'fuzzy_fallback',
+      }
+    }
+
+    // For short-answer questions: use Levenshtein fuzzy result (still valid for short strings)
+    const fuzzy = fuzzyResult || fuzzyMatch(userAnswer, expectedAnswer, acceptableAnswers, 0.85)
+    const partialScore = Math.round(fuzzy.similarity * 100)
+
+    if (fuzzy.similarity >= 0.85) {
       return {
         isCorrect: true,
         score: partialScore,
@@ -577,7 +700,7 @@ export async function evaluateAnswer(params: EvaluateAnswerParams): Promise<Eval
       }
     }
 
-    if (fuzzyResult.similarity >= 0.6) {
+    if (fuzzy.similarity >= 0.6) {
       return {
         isCorrect: false,
         score: partialScore,
@@ -588,7 +711,7 @@ export async function evaluateAnswer(params: EvaluateAnswerParams): Promise<Eval
 
     return {
       isCorrect: false,
-      score: Math.round(fuzzyResult.similarity * 50),
+      score: partialScore, // Fixed: was `similarity * 50` (halved), now `similarity * 100`
       feedback: 'Not quite. Compare with the correct answer.',
       evaluationMethod: 'fuzzy_fallback',
     }

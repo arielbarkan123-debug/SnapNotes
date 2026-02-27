@@ -86,7 +86,7 @@ async function qaCheckDiagram(
     }
 
     const qaMessage = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6-20250227',
+      model: 'claude-sonnet-4-6',
       max_tokens: 300,
       messages: [
         {
@@ -154,7 +154,7 @@ async function generateE2BCode(
   }
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6-20250227',
+    model: 'claude-sonnet-4-6',
     max_tokens: 8192,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: userMessage }],

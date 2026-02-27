@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
+import { MathText } from '@/components/ui/MathRenderer'
 
 // =============================================================================
 // Types
@@ -16,9 +17,9 @@ interface ShortAnswerProps {
 
 interface EvaluationResult {
   isCorrect: boolean
-  score: number
+  score: number // 0-100, or -1 for "could not evaluate"
   feedback: string
-  evaluationMethod: 'exact' | 'fuzzy' | 'ai'
+  evaluationMethod: 'numeric' | 'exact' | 'fuzzy' | 'ai' | 'fuzzy_fallback'
   evaluationTimeMs?: number
 }
 
@@ -82,12 +83,12 @@ export default function ShortAnswer({
       onAnswer(result.isCorrect, result.score)
     } catch (error) {
       console.error('[ShortAnswer] Evaluation error:', error)
-      // Fallback: Show manual grading option
+      // The entire API call failed — show "could not evaluate" instead of fake score
       setEvaluationResult({
         isCorrect: false,
-        score: 0,
+        score: -1,
         feedback: t('couldNotEvaluate'),
-        evaluationMethod: 'fuzzy',
+        evaluationMethod: 'fuzzy_fallback',
       })
     } finally {
       setIsEvaluating(false)
@@ -125,7 +126,7 @@ export default function ShortAnswer({
       {/* Question */}
       <div className="mb-6">
         <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white leading-relaxed">
-          {question}
+          <MathText>{question}</MathText>
         </p>
       </div>
 
@@ -184,27 +185,45 @@ export default function ShortAnswer({
       {evaluationResult && !isEvaluating && (
         <>
           {/* Score Display */}
-          <div className={`mb-4 p-4 rounded-xl border ${getScoreBgColor(evaluationResult.score)}`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className={`text-2xl font-bold ${getScoreColor(evaluationResult.score)}`}>
-                {evaluationResult.score >= 80 ? '✓' : evaluationResult.score >= 50 ? '~' : '✗'} {getScoreLabel(evaluationResult.score)}
-              </span>
-              <span className={`text-3xl font-bold ${getScoreColor(evaluationResult.score)}`}>
-                {evaluationResult.score}%
-              </span>
-            </div>
-            <p className={`text-sm ${getScoreColor(evaluationResult.score)}`}>
-              {evaluationResult.feedback}
-            </p>
-            {evaluationResult.evaluationTimeMs && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                {t('evaluatedIn', { time: evaluationResult.evaluationTimeMs })}
-                {evaluationResult.evaluationMethod === 'ai' && ' (AI)'}
-                {evaluationResult.evaluationMethod === 'fuzzy' && ' (fuzzy match)'}
-                {evaluationResult.evaluationMethod === 'exact' && ' (exact match)'}
+          {evaluationResult.score === -1 ? (
+            /* Could not evaluate — API failed entirely */
+            <div className="mb-4 p-4 rounded-xl border bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xl">⚠️</span>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  {t('couldNotEvaluate')}
+                </span>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t('compareWithModelAnswer')}
               </p>
-            )}
-          </div>
+            </div>
+          ) : (
+            /* Normal score display */
+            <div className={`mb-4 p-4 rounded-xl border ${getScoreBgColor(evaluationResult.score)}`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className={`text-2xl font-bold ${getScoreColor(evaluationResult.score)}`}>
+                  {evaluationResult.score >= 80 ? '✓' : evaluationResult.score >= 50 ? '~' : '✗'} {getScoreLabel(evaluationResult.score)}
+                </span>
+                <span className={`text-3xl font-bold ${getScoreColor(evaluationResult.score)}`}>
+                  {evaluationResult.score}%
+                </span>
+              </div>
+              <p className={`text-sm ${getScoreColor(evaluationResult.score)}`}>
+                {evaluationResult.feedback}
+              </p>
+              {evaluationResult.evaluationTimeMs && (
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                  {t('evaluatedIn', { time: evaluationResult.evaluationTimeMs })}
+                  {evaluationResult.evaluationMethod === 'ai' && ' (AI)'}
+                  {evaluationResult.evaluationMethod === 'fuzzy' && ` (${t('fuzzyMatch')})`}
+                  {evaluationResult.evaluationMethod === 'fuzzy_fallback' && ` (${t('approximateMatch')})`}
+                  {evaluationResult.evaluationMethod === 'exact' && ` (${t('exactMatch')})`}
+                  {evaluationResult.evaluationMethod === 'numeric' && ` (${t('numericMatch')})`}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* User's Answer Display */}
           {userInput.trim() && (
@@ -228,7 +247,7 @@ export default function ShortAnswer({
               {t('modelAnswer')}
             </p>
             <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-medium">
-              {modelAnswer}
+              <MathText>{modelAnswer}</MathText>
             </p>
           </div>
 

@@ -22,7 +22,7 @@ import { classifyTopicType, inferDifficultyFromTopic, resolveEffectiveLanguageLe
 // Configuration
 // ============================================================================
 
-const AI_MODEL = 'claude-sonnet-4-6-20250227'
+const AI_MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 2048
 
 let anthropicClient: Anthropic | null = null

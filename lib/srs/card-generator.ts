@@ -76,7 +76,7 @@ const _MAX_FRONT_WORDS = 30
 const MAX_BACK_WORDS = 200
 
 /** AI model for batch question generation */
-const AI_MODEL = 'claude-sonnet-4-6-20250227'
+const AI_MODEL = 'claude-sonnet-4-6'
 
 // =============================================================================
 // Quality Filter

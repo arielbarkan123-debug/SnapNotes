@@ -67,7 +67,7 @@ function formatEngineError(code: string, message: string, details?: string): str
 // Configuration
 // ============================================================================
 
-const AI_MODEL = 'claude-sonnet-4-6-20250227'
+const AI_MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 4096
 const IMAGE_FETCH_TIMEOUT_MS = 30000 // 30 second timeout for fetching images
 const API_TIMEOUT_MS = 180000 // 3 minutes - increased for Safari compatibility

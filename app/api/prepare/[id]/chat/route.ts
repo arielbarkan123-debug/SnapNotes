@@ -6,7 +6,7 @@ import { getDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-schemas'
 
 export const maxDuration = 60
 
-const AI_MODEL = 'claude-sonnet-4-6-20250227'
+const AI_MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 4096
 
 let anthropicClient: Anthropic | null = null

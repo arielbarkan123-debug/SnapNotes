@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
+import { MathText } from '@/components/ui/MathRenderer'
 
 // =============================================================================
 // Types
@@ -158,7 +159,7 @@ export default function MultipleChoice({
       {/* Question */}
       <div className="mb-6">
         <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white leading-relaxed">
-          {question}
+          <MathText>{question}</MathText>
         </p>
       </div>
 
@@ -187,7 +188,7 @@ export default function MultipleChoice({
               >
                 {getOptionLabel(index)}
               </span>
-              <span className="flex-1">{option.text}</span>
+              <span className="flex-1"><MathText>{option.text}</MathText></span>
               {hasChecked && index === correctShuffledIndex && (
                 <span className="text-green-500 text-xl">✓</span>
               )}
@@ -240,7 +241,7 @@ export default function MultipleChoice({
                   {t('theCorrectAnswer')}
                 </p>
                 <p className="font-semibold text-green-600 dark:text-green-400">
-                  {options[correctIndex]}
+                  <MathText>{options[correctIndex]}</MathText>
                 </p>
               </div>
               {/* Learning tip */}

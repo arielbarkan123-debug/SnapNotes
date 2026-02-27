@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import { MathText } from '@/components/ui/MathRenderer'
 
 // =============================================================================
 // Types
@@ -271,7 +272,7 @@ export default function Sequence({
       {/* Instruction */}
       <div className="mb-6">
         <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white leading-relaxed text-center">
-          {instruction}
+          <MathText>{instruction}</MathText>
         </p>
         {!hasChecked && (
           <>
@@ -331,7 +332,7 @@ export default function Sequence({
             <span className={getNumberStyle(position)}>{position + 1}</span>
 
             {/* Item Text */}
-            <span className="flex-1">{items[itemIndex]}</span>
+            <span className="flex-1"><MathText>{items[itemIndex]}</MathText></span>
 
             {/* Up/Down Buttons */}
             {!hasChecked && (
