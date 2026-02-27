@@ -9,7 +9,6 @@ import type { MistakeItem } from '@/components/practice/MistakeReview'
 import type { ReviewCard as ReviewCardType } from '@/types/srs'
 import { useCourses } from '@/hooks'
 import { useEventTracking } from '@/lib/analytics'
-import { sanitizeError } from '@/lib/utils/error-sanitizer'
 import DifficultyFeedback from '@/components/shared/DifficultyFeedback'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 
@@ -155,6 +154,7 @@ export default function PracticePage() {
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([])
   const [questionCount, setQuestionCount] = useState<number>(20)
   const [error, setError] = useState<string | null>(null)
+  const [isNoQuestionsError, setIsNoQuestionsError] = useState(false)
 
   // Practice session state
   const [cards, setCards] = useState<PracticeCard[]>([])
@@ -246,6 +246,7 @@ export default function PracticePage() {
     if (courses.length === 0 || selectedCourseIds.length === 0) return
 
     setError(null)
+    setIsNoQuestionsError(false)
 
     try {
       const courseFilter = selectedCourseIds
@@ -268,6 +269,7 @@ export default function PracticePage() {
 
       if (!data.cards || data.cards.length === 0) {
         setError(t('noQuestionsAvailable'))
+        setIsNoQuestionsError(true)
         return
       }
 
@@ -331,7 +333,8 @@ export default function PracticePage() {
       const sessionId = await startStudySession()
       sessionIdRef.current = sessionId
     } catch (err) {
-      setError(sanitizeError(err, 'Failed to start practice'))
+      console.error('[Practice] Failed to start:', err)
+      setError(t('failedToStartPractice'))
     }
   }, [courses, selectedCourseIds, questionCount, trackFeature])
 
@@ -840,10 +843,11 @@ export default function PracticePage() {
           {error && (
             <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-300 text-sm">
               {error}
-              {error.includes('No questions available') && (
+              {isNoQuestionsError && (
                 <button
                   onClick={async () => {
                     setError(null)
+                    setIsNoQuestionsError(false)
                     try {
                       const res = await fetch('/api/srs/cards/generate-all', { method: 'POST' })
                       const data = await res.json()

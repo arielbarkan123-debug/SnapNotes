@@ -8,7 +8,9 @@ const authRoutes = ['/login', '/signup', '/forgot-password', '/reset-password']
 const publicRoutes = ['/auth/callback']
 
 // Page routes accessible WITHOUT authentication (deny-by-default for everything else)
-const publicPageRoutes = ['/', '/offline']
+// /reset is a service worker reset utility that MUST work for unauthenticated users
+// (it exists for users stuck in a broken state who can't log in)
+const publicPageRoutes = ['/', '/offline', '/reset']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl

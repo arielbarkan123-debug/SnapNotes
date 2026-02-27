@@ -23,6 +23,7 @@
     "noQuestionsGenerated": "לא ניתן היה לייצר שאלות. נסה להשלים כמה שיעורים קודם.",
     "generatePracticeQuestions": "צור שאלות תרגול",
     "failedToGenerateQuestions": "יצירת השאלות נכשלה. אנא נסה שוב.",
+    "failedToStartPractice": "התחלת התרגול נכשלה. אנא נסה שוב.",
     "noQuestionToDisplay": "אין שאלה להצגה",
     "endSessionConfirm": "לסיים את האימון?",
     "saving": "שומר...",
