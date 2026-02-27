@@ -23,6 +23,7 @@
     "noQuestionsGenerated": "No questions could be generated. Try completing some lessons first.",
     "generatePracticeQuestions": "Generate Practice Questions",
     "failedToGenerateQuestions": "Failed to generate questions. Please try again.",
+    "failedToStartPractice": "Failed to start practice. Please try again.",
     "noQuestionToDisplay": "No question to display",
     "endSessionConfirm": "End practice session?",
     "saving": "Saving...",
