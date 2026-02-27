@@ -189,26 +189,99 @@ export function fuzzyMatch(
 /**
  * Detect if a question is asking for an explanation/description (open-ended conceptual)
  */
-function isExplanationQuestion(question: string): boolean {
-  const lowerQ = question.toLowerCase()
-  return (
-    lowerQ.startsWith('explain') ||
-    lowerQ.startsWith('describe') ||
-    lowerQ.startsWith('why ') ||
-    lowerQ.startsWith('how does') ||
-    lowerQ.startsWith('how do') ||
-    lowerQ.startsWith('what is the difference') ||
-    lowerQ.startsWith('compare') ||
-    lowerQ.includes('explain:') ||
-    lowerQ.includes('describe:') ||
-    // Hebrew equivalents
-    lowerQ.includes('הסבר') ||
-    lowerQ.includes('תאר') ||
-    lowerQ.includes('למה ') ||
-    lowerQ.includes('מדוע') ||
-    lowerQ.includes('כיצד') ||
-    lowerQ.includes('השווה')
-  )
+export function isExplanationQuestion(question: string): boolean {
+  const lowerQ = question.toLowerCase().trim()
+
+  // --- Exact prefix patterns (English) ---
+  const startsWithPatterns = [
+    'explain',
+    'describe',
+    'why ',
+    'how does',
+    'how do',
+    'how is',
+    'how are',
+    'how can',
+    'how would',
+    'what is the difference',
+    'what are the differences',
+    'compare',
+    'discuss',
+    'define ',
+    'summarize',
+    'summarise',
+    'outline ',
+    'tell me about',
+    'tell us about',
+    'what can you tell',
+    'what can you say',
+    'what do you know',
+    'what does it mean',
+    'what is meant by',
+    'in your own words',
+  ]
+
+  for (const pattern of startsWithPatterns) {
+    if (lowerQ.startsWith(pattern)) return true
+  }
+
+  // --- "What is/are/was/were" questions ---
+  // These are definitional/conceptual when not followed by a numeric expression
+  // e.g., "What is an inclined plane?" = explanation, "What is 2+2?" = NOT explanation
+  const whatPatterns = [
+    /^what (?:is|are|was|were) (?:a |an |the |)/,
+    /^what does /,
+    /^what did /,
+  ]
+  for (const regex of whatPatterns) {
+    if (regex.test(lowerQ)) {
+      const afterWhat = lowerQ.replace(regex, '').trim().replace(/[?!.]+$/, '')
+      const looksNumeric = /^[\d\s+\-*/^().=]+$/.test(afterWhat)
+      if (!looksNumeric) return true
+    }
+  }
+
+  // --- Contains patterns (English) ---
+  const includesPatterns = [
+    'explain:',
+    'describe:',
+    'in your own words',
+    'explain why',
+    'explain how',
+    'describe how',
+    'describe the',
+  ]
+  for (const pattern of includesPatterns) {
+    if (lowerQ.includes(pattern)) return true
+  }
+
+  // --- Hebrew patterns ---
+  const hebrewPatterns = [
+    'הסבר',        // explain
+    'תאר',         // describe
+    'למה ',        // why
+    'מדוע',        // why (formal)
+    'כיצד',        // how
+    'השווה',       // compare
+    'מה אתה יכול', // what can you
+    'מה את יכולה', // what can you (fem)
+    'ספר לי',      // tell me
+    'ספרו',        // tell (plural)
+    'מה זה',       // what is this
+    'מהו',         // what is (masc)
+    'מהי',         // what is (fem)
+    'מה הם',       // what are they (masc)
+    'מה הן',       // what are they (fem)
+    'הגדר',        // define
+    'דון ב',       // discuss
+    'סכם',         // summarize
+    'במילים שלך',  // in your own words
+  ]
+  for (const pattern of hebrewPatterns) {
+    if (lowerQ.includes(pattern)) return true
+  }
+
+  return false
 }
 
 /**
@@ -231,7 +304,21 @@ export async function evaluateWithAI(
 
   const client = new Anthropic({ apiKey })
 
-  const isExplanation = isExplanationQuestion(question)
+  let isExplanation = isExplanationQuestion(question)
+
+  // Heuristic: If the expected answer is paragraph-length, it's almost certainly
+  // an open-ended question regardless of how the question is phrased.
+  if (!isExplanation && expectedAnswer.length > 150) {
+    isExplanation = true
+  }
+
+  // Heuristic: "what" questions with multi-sentence expected answers are definitional/conceptual.
+  if (!isExplanation && expectedAnswer.length > 80) {
+    const lowerQ = question.toLowerCase().trim()
+    if (lowerQ.startsWith('what ')) {
+      isExplanation = true
+    }
+  }
 
   const curriculumInstructions = curriculumContext
     ? `
@@ -277,17 +364,20 @@ Grading Rubric (Mixed):
   } else {
     gradingRubric = `
 Grading Rubric (General):
+- The "Expected Answer" below is a REFERENCE — the student may express the same ideas differently
 - Same meaning with different words = CORRECT
-- Key concepts present = PARTIAL CREDIT
+- Key concepts present even if not all points covered = generous PARTIAL CREDIT (50-80)
 - Minor typos/spelling = IGNORE
-- Be generous with partial credit for understanding shown`
+- Be generous: if the student demonstrates understanding of the core idea, give high partial credit
+- A shorter answer that captures the main point is acceptable
+- Do NOT penalize for missing numerical components unless the question explicitly asks for calculations`
   }
 
   const prompt = `You are grading a student's answer.${curriculumContext ? ' Apply curriculum-specific grading criteria.' : ''}${hebrewInstruction}
 ${curriculumInstructions}${gradingRubric}
 
 Question: ${question}
-${isExplanation ? 'Reference Answer (one possible correct answer):' : 'Expected Answer:'} ${expectedAnswer}
+${isExplanation ? 'Reference Answer (one possible correct answer):' : (expectedAnswer.length > 80 ? 'Reference Answer:' : 'Expected Answer:')} ${expectedAnswer}
 Student's Answer: ${userAnswer}
 ${context ? `Context: ${context}` : ''}
 
@@ -296,7 +386,8 @@ ${isExplanation
 A short answer that shows understanding can still be correct.`
     : `Evaluate if the student's answer is correct. Consider:
 - Same meaning with different words = CORRECT
-- Key concepts present = PARTIAL CREDIT
+- Key concepts present = generous PARTIAL CREDIT
+- A correct core idea expressed differently than the reference = HIGH PARTIAL CREDIT (70+)
 - Minor typos/spelling = IGNORE
 - Empty or completely wrong = INCORRECT`}
 ${curriculumContext ? '- Apply curriculum command terms and assessment objectives' : ''}
@@ -430,7 +521,23 @@ export async function evaluateAnswer(params: EvaluateAnswerParams): Promise<Eval
   }
 
   // Layer 3: AI evaluation
-  const topicType = classifyTopicType(context || question)
+  let topicType = classifyTopicType(context || question)
+
+  // Override topic type for clearly open-ended questions to prevent the wrong
+  // rubric (e.g., "mixed" asking for numerical accuracy on a conceptual question).
+  if (topicType === 'mixed' || topicType === 'computational') {
+    const looksOpenEnded =
+      isExplanationQuestion(question) ||
+      expectedAnswer.length > 150 ||
+      (expectedAnswer.length > 80 && question.toLowerCase().trim().startsWith('what '))
+    if (looksOpenEnded) {
+      // Don't override if the expected answer is clearly numeric
+      const expectedIsNumeric = parseNumericAnswer(expectedAnswer) !== null
+      if (!expectedIsNumeric) {
+        topicType = 'conceptual'
+      }
+    }
+  }
 
   try {
     const aiResult = await evaluateWithAI(
