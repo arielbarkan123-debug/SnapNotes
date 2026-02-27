@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
+import { MathText } from '@/components/ui/MathRenderer'
 
 // =============================================================================
 // Types
@@ -375,7 +376,7 @@ export default function Matching({
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-bold">
                     {index + 1}
                   </span>
-                  <span>{term}</span>
+                  <span><MathText>{term}</MathText></span>
                 </span>
               </button>
             ))}
@@ -400,7 +401,7 @@ export default function Matching({
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-bold">
                     {String.fromCharCode(65 + shuffledIndex)}
                   </span>
-                  <span>{def.text}</span>
+                  <span><MathText>{def.text}</MathText></span>
                 </span>
               </button>
             ))}

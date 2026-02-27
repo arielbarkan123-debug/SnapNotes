@@ -34,7 +34,7 @@ const REJECTED_PHRASES = [
   'incorrect',  // "incorrect" alone is too vague — must explain WHY
 ]
 
-const AI_MODEL = 'claude-sonnet-4-6-20250227'
+const AI_MODEL = 'claude-sonnet-4-6'
 
 // ============================================================================
 // Main Validation

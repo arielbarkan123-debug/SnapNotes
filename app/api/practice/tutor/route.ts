@@ -9,7 +9,7 @@ import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integrat
 // Allow 120 seconds — engine diagram generation can take 10-60s on top of AI response
 export const maxDuration = 120
 
-const AI_MODEL = 'claude-sonnet-4-6-20250227'
+const AI_MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 2048
 
 let anthropicClient: Anthropic | null = null

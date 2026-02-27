@@ -112,7 +112,7 @@ export async function generateTikzDiagram(
   const tikzSystemPrompt = buildTikzPrompt(question);
 
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6-20250227',
+    model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     system: tikzSystemPrompt,
     messages: [
@@ -154,7 +154,7 @@ export async function generateTikzDiagram(
     for (let retry = 0; retry < 2 && !imageUrl; retry++) {
       console.log(`[TikZ] Compilation retry ${retry + 1}...`);
       const fixMessage = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6-20250227',
+        model: 'claude-sonnet-4-6',
         max_tokens: 4096,
         system: tikzSystemPrompt,
         messages: [

@@ -186,7 +186,7 @@ Remember: You're a tutor, not just an answer machine. Help them understand, don'
 
     // Call Claude API
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6-20250227',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       system: systemPrompt,
       messages: [

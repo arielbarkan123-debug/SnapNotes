@@ -8,7 +8,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import type { GeneratedGuide } from '@/types/prepare'
 import type { UserLearningContext } from '@/lib/ai/prompts'
 
-const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6-20250227'
+const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'
 const MAX_TOKENS = 8000
 const MAX_RETRIES = 0
 const RETRY_DELAY_MS = 2000

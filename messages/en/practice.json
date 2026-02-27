@@ -155,5 +155,10 @@
   "checking": "Checking...",
   "aiGraded": "AI graded",
   "partiallyCorrect": "Partially Correct",
-  "referenceAnswer": "Reference answer:"
+  "referenceAnswer": "Reference answer:",
+  "approximateMatch": "approximate match",
+  "fuzzyMatch": "fuzzy match",
+  "exactMatch": "exact match",
+  "numericMatch": "numeric match",
+  "compareWithModelAnswer": "Please compare your answer with the model answer below."
 }

@@ -6,6 +6,9 @@ import {
   numericMatch,
   fuzzyMatch,
   evaluateAnswer,
+  keywordOverlapScore,
+  isExplanationQuestion,
+  isLongAnswerQuestion,
 } from '@/lib/evaluation/answer-checker'
 
 // =============================================================================
@@ -249,5 +252,158 @@ describe('evaluateAnswer', () => {
       acceptableAnswers: ['light blue', 'azure'],
     })
     expect(result.isCorrect).toBe(true)
+  })
+})
+
+// =============================================================================
+// keywordOverlapScore
+// =============================================================================
+
+describe('keywordOverlapScore', () => {
+  it('returns high score when student answer contains key terms (precision-weighted)', () => {
+    const expected = 'A free body diagram shows all forces acting on an object including gravity normal force friction and applied forces represented as vectors from the center'
+    const student = 'A free body diagram is a diagram that shows forces acting on an object'
+    const score = keywordOverlapScore(student, expected)
+    // Precision is high (student's keywords are mostly in expected), recall is moderate
+    expect(score).toBeGreaterThan(0.5)
+  })
+
+  it('returns low score for completely irrelevant answer', () => {
+    const expected = 'A free body diagram shows all forces acting on an object'
+    const student = 'The weather is nice today and I like pizza'
+    const score = keywordOverlapScore(student, expected)
+    expect(score).toBeLessThan(0.15)
+  })
+
+  it('returns 1 when all keywords match', () => {
+    const expected = 'forces acting object'
+    const student = 'forces acting on an object'
+    const score = keywordOverlapScore(student, expected)
+    expect(score).toBe(1)
+  })
+
+  it('returns 0 for empty expected answer', () => {
+    expect(keywordOverlapScore('some answer', '')).toBe(0)
+  })
+
+  it('returns 0 for empty user answer', () => {
+    expect(keywordOverlapScore('', 'some expected answer')).toBe(0)
+  })
+
+  it('handles Hebrew text', () => {
+    const expected = 'דיאגרמת גוף חופשי מראה כוחות הפועלים גוף כולל כבידה חיכוך'
+    const student = 'דיאגרמה שמראה כוחות גוף חיכוך'
+    const score = keywordOverlapScore(student, expected)
+    expect(score).toBeGreaterThan(0.3)
+  })
+
+  it('gives good score for concise correct answer vs long model answer', () => {
+    const expected = 'Newton second law motion states acceleration object directly proportional net force acting inversely proportional mass written mathematically force equals mass times acceleration'
+    const student = 'Newton second law states force equals mass times acceleration'
+    const score = keywordOverlapScore(student, expected)
+    // Student's keywords are all correct (high precision), coverage is partial (low recall)
+    // With 70/30 weighting, should still score well
+    expect(score).toBeGreaterThan(0.5)
+  })
+})
+
+// =============================================================================
+// isExplanationQuestion (expanded)
+// =============================================================================
+
+describe('isExplanationQuestion', () => {
+  // Original patterns still work
+  it('detects "Explain..." questions', () => {
+    expect(isExplanationQuestion('Explain how photosynthesis works')).toBe(true)
+  })
+
+  it('detects "Describe..." questions', () => {
+    expect(isExplanationQuestion('Describe the process of mitosis')).toBe(true)
+  })
+
+  it('detects "Why..." questions', () => {
+    expect(isExplanationQuestion('Why does ice float on water?')).toBe(true)
+  })
+
+  // NEW patterns — these were the bug!
+  it('detects "What can you tell me about..." (the exact screenshot question)', () => {
+    expect(isExplanationQuestion('What can you tell me about a free body diagram?')).toBe(true)
+  })
+
+  it('detects "What is a..." questions', () => {
+    expect(isExplanationQuestion('What is a free body diagram?')).toBe(true)
+  })
+
+  it('detects "What are..." questions', () => {
+    expect(isExplanationQuestion('What are the laws of thermodynamics?')).toBe(true)
+  })
+
+  it('detects "Define..." questions', () => {
+    expect(isExplanationQuestion('Define acceleration in physics')).toBe(true)
+  })
+
+  it('detects "Discuss..." questions', () => {
+    expect(isExplanationQuestion('Discuss the causes of World War I')).toBe(true)
+  })
+
+  it('detects "Tell me about..." questions', () => {
+    expect(isExplanationQuestion('Tell me about the water cycle')).toBe(true)
+  })
+
+  it('detects "Summarize..." questions', () => {
+    expect(isExplanationQuestion('Summarize the main themes of the novel')).toBe(true)
+  })
+
+  it('detects "In your own words..." questions', () => {
+    expect(isExplanationQuestion('In your own words, explain gravity')).toBe(true)
+  })
+
+  // Negative cases — should NOT match computational questions
+  it('does NOT match "What is the answer to..."', () => {
+    expect(isExplanationQuestion('What is the answer to 3+5?')).toBe(false)
+  })
+
+  it('does NOT match "What is the value of x?"', () => {
+    expect(isExplanationQuestion('What is the value of x?')).toBe(false)
+  })
+
+  it('does NOT match "What is the sum of..."', () => {
+    expect(isExplanationQuestion('What is the sum of 10 and 20?')).toBe(false)
+  })
+
+  // Hebrew patterns
+  it('detects Hebrew "מה זה" questions', () => {
+    expect(isExplanationQuestion('מה זה דיאגרמת גוף חופשי?')).toBe(true)
+  })
+
+  it('detects Hebrew "הסבר" questions', () => {
+    expect(isExplanationQuestion('הסבר מהו כוח הכבידה')).toBe(true)
+  })
+
+  it('detects Hebrew "מה" at start of question', () => {
+    expect(isExplanationQuestion('מה אתה יכול לספר לי על דיאגרמת גוף חופשי?')).toBe(true)
+  })
+})
+
+// =============================================================================
+// isLongAnswerQuestion
+// =============================================================================
+
+describe('isLongAnswerQuestion', () => {
+  it('returns true for expected answers >150 chars', () => {
+    const longAnswer = 'A free body diagram is a simplified drawing that shows all the forces acting on a single object, represented as arrows pointing away from the object center. This is important for physics.'
+    expect(isLongAnswerQuestion(longAnswer, 'short answer')).toBe(true)
+  })
+
+  it('returns true when length ratio >3:1', () => {
+    expect(isLongAnswerQuestion('This is a medium length answer text', 'short')).toBe(true)
+  })
+
+  it('returns false for short expected answers with similar length user answers', () => {
+    expect(isLongAnswerQuestion('Paris', 'Pariss')).toBe(false)
+  })
+
+  it('returns false for short equal-length answers', () => {
+    expect(isLongAnswerQuestion('42', '43')).toBe(false)
   })
 })
