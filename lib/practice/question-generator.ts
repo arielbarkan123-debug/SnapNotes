@@ -298,6 +298,14 @@ ${courseContent}
 5. ${bloomWeights ? `Distribute questions across cognitive levels with these weights: ${bloomWeights}` : 'Distribute questions across different cognitive levels'}
 6. For fill_blank: use underscores for the blank (e.g., "The process of _____ converts...")
 7. For matching/sequence: provide clear items that can be matched/ordered
+8. CRITICAL — correct_answer field rules by question type:
+   - multiple_choice: The LABEL of the correct choice (e.g., "A", "B", "C", or "D")
+   - true_false: Either "true" or "false"
+   - fill_blank: The exact word or phrase that fills the blank
+   - short_answer: The CONCISE, DIRECT answer to the question (NOT an explanation). Keep it under 2 sentences. Put the detailed explanation in the "explanation" field instead.
+   - multi_select: Comma-separated labels of ALL correct choices (e.g., "A,C,E")
+   - matching/sequence: The correct ordering or pairing
+9. NEVER put explanatory text in the "correct_answer" field. The "correct_answer" is what the student should write; the "explanation" is why it's correct. These are DIFFERENT things.
 
 ## Output Format:
 Return a JSON array of questions:
@@ -341,6 +349,17 @@ Return a JSON array of questions:
     "cognitive_level": "remember",
     "concept_name": "Glycolysis",
     "tags": ["biology", "cellular-respiration", "metabolism"]
+  },
+  {
+    "question_type": "short_answer",
+    "question_text": "A store sells a product for $500 and offers a discount of $50. What is the discount percentage?",
+    "options": null,
+    "correct_answer": "The discount is 10%",
+    "explanation": "To find the discount percentage, divide the discount amount by the original price and multiply by 100: (50/500) × 100 = 10%.",
+    "difficulty_level": 3,
+    "cognitive_level": "apply",
+    "concept_name": "Percentages",
+    "tags": ["math", "percentages", "word-problems"]
   },
   {
     "question_type": "multi_select",

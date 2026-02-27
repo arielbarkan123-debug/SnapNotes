@@ -376,15 +376,21 @@ Grading Rubric (General):
   const prompt = `You are grading a student's answer.${curriculumContext ? ' Apply curriculum-specific grading criteria.' : ''}${hebrewInstruction}
 ${curriculumInstructions}${gradingRubric}
 
+IMPORTANT: Evaluate the student's answer based on whether it CORRECTLY ANSWERS THE QUESTION.
+The reference answer below is provided as guidance but may be imprecise, overly generic, or even unrelated to the specific question.
+If the student's answer is factually correct for the question asked, grade it as correct regardless of whether it matches the reference.
+Always trust the QUESTION as the source of truth, not the reference answer.
+
 Question: ${question}
-${isExplanation ? 'Reference Answer (one possible correct answer):' : (expectedAnswer.length > 80 ? 'Reference Answer:' : 'Expected Answer:')} ${expectedAnswer}
+Reference Answer (may be imprecise): ${expectedAnswer}
 Student's Answer: ${userAnswer}
 ${context ? `Context: ${context}` : ''}
 
 ${isExplanation
     ? `This is an explanation question. Grade based on conceptual understanding, not exact wording.
 A short answer that shows understanding can still be correct.`
-    : `Evaluate if the student's answer is correct. Consider:
+    : `Evaluate if the student's answer CORRECTLY ANSWERS THE QUESTION. Consider:
+- If the student's answer is factually correct for the question, mark CORRECT even if it differs from the reference
 - Same meaning with different words = CORRECT
 - Key concepts present = generous PARTIAL CREDIT
 - A correct core idea expressed differently than the reference = HIGH PARTIAL CREDIT (70+)

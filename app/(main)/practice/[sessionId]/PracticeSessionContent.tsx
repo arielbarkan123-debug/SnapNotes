@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { useToast } from '@/contexts/ToastContext'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import DifficultyFeedback from '@/components/shared/DifficultyFeedback'
+import { MathText } from '@/components/ui/MathRenderer'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import type {
   PracticeSession,
@@ -121,7 +122,7 @@ function QuestionCard({ question, onAnswer, isSubmitting }: QuestionCardProps) {
 
       {/* Question Text */}
       <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-        {question.question_text}
+        <MathText>{question.question_text}</MathText>
       </h2>
 
       {/* Answer Input */}
@@ -143,7 +144,7 @@ function QuestionCard({ question, onAnswer, isSubmitting }: QuestionCardProps) {
               <span className="font-medium text-gray-900 dark:text-white">
                 {choice.label}.{' '}
               </span>
-              <span className="text-gray-700 dark:text-gray-300">{choice.value}</span>
+              <span className="text-gray-700 dark:text-gray-300"><MathText>{choice.value}</MathText></span>
             </button>
           ))}
         </div>
@@ -267,7 +268,7 @@ function ResultCard({ question, isCorrect, userAnswer, evaluationFeedback, evalu
 
       {/* Question */}
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-        {question.question_text}
+        <MathText>{question.question_text}</MathText>
       </h2>
 
       {/* Evaluation Feedback — show for AI, fuzzy, and fuzzy_fallback */}
@@ -281,7 +282,7 @@ function ResultCard({ question, isCorrect, userAnswer, evaluationFeedback, evalu
             evaluationMethod === 'ai'
               ? 'text-blue-700 dark:text-blue-300'
               : 'text-amber-700 dark:text-amber-300'
-          }`}>{evaluationFeedback}</p>
+          }`}><MathText>{evaluationFeedback}</MathText></p>
           {evaluationMethod === 'ai' && (
             <p className="text-xs text-blue-500 dark:text-blue-400 mt-1 opacity-60">{tp('aiGraded')}</p>
           )}
@@ -305,7 +306,7 @@ function ResultCard({ question, isCorrect, userAnswer, evaluationFeedback, evalu
               isPartialCredit
                 ? 'text-amber-800 dark:text-amber-200'
                 : 'text-red-800 dark:text-red-200'
-            }`}>{userAnswer}</p>
+            }`}><MathText>{userAnswer}</MathText></p>
           </div>
         )}
         <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
@@ -313,7 +314,7 @@ function ResultCard({ question, isCorrect, userAnswer, evaluationFeedback, evalu
             {isPartialCredit ? tp('referenceAnswer') : tp('correctAnswerIs')}
           </p>
           <p className="font-medium text-green-800 dark:text-green-200">
-            {question.correct_answer}
+            <MathText>{question.correct_answer}</MathText>
           </p>
         </div>
       </div>
@@ -324,7 +325,9 @@ function ResultCard({ question, isCorrect, userAnswer, evaluationFeedback, evalu
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             {tp('explanationLabel')}
           </h3>
-          <p className="text-gray-600 dark:text-gray-400">{question.explanation}</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            <MathText>{question.explanation}</MathText>
+          </p>
         </div>
       )}
 
