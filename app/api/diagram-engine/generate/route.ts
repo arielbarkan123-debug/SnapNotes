@@ -1,10 +1,19 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { generateDiagram, type Pipeline } from '@/lib/diagram-engine'
+import { createClient } from '@/lib/supabase/server'
+import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 
 export const maxDuration = 120 // E2B sandboxes + QA can take time
 
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate — this endpoint uses E2B sandboxes + Recraft AI (costs money)
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return createErrorResponse(ErrorCodes.UNAUTHORIZED)
+    }
+
     const body = await request.json()
     const { question, pipeline } = body as {
       question?: string

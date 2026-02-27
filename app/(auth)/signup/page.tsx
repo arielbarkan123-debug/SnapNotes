@@ -226,7 +226,7 @@ export default function SignupPage() {
         } else if (error.message.toLowerCase().includes('user not found') ||
                    error.code === 'user_not_found') {
           console.log('[Signup] User not found - may need to sign up again')
-          setServerError('No account found with this email. Please sign up again.')
+          setServerError(t('signup.accountNotFound'))
         } else {
           const { message } = mapSupabaseAuthError(error.message)
           setServerError(message)

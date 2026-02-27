@@ -25,6 +25,7 @@ import knowledgeMap from './knowledgeMap.json'
 import diagram from './diagram.json'
 import prepare from './prepare.json'
 import courses from './courses.json'
+import landing from './landing.json'
 
 const messages = {
   common,
@@ -54,6 +55,7 @@ const messages = {
   diagram,
   prepare,
   courses,
+  landing,
 }
 
 export default messages

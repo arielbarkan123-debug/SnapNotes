@@ -267,7 +267,7 @@ export default function PracticePage() {
       }
 
       if (!data.cards || data.cards.length === 0) {
-        setError('No questions available for practice. Complete some lessons first!')
+        setError(t('noQuestionsAvailable'))
         return
       }
 
@@ -851,10 +851,10 @@ export default function PracticePage() {
                         setError(null)
                         startPractice()
                       } else if (data.totalCreated === 0) {
-                        setError('No questions could be generated. Try completing some lessons first.')
+                        setError(t('noQuestionsGenerated'))
                       }
                     } catch {
-                      setError('Failed to generate questions. Please try again.')
+                      setError(t('failedToGenerateQuestions'))
                     }
                   }}
                   className="mt-3 w-full py-2 px-4 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg transition-colors text-sm"
