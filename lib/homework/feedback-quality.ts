@@ -12,6 +12,7 @@
 
 import type Anthropic from '@anthropic-ai/sdk'
 import type { FeedbackPoint, FeedbackQualityResult } from './types'
+import { AI_MODEL } from '@/lib/ai/claude'
 
 // ============================================================================
 // Configuration
@@ -33,8 +34,6 @@ const REJECTED_PHRASES = [
   'almost there',
   'incorrect',  // "incorrect" alone is too vague — must explain WHY
 ]
-
-const AI_MODEL = 'claude-sonnet-4-6'
 
 // ============================================================================
 // Main Validation

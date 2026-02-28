@@ -3,11 +3,10 @@ import { createClient } from '@/lib/supabase/server'
 import { type HelpAPIRequest, type HelpRequestType } from '@/types'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import Anthropic from '@anthropic-ai/sdk'
+import { AI_MODEL } from '@/lib/ai/claude'
 
 // Allow 90 seconds for AI help generation (Claude API call)
 export const maxDuration = 90
-
-const AI_MODEL = 'claude-sonnet-4-6'
 const MAX_CONTENT_LENGTH = 4000
 
 export async function POST(request: Request): Promise<NextResponse> {

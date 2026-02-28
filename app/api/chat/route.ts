@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { AI_MODEL } from '@/lib/ai/claude'
 import { buildChatContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
 import { getAnthropicApiKey } from '@/lib/env'
@@ -186,7 +187,7 @@ Remember: You're a tutor, not just an answer machine. Help them understand, don'
 
     // Call Claude API
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: AI_MODEL,
       max_tokens: 1024,
       system: systemPrompt,
       messages: [

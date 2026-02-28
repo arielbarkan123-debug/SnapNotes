@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import Anthropic from '@anthropic-ai/sdk'
+import { AI_MODEL } from '@/lib/ai/claude'
 
 export const maxDuration = 30
 
@@ -254,7 +255,7 @@ async function semanticSearch(
 
   const anthropic = new Anthropic()
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: AI_MODEL,
     max_tokens: 500,
     messages: [{
       role: 'user',

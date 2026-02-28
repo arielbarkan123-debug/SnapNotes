@@ -1,6 +1,120 @@
 {
   "privacyTitle": "Privacy Policy",
   "termsTitle": "Terms of Service",
-  "comingSoon": "This page is being prepared. Please check back soon.",
-  "backToHome": "← Back to Home"
+  "backToHome": "Back to Home",
+  "lastUpdated": "Last updated: {date}",
+
+  "privacy": {
+    "intro": "NoteSnap (\"we\", \"our\", or \"us\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our AI-powered educational platform.",
+
+    "dataCollectionTitle": "Information We Collect",
+    "dataCollectionIntro": "We collect the following types of information to provide and improve our service:",
+    "dataCollection1Title": "Account Information",
+    "dataCollection1": "When you create an account, we collect your name, email address, and password. You may optionally provide your grade level, preferred subjects, and language preference.",
+    "dataCollection2Title": "Homework & Study Content",
+    "dataCollection2": "When you upload homework photos or documents, we process these images to provide AI-powered checking and feedback. Uploaded images are stored securely and associated with your account.",
+    "dataCollection3Title": "Practice & Learning Data",
+    "dataCollection3": "We collect your practice answers, quiz results, study session data, and learning progress to personalize your experience and track your improvement over time.",
+    "dataCollection4Title": "Usage Data",
+    "dataCollection4": "We automatically collect technical information such as your browser type, device type, and general usage patterns to improve our service.",
+
+    "aiTitle": "How We Use AI",
+    "aiIntro": "NoteSnap uses Anthropic's Claude AI to power its core features:",
+    "ai1": "Homework checking and feedback generation",
+    "ai2": "Practice question generation and tutoring",
+    "ai3": "Educational diagram and visualization creation",
+    "aiDisclaimer": "Important: Your data is never used to train AI models. Anthropic's Claude processes your content in real-time to generate responses but does not retain or learn from your data. Each interaction is independent.",
+
+    "dataStorageTitle": "Data Storage & Security",
+    "dataStorage1": "Your data is stored securely using Supabase (database and authentication) and Vercel (hosting and delivery).",
+    "dataStorage2": "All data is transmitted using HTTPS encryption. Images are stored in private, access-controlled cloud storage buckets.",
+    "dataStorage3": "We implement industry-standard security measures to protect your personal information from unauthorized access, alteration, or destruction.",
+
+    "cookiesTitle": "Cookies",
+    "cookiesIntro": "We use only essential cookies required for the service to function:",
+    "cookie1": "Authentication cookies — to keep you signed in securely",
+    "cookie2": "Language preference cookie (NEXT_LOCALE) — to remember your chosen language (English or Hebrew)",
+    "cookiesNote": "We do not use tracking cookies, advertising cookies, or third-party analytics cookies.",
+
+    "userRightsTitle": "Your Rights",
+    "userRightsIntro": "You have the following rights regarding your personal data:",
+    "userRight1": "Access — You can request a copy of the data we hold about you",
+    "userRight2": "Correction — You can update your account information at any time through your profile settings",
+    "userRight3": "Deletion — You can request complete deletion of your account and all associated data by contacting us",
+    "userRight4": "Data Portability — You can request your data in a machine-readable format",
+
+    "childrenTitle": "Children's Privacy",
+    "children1": "NoteSnap is designed as an educational tool for students of all ages. We encourage parents and guardians to be involved in their children's online activities.",
+    "children2": "For users under 13 years of age, we recommend that a parent or guardian creates and manages the account. We do not knowingly collect personal information from children under 13 without parental consent.",
+    "children3": "If you believe a child under 13 has provided us with personal information without parental consent, please contact us and we will promptly delete that information.",
+
+    "retentionTitle": "Data Retention",
+    "retention1": "We retain your account data and learning history for as long as your account is active.",
+    "retention2": "If you delete your account, we will remove your personal data within 30 days, except where we are required by law to retain certain information.",
+    "retention3": "Uploaded homework images are retained for the duration of your account to allow you to review past results.",
+
+    "changesTitle": "Changes to This Policy",
+    "changes1": "We may update this Privacy Policy from time to time. We will notify you of any significant changes by posting the new policy on this page and updating the \"Last updated\" date.",
+
+    "contactTitle": "Contact Us",
+    "contact1": "If you have questions about this Privacy Policy or wish to exercise your rights, please contact us at:",
+    "contactEmail": "support@notesnap.app"
+  },
+
+  "terms": {
+    "intro": "Welcome to NoteSnap. By accessing or using our service, you agree to be bound by these Terms of Service. Please read them carefully.",
+
+    "serviceTitle": "Service Description",
+    "service1": "NoteSnap is an AI-powered educational platform that provides homework checking, practice exercises, tutoring assistance, and visual learning tools.",
+    "service2": "Our service uses artificial intelligence to assist with learning but is not a substitute for professional teaching, tutoring, or educational guidance.",
+
+    "accountTitle": "Account Registration",
+    "account1": "You must create an account to use NoteSnap. You are responsible for maintaining the confidentiality of your account credentials.",
+    "account2": "You must provide accurate information when creating your account. You are responsible for all activity that occurs under your account.",
+    "account3": "You must be at least 13 years old to create an account. Users under 13 must have a parent or guardian create and manage the account on their behalf.",
+
+    "acceptableUseTitle": "Acceptable Use",
+    "acceptableUseIntro": "When using NoteSnap, you agree not to:",
+    "acceptableUse1": "Use the service to plagiarize or submit AI-generated work as your own in academic settings where this is prohibited",
+    "acceptableUse2": "Upload content that is harmful, offensive, illegal, or violates the rights of others",
+    "acceptableUse3": "Attempt to reverse-engineer, hack, or disrupt the service",
+    "acceptableUse4": "Create multiple accounts to circumvent usage policies",
+    "acceptableUse5": "Use the service for any purpose other than educational learning",
+
+    "aiDisclaimerTitle": "AI-Generated Content Disclaimer",
+    "aiDisclaimer1": "NoteSnap's AI-generated content, including homework feedback, practice questions, and explanations, is provided for educational assistance only.",
+    "aiDisclaimer2": "While we strive for accuracy, AI-generated content may occasionally contain errors. Users should verify important information with their teachers or official educational resources.",
+    "aiDisclaimer3": "NoteSnap is not responsible for academic decisions made based on AI-generated feedback.",
+
+    "ipTitle": "Intellectual Property",
+    "ip1": "Content you upload (homework photos, documents) remains your intellectual property. By uploading content, you grant NoteSnap a limited license to process it for the purpose of providing our service.",
+    "ip2": "The NoteSnap platform, including its design, code, AI systems, and educational content, is the intellectual property of NoteSnap and is protected by applicable laws.",
+    "ip3": "You may not copy, modify, distribute, or create derivative works based on our platform without our written permission.",
+
+    "liabilityTitle": "Limitation of Liability",
+    "liability1": "NoteSnap is provided \"as is\" without warranties of any kind, express or implied.",
+    "liability2": "We are not liable for any indirect, incidental, or consequential damages arising from your use of the service.",
+    "liability3": "Our total liability for any claim related to the service shall not exceed the amount you paid for the service in the preceding 12 months.",
+
+    "terminationTitle": "Termination",
+    "termination1": "You may delete your account at any time. Upon deletion, your data will be removed in accordance with our Privacy Policy.",
+    "termination2": "We reserve the right to suspend or terminate accounts that violate these terms, with or without notice.",
+
+    "changesToTermsTitle": "Changes to These Terms",
+    "changesToTerms1": "We may update these Terms of Service from time to time. Continued use of the service after changes constitutes acceptance of the updated terms.",
+    "changesToTerms2": "We will notify you of significant changes by posting a notice on our website.",
+
+    "governingLawTitle": "Governing Law",
+    "governingLaw1": "These Terms of Service are governed by the laws of the State of Israel, without regard to conflict of law principles.",
+
+    "contactTitle": "Contact Us",
+    "contact1": "If you have questions about these Terms of Service, please contact us at:",
+    "contactEmail": "support@notesnap.app"
+  },
+
+  "cookie": {
+    "message": "We use essential cookies for authentication and language preferences.",
+    "accept": "Accept",
+    "learnMore": "Learn more"
+  }
 }

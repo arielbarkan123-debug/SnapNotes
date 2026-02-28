@@ -6,12 +6,11 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import type { ReferenceAnalysis, QuestionAnalysis, RelevantSection } from './types'
+import { AI_MODEL } from '@/lib/ai/claude'
 
 // ============================================================================
 // Configuration
 // ============================================================================
-
-const AI_MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 4096
 const MAX_IMAGES_PER_REQUEST = 10
 

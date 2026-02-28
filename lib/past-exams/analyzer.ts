@@ -5,6 +5,7 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import type { ExamAnalysis, ImageAnalysis, DiagramType, LabelingStyle } from '@/types/past-exam'
+import { AI_MODEL } from '@/lib/ai/claude'
 
 const anthropic = new Anthropic()
 
@@ -158,7 +159,7 @@ export async function analyzeExamImage(
   mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
 ): Promise<ExamAnalysis> {
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: AI_MODEL,
     max_tokens: 4000,
     messages: [
       {
@@ -199,7 +200,7 @@ export async function analyzeExamText(
   extractedText: string
 ): Promise<ExamAnalysis> {
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: AI_MODEL,
     max_tokens: 4000,
     messages: [
       {

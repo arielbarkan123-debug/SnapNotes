@@ -6,12 +6,11 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import type { HintResponse, HintContext, HintLevel } from './types'
+import { AI_MODEL } from '@/lib/ai/claude'
 
 // ============================================================================
 // Configuration
 // ============================================================================
-
-const AI_MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 1500
 
 let anthropicClient: Anthropic | null = null

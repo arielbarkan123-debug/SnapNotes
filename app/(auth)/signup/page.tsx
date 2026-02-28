@@ -33,6 +33,8 @@ export default function SignupPage() {
     confirmPassword: '',
   })
   const [errors, setErrors] = useState<FormErrors>({})
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [termsError, setTermsError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isResending, setIsResending] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
@@ -82,8 +84,15 @@ export default function SignupPage() {
       newErrors.confirmPassword = t('validation.passwordsNoMatch')
     }
 
+    // Terms acceptance validation
+    if (!termsAccepted) {
+      setTermsError(t('signup.termsRequired'))
+    } else {
+      setTermsError('')
+    }
+
     setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    return Object.keys(newErrors).length === 0 && termsAccepted
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -398,6 +407,41 @@ export default function SignupPage() {
               disabled={isLoading}
               autoComplete="new-password"
             />
+
+            {/* Terms Acceptance */}
+            <div className="space-y-1">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => {
+                    setTermsAccepted(e.target.checked)
+                    if (e.target.checked) setTermsError('')
+                  }}
+                  disabled={isLoading}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500 shrink-0"
+                />
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {t.rich('signup.termsAcceptance', {
+                    terms: (chunks) => (
+                      <Link href="/terms" target="_blank" className="text-violet-600 dark:text-violet-400 hover:underline font-medium">
+                        {chunks}
+                      </Link>
+                    ),
+                    privacy: (chunks) => (
+                      <Link href="/privacy" target="_blank" className="text-violet-600 dark:text-violet-400 hover:underline font-medium">
+                        {chunks}
+                      </Link>
+                    ),
+                  })}
+                </span>
+              </label>
+              {termsError && (
+                <p className="text-red-500 dark:text-red-400 text-xs ms-7">
+                  {termsError}
+                </p>
+              )}
+            </div>
 
             <button
               type="submit"

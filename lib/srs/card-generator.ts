@@ -43,6 +43,8 @@ import {
   type TopicType,
 } from '@/lib/ai/content-classifier'
 
+import { AI_MODEL } from '@/lib/ai/claude'
+
 // =============================================================================
 // Concept Mapping Types
 // =============================================================================
@@ -75,8 +77,7 @@ const _MAX_FRONT_WORDS = 30
 /** Maximum words for card back (answers) */
 const MAX_BACK_WORDS = 200
 
-/** AI model for batch question generation */
-const AI_MODEL = 'claude-sonnet-4-6'
+/** AI model for batch question generation — centralized in lib/ai/claude.ts */
 
 // =============================================================================
 // Quality Filter

@@ -58,9 +58,8 @@ const mockDiagram: DiagramState = {
   visibleStep: 0,
   totalSteps: 5,
   data: {
-    initialVelocity: 20,
-    angle: 45,
-    points: [],
+    initial: { x: 0, y: 0 },
+    initialVelocity: { magnitude: 20, angle: 45 },
   },
 }
 

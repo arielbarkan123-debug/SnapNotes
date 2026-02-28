@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import FormInput from '@/components/ui/FormInput'
 
 // Admin email for support
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'support@notesnap.com'
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'support@notesnap.app'
 
 export default function ForgotPasswordPage() {
   const t = useTranslations('auth')

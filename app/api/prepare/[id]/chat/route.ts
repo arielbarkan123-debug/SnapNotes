@@ -3,10 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { ErrorCodes, createErrorResponse } from '@/lib/api/errors'
 import { getDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-schemas'
+import { AI_MODEL } from '@/lib/ai/claude'
 
 export const maxDuration = 60
-
-const AI_MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 4096
 
 let anthropicClient: Anthropic | null = null
