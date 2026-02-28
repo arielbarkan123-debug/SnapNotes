@@ -40,9 +40,9 @@ export default function DiagramToggle({ compact = false, className = '' }: Diagr
       {!compact && (
         <span>{enabled ? 'Diagrams' : 'Diagrams'}</span>
       )}
-      {/* Toggle switch */}
-      <div className={`relative w-7 h-4 rounded-full transition-colors ${enabled ? 'bg-violet-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
-        <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform shadow-sm ${enabled ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+      {/* Toggle switch — force LTR so dot positioning works in RTL layouts */}
+      <div dir="ltr" className={`relative w-7 h-4 rounded-full transition-colors ${enabled ? 'bg-violet-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+        <div className={`absolute left-0 top-0.5 w-3 h-3 rounded-full bg-white transition-transform shadow-sm ${enabled ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
       </div>
     </button>
   )
