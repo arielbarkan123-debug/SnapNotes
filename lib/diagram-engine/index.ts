@@ -233,7 +233,9 @@ async function generateE2BDiagram(
         code = await generateE2BCode(
           question,
           lastError,
-          attempt === 1 ? qaFeedback : undefined,
+          // Keep QA feedback for all compile attempts in this round
+          // (generateE2BCode prioritizes previousError when both are set)
+          qaFeedback,
         );
         mode = forcedMode || detectMode(code);
 

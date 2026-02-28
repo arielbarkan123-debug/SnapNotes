@@ -518,11 +518,11 @@ eq_p = 10 + 0.8 * eq_q
 
 ax.plot(q, supply, color='#2563eb', linewidth=2.5, label='Supply', zorder=3)
 ax.plot(q, demand, color='#dc2626', linewidth=2.5, label='Demand', zorder=3)
-ax.plot(eq_q, eq_p, 'o', color='#16a34a', markersize=12, zorder=5, label=f'Equilibrium ({eq_q:.0f}, \${eq_p:.0f})')
+ax.plot(eq_q, eq_p, 'o', color='#16a34a', markersize=12, zorder=5, label=f'Equilibrium ({eq_q:.0f}, ${'$'}{eq_p:.0f})')
 
 ax.plot([eq_q, eq_q], [0, eq_p], '--', color='#64748b', linewidth=1, alpha=0.6)
 ax.plot([0, eq_q], [eq_p, eq_p], '--', color='#64748b', linewidth=1, alpha=0.6)
-ax.annotate(f'E ({eq_q:.0f}, \${eq_p:.0f})', (eq_q, eq_p), textcoords='offset points', xytext=(15, 15), fontsize=14, color='#16a34a', fontweight='bold')
+ax.annotate(f'E ({eq_q:.0f}, ${'$'}{eq_p:.0f})', (eq_q, eq_p), textcoords='offset points', xytext=(15, 15), fontsize=14, color='#16a34a', fontweight='bold')
 
 ax.set_xlabel('Quantity', fontsize=15)
 ax.set_ylabel('Price ($)', fontsize=15)

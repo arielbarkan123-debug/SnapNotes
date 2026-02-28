@@ -297,9 +297,12 @@ function fixLabelCollisions(labels: OverlayLabel[]): OverlayLabel[] {
     }
 
     // If pushing down caused labels to go past 98, push earlier ones up
+    // Stop as soon as the gap is satisfied to avoid displacing correctly-placed labels
     for (let i = group.length - 2; i >= 0; i--) {
       if (group[i + 1].y - group[i].y < minGap) {
         group[i].y = Math.max(2, group[i + 1].y - minGap);
+      } else {
+        break; // Gap satisfied — no need to adjust earlier labels
       }
     }
   }

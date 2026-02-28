@@ -102,7 +102,7 @@ export async function getCachedDiagram(
 
     const { data, error } = await supabase
       .from('diagram_cache')
-      .select('image_data, pipeline, qa_verdict')
+      .select('image_data, pipeline, qa_verdict, hit_count')
       .eq('question_hash', key)
       .single();
 
@@ -121,9 +121,12 @@ export async function getCachedDiagram(
     evictLRU();
 
     // Bump hit count (fire-and-forget)
+    const currentHitCount = typeof (data as Record<string, unknown>).hit_count === 'number'
+      ? (data as Record<string, unknown>).hit_count as number
+      : 0;
     void supabase
       .from('diagram_cache')
-      .update({ hit_count: (data as Record<string, unknown>).hit_count as number + 1, last_hit_at: new Date().toISOString() })
+      .update({ hit_count: currentHitCount + 1, last_hit_at: new Date().toISOString() })
       .eq('question_hash', key)
       .then(() => {});
 
