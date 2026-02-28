@@ -53,10 +53,15 @@ function sanitizeUnicode(code: string): string {
     .replace(/″/g, "''");
 }
 
+interface CompileSuccess { url: string }
+interface CompileFailure { error: string }
+
 /**
  * Compile TikZ code to PNG via QuickLaTeX API.
+ * Returns the image URL on success, or the actual error text on failure
+ * (so it can be fed back to Claude for targeted fixes).
  */
-async function compileTikZ(tikzCode: string): Promise<string | null> {
+async function compileTikZ(tikzCode: string): Promise<CompileSuccess | CompileFailure> {
   try {
     const libraryMatches = tikzCode.match(/\\usetikzlibrary\{[^}]+\}/g);
     const libraries = libraryMatches ? libraryMatches.join('\n') : '';
@@ -69,7 +74,7 @@ async function compileTikZ(tikzCode: string): Promise<string | null> {
 
     const parts = [
       `formula=${encodeURIComponent(formula)}`,
-      `fsize=28px`,
+      `fsize=40px`,
       `fcolor=000000`,
       `mode=0`,
       `out=1`,
@@ -86,21 +91,23 @@ async function compileTikZ(tikzCode: string): Promise<string | null> {
     const lines = text.trim().split(/\r?\n/);
 
     if (lines[0].trim() !== '0') {
-      console.error('QuickLaTeX compilation failed:', text.substring(0, 500));
-      return null;
+      const errorText = text.substring(0, 500);
+      console.error('QuickLaTeX compilation failed:', errorText);
+      return { error: errorText };
     }
 
     const urlParts = lines[1].trim().split(' ');
     const imageUrl = urlParts[0];
 
     if (!imageUrl || imageUrl.includes('error.png')) {
-      return null;
+      return { error: 'QuickLaTeX returned error.png — likely a rendering failure' };
     }
 
-    return imageUrl;
+    return { url: imageUrl };
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : 'Unknown QuickLaTeX error';
     console.error('QuickLaTeX error:', error);
-    return null;
+    return { error: errMsg };
   }
 }
 
@@ -149,10 +156,11 @@ export async function generateTikzDiagram(
   }
 
   // Compile with retries
-  let imageUrl = await compileTikZ(tikzCode);
+  let compileResult = await compileTikZ(tikzCode);
+  let lastCompileError = 'error' in compileResult ? compileResult.error : '';
 
-  if (!imageUrl) {
-    for (let retry = 0; retry < 2 && !imageUrl; retry++) {
+  if ('error' in compileResult) {
+    for (let retry = 0; retry < 2; retry++) {
       console.log(`[TikZ] Compilation retry ${retry + 1}...`);
       const fixMessage = await anthropic.messages.create({
         model: AI_MODEL,
@@ -167,6 +175,9 @@ export async function generateTikzDiagram(
           {
             role: 'user',
             content: `The TikZ code failed to compile via QuickLaTeX (pdflatex).
+
+ACTUAL COMPILATION ERROR:
+${lastCompileError}
 
 Common causes of failure:
 1. Unicode characters (°, →, ², α, etc.) — MUST use LaTeX equivalents (^{\\circ}, \\rightarrow, ^{2}, \\alpha)
@@ -193,15 +204,17 @@ Fix the code. Output ONLY the corrected TikZ code, starting with \\usetikzlibrar
 
         if (fixedCode.includes('\\begin{tikzpicture}')) {
           tikzCode = fixedCode;
-          imageUrl = await compileTikZ(tikzCode);
+          compileResult = await compileTikZ(tikzCode);
+          if ('url' in compileResult) break; // Success!
+          lastCompileError = compileResult.error;
         }
       }
     }
   }
 
-  if (!imageUrl) {
-    return { error: 'TikZ compilation failed after 3 attempts.', tikzCode };
+  if ('error' in compileResult) {
+    return { error: `TikZ compilation failed after 3 attempts. Last error: ${lastCompileError.slice(0, 200)}`, tikzCode };
   }
 
-  return { imageUrl, tikzCode, attempts: 1 };
+  return { imageUrl: compileResult.url, tikzCode, attempts: 1 };
 }

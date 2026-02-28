@@ -193,3 +193,24 @@ export function routeQuestion(question: string): Pipeline {
 
   return scores[0].pipeline;
 }
+
+// ─── Cross-Pipeline Fallback Map ─────────────────────────────────────────────
+
+/**
+ * When a pipeline fails completely, this maps to a reasonable fallback.
+ * The fallback should be capable of handling most of the same question types.
+ */
+const FALLBACKS: Record<Pipeline, Pipeline | null> = {
+  'tikz': 'e2b-matplotlib',       // TikZ fails → try matplotlib (can draw most schematics)
+  'e2b-latex': 'tikz',            // LaTeX fails → try TikZ (can typeset math too)
+  'e2b-matplotlib': 'tikz',       // Matplotlib fails → try TikZ (clean diagrams)
+  'recraft': 'tikz',              // Recraft fails → try TikZ (schematic fallback)
+};
+
+/**
+ * Get the fallback pipeline for a failed primary pipeline.
+ * Returns null if no fallback is configured.
+ */
+export function getFallbackPipeline(primary: Pipeline): Pipeline | null {
+  return FALLBACKS[primary] ?? null;
+}

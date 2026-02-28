@@ -63,11 +63,21 @@ export function detectTopic(prompt: string): TopicMatch {
     .slice(0, 2)
     .map((s) => s.template)
 
-  // Fallback: if no match, use number-lines as the most generic template
-  const fallback = ALL_TEMPLATES.find((t) => t.id === 'number-lines')!
+  // If no template matched at all, return confidence 0 with no template.
+  // This lets buildTikzPrompt() use the advanced fallback path instead of
+  // forcing the "number-lines" template for unrelated topics (e.g., biology).
+  if (!bestMatch) {
+    const genericFallback = ALL_TEMPLATES.find((t) => t.id === 'number-lines')!
+    return {
+      template: genericFallback,
+      confidence: 0,
+      secondaryTemplates: [],
+    }
+  }
+
   return {
-    template: bestMatch || fallback,
-    confidence: bestScore > 0 ? Math.min(bestScore / 3, 1) : 0,
+    template: bestMatch,
+    confidence: Math.min(bestScore / 3, 1),
     secondaryTemplates,
   }
 }

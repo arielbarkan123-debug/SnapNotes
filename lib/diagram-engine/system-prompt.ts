@@ -225,7 +225,7 @@ Generate a complete, self-contained Python script that produces a single high-qu
 VISUAL QUALITY STANDARDS — every diagram must follow these:
 
 1. FIGURE SETUP:
-   fig, ax = plt.subplots(figsize=(10, 8), dpi=150, facecolor='white')
+   fig, ax = plt.subplots(figsize=(10, 8), dpi=300, facecolor='white')
    Use figsize=(10, 10) for square diagrams (unit circle, FBD, geometric shapes).
 
 2. TYPOGRAPHY:
@@ -292,7 +292,7 @@ VISUAL QUALITY STANDARDS — every diagram must follow these:
     - Inclined plane: draw the surface, angle label, and hash marks for ground
 
 11. OUTPUT:
-    plt.savefig('diagram.png', bbox_inches='tight', pad_inches=0.3, facecolor='white')
+    plt.savefig('diagram.png', bbox_inches='tight', pad_inches=0.3, facecolor='white', dpi=300)
     Always include plt.tight_layout() before savefig.
 
 MATPLOTLIB EXAMPLE — Quadratic Function:
@@ -304,7 +304,7 @@ import matplotlib
 matplotlib.rcParams['font.family'] = 'serif'
 matplotlib.rcParams['mathtext.fontset'] = 'cm'
 
-fig, ax = plt.subplots(figsize=(10, 8), dpi=150, facecolor='white')
+fig, ax = plt.subplots(figsize=(10, 8), dpi=300, facecolor='white')
 x = np.linspace(-1, 5, 300)
 y = x**2 - 4*x + 3
 
@@ -342,7 +342,7 @@ import matplotlib
 matplotlib.rcParams['font.family'] = 'serif'
 matplotlib.rcParams['mathtext.fontset'] = 'cm'
 
-fig, ax = plt.subplots(figsize=(10, 10), dpi=150, facecolor='white')
+fig, ax = plt.subplots(figsize=(10, 10), dpi=300, facecolor='white')
 
 # Inclined plane
 angle = 30
@@ -400,7 +400,7 @@ matplotlib.rcParams['font.family'] = 'serif'
 matplotlib.rcParams['mathtext.fontset'] = 'cm'
 
 data = [65, 68, 70, 72, 74, 75, 78, 80, 82, 85, 88, 90, 92, 95]
-fig, ax = plt.subplots(figsize=(10, 5), dpi=150, facecolor='white')
+fig, ax = plt.subplots(figsize=(10, 5), dpi=300, facecolor='white')
 
 bp = ax.boxplot(data, vert=False, patch_artist=True, widths=0.5,
     boxprops=dict(facecolor='#dbeafe', edgecolor='#2563eb', linewidth=2),
@@ -425,6 +425,148 @@ ax.spines['right'].set_visible(False)
 ax.spines['left'].set_visible(False)
 plt.tight_layout()
 plt.savefig('diagram.png', bbox_inches='tight', pad_inches=0.3, facecolor='white')
+\`\`\`
+
+MATPLOTLIB EXAMPLE — Unit Circle:
+\`\`\`
+# MODE: matplotlib
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.rcParams['font.family'] = 'serif'
+matplotlib.rcParams['mathtext.fontset'] = 'cm'
+
+fig, ax = plt.subplots(figsize=(10, 10), dpi=300, facecolor='white')
+theta = np.linspace(0, 2*np.pi, 300)
+ax.plot(np.cos(theta), np.sin(theta), color='#2563eb', linewidth=2.5, zorder=3)
+ax.axhline(y=0, color='#1a1a2e', linewidth=0.8, zorder=1)
+ax.axvline(x=0, color='#1a1a2e', linewidth=0.8, zorder=1)
+
+angles = [0, np.pi/6, np.pi/4, np.pi/3, np.pi/2, 2*np.pi/3, 3*np.pi/4, 5*np.pi/6, np.pi, 7*np.pi/6, 5*np.pi/4, 4*np.pi/3, 3*np.pi/2, 5*np.pi/3, 7*np.pi/4, 11*np.pi/6]
+labels = [r'$0$', r'$\\frac{\\pi}{6}$', r'$\\frac{\\pi}{4}$', r'$\\frac{\\pi}{3}$', r'$\\frac{\\pi}{2}$', r'$\\frac{2\\pi}{3}$', r'$\\frac{3\\pi}{4}$', r'$\\frac{5\\pi}{6}$', r'$\\pi$', r'$\\frac{7\\pi}{6}$', r'$\\frac{5\\pi}{4}$', r'$\\frac{4\\pi}{3}$', r'$\\frac{3\\pi}{2}$', r'$\\frac{5\\pi}{3}$', r'$\\frac{7\\pi}{4}$', r'$\\frac{11\\pi}{6}$']
+
+for a, lbl in zip(angles, labels):
+    x, y = np.cos(a), np.sin(a)
+    ax.plot(x, y, 'o', color='#dc2626', markersize=6, zorder=4)
+    ax.plot([0, x], [0, y], '--', color='#64748b', linewidth=0.8, alpha=0.5)
+    offset = 20 if abs(x) > 0.5 else 12
+    ax.annotate(lbl, (x, y), textcoords='offset points', xytext=(offset * np.sign(x) if abs(x) > 0.1 else 0, offset * np.sign(y) if abs(y) > 0.1 else 15), fontsize=11, ha='center', va='center', color='#2563eb')
+
+ax.set_xlim(-1.5, 1.5)
+ax.set_ylim(-1.5, 1.5)
+ax.set_aspect('equal')
+ax.set_title('Unit Circle', fontsize=20, fontweight='bold', pad=15)
+ax.grid(True, alpha=0.15, linestyle='--')
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+plt.tight_layout()
+plt.savefig('diagram.png', bbox_inches='tight', pad_inches=0.3, facecolor='white', dpi=300)
+\`\`\`
+
+MATPLOTLIB EXAMPLE — Normal Distribution:
+\`\`\`
+# MODE: matplotlib
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import stats
+import matplotlib
+matplotlib.rcParams['font.family'] = 'serif'
+matplotlib.rcParams['mathtext.fontset'] = 'cm'
+
+fig, ax = plt.subplots(figsize=(10, 6), dpi=300, facecolor='white')
+mu, sigma = 100, 15
+x = np.linspace(mu - 4*sigma, mu + 4*sigma, 400)
+y = stats.norm.pdf(x, mu, sigma)
+
+ax.plot(x, y, color='#2563eb', linewidth=2.5, zorder=3, label=r'$\\mu=100,\\ \\sigma=15$')
+ax.fill_between(x, y, where=(x >= mu - sigma) & (x <= mu + sigma), alpha=0.3, color='#dbeafe', zorder=2, label=r'$\\mu \\pm 1\\sigma$ (68.2%)')
+ax.fill_between(x, y, where=(x >= mu - 2*sigma) & (x <= mu + 2*sigma), alpha=0.15, color='#93c5fd', zorder=1, label=r'$\\mu \\pm 2\\sigma$ (95.4%)')
+
+for i, c in [(-2, '#64748b'), (-1, '#2563eb'), (0, '#dc2626'), (1, '#2563eb'), (2, '#64748b')]:
+    xv = mu + i * sigma
+    ax.axvline(x=xv, color=c, linewidth=1 if abs(i) == 2 else 1.5, linestyle='--', alpha=0.6)
+    lbl = f'{xv:.0f}' if i != 0 else r'$\\mu$=' + f'{mu}'
+    ax.annotate(lbl, (xv, 0), textcoords='offset points', xytext=(0, -20), fontsize=12, ha='center', color=c)
+
+ax.set_xlabel('Value', fontsize=15)
+ax.set_ylabel('Probability Density', fontsize=15)
+ax.set_title('Normal Distribution', fontsize=20, fontweight='bold', pad=15)
+ax.legend(fontsize=12, loc='upper right', framealpha=0.9)
+ax.tick_params(labelsize=12)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+plt.tight_layout()
+plt.savefig('diagram.png', bbox_inches='tight', pad_inches=0.3, facecolor='white', dpi=300)
+\`\`\`
+
+MATPLOTLIB EXAMPLE — Supply and Demand:
+\`\`\`
+# MODE: matplotlib
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.rcParams['font.family'] = 'serif'
+matplotlib.rcParams['mathtext.fontset'] = 'cm'
+
+fig, ax = plt.subplots(figsize=(10, 8), dpi=300, facecolor='white')
+q = np.linspace(0, 100, 300)
+supply = 10 + 0.8 * q
+demand = 90 - 0.6 * q
+
+eq_q = (90 - 10) / (0.8 + 0.6)
+eq_p = 10 + 0.8 * eq_q
+
+ax.plot(q, supply, color='#2563eb', linewidth=2.5, label='Supply', zorder=3)
+ax.plot(q, demand, color='#dc2626', linewidth=2.5, label='Demand', zorder=3)
+ax.plot(eq_q, eq_p, 'o', color='#16a34a', markersize=12, zorder=5, label=f'Equilibrium ({eq_q:.0f}, \${eq_p:.0f})')
+
+ax.plot([eq_q, eq_q], [0, eq_p], '--', color='#64748b', linewidth=1, alpha=0.6)
+ax.plot([0, eq_q], [eq_p, eq_p], '--', color='#64748b', linewidth=1, alpha=0.6)
+ax.annotate(f'E ({eq_q:.0f}, \${eq_p:.0f})', (eq_q, eq_p), textcoords='offset points', xytext=(15, 15), fontsize=14, color='#16a34a', fontweight='bold')
+
+ax.set_xlabel('Quantity', fontsize=15)
+ax.set_ylabel('Price ($)', fontsize=15)
+ax.set_title('Supply and Demand', fontsize=20, fontweight='bold', pad=15)
+ax.legend(fontsize=13, loc='upper right', framealpha=0.9)
+ax.tick_params(labelsize=12)
+ax.set_xlim(0, 100)
+ax.set_ylim(0, 100)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+ax.grid(True, alpha=0.15, linestyle='--')
+plt.tight_layout()
+plt.savefig('diagram.png', bbox_inches='tight', pad_inches=0.3, facecolor='white', dpi=300)
+\`\`\`
+
+MATPLOTLIB EXAMPLE — Histogram:
+\`\`\`
+# MODE: matplotlib
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.rcParams['font.family'] = 'serif'
+matplotlib.rcParams['mathtext.fontset'] = 'cm'
+
+fig, ax = plt.subplots(figsize=(10, 7), dpi=300, facecolor='white')
+np.random.seed(42)
+data = np.random.normal(75, 12, 200)
+counts, bins, patches = ax.hist(data, bins=12, edgecolor='white', linewidth=1.5, color='#2563eb', alpha=0.85, zorder=3)
+
+for count, patch in zip(counts, patches):
+    ax.text(patch.get_x() + patch.get_width() / 2, count + 0.5, f'{int(count)}', ha='center', va='bottom', fontsize=11, color='#1a1a2e')
+
+mean_val = np.mean(data)
+ax.axvline(x=mean_val, color='#dc2626', linewidth=2, linestyle='--', label=f'Mean = {mean_val:.1f}', zorder=4)
+
+ax.set_xlabel('Score', fontsize=15)
+ax.set_ylabel('Frequency', fontsize=15)
+ax.set_title('Distribution of Test Scores', fontsize=20, fontweight='bold', pad=15)
+ax.legend(fontsize=13, loc='upper right', framealpha=0.9)
+ax.tick_params(labelsize=12)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+plt.tight_layout()
+plt.savefig('diagram.png', bbox_inches='tight', pad_inches=0.3, facecolor='white', dpi=300)
 \`\`\`
 
 === IMPORTANT RULES FOR BOTH MODES ===

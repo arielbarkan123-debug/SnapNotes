@@ -246,7 +246,12 @@ export async function generateRecraftDiagram(
     // Still return the image without labels
   }
 
-  // Step 4: Composite labels using TikZ (text is ONLY added via TikZ, never by Recraft)
+  // Step 4: Fix label collisions before compositing
+  if (labels && labels.length > 0) {
+    labels = fixLabelCollisions(labels);
+  }
+
+  // Step 5: Composite labels using TikZ (text is ONLY added via TikZ, never by Recraft)
   if (labels && labels.length > 0) {
     console.log(`[Recraft] Compositing ${labels.length} labels via TikZ...`);
     const compositedUrl = await compositeWithTikzLabels(imageUrl, labels);
@@ -259,6 +264,50 @@ export async function generateRecraftDiagram(
 
   // Return base image if no labels or compositing failed
   return { imageUrl };
+}
+
+/**
+ * Fix label collisions by ensuring labels don't overlap and aren't cut off at edges.
+ * 1. Clamp all positions to safe margins (2-98 range)
+ * 2. Sort labels by y position
+ * 3. If two labels on the same side are within 6 units, spread them apart
+ */
+function fixLabelCollisions(labels: OverlayLabel[]): OverlayLabel[] {
+  // Clamp positions to safe margins
+  const clamped = labels.map(label => ({
+    ...label,
+    x: Math.max(2, Math.min(98, label.x)),
+    y: Math.max(2, Math.min(98, label.y)),
+    targetX: Math.max(5, Math.min(95, label.targetX)),
+    targetY: Math.max(5, Math.min(95, label.targetY)),
+  }));
+
+  // Separate into left-side and right-side labels
+  const leftLabels = clamped.filter(l => l.x < 50).sort((a, b) => a.y - b.y);
+  const rightLabels = clamped.filter(l => l.x >= 50).sort((a, b) => a.y - b.y);
+
+  // Spread labels that are too close on the same side
+  function spreadLabels(group: OverlayLabel[], minGap: number): void {
+    for (let i = 1; i < group.length; i++) {
+      const gap = group[i].y - group[i - 1].y;
+      if (gap < minGap) {
+        // Push the current label down
+        group[i].y = Math.min(98, group[i - 1].y + minGap);
+      }
+    }
+
+    // If pushing down caused labels to go past 98, push earlier ones up
+    for (let i = group.length - 2; i >= 0; i--) {
+      if (group[i + 1].y - group[i].y < minGap) {
+        group[i].y = Math.max(2, group[i + 1].y - minGap);
+      }
+    }
+  }
+
+  spreadLabels(leftLabels, 6);
+  spreadLabels(rightLabels, 6);
+
+  return [...leftLabels, ...rightLabels];
 }
 
 function buildFallbackPrompt(question: string, is3D: boolean): string {
