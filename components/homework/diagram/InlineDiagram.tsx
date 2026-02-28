@@ -1,27 +1,15 @@
 'use client'
 
-import { useState } from 'react'
-import { useTranslations, useLocale } from 'next-intl'
-import dynamic from 'next/dynamic'
-import { type DiagramState, getDiagramTypeName, isEngineDiagram } from './types'
+import { useLocale } from 'next-intl'
+import { type DiagramState, getDiagramTypeName } from './types'
 import DiagramRenderer from './DiagramRenderer'
-
-// Lazy load fullscreen view
-const FullScreenDiagramView = dynamic(
-  () => import('@/components/diagrams/FullScreenDiagramView'),
-  { ssr: false }
-)
 
 interface InlineDiagramProps {
   diagram: DiagramState
-  /** Override which step to display (defaults to last step = fully revealed) */
-  currentStep?: number
   /** Size variant: 'compact' (350x280), 'default' (400x350), or 'large' (500x400) */
   size?: 'compact' | 'default' | 'large'
   /** Language for labels */
   language?: 'en' | 'he'
-  /** Whether to show the expand button */
-  showExpandButton?: boolean
 }
 
 const SIZE_MAP = {
@@ -31,104 +19,36 @@ const SIZE_MAP = {
 }
 
 /**
- * Inline diagram for rendering within message bubbles
- * Now with expand-to-fullscreen capability
+ * Inline diagram for rendering engine-generated images within message bubbles.
+ * All diagrams are now engine_image (static PNG) — no step controls needed.
  */
 export default function InlineDiagram({
   diagram,
-  currentStep,
   size = 'default',
   language,
-  showExpandButton = true,
 }: InlineDiagramProps) {
-  const t = useTranslations('diagram')
   const locale = useLocale()
   const lang = language || (locale as 'en' | 'he')
-
-  const [isFullscreen, setIsFullscreen] = useState(false)
-  const [fullscreenStep, setFullscreenStep] = useState(currentStep ?? 0)
-
   const { width, height } = SIZE_MAP[size]
 
-  // Engine-generated images don't have steps - they're just static images
-  const isEngineImage = isEngineDiagram(diagram)
-
-  // Inline diagrams show fully revealed (all steps visible) for quick viewing.
-  // Users can expand to fullscreen for the step-by-step experience.
-  const totalSteps = isEngineImage ? 1 : (diagram.totalSteps ?? diagram.stepConfig?.length ?? 1)
-  const inlineStep = currentStep ?? (totalSteps > 0 ? totalSteps - 1 : 0)
-
-  // Engine images don't need expand button or step controls
-  const shouldShowExpandButton = showExpandButton && !isEngineImage
-
-  const handleOpenFullscreen = () => {
-    // Fullscreen starts from step 0 for the full step-by-step experience
-    setFullscreenStep(0)
-    setIsFullscreen(true)
-  }
-
   return (
-    <>
-      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-        {/* Header with diagram type and expand button */}
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-medium text-violet-600 dark:text-violet-400">
-            {getDiagramTypeName(diagram.type)}
-          </span>
-
-          {shouldShowExpandButton && (
-            <button
-              onClick={handleOpenFullscreen}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-              title={t('expand')}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-              </svg>
-              {t('expand')}
-            </button>
-          )}
-        </div>
-
-        {/* Diagram container — fully revealed, no step controls.
-             The .diagram-content override removes per-component maxWidth caps
-             so the SVG fills available width (components use width:100% + viewBox). */}
-        <div className="rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700 [&_.diagram-content]:!max-w-full [&_.diagram-content_svg]:!h-auto [&_.diagram-content_svg]:max-h-[400px]">
-          <DiagramRenderer
-            diagram={diagram}
-            currentStep={inlineStep}
-            animate={false}
-            showControls={false}
-            width={width}
-            height={height}
-            language={lang}
-          />
-        </div>
-
-        {/* Hint to expand for step-by-step view (only for step-based diagrams) */}
-        {shouldShowExpandButton && totalSteps > 1 && (
-          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
-            {lang === 'he' ? 'לחץ להגדלה לצפייה צעד-אחר-צעד' : 'Expand for step-by-step view'}
-          </p>
-        )}
+    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+      {/* Header with diagram type */}
+      <div className="flex items-center mb-3">
+        <span className="text-xs font-medium text-violet-600 dark:text-violet-400">
+          {getDiagramTypeName(diagram.type)}
+        </span>
       </div>
 
-      {/* Fullscreen Dialog (only for step-based diagrams) */}
-      {!isEngineImage && (
-        <FullScreenDiagramView
+      {/* Diagram container */}
+      <div className="rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700">
+        <DiagramRenderer
           diagram={diagram}
-          isOpen={isFullscreen}
-          onClose={() => setIsFullscreen(false)}
-          initialStep={fullscreenStep}
+          width={width}
+          height={height}
           language={lang}
-          stepConfig={diagram.stepConfig?.map((s, idx) => ({
-            step: 'step' in s ? (s as { step: number }).step : idx,
-            stepLabel: s.stepLabel || `Step ${idx + 1}`,
-            stepLabelHe: s.stepLabelHe,
-            showCalculation: typeof s.showCalculation === 'string' ? s.showCalculation : undefined,
-          }))}
         />
-      )}
-    </>
+      </div>
+    </div>
   )
 }

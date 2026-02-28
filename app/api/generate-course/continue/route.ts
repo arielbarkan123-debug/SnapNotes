@@ -4,6 +4,7 @@ import { generateContinuationLessons } from '@/lib/ai'
 import type { UserLearningContext } from '@/lib/ai'
 import { logError } from '@/lib/api/errors'
 import type { LessonOutline, Lesson, GeneratedCourse } from '@/types'
+import { generateDiagramsForSteps } from '@/lib/diagram-engine/integration'
 
 // Allow 3 minutes for continuation (generates 2 lessons at a time)
 export const maxDuration = 180
@@ -148,6 +149,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       targetIndices,
       userContext
     )
+
+    // 9b. Generate engine diagrams for diagram steps in new lessons (concurrency-limited)
+    try {
+      await generateDiagramsForSteps(result.newLessons, '[continue]')
+    } catch (diagramErr) {
+      // Diagram generation is non-critical; log and continue without diagrams
+      console.error('[continue] Diagram batch generation failed:', diagramErr)
+    }
 
     // 10. Merge new lessons into course
     const updatedLessons = [...currentLessons, ...result.newLessons]

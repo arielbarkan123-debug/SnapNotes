@@ -587,7 +587,7 @@ Keep it brief - 2-3 sentences max.`
 /**
  * Generate the initial greeting when a session starts
  */
-export async function generateInitialGreeting(context: TutorContext): Promise<TutorResponse> {
+export async function generateInitialGreeting(context: TutorContext, enableDiagrams = true): Promise<TutorResponse> {
   const client = getAnthropicClient()
   const questionText = context.questionAnalysis.questionText
 
@@ -595,7 +595,7 @@ export async function generateInitialGreeting(context: TutorContext): Promise<Tu
   console.log(`[TutorEngine] shouldUseEngine result: ${shouldUseEngine(questionText)}`)
 
   // Fire engine diagram in parallel with AI call (if topic needs it)
-  const enginePromise = shouldUseEngine(questionText)
+  const enginePromise = enableDiagrams && shouldUseEngine(questionText)
     ? tryEngineDiagram(questionText).catch((err) => {
         console.warn('[TutorEngine] Engine diagram failed for greeting:', err)
         return undefined
@@ -661,7 +661,8 @@ export async function generateInitialGreeting(context: TutorContext): Promise<Tu
  */
 export async function generateTutorResponse(
   context: TutorContext,
-  studentMessage: string
+  studentMessage: string,
+  enableDiagrams = true,
 ): Promise<TutorResponse> {
   const client = getAnthropicClient()
 
@@ -711,7 +712,7 @@ export async function generateTutorResponse(
   const diagramTopic = `${context.questionAnalysis.questionText} ${studentMessage}`
 
   // Fire engine diagram in parallel with AI call (if topic needs it and no existing diagram)
-  const enginePromise = !previousDiagram && shouldUseEngine(diagramTopic)
+  const enginePromise = enableDiagrams && !previousDiagram && shouldUseEngine(diagramTopic)
     ? tryEngineDiagram(diagramTopic).catch((err) => {
         console.warn('[TutorEngine] Engine diagram failed for chat:', err)
         return undefined

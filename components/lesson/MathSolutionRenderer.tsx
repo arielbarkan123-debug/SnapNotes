@@ -1,19 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, Check, BarChart3 } from 'lucide-react'
-import { type MathSolution, type MathStep, type MathVisual, type StructuredWorkedSolution } from '@/types'
+import { ChevronDown, ChevronRight, Check } from 'lucide-react'
+import { type MathSolution, type MathStep, type StructuredWorkedSolution } from '@/types'
 import { MathRenderer, MathText } from '@/components/ui/MathRenderer'
 import { useTranslations } from 'next-intl'
-import {
-  NumberLine,
-  CoordinatePlane,
-  Triangle,
-  Circle,
-  UnitCircle,
-  MathTable,
-  TreeDiagram,
-} from '@/components/math'
 
 interface MathSolutionRendererProps {
   solution: StructuredWorkedSolution
@@ -132,67 +123,8 @@ function MathMethodRenderer({ method, isAlternative = false, methodNumber }: Mat
             </div>
           )}
 
-          {/* Visual representation (optional) */}
-          {method.visual && (
-            <MathVisualRenderer visual={method.visual} />
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-interface MathVisualRendererProps {
-  visual: MathVisual
-}
-
-/**
- * Renders the appropriate visual component based on type
- */
-function MathVisualRenderer({ visual }: MathVisualRendererProps) {
-  const t = useTranslations('deepPractice.math')
-  const [showVisual, setShowVisual] = useState(true)
-
-  return (
-    <div className="mt-4">
-      {/* Visual toggle header */}
-      <button
-        onClick={() => setShowVisual(!showVisual)}
-        className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-2"
-      >
-        <BarChart3 className="h-4 w-4" />
-        <span>{showVisual ? t('hideVisual') : t('showVisual')}</span>
-        {showVisual ? (
-          <ChevronDown className="h-4 w-4" />
-        ) : (
-          <ChevronRight className="h-4 w-4" />
-        )}
-      </button>
-
-      {/* Visual content */}
-      {showVisual && (
-        <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
-          {visual.type === 'number_line' && (
-            <NumberLine data={visual.data} className="mx-auto" />
-          )}
-          {visual.type === 'coordinate_plane' && (
-            <CoordinatePlane data={visual.data} className="mx-auto" />
-          )}
-          {visual.type === 'triangle' && (
-            <Triangle data={visual.data} className="mx-auto" />
-          )}
-          {visual.type === 'circle' && (
-            <Circle data={visual.data} className="mx-auto" />
-          )}
-          {visual.type === 'unit_circle' && (
-            <UnitCircle data={visual.data} className="mx-auto" />
-          )}
-          {visual.type === 'table' && (
-            <MathTable data={visual.data} className="mx-auto" />
-          )}
-          {visual.type === 'tree_diagram' && (
-            <TreeDiagram data={visual.data} className="mx-auto" />
-          )}
+          {/* Visual representation — legacy React SVG visuals removed;
+             diagrams are now rendered via the engine_image pipeline */}
         </div>
       )}
     </div>

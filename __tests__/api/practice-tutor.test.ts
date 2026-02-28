@@ -27,11 +27,6 @@ jest.mock('@anthropic-ai/sdk', () => {
   }))
 })
 
-// Mock diagram generator
-jest.mock('@/lib/homework/diagram-generator', () => ({
-  generateDiagramFromTutorMessage: jest.fn().mockReturnValue(null),
-}))
-
 // Mock diagram-engine integration to avoid ESM import chain (e2b → chalk)
 jest.mock('@/lib/diagram-engine/integration', () => ({
   tryEngineDiagram: jest.fn().mockResolvedValue(null),

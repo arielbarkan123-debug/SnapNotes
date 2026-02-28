@@ -159,6 +159,8 @@ export interface CreateSessionRequest {
   // Common fields
   comfortLevel?: ComfortLevel
   initialAttempt?: string
+  /** Whether to generate engine diagrams (default: true) */
+  enableDiagrams?: boolean
 }
 
 export interface UpdateSessionRequest {

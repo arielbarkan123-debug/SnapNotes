@@ -182,6 +182,7 @@ export async function POST(request: NextRequest) {
     let greetingMessage: ConversationMessage
     try {
       console.log(`[Sessions] Calling generateInitialGreeting for question: "${questionAnalysis.questionText.slice(0, 80)}..."`)
+      const enableDiagrams = body.enableDiagrams !== false
       const greeting = await generateInitialGreeting({
         session: createdSession,
         questionAnalysis,
@@ -192,7 +193,7 @@ export async function POST(request: NextRequest) {
         language: userLanguage,
         grade: userGrade,
         studySystem: userStudySystem,
-      })
+      }, enableDiagrams)
 
       console.log(`[Sessions] Greeting received. Has diagram: ${!!greeting.diagram}, type: ${greeting.diagram?.type}`)
       if (greeting.diagram) {
