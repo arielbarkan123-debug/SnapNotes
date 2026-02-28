@@ -183,6 +183,7 @@ export default function PracticePage() {
   const [cardDiagrams, setCardDiagrams] = useState<Record<string, string>>({})
   const [diagramLoading, setDiagramLoading] = useState(false)
   const diagramAbortRef = useRef<AbortController | null>(null)
+  const [diagramZoom, setDiagramZoom] = useState(100) // percentage: 50–200
 
   // Auto-save resume state
   const [hasSavedSession, setHasSavedSession] = useState(false)
@@ -1224,13 +1225,40 @@ export default function PracticePage() {
                       {t('aiDiagram') || 'AI Diagram'}
                     </span>
                   </div>
-                  <div className="p-3 flex justify-center">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={cardDiagrams[currentCard.id]}
-                      alt="Diagram for this question"
-                      className="max-w-full max-h-64 object-contain rounded-lg"
-                    />
+                  <div className="relative p-3">
+                    <div className="flex justify-center overflow-auto" style={{ maxHeight: diagramZoom > 100 ? `${(diagramZoom / 100) * 16}rem` : '16rem' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={cardDiagrams[currentCard.id]}
+                        alt="Diagram for this question"
+                        className="object-contain rounded-lg transition-transform duration-200"
+                        style={{ width: `${diagramZoom}%`, maxWidth: 'none' }}
+                      />
+                    </div>
+                    {/* Zoom controls — bottom-right corner */}
+                    <div dir="ltr" className="absolute bottom-2 right-2 flex items-center gap-1 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm px-1 py-0.5">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setDiagramZoom(z => Math.max(50, z - 25)) }}
+                        disabled={diagramZoom <= 50}
+                        className="w-6 h-6 flex items-center justify-center rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        title="Zoom out"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14" /></svg>
+                      </button>
+                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 min-w-[2rem] text-center tabular-nums">
+                        {diagramZoom}%
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setDiagramZoom(z => Math.min(200, z + 25)) }}
+                        disabled={diagramZoom >= 200}
+                        className="w-6 h-6 flex items-center justify-center rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        title="Zoom in"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : diagramLoading ? (
