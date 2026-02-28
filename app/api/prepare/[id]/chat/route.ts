@@ -4,8 +4,9 @@ import Anthropic from '@anthropic-ai/sdk'
 import { ErrorCodes, createErrorResponse } from '@/lib/api/errors'
 import { getDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-schemas'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
 
-export const maxDuration = 60
+export const maxDuration = 120
 const MAX_TOKENS = 4096
 
 let anthropicClient: Anthropic | null = null
@@ -24,6 +25,8 @@ interface ChatRequest {
   sectionRef?: string
   action?: 'quiz' | 'practice' | 'explain' | 'diagram'
   language?: 'en' | 'he'
+  /** Whether to generate engine diagrams (default: true) */
+  enableDiagrams?: boolean
 }
 
 /**
@@ -132,7 +135,7 @@ export async function POST(
       return createErrorResponse(ErrorCodes.VALIDATION_ERROR, 'Invalid request body')
     }
 
-    const { message, sectionRef, action, language = 'en' } = body
+    const { message, sectionRef, action, language = 'en', enableDiagrams = true } = body
 
     if (!message && !action) {
       return createErrorResponse(ErrorCodes.MISSING_FIELD, 'Message or action is required')
@@ -209,6 +212,16 @@ export async function POST(
 
     messages.push({ role: 'user', content: userMessage })
 
+    // Fire engine diagram generation in parallel with AI call (if enabled).
+    // Uses the user's message/question as the prompt for the diagram engine.
+    const diagramPrompt = userMessage
+    const enginePromise = enableDiagrams && shouldUseEngine(diagramPrompt)
+      ? tryEngineDiagram(diagramPrompt).catch((err) => {
+          console.warn('[PrepareChat] Engine diagram failed:', err)
+          return undefined
+        })
+      : Promise.resolve(undefined)
+
     // Call AI
     const client = getAnthropicClient()
     const response = await client.messages.create({
@@ -224,7 +237,7 @@ export async function POST(
     }
 
     let assistantMessage: string
-    let diagram = null
+    let diagram: Record<string, unknown> | null = null
 
     try {
       const jsonMatch = content.text.match(/\{[\s\S]*\}/)
@@ -237,6 +250,21 @@ export async function POST(
       }
     } catch {
       assistantMessage = content.text
+    }
+
+    // Override with engine-generated diagram if available (higher quality)
+    const engineResult = await enginePromise
+    if (engineResult) {
+      diagram = {
+        type: 'engine_image',
+        visibleStep: 0,
+        data: {
+          imageUrl: engineResult.imageUrl,
+          pipeline: engineResult.pipeline,
+          overlay: engineResult.overlay,
+          qaVerdict: engineResult.qaVerdict,
+        },
+      }
     }
 
     // Save both messages to DB

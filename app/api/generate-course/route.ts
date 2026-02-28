@@ -36,6 +36,7 @@ import type { StudySystem } from '@/lib/curriculum/types'
 import { checkRateLimit, RATE_LIMITS, getIdentifier } from '@/lib/rate-limit'
 import { validateLearningObjectives, type LearningObjective } from '@/lib/curriculum/learning-objectives'
 import { scoreExtraction, type ExtractionConfidence } from '@/lib/extraction/confidence-scorer'
+import { generateDiagramsForSteps } from '@/lib/diagram-engine/integration'
 
 // ============================================================================
 // Route Configuration
@@ -66,6 +67,8 @@ interface GenerateCourseRequest {
   intensityMode?: LessonIntensityMode
   /** Optional supplementary text context provided alongside file uploads */
   supplementaryText?: string
+  /** Whether to generate engine diagrams for diagram steps (default: true) */
+  enableDiagrams?: boolean
 }
 
 type SourceType = 'image' | 'pdf' | 'pptx' | 'docx' | 'text'
@@ -220,7 +223,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         return
       }
 
-      const { imageUrl, imageUrls, documentContent, documentUrl, textContent, supplementaryText, title, intensityMode } = body
+      const { imageUrl, imageUrls, documentContent, documentUrl, textContent, supplementaryText, title, intensityMode, enableDiagrams = true } = body
 
       // 3. Determine source type and validate input
       let sourceType: SourceType = 'image'
@@ -466,13 +469,24 @@ export async function POST(request: NextRequest): Promise<Response> {
         pageCount: documentContent?.metadata?.pageCount,
       })
 
+      // 6c. Generate engine diagrams for diagram steps (concurrency-limited)
+      if (enableDiagrams && generatedCourse.lessons) {
+        sendMessage({ type: 'progress', stage: 'Generating diagrams', percent: 77 })
+        try {
+          await generateDiagramsForSteps(generatedCourse.lessons, '[GenerateCourse]')
+        } catch (diagramErr) {
+          // Diagram generation is non-critical; log and continue without diagrams
+          console.error('[GenerateCourse] Diagram batch generation failed:', diagramErr)
+        }
+      }
+
       sendMessage({ type: 'progress', stage: 'Saving course', percent: 80 })
 
       // Log extraction confidence for monitoring
       console.log('[GenerateCourse] Extraction confidence:', extractionConfidence.overall)
       console.log('[GenerateCourse] Learning objectives:', learningObjectives.length)
 
-      // 6c. Save to database
+      // 6d. Save to database
       // Check for progressive generation metadata
       const progressiveMetadata = (generatedCourse as GeneratedCourseWithMetadata)._progressiveMetadata
       const isProgressiveGeneration = !!progressiveMetadata

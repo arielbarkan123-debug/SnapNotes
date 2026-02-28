@@ -43,6 +43,8 @@ interface PracticeTutorRequest {
   subject?: string
   /** Grade level for diagram schema filtering (e.g. 5, 8, 11) */
   grade?: number
+  /** Whether to generate engine diagrams (default: true) */
+  enableDiagrams?: boolean
 }
 
 interface TutorResponseData {
@@ -158,6 +160,7 @@ export async function POST(request: NextRequest) {
       language = 'en',
       subject,
       grade,
+      enableDiagrams = true,
     } = body
 
     if (!question || !correctAnswer) {
@@ -218,9 +221,9 @@ ${wasCorrect === false ? '**The student answered incorrectly and is asking for h
       })
     }
 
-    // Fire engine diagram generation in parallel with AI call (if topic needs it).
+    // Fire engine diagram generation in parallel with AI call (if enabled and topic needs it).
     // This saves 10-60s vs running them sequentially.
-    const enginePromise = shouldUseEngine(question)
+    const enginePromise = enableDiagrams && shouldUseEngine(question)
       ? tryEngineDiagram(question).catch((err) => {
           console.warn('[PracticeTutor] Engine diagram failed, using fallback:', err)
           return undefined

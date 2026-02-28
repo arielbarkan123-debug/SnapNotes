@@ -96,9 +96,3 @@ export {
   type UseStudyPlanReturn,
 } from './useStudyPlan'
 
-// Interactive Parameters
-export {
-  useInteractiveParameters,
-  type UseInteractiveParametersOptions,
-  type UseInteractiveParametersReturn,
-} from './useInteractiveParameters'

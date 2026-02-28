@@ -107,6 +107,11 @@ jest.mock('@/lib/extraction/confidence-scorer', () => ({
   }),
 }))
 
+jest.mock('@/lib/diagram-engine/integration', () => ({
+  tryEngineDiagram: jest.fn().mockResolvedValue(undefined),
+  generateDiagramsForSteps: jest.fn().mockResolvedValue({ generated: 0, attempted: 0 }),
+}))
+
 // ============================================================================
 // Stream Helper
 // ============================================================================
@@ -615,6 +620,47 @@ describe('Course Generation API - POST', () => {
 
       expect(errorMsg).toBeDefined()
       expect(errorMsg?.code).toBe('VALIDATION_ERROR')
+    })
+  })
+
+  describe('Diagram Engine Integration', () => {
+    it('calls generateDiagramsForSteps with generated lessons', async () => {
+      const { generateDiagramsForSteps } = require('@/lib/diagram-engine/integration')
+
+      const request = new NextRequest('http://localhost/api/generate-course', {
+        method: 'POST',
+        body: JSON.stringify({ imageUrl: 'https://example.com/image.jpg' }),
+      })
+
+      const messages = await drainStream(await POST(request))
+      const successMsg = messages.find((m) => m.type === 'success')
+
+      expect(successMsg).toBeDefined()
+      // mockGeneratedCourse has a diagram step in lesson 2, so this should be called
+      expect(generateDiagramsForSteps).toHaveBeenCalledTimes(1)
+      expect(generateDiagramsForSteps).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ title: 'Cell Organelles' }),
+        ]),
+        '[GenerateCourse]',
+      )
+    })
+
+    it('succeeds even when diagram generation fails', async () => {
+      const { generateDiagramsForSteps } = require('@/lib/diagram-engine/integration')
+      generateDiagramsForSteps.mockRejectedValueOnce(new Error('E2B sandbox unavailable'))
+
+      const request = new NextRequest('http://localhost/api/generate-course', {
+        method: 'POST',
+        body: JSON.stringify({ imageUrl: 'https://example.com/image.jpg' }),
+      })
+
+      const messages = await drainStream(await POST(request))
+      const successMsg = messages.find((m) => m.type === 'success')
+
+      // Course should still succeed even if diagram generation throws
+      expect(successMsg).toBeDefined()
+      expect(successMsg?.courseId).toBe('course-123')
     })
   })
 

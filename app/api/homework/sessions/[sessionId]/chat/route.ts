@@ -38,7 +38,7 @@ export async function POST(
     }
 
     // Parse request
-    let body: { message: string }
+    let body: { message: string; enableDiagrams?: boolean }
     try {
       body = await request.json()
     } catch {
@@ -48,6 +48,8 @@ export async function POST(
     if (!body.message || typeof body.message !== 'string') {
       return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Message is required')
     }
+
+    const enableDiagrams = body.enableDiagrams !== false
 
     // Get the session
     const { data: session, error: sessionError } = await supabase
@@ -122,7 +124,7 @@ export async function POST(
     }
 
     // Step 3: Generate Socratic tutor response
-    const tutorResponse = await generateTutorResponse(context, body.message)
+    const tutorResponse = await generateTutorResponse(context, body.message, enableDiagrams)
 
     // Step 4: Check if student solved the problem (if high progress)
     let solutionCheck = { solved: false, feedback: '' }

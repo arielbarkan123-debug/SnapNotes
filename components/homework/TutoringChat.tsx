@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import DiagramToggle from '@/components/ui/DiagramToggle'
 import type { HomeworkSession, ConversationMessage, HintLevel } from '@/lib/homework/types'
 
 // Import diagram components
@@ -357,6 +358,10 @@ export default function TutoringChat({
     <div className="flex h-full bg-gray-50 dark:bg-gray-900">
       {/* Main Chat Area */}
       <div className="flex flex-col w-full">
+        {/* Diagram toggle */}
+        <div className="flex justify-end px-4 pt-2">
+          <DiagramToggle compact />
+        </div>
         {/* Progress - hidden for engine diagram sessions */}
         {!hasEngineDiagram && (
           <ChatProgressBar
