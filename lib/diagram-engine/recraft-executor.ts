@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { AI_MODEL } from '@/lib/ai/claude';
 import { Sandbox } from '@e2b/code-interpreter';
 import { generateRecraftImage, type RecraftStyle } from './recraft-client';
 
@@ -156,7 +157,7 @@ export async function generateRecraftDiagram(
   let cleanPrompt: string;
   try {
     const rewriteMsg = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: AI_MODEL,
       max_tokens: 400,
       messages: [
         {
@@ -207,7 +208,7 @@ export async function generateRecraftDiagram(
     ) as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
 
     const visionMessage = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: AI_MODEL,
       max_tokens: 2048,
       messages: [
         {

@@ -18,11 +18,11 @@ import { validateSchema, autoCorrectDiagram, type DiagramType as VisualDiagramTy
 import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
 import { classifyTopicType, inferDifficultyFromTopic, resolveEffectiveLanguageLevel, type TopicType } from '@/lib/ai/content-classifier'
 
+import { AI_MODEL } from '@/lib/ai/claude'
+
 // ============================================================================
 // Configuration
 // ============================================================================
-
-const AI_MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 2048
 
 let anthropicClient: Anthropic | null = null

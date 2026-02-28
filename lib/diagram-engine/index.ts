@@ -5,6 +5,7 @@ import { generateRecraftDiagram } from './recraft-executor';
 import type { OverlayLabel } from './recraft-executor';
 import { routeQuestion, type Pipeline } from './router';
 import Anthropic from '@anthropic-ai/sdk';
+import { AI_MODEL } from '@/lib/ai/claude';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -86,7 +87,7 @@ async function qaCheckDiagram(
     }
 
     const qaMessage = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: AI_MODEL,
       max_tokens: 300,
       messages: [
         {
@@ -154,7 +155,7 @@ async function generateE2BCode(
   }
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: AI_MODEL,
     max_tokens: 8192,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: userMessage }],

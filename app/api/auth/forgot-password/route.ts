@@ -43,7 +43,7 @@ function checkRateLimit(key: string): { allowed: boolean; retryAfter?: number } 
 }
 
 // Admin email for support contact (from env)
-const ADMIN_EMAIL = process.env.ADMIN_SUPPORT_EMAIL || 'support@notesnap.com'
+const ADMIN_EMAIL = process.env.ADMIN_SUPPORT_EMAIL || 'support@notesnap.app'
 
 export async function POST(request: NextRequest) {
   try {
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       email.toLowerCase(),
       {
-        redirectTo: `${request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://notesnap.app'}/reset-password`,
       }
     )
 

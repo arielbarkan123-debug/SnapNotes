@@ -6,6 +6,8 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import { isRTL, type Locale } from "@/i18n/config";
 import SwCachePurgeScript from "@/components/SwCachePurgeScript";
+import CookieConsent from "@/components/CookieConsent";
+import JsonLd from "@/components/JsonLd";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -77,6 +79,9 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png",
   },
   manifest: "/manifest.json",
+  alternates: {
+    canonical: "/",
+  },
 };
 
 export const viewport: Viewport = {
@@ -102,6 +107,7 @@ export default async function RootLayout({
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <head>
         <SwCachePurgeScript />
+        <JsonLd />
       </head>
       <body
         className={`${plusJakarta.variable} ${rubik.variable} antialiased bg-white dark:bg-gray-900 text-gray-900 dark:text-white`}
@@ -109,6 +115,7 @@ export default async function RootLayout({
         <NextIntlClientProvider messages={messages}>
           <Providers>
             {children}
+            <CookieConsent />
           </Providers>
         </NextIntlClientProvider>
       </body>

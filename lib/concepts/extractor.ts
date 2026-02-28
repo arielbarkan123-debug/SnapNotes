@@ -6,6 +6,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
+import { AI_MODEL } from '@/lib/ai/claude'
 import { createClient } from '@/lib/supabase/server'
 import type {
   Concept,
@@ -235,7 +236,7 @@ export async function extractConceptsFromCourse(
 
   // Call Claude
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: AI_MODEL,
     max_tokens: 4000,
     messages: [{ role: 'user', content: prompt }],
   })
@@ -278,7 +279,7 @@ export async function extractConceptsFromCourse(
     metadata: {
       courseId: course.id,
       extractedAt: new Date().toISOString(),
-      modelUsed: 'claude-sonnet-4-6',
+      modelUsed: AI_MODEL,
       conceptCount: enrichedConcepts.length,
       mappingCount: parsed.mappings.length,
     },

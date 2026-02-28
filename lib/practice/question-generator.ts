@@ -23,12 +23,11 @@ import {
   type TopicType,
 } from '@/lib/ai/content-classifier'
 import { isQuestionQualityAcceptable } from '@/lib/srs'
+import { AI_MODEL } from '@/lib/ai/claude'
 
 // -----------------------------------------------------------------------------
 // Constants
 // -----------------------------------------------------------------------------
-
-const ANTHROPIC_MODEL = 'claude-sonnet-4-6'
 
 const QUESTION_TYPE_DESCRIPTIONS: Record<PracticeQuestionType, string> = {
   multiple_choice: '4 options (A-D) with one correct answer',
@@ -502,7 +501,7 @@ export async function generatePracticeQuestions(
   const anthropic = new Anthropic()
 
   const response = await anthropic.messages.create({
-    model: ANTHROPIC_MODEL,
+    model: AI_MODEL,
     max_tokens: 4000,
     messages: [{ role: 'user', content: prompt }],
   })

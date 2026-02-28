@@ -9,6 +9,7 @@ import { buildExamStyleGuide, pastExamsHaveImages, getAggregatedImageAnalysis } 
 import { shouldIncludeImages, detectVisualContentMentions } from '@/lib/images/smart-search'
 import type { PastExamTemplate, ImageAnalysis } from '@/types/past-exam'
 import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
+import { AI_MODEL } from '@/lib/ai/claude'
 
 // Type for AI-generated exam questions
 interface GeneratedQuestion {
@@ -32,8 +33,6 @@ interface GeneratedQuestion {
 
 // Allow 3 minutes for exam generation (Claude API call for complex exams)
 export const maxDuration = 180
-
-const AI_MODEL = 'claude-sonnet-4-6'
 
 export async function GET(request: Request) {
   try {

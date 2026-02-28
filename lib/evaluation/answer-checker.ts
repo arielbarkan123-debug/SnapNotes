@@ -6,6 +6,7 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import { classifyTopicType } from '@/lib/ai/content-classifier'
+import { AI_MODEL } from '@/lib/ai/claude'
 
 // =============================================================================
 // Types
@@ -498,7 +499,7 @@ Respond with ONLY valid JSON (no markdown):
 
   try {
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: AI_MODEL,
       max_tokens: maxTokens,
       messages: [{ role: 'user', content: prompt }]
     })

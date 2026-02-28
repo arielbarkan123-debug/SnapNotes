@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { AI_MODEL } from '@/lib/ai/claude'
 import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
 import { getAnthropicApiKey } from '@/lib/env'
@@ -211,7 +212,7 @@ Return JSON in this exact format:
         : `Generate ${validCount} practice questions based on the lesson content.`
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: AI_MODEL,
       max_tokens: 2048,
       system: systemPrompt,
       messages: [{ role: 'user', content: userMessage }],

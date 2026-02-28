@@ -5,11 +5,10 @@ import type { TutorDiagramState, PedagogicalIntent, HintLevel } from '@/lib/home
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import { getFilteredDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-schemas'
 import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
+import { AI_MODEL } from '@/lib/ai/claude'
 
 // Allow 120 seconds — engine diagram generation can take 10-60s on top of AI response
 export const maxDuration = 120
-
-const AI_MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 2048
 
 let anthropicClient: Anthropic | null = null

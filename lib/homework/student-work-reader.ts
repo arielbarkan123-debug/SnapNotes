@@ -13,8 +13,7 @@
 
 import type Anthropic from '@anthropic-ai/sdk'
 import type { StudentAnswerSet, StudentAnswer, VerifiedProblem } from './types'
-
-const AI_MODEL = 'claude-sonnet-4-6'
+import { AI_MODEL } from '@/lib/ai/claude'
 const MAX_TOKENS = 2048
 
 // ============================================================================
