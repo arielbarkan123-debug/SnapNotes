@@ -12,7 +12,7 @@ const customJestConfig = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
-  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/', '<rootDir>/.worktrees/'],
+  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/', '<rootDir>/.worktrees/', '<rootDir>/.claude/worktrees/'],
   transformIgnorePatterns: [
     '/node_modules/(?!(next-intl|use-intl)/)',
   ],
