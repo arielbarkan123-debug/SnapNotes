@@ -14,7 +14,7 @@ import type {
   CreateSessionRequest,
   AnswerQuestionResponse,
 } from './types'
-import { selectExistingQuestions } from './question-generator'
+import { selectExistingQuestions, generateAndStoreQuestions } from './question-generator'
 import { evaluateAnswer } from '@/lib/evaluation/answer-checker'
 import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
@@ -56,13 +56,31 @@ export async function createPracticeSession(
       custom: 10,
     }[request.sessionType]
 
-  // Select questions
-  const questionIds = await selectExistingQuestions({
+  // Select existing questions first
+  let questionIds = await selectExistingQuestions({
     courseId: request.courseId,
     conceptIds: targetConceptIds.length ? targetConceptIds : undefined,
     difficulty: request.targetDifficulty,
     count: questionCount,
   })
+
+  // If not enough questions exist, auto-generate via AI
+  if (questionIds.length < questionCount && request.courseId) {
+    const shortfall = questionCount - questionIds.length
+    console.log(
+      `[SessionManager] Only ${questionIds.length}/${questionCount} questions available, generating ${shortfall} more`
+    )
+    try {
+      const { questionIds: newIds } = await generateAndStoreQuestions({
+        courseId: request.courseId,
+        count: shortfall,
+      })
+      questionIds = [...questionIds, ...newIds]
+    } catch (err) {
+      console.error('[SessionManager] Auto-generation failed:', err)
+      // Continue with whatever we have
+    }
+  }
 
   if (!questionIds.length) {
     throw new Error('No questions available for this practice session')

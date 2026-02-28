@@ -24,6 +24,7 @@
     "generatePracticeQuestions": "צור שאלות תרגול",
     "failedToGenerateQuestions": "יצירת השאלות נכשלה. אנא נסה שוב.",
     "failedToStartPractice": "התחלת התרגול נכשלה. אנא נסה שוב.",
+    "generatingQuestions": "מייצר שאלות חדשות...",
     "noQuestionToDisplay": "אין שאלה להצגה",
     "endSessionConfirm": "לסיים את האימון?",
     "saving": "שומר...",

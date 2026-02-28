@@ -1,36 +1,263 @@
 import { type NextRequest, NextResponse } from 'next/server'
+import { randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import {
   generateMixedPractice,
   generateSpacedInterleaving,
   type MasteryData,
 } from '@/lib/practice/interleaving'
-import type { ReviewCard } from '@/types/srs'
+import { generatePracticeQuestions } from '@/lib/practice/question-generator'
+import type { GeneratedQuestion, PracticeQuestionType } from '@/lib/practice/types'
+import type { ReviewCard, CardType } from '@/types/srs'
 
 interface RequestBody {
   course_ids: string[]
   card_count: number
   use_interleaving?: boolean
+  language?: 'en' | 'he'
 }
+
+// Maximum questions allowed per request to prevent abuse
+const MAX_CARD_COUNT = 50
+
+// -----------------------------------------------------------------------------
+// Map AI-generated questions to ReviewCard format for the practice UI
+// -----------------------------------------------------------------------------
+
+function toCardType(qt: PracticeQuestionType): CardType {
+  // image_label doesn't exist in CardType — map to short_answer
+  if (qt === 'image_label') return 'short_answer'
+  return qt as CardType
+}
+
+function mapGeneratedQuestionToCard(
+  q: GeneratedQuestion,
+  index: number,
+  courseId: string,
+  userId: string
+): ReviewCard {
+  let back: string
+
+  switch (q.question_type) {
+    case 'multiple_choice': {
+      const options = q.options?.choices?.map((c) => c.value) || []
+      const correctIndex = q.options?.choices?.findIndex(
+        (c) => c.label === q.correct_answer
+      ) ?? 0
+      back = JSON.stringify({
+        options,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0,
+        explanation: q.explanation,
+      })
+      break
+    }
+    case 'true_false': {
+      back = JSON.stringify({
+        correct: q.correct_answer.toLowerCase() === 'true',
+        explanation: q.explanation,
+      })
+      break
+    }
+    case 'fill_blank': {
+      back = JSON.stringify({
+        answer: q.correct_answer,
+        acceptableAnswers: [q.correct_answer],
+      })
+      break
+    }
+    case 'matching': {
+      const pairs = q.options?.pairs || []
+      back = JSON.stringify({
+        terms: pairs.map((p) => p.left),
+        definitions: pairs.map((p) => p.right),
+        correctPairs: pairs.map((_, i) => i),
+      })
+      break
+    }
+    case 'sequence': {
+      const items = q.options?.items || []
+      back = JSON.stringify({
+        items,
+        correctOrder: items.map((_, i) => i),
+      })
+      break
+    }
+    case 'multi_select': {
+      const msOptions = q.options?.choices?.map((c) => c.value) || []
+      const correctLabels = q.correct_answer.split(',').map((l) => l.trim())
+      const correctIndices = correctLabels
+        .map((label) =>
+          q.options?.choices?.findIndex((c) => c.label === label) ?? -1
+        )
+        .filter((i) => i >= 0)
+      back = JSON.stringify({
+        options: msOptions,
+        correctIndices,
+        explanation: q.explanation,
+      })
+      break
+    }
+    case 'short_answer':
+    default: {
+      back = q.correct_answer
+      break
+    }
+  }
+
+  const now = new Date().toISOString()
+  return {
+    id: randomUUID(),
+    user_id: userId,
+    course_id: courseId,
+    lesson_index: 0,
+    step_index: index,
+    card_type: toCardType(q.question_type),
+    front: q.question_text,
+    back,
+    stability: 0,
+    // FSRS difficulty defaults to 0 for new cards (not the question's difficulty_level)
+    difficulty: 0,
+    elapsed_days: 0,
+    scheduled_days: 0,
+    reps: 0,
+    lapses: 0,
+    state: 'new' as const,
+    due_date: now,
+    last_review: null,
+    concept_ids: null,
+    created_at: now,
+    updated_at: now,
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Fallback: fetch review cards (old behavior)
+// -----------------------------------------------------------------------------
+
+async function fetchReviewCardsFallback(
+  userId: string,
+  courseIds: string[],
+  cardCount: number,
+  useInterleaving: boolean
+) {
+  const supabase = await createClient()
+
+  const { data: allCards, error: cardsError } = await supabase
+    .from('review_cards')
+    .select(
+      'id, user_id, course_id, lesson_index, step_index, card_type, front, back, stability, difficulty, elapsed_days, scheduled_days, reps, lapses, state, due_date, last_review, created_at, updated_at'
+    )
+    .eq('user_id', userId)
+    .in('course_id', courseIds)
+    .order('due_date', { ascending: true })
+    .limit(500)
+
+  if (cardsError || !allCards || allCards.length === 0) {
+    return { cards: [], stats: null, requested: cardCount, available: 0 }
+  }
+
+  const { data: masteryData } = await supabase
+    .from('user_mastery')
+    .select('course_id, mastery_score')
+    .eq('user_id', userId)
+    .in('course_id', courseIds)
+
+  const masteryArray: MasteryData[] = []
+  if (masteryData) {
+    for (const mastery of masteryData) {
+      const courseCards = allCards.filter(
+        (c) => c.course_id === mastery.course_id
+      )
+      const lessonIndices = [...new Set(courseCards.map((c) => c.lesson_index))]
+      for (const lessonIndex of lessonIndices) {
+        masteryArray.push({
+          courseId: mastery.course_id,
+          lessonIndex,
+          masteryScore: mastery.mastery_score,
+        })
+      }
+    }
+  }
+
+  const targetCount = Math.min(cardCount, allCards.length, 100)
+  const cards = allCards as ReviewCard[]
+  const maxNewCards = Math.min(
+    Math.ceil(targetCount * 0.5),
+    allCards.filter((c) => c.state === 'new').length
+  )
+
+  const session = generateMixedPractice(userId, cards, masteryArray, {
+    cardCount: targetCount,
+    maxConsecutiveSameTopic: 2,
+    prioritizeLowMastery: true,
+    maxNewCards,
+  })
+
+  let finalCards = useInterleaving
+    ? generateSpacedInterleaving(session.cards, {
+        cardCount: targetCount,
+        maxConsecutiveSameTopic: 2,
+        prioritizeLowMastery: true,
+        maxNewCards,
+      })
+    : session.cards
+
+  if (finalCards.length < targetCount && allCards.length > finalCards.length) {
+    const usedIds = new Set(finalCards.map((c) => c.id))
+    const remaining = cards.filter((c) => !usedIds.has(c.id))
+    const extras = remaining.slice(0, targetCount - finalCards.length).map(
+      (card) => ({
+        ...card,
+        topicKey: `${card.course_id}:${card.lesson_index}`,
+        lessonMastery: 0.5,
+        priorityScore: 0,
+      })
+    )
+    finalCards = [...finalCards, ...extras]
+  }
+
+  const result = finalCards.slice(0, targetCount)
+  return {
+    cards: result,
+    stats: { ...session.stats, totalCards: result.length },
+    requested: cardCount,
+    delivered: result.length,
+    available: allCards.length,
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Main endpoint
+// -----------------------------------------------------------------------------
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
 
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
     if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body: RequestBody = await request.json()
-    const { course_ids, card_count = 20, use_interleaving = true } = body
+    const {
+      course_ids,
+      card_count: rawCardCount = 20,
+      use_interleaving = true,
+      language: bodyLanguage,
+    } = body
 
-    // Log requested count
-    console.log(`[Practice API] User requested: ${card_count} questions`)
+    // Validate and clamp card_count
+    const card_count = Math.max(1, Math.min(
+      typeof rawCardCount === 'number' && !isNaN(rawCardCount) ? Math.floor(rawCardCount) : 20,
+      MAX_CARD_COUNT
+    ))
+
+    console.log(`[Practice API] User requested: ${card_count} AI-generated questions`)
 
     if (!course_ids || !Array.isArray(course_ids) || course_ids.length === 0) {
       return NextResponse.json(
@@ -39,124 +266,102 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fetch review cards for the selected courses (limit to reasonable max for practice)
-    const { data: allCards, error: cardsError } = await supabase
-      .from('review_cards')
-      .select('id, user_id, course_id, lesson_index, step_index, card_type, front, back, stability, difficulty, elapsed_days, scheduled_days, reps, lapses, state, due_date, last_review, created_at, updated_at')
+    // Get user's education level and language
+    const { data: profile } = await supabase
+      .from('user_learning_profile')
+      .select('education_level')
       .eq('user_id', user.id)
-      .in('course_id', course_ids)
-      .order('due_date', { ascending: true })
-      .limit(500)
+      .single()
 
-    if (cardsError) {
-      console.error('Failed to fetch cards:', cardsError)
-      return NextResponse.json(
-        { error: 'Failed to fetch cards' },
-        { status: 500 }
-      )
+    const educationLevel = profile?.education_level || 'high_school'
+
+    // Determine language: prefer explicit body param, then Accept-Language header, then default
+    let language: 'en' | 'he' = 'en'
+    if (bodyLanguage === 'en' || bodyLanguage === 'he') {
+      language = bodyLanguage
+    } else {
+      const acceptLang = request.headers.get('accept-language') || ''
+      if (acceptLang.includes('he')) language = 'he'
     }
 
-    // If no cards exist, return empty
-    if (!allCards || allCards.length === 0) {
-      console.log('[Practice API] No cards available in database')
-      return NextResponse.json({ cards: [], stats: null, requested: card_count, available: 0 })
-    }
+    // Distribute questions across courses (don't over-generate)
+    const questionsPerCourse = Math.max(
+      1,
+      Math.ceil(card_count / course_ids.length)
+    )
 
-    console.log(`[Practice API] Available cards in database: ${allCards.length}`)
+    // Generate fresh AI questions for each course
+    const allGeneratedCards: ReviewCard[] = []
+    const failedCourses: string[] = []
 
-    // Fetch mastery data for lessons
-    const { data: masteryData } = await supabase
-      .from('user_mastery')
-      .select('course_id, mastery_score')
-      .eq('user_id', user.id)
-      .in('course_id', course_ids)
-
-    // Build mastery data array (expand to lesson level as approximation)
-    const masteryArray: MasteryData[] = []
-    if (masteryData) {
-      for (const mastery of masteryData) {
-        const courseCards = allCards.filter(c => c.course_id === mastery.course_id)
-        const lessonIndices = [...new Set(courseCards.map(c => c.lesson_index))]
-
-        for (const lessonIndex of lessonIndices) {
-          masteryArray.push({
-            courseId: mastery.course_id,
-            lessonIndex,
-            masteryScore: mastery.mastery_score,
+    await Promise.all(
+      course_ids.map(async (courseId) => {
+        try {
+          const questions = await generatePracticeQuestions({
+            courseId,
+            count: questionsPerCourse,
+            educationLevel,
+            language,
           })
+
+          const cards = questions.map((q, i) =>
+            mapGeneratedQuestionToCard(q, i, courseId, user.id)
+          )
+          allGeneratedCards.push(...cards)
+
+          console.log(
+            `[Practice API] Generated ${cards.length} AI questions for course ${courseId}`
+          )
+        } catch (err) {
+          console.error(
+            `[Practice API] AI generation failed for course ${courseId}:`,
+            err
+          )
+          failedCourses.push(courseId)
         }
-      }
-    }
-
-    // Determine target count - can't exceed what's available
-    const targetCount = Math.min(card_count, allCards.length, 100)
-
-    // Generate practice session using interleaving
-    // Allow more new cards if we need them to hit the target
-    const cards = allCards as ReviewCard[]
-    const maxNewCards = Math.min(
-      Math.ceil(targetCount * 0.5), // Allow up to 50% new cards
-      allCards.filter(c => c.state === 'new').length // But not more than available
+      })
     )
 
-    const session = generateMixedPractice(
+    // If AI generated enough questions, shuffle and return them
+    if (allGeneratedCards.length > 0) {
+      // Fisher-Yates shuffle for uniform distribution
+      for (let i = allGeneratedCards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[allGeneratedCards[i], allGeneratedCards[j]] = [allGeneratedCards[j], allGeneratedCards[i]]
+      }
+      const result = allGeneratedCards.slice(0, card_count)
+
+      console.log(
+        `[Practice API] Returning ${result.length} AI-generated questions (requested: ${card_count})`
+      )
+
+      return NextResponse.json({
+        cards: result,
+        stats: { totalCards: result.length },
+        requested: card_count,
+        delivered: result.length,
+        available: allGeneratedCards.length,
+        source: 'ai_generated',
+        ...(failedCourses.length > 0 && {
+          warnings: [`AI generation failed for ${failedCourses.length} course(s), partial results returned`],
+        }),
+      })
+    }
+
+    // Fallback: If ALL AI generations failed, use old review_cards method
+    console.log(
+      '[Practice API] All AI generations failed, falling back to review cards'
+    )
+    const fallbackResult = await fetchReviewCardsFallback(
       user.id,
-      cards,
-      masteryArray,
-      {
-        cardCount: targetCount,
-        maxConsecutiveSameTopic: 2,
-        prioritizeLowMastery: true,
-        maxNewCards: maxNewCards,
-      }
+      course_ids,
+      card_count,
+      use_interleaving
     )
-
-    console.log(`[Practice API] After generateMixedPractice: ${session.cards.length} cards`)
-
-    // Optionally apply spaced interleaving for maximum variety
-    let finalCards = use_interleaving
-      ? generateSpacedInterleaving(session.cards, {
-          cardCount: targetCount,
-          maxConsecutiveSameTopic: 2,
-          prioritizeLowMastery: true,
-          maxNewCards: maxNewCards,
-        })
-      : session.cards
-
-    console.log(`[Practice API] After interleaving: ${finalCards.length} cards`)
-
-    // If we still don't have enough, try to fill from remaining cards
-    if (finalCards.length < targetCount && allCards.length > finalCards.length) {
-      const usedIds = new Set(finalCards.map(c => c.id))
-      const remaining = cards.filter(c => !usedIds.has(c.id))
-      const needed = targetCount - finalCards.length
-
-      // Add remaining cards (already sorted by due_date from query)
-      const extras = remaining.slice(0, needed).map(card => ({
-        ...card,
-        topicKey: `${card.course_id}:${card.lesson_index}`,
-        lessonMastery: 0.5,
-        priorityScore: 0,
-      }))
-
-      finalCards = [...finalCards, ...extras]
-      console.log(`[Practice API] Added ${extras.length} extra cards to reach target`)
-    }
-
-    // Final slice to exact count
-    const result = finalCards.slice(0, targetCount)
-
-    console.log(`[Practice API] Final result: ${result.length} cards (requested: ${card_count}, available: ${allCards.length})`)
 
     return NextResponse.json({
-      cards: result,
-      stats: {
-        ...session.stats,
-        totalCards: result.length,
-      },
-      requested: card_count,
-      delivered: result.length,
-      available: allCards.length,
+      ...fallbackResult,
+      source: 'review_cards_fallback',
     })
   } catch (error) {
     console.error('Error generating practice session:', error)
