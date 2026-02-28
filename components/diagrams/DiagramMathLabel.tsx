@@ -151,7 +151,7 @@ export function DiagramMathLabel({
         displayMode: false,
         output: 'html',
         strict: false,
-        trust: true,
+        trust: false,
         macros: {
           // Common physics macros
           '\\vec': '\\overrightarrow{#1}',

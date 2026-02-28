@@ -27,7 +27,7 @@ export function MathRenderer({ math, block = false, className = '' }: MathRender
         throwOnError: false,
         errorColor: '#cc0000',
         strict: false,
-        trust: true,
+        trust: false,
       })
       // Sanitize KaTeX output with DOMPurify for security
       const sanitized = DOMPurify.sanitize(rendered, {

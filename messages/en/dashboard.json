@@ -1,4 +1,6 @@
 {
+  "loadError": "Unable to load your courses. Please try again.",
+  "retry": "Retry",
   "title": "Your Study Courses",
   "greeting": {
     "morning": "Good morning",

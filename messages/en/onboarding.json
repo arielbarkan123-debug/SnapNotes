@@ -1,0 +1,136 @@
+{
+  "steps": {
+    "system": {
+      "title": "What study system are you in?",
+      "subtitle": "This helps us tailor content to your curriculum"
+    },
+    "grade": {
+      "title": "What grade are you in?",
+      "subtitle": "Select your current grade level"
+    },
+    "subjects": {
+      "title": "Which subjects are you studying?",
+      "subtitle": "Select the subjects you want to focus on"
+    },
+    "goal": {
+      "title": "What's your main study goal?",
+      "subtitle": "This helps us personalize your learning experience"
+    },
+    "time": {
+      "title": "How much time can you study daily?",
+      "subtitle": "We'll optimize session lengths for your schedule"
+    },
+    "preferred": {
+      "title": "When do you prefer to study?",
+      "subtitle": "We'll remind you at the best times"
+    },
+    "learning": {
+      "title": "How do you learn best?",
+      "subtitle": "Select all that apply (optional)"
+    }
+  },
+  "studySystems": {
+    "ib": {
+      "title": "IB (International Baccalaureate)",
+      "description": "International Baccalaureate Diploma Programme"
+    },
+    "uk": {
+      "title": "UK A-Levels",
+      "description": "British curriculum (GCSE, A-Levels)"
+    },
+    "ap": {
+      "title": "AP (Advanced Placement)",
+      "description": "College-level courses in high school"
+    },
+    "israeli_bagrut": {
+      "title": "Israeli Bagrut",
+      "description": "Israeli matriculation exams"
+    },
+    "us": {
+      "title": "US System",
+      "description": "American curriculum (Common Core)"
+    },
+    "general": {
+      "title": "General",
+      "description": "Standard curriculum or self-study"
+    }
+  },
+  "studyGoals": {
+    "exam_prep": {
+      "title": "Exam Preparation",
+      "description": "Preparing for tests, certifications, or academic exams"
+    },
+    "general_learning": {
+      "title": "General Learning",
+      "description": "Expanding knowledge and learning new subjects"
+    },
+    "skill_improvement": {
+      "title": "Skill Improvement",
+      "description": "Building specific skills for work or hobbies"
+    }
+  },
+  "timeOptions": {
+    "short": {
+      "title": "5-10 minutes",
+      "description": "Quick study sessions between tasks"
+    },
+    "medium": {
+      "title": "15-20 minutes",
+      "description": "Focused daily practice sessions"
+    },
+    "long": {
+      "title": "30+ minutes",
+      "description": "Deep study and comprehensive review"
+    }
+  },
+  "timePreferences": {
+    "morning": {
+      "title": "Morning",
+      "description": "Best focus before the day starts"
+    },
+    "afternoon": {
+      "title": "Afternoon",
+      "description": "Study during midday breaks"
+    },
+    "evening": {
+      "title": "Evening",
+      "description": "Wind down with evening review"
+    },
+    "varies": {
+      "title": "Varies",
+      "description": "My schedule changes day to day"
+    }
+  },
+  "learningStyles": {
+    "reading": {
+      "title": "Reading",
+      "description": "Learning through text and explanations"
+    },
+    "visual": {
+      "title": "Visual",
+      "description": "Diagrams, charts, and visual content"
+    },
+    "practice": {
+      "title": "Practice & Testing",
+      "description": "Learning by doing and self-testing"
+    }
+  },
+  "ui": {
+    "quickSetup": "Quick Setup (3 steps)",
+    "back": "Back",
+    "skip": "Skip",
+    "skipAndFinish": "Skip & Finish",
+    "getStarted": "Get Started",
+    "settingUp": "Setting up...",
+    "continueWithSubjects": "Continue with {count} subject",
+    "continueWithSubjectsPlural": "Continue with {count} subjects",
+    "skipForNow": "Skip for now",
+    "stepOf": "Step {current} of {total}",
+    "failedToSave": "Failed to save your preferences. Please try again.",
+    "somethingWentWrong": "Something went wrong. Please try again."
+  },
+  "celebration": {
+    "title": "You're all set!",
+    "subtitle": "Let's start learning"
+  }
+}

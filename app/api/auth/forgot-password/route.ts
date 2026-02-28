@@ -87,14 +87,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient()
 
-    // Check if email exists in the system (for internal logging only, don't reveal to user)
-    const { data: existingUser } = await supabase.auth.admin.listUsers()
-    const userExists = existingUser?.users?.some(
-      (u) => u.email?.toLowerCase() === email.toLowerCase()
-    )
-
     // Log for security monitoring (don't expose to client)
-    console.log(`[Password Reset] Request for ${email.substring(0, 3)}***@*** - User exists: ${userExists}`)
+    // Note: We intentionally don't check if user exists - resetPasswordForEmail()
+    // handles non-existent emails silently, and checking would require loading all users
+    console.log(`[Password Reset] Request for ${email.substring(0, 3)}***@***`)
 
     // Always attempt to send the reset email
     // Supabase will ONLY send to the registered email - this is secure by design

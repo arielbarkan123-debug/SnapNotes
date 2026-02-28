@@ -15,8 +15,14 @@ jest.mock('framer-motion', () => ({
     polygon: (props: any) => <polygon {...props} />,
     line: (props: any) => <line {...props} />,
     rect: (props: any) => <rect {...props} />,
+    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   },
   AnimatePresence: ({ children }: any) => children,
+}))
+
+// Mock MathRenderer (InlineMath used in Formulas & Properties section)
+jest.mock('@/components/ui/MathRenderer', () => ({
+  InlineMath: ({ children }: { children: string }) => <span data-testid="inline-math">{children}</span>,
 }))
 
 // Mock useDiagramBase — returns subject-coded colors and controlled step
@@ -197,10 +203,10 @@ describe('Triangle', () => {
       expect(screen.getByTestId('diagram-step-controls')).toBeInTheDocument()
     })
 
-    it('passes correct total steps (outline + sides + angles = 3)', () => {
+    it('passes correct total steps (outline + sides + angles + formulas = 4)', () => {
       render(<Triangle data={baseData} />)
       const controls = screen.getByTestId('diagram-step-controls')
-      expect(controls.getAttribute('data-total')).toBe('3')
+      expect(controls.getAttribute('data-total')).toBe('4')
     })
 
     it('passes subject color to controls', () => {
@@ -216,8 +222,8 @@ describe('Triangle', () => {
       }
       render(<Triangle data={data} />)
       const controls = screen.getByTestId('diagram-step-controls')
-      // outline + sides + angles + special = 4
-      expect(controls.getAttribute('data-total')).toBe('4')
+      // outline + sides + angles + special + formulas = 5
+      expect(controls.getAttribute('data-total')).toBe('5')
     })
 
     it('includes error step when errors present', () => {
@@ -229,8 +235,8 @@ describe('Triangle', () => {
       }
       render(<Triangle data={data} />)
       const controls = screen.getByTestId('diagram-step-controls')
-      // outline + sides + angles + errors = 4
-      expect(controls.getAttribute('data-total')).toBe('4')
+      // outline + sides + angles + formulas + errors = 5
+      expect(controls.getAttribute('data-total')).toBe('5')
     })
   })
 
@@ -309,20 +315,20 @@ describe('Triangle', () => {
     }
 
     it('renders error group at correct step', () => {
-      // outline(0), sides(1), angles(2), errors(3)
-      mockCurrentStep = 3
+      // outline(0), sides(1), angles(2), formulas(3), errors(4)
+      mockCurrentStep = 4
       render(<Triangle data={errorData} />)
       expect(screen.getByTestId('tri-errors')).toBeInTheDocument()
     })
 
     it('renders wrong side marker', () => {
-      mockCurrentStep = 3
+      mockCurrentStep = 4
       render(<Triangle data={errorData} />)
       expect(screen.getByTestId('tri-wrong-side-AB')).toBeInTheDocument()
     })
 
     it('renders wrong angle marker', () => {
-      mockCurrentStep = 3
+      mockCurrentStep = 4
       render(<Triangle data={errorData} />)
       expect(screen.getByTestId('tri-wrong-angle-A')).toBeInTheDocument()
     })
@@ -340,7 +346,8 @@ describe('Triangle', () => {
 
   describe('data-testid attributes', () => {
     it('has all required testids at full reveal', () => {
-      mockCurrentStep = 3
+      // outline(0), sides(1), angles(2), formulas(3), errors(4)
+      mockCurrentStep = 4
       const data = {
         ...baseData,
         errorHighlight: { wrongSides: ['AB'] },
@@ -351,6 +358,7 @@ describe('Triangle', () => {
       expect(screen.getByTestId('tri-outline')).toBeInTheDocument()
       expect(screen.getByTestId('tri-sides')).toBeInTheDocument()
       expect(screen.getByTestId('tri-angles')).toBeInTheDocument()
+      expect(screen.getByTestId('tri-formulas')).toBeInTheDocument()
       expect(screen.getByTestId('tri-errors')).toBeInTheDocument()
     })
   })

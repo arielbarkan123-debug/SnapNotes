@@ -32,18 +32,21 @@ function LoginForm() {
   const [successMessage, setSuccessMessage] = useState('')
 
   useEffect(() => {
-    // Check for success message in URL params (from password reset or email verification)
-    const message = searchParams.get('message')
-    if (message) {
-      setSuccessMessage(decodeURIComponent(message))
-    }
+    // Check for message key in URL params (from password reset or email verification)
+    // Uses an allowlist to prevent phishing via crafted URLs
+    const messageKey = searchParams.get('messageKey')
+    if (messageKey) {
+      const validSuccessKeys = ['emailVerified', 'passwordUpdated']
+      const validErrorKeys = ['emailVerificationFailed', 'unexpectedError']
 
-    // Check for error message in URL params (from failed email verification)
-    const error = searchParams.get('error')
-    if (error) {
-      setServerError(decodeURIComponent(error))
+      if (validSuccessKeys.includes(messageKey)) {
+        setSuccessMessage(t(`loginMessages.${messageKey}`))
+      } else if (validErrorKeys.includes(messageKey)) {
+        setServerError(t(`loginMessages.${messageKey}`))
+      }
+      // Unknown keys are silently ignored (no user-controlled content rendered)
     }
-  }, [searchParams])
+  }, [searchParams, t])
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}

@@ -54,12 +54,13 @@ import FullScreenDiagramView from '@/components/diagrams/FullScreenDiagramView'
 const renderComponent = (ui: React.ReactElement) => render(ui)
 
 const mockDiagram: DiagramState = {
-  type: 'fbd',
+  type: 'projectile',
   visibleStep: 0,
   totalSteps: 5,
   data: {
-    object: { type: 'block', position: { x: 150, y: 150 } },
-    forces: [],
+    initialVelocity: 20,
+    angle: 45,
+    points: [],
   },
 }
 

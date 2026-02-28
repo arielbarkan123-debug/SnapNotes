@@ -24,9 +24,9 @@ export default async function DashboardPage() {
     .order('created_at', { ascending: false })
     .limit(50)
 
-  // Silently handle errors - courses will just be empty
+  // Show error state instead of misleading empty state
   if (error) {
-    return <DashboardContent initialCourses={[]} userName={userName} />
+    return <DashboardContent initialCourses={[]} userName={userName} dbError />
   }
 
   return <DashboardContent initialCourses={(courses as Course[]) || []} userName={userName} />

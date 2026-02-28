@@ -115,7 +115,7 @@ export default function ResetPasswordPage() {
         // Sign out after password reset
         await supabase.auth.signOut()
         // Redirect to login with success message
-        router.push(`/login?message=${encodeURIComponent(t('resetPassword.passwordUpdated'))}`)
+        router.push('/login?messageKey=passwordUpdated')
       }
     } catch {
       setServerError(t('resetPassword.unexpectedError'))
