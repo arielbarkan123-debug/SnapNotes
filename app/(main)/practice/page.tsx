@@ -155,6 +155,7 @@ export default function PracticePage() {
   const [questionCount, setQuestionCount] = useState<number>(20)
   const [error, setError] = useState<string | null>(null)
   const [isNoQuestionsError, setIsNoQuestionsError] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
 
   // Practice session state
   const [cards, setCards] = useState<PracticeCard[]>([])
@@ -247,17 +248,22 @@ export default function PracticePage() {
 
     setError(null)
     setIsNoQuestionsError(false)
+    setIsGenerating(true)
 
     try {
       const courseFilter = selectedCourseIds
 
-      // Fetch questions for practice
+      // Generate fresh AI questions for practice
       const response = await fetch('/api/practice/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept-Language': locale,
+        },
         body: JSON.stringify({
           course_ids: courseFilter,
           card_count: questionCount,
+          language: locale,
         }),
       })
 
@@ -335,8 +341,10 @@ export default function PracticePage() {
     } catch (err) {
       console.error('[Practice] Failed to start:', err)
       setError(t('failedToStartPractice'))
+    } finally {
+      setIsGenerating(false)
     }
-  }, [courses, selectedCourseIds, questionCount, trackFeature])
+  }, [courses, selectedCourseIds, questionCount, locale, trackFeature, t])
 
   // ==========================================================================
   // Toggle course selection
@@ -434,10 +442,37 @@ export default function PracticePage() {
 
       // Track mistakes for review at end of session
       if (!wasCorrect) {
+        // Extract human-readable correct answer from card back
+        // For interactive types, back is JSON — extract the answer text
+        let readableCorrectAnswer = currentCard.back
+        let explanation: string | undefined
+        try {
+          const cardData = parseCardBack(currentCard)
+          if (isMultipleChoice(cardData)) {
+            readableCorrectAnswer = cardData.options[cardData.correctIndex] || currentCard.back
+            explanation = cardData.explanation
+          } else if (isTrueFalse(cardData)) {
+            readableCorrectAnswer = cardData.correct ? 'True' : 'False'
+            explanation = cardData.explanation
+          } else if (isFillBlank(cardData)) {
+            readableCorrectAnswer = cardData.answer
+          } else if (isMatching(cardData)) {
+            readableCorrectAnswer = cardData.terms.map((t, i) => `${t} → ${cardData.definitions[cardData.correctPairs[i]]}`).join(', ')
+          } else if (isSequence(cardData)) {
+            readableCorrectAnswer = cardData.correctOrder.map(i => cardData.items[i]).join(' → ')
+          } else if (isMultiSelect(cardData)) {
+            readableCorrectAnswer = cardData.correctIndices.map(i => cardData.options[i]).join(', ')
+            explanation = cardData.explanation
+          }
+        } catch {
+          // If parsing fails, use raw back as fallback
+        }
+
         const newMistake = {
           question: currentCard.front,
           userAnswer: '', // User's specific answer not tracked in flashcard mode
-          correctAnswer: currentCard.back,
+          correctAnswer: readableCorrectAnswer,
+          explanation,
           courseId: currentCard.course_id,
           lessonIndex: currentCard.lesson_index,
           lessonTitle: currentCard.lessonTitle,
@@ -1014,10 +1049,20 @@ export default function PracticePage() {
               {/* Start Button */}
               <button
                 onClick={startPractice}
-                disabled={selectedCourseIds.length === 0}
+                disabled={selectedCourseIds.length === 0 || isGenerating}
                 className="w-full py-4 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-semibold rounded-xl transition-all text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {t('startPractice')}
+                {isGenerating ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    {t('generatingQuestions')}
+                  </span>
+                ) : (
+                  t('startPractice')
+                )}
               </button>
 
               {/* Back link */}

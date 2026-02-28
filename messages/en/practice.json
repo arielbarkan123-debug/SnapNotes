@@ -24,6 +24,7 @@
     "generatePracticeQuestions": "Generate Practice Questions",
     "failedToGenerateQuestions": "Failed to generate questions. Please try again.",
     "failedToStartPractice": "Failed to start practice. Please try again.",
+    "generatingQuestions": "Generating fresh questions...",
     "noQuestionToDisplay": "No question to display",
     "endSessionConfirm": "End practice session?",
     "saving": "Saving...",
