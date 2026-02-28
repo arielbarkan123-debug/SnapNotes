@@ -222,7 +222,8 @@ describe('Exams API - POST (Generate Exam)', () => {
         expect.any(Array),
         expect.any(Object),
         expect.any(String),
-        expect.any(String)
+        expect.any(String),
+        undefined // grade (not in mock profile)
       )
     })
 
@@ -245,7 +246,8 @@ describe('Exams API - POST (Generate Exam)', () => {
         ['biology'], // subjects from mock profile
         { biology: 'HL' }, // subject_levels from mock profile
         expect.any(String),
-        expect.any(String)
+        expect.any(String),
+        undefined // grade
       )
     })
 
@@ -268,7 +270,8 @@ describe('Exams API - POST (Generate Exam)', () => {
         expect.any(Array),
         expect.any(Object),
         'match_real', // exam_format from mock profile
-        expect.any(String)
+        expect.any(String),
+        undefined // grade
       )
     })
 
@@ -339,7 +342,8 @@ describe('Exams API - POST (Generate Exam)', () => {
         [], // empty subjects
         {}, // empty subject_levels
         'match_real', // default exam_format
-        expect.any(String)
+        expect.any(String),
+        undefined // grade
       )
     })
   })
@@ -514,7 +518,8 @@ describe('Exams API - POST (Generate Exam)', () => {
         expect.any(Array),
         expect.any(Object),
         'inspired_by', // from request body
-        expect.any(String)
+        expect.any(String),
+        undefined // grade
       )
     })
   })

@@ -32,6 +32,13 @@ jest.mock('@/lib/homework/diagram-generator', () => ({
   generateDiagramFromTutorMessage: jest.fn().mockReturnValue(null),
 }))
 
+// Mock diagram-engine integration to avoid ESM import chain (e2b → chalk)
+jest.mock('@/lib/diagram-engine/integration', () => ({
+  tryEngineDiagram: jest.fn().mockResolvedValue(null),
+  shouldUseEngine: jest.fn().mockReturnValue(false),
+  tieredRoute: jest.fn().mockResolvedValue(null),
+}))
+
 describe('POST /api/practice/tutor', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -282,8 +289,10 @@ describe('POST /api/practice/tutor', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(data.response.diagram).toBeDefined()
-      expect(data.response.diagram.type).toBe('equation')
+      // Diagram engine is mocked to return false for shouldUseEngine,
+      // and the route always deletes AI-returned diagrams (only uses engine).
+      // So diagram should be undefined when engine is not active.
+      expect(data.response.diagram).toBeUndefined()
     })
 
     it('handles non-JSON response from AI gracefully', async () => {

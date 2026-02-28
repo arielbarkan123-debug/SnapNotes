@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { useFunnelTracking, useEventTracking } from '@/lib/analytics'
 import { GradeSelector, SubjectPicker, type SelectedSubject } from '@/components/curriculum'
@@ -79,134 +80,22 @@ function clearOnboardingState(): void {
 // Constants
 // =============================================================================
 
-const STUDY_SYSTEMS = [
-  {
-    id: 'ib' as StudySystem,
-    icon: '🌐',
-    title: 'IB (International Baccalaureate)',
-    description: 'International Baccalaureate Diploma Programme',
-  },
-  {
-    id: 'uk' as StudySystem,
-    icon: '🇬🇧',
-    title: 'UK A-Levels',
-    description: 'British curriculum (GCSE, A-Levels)',
-  },
-  {
-    id: 'ap' as StudySystem,
-    icon: '📚',
-    title: 'AP (Advanced Placement)',
-    description: 'College-level courses in high school',
-  },
-  {
-    id: 'israeli_bagrut' as StudySystem,
-    icon: '🇮🇱',
-    title: 'Israeli Bagrut',
-    description: 'Israeli matriculation exams',
-  },
-  {
-    id: 'us' as StudySystem,
-    icon: '🇺🇸',
-    title: 'US System',
-    description: 'American curriculum (Common Core)',
-  },
-  {
-    id: 'general' as StudySystem,
-    icon: '🌍',
-    title: 'General',
-    description: 'Standard curriculum or self-study',
-  },
-]
-
-const STUDY_GOALS = [
-  {
-    id: 'exam_prep' as StudyGoal,
-    icon: '📝',
-    title: 'Exam Preparation',
-    description: 'Preparing for tests, certifications, or academic exams',
-  },
-  {
-    id: 'general_learning' as StudyGoal,
-    icon: '📚',
-    title: 'General Learning',
-    description: 'Expanding knowledge and learning new subjects',
-  },
-  {
-    id: 'skill_improvement' as StudyGoal,
-    icon: '🎯',
-    title: 'Skill Improvement',
-    description: 'Building specific skills for work or hobbies',
-  },
-]
-
-const TIME_OPTIONS = [
-  {
-    id: 'short' as TimeAvailability,
-    icon: '⚡',
-    title: '5-10 minutes',
-    description: 'Quick study sessions between tasks',
-  },
-  {
-    id: 'medium' as TimeAvailability,
-    icon: '⏱️',
-    title: '15-20 minutes',
-    description: 'Focused daily practice sessions',
-  },
-  {
-    id: 'long' as TimeAvailability,
-    icon: '📖',
-    title: '30+ minutes',
-    description: 'Deep study and comprehensive review',
-  },
-]
-
-const TIME_PREFERENCES = [
-  {
-    id: 'morning' as PreferredTime,
-    icon: '🌅',
-    title: 'Morning',
-    description: 'Best focus before the day starts',
-  },
-  {
-    id: 'afternoon' as PreferredTime,
-    icon: '☀️',
-    title: 'Afternoon',
-    description: 'Study during midday breaks',
-  },
-  {
-    id: 'evening' as PreferredTime,
-    icon: '🌙',
-    title: 'Evening',
-    description: 'Wind down with evening review',
-  },
-  {
-    id: 'varies' as PreferredTime,
-    icon: '🔄',
-    title: 'Varies',
-    description: 'My schedule changes day to day',
-  },
-]
-
-const LEARNING_STYLES = [
-  {
-    id: 'reading' as LearningStyle,
-    icon: '📖',
-    title: 'Reading',
-    description: 'Learning through text and explanations',
-  },
-  {
-    id: 'visual' as LearningStyle,
-    icon: '🖼️',
-    title: 'Visual',
-    description: 'Diagrams, charts, and visual content',
-  },
-  {
-    id: 'practice' as LearningStyle,
-    icon: '✍️',
-    title: 'Practice & Testing',
-    description: 'Learning by doing and self-testing',
-  },
-]
+// Icons for study systems, goals, time, etc. (text comes from i18n)
+const STUDY_SYSTEM_ICONS: Record<string, string> = {
+  ib: '🌐', uk: '🇬🇧', ap: '📚', israeli_bagrut: '🇮🇱', us: '🇺🇸', general: '🌍',
+}
+const STUDY_GOAL_ICONS: Record<string, string> = {
+  exam_prep: '📝', general_learning: '📚', skill_improvement: '🎯',
+}
+const TIME_OPTION_ICONS: Record<string, string> = {
+  short: '⚡', medium: '⏱️', long: '📖',
+}
+const TIME_PREFERENCE_ICONS: Record<string, string> = {
+  morning: '🌅', afternoon: '☀️', evening: '🌙', varies: '🔄',
+}
+const LEARNING_STYLE_ICONS: Record<string, string> = {
+  reading: '📖', visual: '🖼️', practice: '✍️',
+}
 
 // =============================================================================
 // Main Component
@@ -214,6 +103,7 @@ const LEARNING_STYLES = [
 
 export default function OnboardingPage() {
   const router = useRouter()
+  const t = useTranslations('onboarding')
   const { error: showError } = useToast()
   const [currentStep, setCurrentStep] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
@@ -234,6 +124,42 @@ export default function OnboardingPage() {
     learningStyles: [],
   })
   const [_saveError, setSaveError] = useState<string | null>(null)
+
+  // Translated option arrays (text pulled from i18n)
+  const studySystems = (['ib', 'uk', 'ap', 'israeli_bagrut', 'us', 'general'] as const).map(id => ({
+    id: id as StudySystem,
+    icon: STUDY_SYSTEM_ICONS[id],
+    title: t(`studySystems.${id}.title`),
+    description: t(`studySystems.${id}.description`),
+  }))
+
+  const studyGoals = (['exam_prep', 'general_learning', 'skill_improvement'] as const).map(id => ({
+    id: id as StudyGoal,
+    icon: STUDY_GOAL_ICONS[id],
+    title: t(`studyGoals.${id}.title`),
+    description: t(`studyGoals.${id}.description`),
+  }))
+
+  const timeOptions = (['short', 'medium', 'long'] as const).map(id => ({
+    id: id as TimeAvailability,
+    icon: TIME_OPTION_ICONS[id],
+    title: t(`timeOptions.${id}.title`),
+    description: t(`timeOptions.${id}.description`),
+  }))
+
+  const timePreferences = (['morning', 'afternoon', 'evening', 'varies'] as const).map(id => ({
+    id: id as PreferredTime,
+    icon: TIME_PREFERENCE_ICONS[id],
+    title: t(`timePreferences.${id}.title`),
+    description: t(`timePreferences.${id}.description`),
+  }))
+
+  const learningStyles = (['reading', 'visual', 'practice'] as const).map(id => ({
+    id: id as LearningStyle,
+    icon: LEARNING_STYLE_ICONS[id],
+    title: t(`learningStyles.${id}.title`),
+    description: t(`learningStyles.${id}.description`),
+  }))
 
   // Restore state from localStorage on mount
   useEffect(() => {
@@ -485,7 +411,7 @@ export default function OnboardingPage() {
 
       if (error) {
         console.error('[Onboarding] Failed to create learning profile:', error.message)
-        showError('Failed to save your preferences. Please try again.')
+        showError(t('ui.failedToSave'))
         setSaveError('learning_profile')
         setIsSaving(false)
         return
@@ -537,7 +463,7 @@ export default function OnboardingPage() {
       }, 2000)
     } catch (err) {
       console.error('[Onboarding] Unexpected error:', err)
-      showError('Something went wrong. Please try again.')
+      showError(t('ui.somethingWentWrong'))
       setSaveError('unknown')
       setIsSaving(false)
     }
@@ -572,7 +498,7 @@ export default function OnboardingPage() {
             ))}
           </div>
           <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-            Step {currentStep} of {totalSteps}
+            {t('ui.stepOf', { current: currentStep, total: totalSteps })}
           </p>
         </div>
       </div>
@@ -589,9 +515,9 @@ export default function OnboardingPage() {
             {getStepContent(currentStep) === 'system' && (
               <div>
                 <StepContent
-                  title="What study system are you in?"
-                  subtitle="This helps us tailor content to your curriculum"
-                  options={STUDY_SYSTEMS}
+                  title={t('steps.system.title')}
+                  subtitle={t('steps.system.subtitle')}
+                  options={studySystems}
                   selected={data.studySystem}
                   onSelect={handleSelect}
                 />
@@ -601,7 +527,7 @@ export default function OnboardingPage() {
                       onClick={() => setIsQuickMode(true)}
                       className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 hover:bg-violet-100 dark:hover:bg-violet-900/50 rounded-full transition-colors"
                     >
-                      <span>&#9889;</span> Quick Setup (3 steps)
+                      <span>&#9889;</span> {t('ui.quickSetup')}
                     </button>
                   </div>
                 )}
@@ -611,10 +537,10 @@ export default function OnboardingPage() {
             {getStepContent(currentStep) === 'grade' && data.studySystem && (
               <div className="text-center">
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                  What grade are you in?
+                  {t('steps.grade.title')}
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400 mb-8">
-                  Select your current grade level
+                  {t('steps.grade.subtitle')}
                 </p>
 
                 <GradeSelector
@@ -629,10 +555,10 @@ export default function OnboardingPage() {
             {getStepContent(currentStep) === 'subjects' && data.studySystem && (
               <div className="text-center">
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                  Which subjects are you studying?
+                  {t('steps.subjects.title')}
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  Select the subjects you want to focus on
+                  {t('steps.subjects.subtitle')}
                 </p>
 
                 <div className="max-h-[50vh] overflow-y-auto text-start mb-6">
@@ -649,16 +575,20 @@ export default function OnboardingPage() {
                   onClick={nextStep}
                   className="w-full py-4 px-6 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl transition-colors"
                 >
-                  {data.subjects.length > 0 ? `Continue with ${data.subjects.length} subject${data.subjects.length > 1 ? 's' : ''}` : 'Skip for now'}
+                  {data.subjects.length > 0
+                    ? (data.subjects.length > 1
+                        ? t('ui.continueWithSubjectsPlural', { count: data.subjects.length })
+                        : t('ui.continueWithSubjects', { count: data.subjects.length }))
+                    : t('ui.skipForNow')}
                 </button>
               </div>
             )}
 
             {getStepContent(currentStep) === 'goal' && (
               <StepContent
-                title="What's your main study goal?"
-                subtitle="This helps us personalize your learning experience"
-                options={STUDY_GOALS}
+                title={t('steps.goal.title')}
+                subtitle={t('steps.goal.subtitle')}
+                options={studyGoals}
                 selected={data.studyGoal}
                 onSelect={handleSelect}
               />
@@ -666,9 +596,9 @@ export default function OnboardingPage() {
 
             {getStepContent(currentStep) === 'time' && (
               <StepContent
-                title="How much time can you study daily?"
-                subtitle="We'll optimize session lengths for your schedule"
-                options={TIME_OPTIONS}
+                title={t('steps.time.title')}
+                subtitle={t('steps.time.subtitle')}
+                options={timeOptions}
                 selected={data.timeAvailability}
                 onSelect={handleSelect}
               />
@@ -676,9 +606,9 @@ export default function OnboardingPage() {
 
             {getStepContent(currentStep) === 'preferred' && (
               <StepContent
-                title="When do you prefer to study?"
-                subtitle="We'll remind you at the best times"
-                options={TIME_PREFERENCES}
+                title={t('steps.preferred.title')}
+                subtitle={t('steps.preferred.subtitle')}
+                options={timePreferences}
                 selected={data.preferredTime}
                 onSelect={handleSelect}
               />
@@ -687,14 +617,14 @@ export default function OnboardingPage() {
             {getStepContent(currentStep) === 'learning' && (
               <div className="text-center">
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                  How do you learn best?
+                  {t('steps.learning.title')}
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400 mb-8">
-                  Select all that apply (optional)
+                  {t('steps.learning.subtitle')}
                 </p>
 
                 <div className="space-y-3 mb-8">
-                  {LEARNING_STYLES.map(style => (
+                  {learningStyles.map(style => (
                     <button
                       key={style.id}
                       onClick={() => toggleLearningStyle(style.id)}
@@ -736,11 +666,11 @@ export default function OnboardingPage() {
                   {isSaving ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Setting up...
+                      {t('ui.settingUp')}
                     </>
                   ) : (
                     <>
-                      Get Started
+                      {t('ui.getStarted')}
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                       </svg>
@@ -766,7 +696,7 @@ export default function OnboardingPage() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              Back
+              {t('ui.back')}
             </span>
           </button>
 
@@ -774,7 +704,7 @@ export default function OnboardingPage() {
             onClick={skip}
             className="px-4 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors text-sm"
           >
-            Skip {currentStep === totalSteps ? '& Finish' : ''}
+            {currentStep === totalSteps ? t('ui.skipAndFinish') : t('ui.skip')}
           </button>
         </div>
       </div>
@@ -793,10 +723,10 @@ export default function OnboardingPage() {
           `}</style>
           <span className="celebration-emoji text-7xl mb-6" role="img" aria-label="celebration">&#127881;</span>
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3">
-            You&apos;re all set!
+            {t('celebration.title')}
           </h1>
           <p className="text-xl text-white/90">
-            Let&apos;s start learning
+            {t('celebration.subtitle')}
           </p>
         </div>
       )}

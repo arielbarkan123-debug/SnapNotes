@@ -26,6 +26,8 @@ import diagram from './diagram.json'
 import prepare from './prepare.json'
 import courses from './courses.json'
 import landing from './landing.json'
+import legal from './legal.json'
+import onboarding from './onboarding.json'
 
 const messages = {
   common,
@@ -56,6 +58,8 @@ const messages = {
   prepare,
   courses,
   landing,
+  legal,
+  onboarding,
 }
 
 export default messages

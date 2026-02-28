@@ -28,8 +28,7 @@ export async function GET(request: Request) {
   // Handle error from Supabase (e.g., expired link)
   if (error) {
     log.error('Error from Supabase:', error, errorDescription)
-    const errorMessage = encodeURIComponent(errorDescription || 'Email verification failed')
-    return NextResponse.redirect(`${origin}/login?error=${errorMessage}`)
+    return NextResponse.redirect(`${origin}/login?messageKey=emailVerificationFailed`)
   }
 
   // Handle token_hash flow (works cross-device, no PKCE required)
@@ -71,16 +70,14 @@ export async function GET(request: Request) {
 
       if (verifyError) {
         log.error(' Token verification error:', verifyError.message)
-        const errorMessage = encodeURIComponent('Email verification failed. The link may have expired. Please try signing up again.')
-        return NextResponse.redirect(`${origin}/login?error=${errorMessage}`)
+        return NextResponse.redirect(`${origin}/login?messageKey=emailVerificationFailed`)
       }
 
       log.log(' Token verified successfully!')
       log.log(' User ID:', data?.user?.id)
       log.log(' User email:', data?.user?.email)
 
-      const successMessage = encodeURIComponent('Email verified successfully! Welcome to NoteSnap.')
-      const redirectUrl = `${origin}${next}?message=${successMessage}`
+      const redirectUrl = `${origin}${next}?messageKey=emailVerified`
       const response = NextResponse.redirect(redirectUrl)
 
       cookiesToSet.forEach(({ name, value, options }) => {
@@ -91,8 +88,7 @@ export async function GET(request: Request) {
       return response
     } catch (err) {
       log.error(' Token hash error:', err)
-      const errorMessage = encodeURIComponent('An unexpected error occurred. Please try again.')
-      return NextResponse.redirect(`${origin}/login?error=${errorMessage}`)
+      return NextResponse.redirect(`${origin}/login?messageKey=unexpectedError`)
     }
   }
 
@@ -141,8 +137,7 @@ export async function GET(request: Request) {
         log.error(' Exchange error:', exchangeError.message)
         log.error(' Exchange error code:', exchangeError.code)
         log.error(' Exchange error status:', exchangeError.status)
-        const errorMessage = encodeURIComponent('Email verification failed. The link may have expired. Please try signing up again.')
-        return NextResponse.redirect(`${origin}/login?error=${errorMessage}`)
+        return NextResponse.redirect(`${origin}/login?messageKey=emailVerificationFailed`)
       }
 
       log.log(' SUCCESS! Session established')
@@ -153,8 +148,7 @@ export async function GET(request: Request) {
       log.log(' Cookies to transfer:', cookiesToSet.length)
 
       // Create redirect response and transfer ALL cookies from the exchange
-      const successMessage = encodeURIComponent('Email verified successfully! Welcome to NoteSnap.')
-      const redirectUrl = `${origin}${next}?message=${successMessage}`
+      const redirectUrl = `${origin}${next}?messageKey=emailVerified`
       log.log(' Redirecting to:', redirectUrl)
 
       const response = NextResponse.redirect(redirectUrl)
@@ -171,8 +165,7 @@ export async function GET(request: Request) {
     } catch (err) {
       log.error(' Unexpected error:', err)
       log.error(' Error stack:', err instanceof Error ? err.stack : 'No stack')
-      const errorMessage = encodeURIComponent('An unexpected error occurred. Please try again.')
-      return NextResponse.redirect(`${origin}/login?error=${errorMessage}`)
+      return NextResponse.redirect(`${origin}/login?messageKey=unexpectedError`)
     }
   }
 

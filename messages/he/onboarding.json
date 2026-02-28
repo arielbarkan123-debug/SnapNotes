@@ -1,0 +1,136 @@
+{
+  "steps": {
+    "system": {
+      "title": "באיזו מערכת לימודים אתה?",
+      "subtitle": "זה עוזר לנו להתאים תוכן לתכנית הלימודים שלך"
+    },
+    "grade": {
+      "title": "באיזו כיתה אתה?",
+      "subtitle": "בחר את רמת הכיתה הנוכחית שלך"
+    },
+    "subjects": {
+      "title": "אילו מקצועות אתה לומד?",
+      "subtitle": "בחר את המקצועות שאתה רוצה להתמקד בהם"
+    },
+    "goal": {
+      "title": "מה המטרה העיקרית שלך בלימודים?",
+      "subtitle": "זה עוזר לנו להתאים את חוויית הלמידה שלך"
+    },
+    "time": {
+      "title": "כמה זמן אתה יכול ללמוד ביום?",
+      "subtitle": "נתאים את אורך הסשנים ללוח הזמנים שלך"
+    },
+    "preferred": {
+      "title": "מתי אתה מעדיף ללמוד?",
+      "subtitle": "נזכיר לך בזמנים הטובים ביותר"
+    },
+    "learning": {
+      "title": "איך אתה לומד הכי טוב?",
+      "subtitle": "בחר את כל מה שמתאים (אופציונלי)"
+    }
+  },
+  "studySystems": {
+    "ib": {
+      "title": "IB (תעודת בגרות בינלאומית)",
+      "description": "תכנית הדיפלומה של הבגרות הבינלאומית"
+    },
+    "uk": {
+      "title": "A-Levels בריטי",
+      "description": "תכנית לימודים בריטית (GCSE, A-Levels)"
+    },
+    "ap": {
+      "title": "AP (מיקום מתקדם)",
+      "description": "קורסים ברמת מכללה בתיכון"
+    },
+    "israeli_bagrut": {
+      "title": "בגרות ישראלית",
+      "description": "בחינות בגרות ישראליות"
+    },
+    "us": {
+      "title": "מערכת אמריקאית",
+      "description": "תכנית לימודים אמריקאית (Common Core)"
+    },
+    "general": {
+      "title": "כללי",
+      "description": "תכנית לימודים סטנדרטית או לימוד עצמי"
+    }
+  },
+  "studyGoals": {
+    "exam_prep": {
+      "title": "הכנה למבחנים",
+      "description": "הכנה למבחנים, הסמכות או בחינות אקדמיות"
+    },
+    "general_learning": {
+      "title": "למידה כללית",
+      "description": "הרחבת ידע ולימוד נושאים חדשים"
+    },
+    "skill_improvement": {
+      "title": "שיפור מיומנויות",
+      "description": "בניית מיומנויות ספציפיות לעבודה או תחביבים"
+    }
+  },
+  "timeOptions": {
+    "short": {
+      "title": "5-10 דקות",
+      "description": "סשני לימוד קצרים בין משימות"
+    },
+    "medium": {
+      "title": "15-20 דקות",
+      "description": "סשני תרגול יומיים ממוקדים"
+    },
+    "long": {
+      "title": "30+ דקות",
+      "description": "לימוד מעמיק וסקירה מקיפה"
+    }
+  },
+  "timePreferences": {
+    "morning": {
+      "title": "בוקר",
+      "description": "ריכוז מיטבי לפני תחילת היום"
+    },
+    "afternoon": {
+      "title": "צהריים",
+      "description": "לימוד בהפסקות הצהריים"
+    },
+    "evening": {
+      "title": "ערב",
+      "description": "סיום היום עם סקירה ערבית"
+    },
+    "varies": {
+      "title": "משתנה",
+      "description": "לוח הזמנים שלי משתנה מיום ליום"
+    }
+  },
+  "learningStyles": {
+    "reading": {
+      "title": "קריאה",
+      "description": "למידה דרך טקסט והסברים"
+    },
+    "visual": {
+      "title": "ויזואלי",
+      "description": "דיאגרמות, תרשימים ותוכן חזותי"
+    },
+    "practice": {
+      "title": "תרגול ובחינות",
+      "description": "למידה דרך עשייה ובדיקה עצמית"
+    }
+  },
+  "ui": {
+    "quickSetup": "הגדרה מהירה (3 שלבים)",
+    "back": "חזרה",
+    "skip": "דלג",
+    "skipAndFinish": "דלג וסיים",
+    "getStarted": "בוא נתחיל",
+    "settingUp": "מגדיר...",
+    "continueWithSubjects": "המשך עם מקצוע {count}",
+    "continueWithSubjectsPlural": "המשך עם {count} מקצועות",
+    "skipForNow": "דלג לעת עתה",
+    "stepOf": "שלב {current} מתוך {total}",
+    "failedToSave": "שמירת ההעדפות נכשלה. נא לנסות שוב.",
+    "somethingWentWrong": "משהו השתבש. נא לנסות שוב."
+  },
+  "celebration": {
+    "title": "הכל מוכן!",
+    "subtitle": "בוא נתחיל ללמוד"
+  }
+}

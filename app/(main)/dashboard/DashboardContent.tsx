@@ -68,9 +68,10 @@ const WelcomeModal = dynamic(
 interface DashboardContentProps {
   initialCourses: Course[]
   userName?: string
+  dbError?: boolean
 }
 
-export default function DashboardContent({ initialCourses, userName }: DashboardContentProps) {
+export default function DashboardContent({ initialCourses, userName, dbError }: DashboardContentProps) {
   const router = useRouter()
   const t = useTranslations('dashboard')
   const tTask = useTranslations('studyPlan.taskTypes')
@@ -347,15 +348,33 @@ export default function DashboardContent({ initialCourses, userName }: Dashboard
             )}
           </div>
 
-          {hasNoCourses ? (
+          {/* Database Error Banner */}
+          {dbError && (
+            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-red-500 flex-shrink-0">⚠️</span>
+                <p className="text-sm text-red-700 dark:text-red-400">
+                  {t('loadError')}
+                </p>
+              </div>
+              <button
+                onClick={() => router.refresh()}
+                className="text-sm font-medium text-violet-600 dark:text-violet-400 hover:underline flex-shrink-0 ms-4"
+              >
+                {t('retry')}
+              </button>
+            </div>
+          )}
+
+          {hasNoCourses && !dbError ? (
             <EmptyState onUploadClick={() => setIsUploadModalOpen(true)} />
-          ) : (
+          ) : !dbError ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredCourses.slice(0, 6).map((course) => (
                 <CompactCourseCard key={course.id} course={course} />
               ))}
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Generate Covers Banner */}

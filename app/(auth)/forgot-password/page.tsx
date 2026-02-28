@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import FormInput from '@/components/ui/FormInput'
@@ -16,6 +16,23 @@ export default function ForgotPasswordPage() {
   const [successMessage, setSuccessMessage] = useState('')
   const [showHelp, setShowHelp] = useState(false)
   const [retryAfter, setRetryAfter] = useState<number | null>(null)
+
+  // Countdown timer for rate limiting
+  useEffect(() => {
+    if (retryAfter === null || retryAfter <= 0) return
+
+    const interval = setInterval(() => {
+      setRetryAfter(prev => {
+        if (prev === null || prev <= 1) {
+          clearInterval(interval)
+          return null
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [retryAfter])
 
   const validateEmail = (): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -181,7 +198,9 @@ export default function ForgotPasswordPage() {
                   {t('forgotPassword.sending')}
                 </>
               ) : retryAfter !== null ? (
-                t('forgotPassword.tryAgainIn', { minutes: Math.ceil(retryAfter / 60) })
+                retryAfter > 60
+                  ? t('forgotPassword.tryAgainIn', { minutes: Math.ceil(retryAfter / 60) })
+                  : t('forgotPassword.tryAgainInSeconds', { seconds: retryAfter })
               ) : (
                 t('forgotPassword.sendLink')
               )}

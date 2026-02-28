@@ -485,8 +485,8 @@ async function Footer() {
               {t('footer.signUp')}
             </Link>
             <span className="text-gray-600">|</span>
-            <span className="text-gray-500">{t('footer.privacy')}</span>
-            <span className="text-gray-500">{t('footer.terms')}</span>
+            <Link href="/privacy" className="hover:text-white transition-colors">{t('footer.privacy')}</Link>
+            <Link href="/terms" className="hover:text-white transition-colors">{t('footer.terms')}</Link>
           </nav>
 
           {/* Copyright */}
