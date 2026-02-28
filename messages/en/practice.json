@@ -48,7 +48,11 @@
     "viewDiagram": "View Diagram",
     "getHint": "Get a hint",
     "showSolution": "Show solution",
-    "understandBetter": "Help me understand this better"
+    "understandBetter": "Help me understand this better",
+    "aiDiagrams": "AI Diagrams",
+    "aiDiagramsDesc": "Show visual diagrams alongside questions",
+    "aiDiagram": "AI Diagram",
+    "generatingDiagram": "Generating diagram..."
   },
   "encouragement": {
     "1": "Almost there! Let's see why this wasn't quite right.",
