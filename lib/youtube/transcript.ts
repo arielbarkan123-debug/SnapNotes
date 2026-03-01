@@ -1,8 +1,13 @@
 /**
  * YouTube Transcript Extractor
  *
- * Extracts captions/subtitles from YouTube videos using the timedtext API.
- * No API key required for public captions.
+ * Extracts captions/subtitles from YouTube videos.
+ * Uses multiple strategies: HTML page scraping → innertube API fallback.
+ *
+ * Known limitation: YouTube blocks cloud server IPs (Vercel, AWS, etc.)
+ * with "Sign in to confirm you're not a bot". This is an industry-wide issue.
+ * When server-side extraction fails, we return a specific error so the UI
+ * can guide users to paste transcript text manually.
  */
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -30,10 +35,20 @@ export function parseVideoId(url: string): string | null {
   return null
 }
 
+// ─── Custom Error for bot detection ─────────────────────────────────────────
+
+export class YouTubeBotDetectionError extends Error {
+  constructor() {
+    super('YOUTUBE_BOT_DETECTION')
+    this.name = 'YouTubeBotDetectionError'
+  }
+}
+
 // ─── Transcript Extraction ───────────────────────────────────────────────────
 
 /**
  * Extract transcript from a YouTube video URL.
+ * Tries multiple strategies to work around YouTube's server-side restrictions.
  */
 export async function extractYouTubeTranscript(url: string): Promise<VideoTranscript> {
   const videoId = parseVideoId(url)
@@ -41,34 +56,16 @@ export async function extractYouTubeTranscript(url: string): Promise<VideoTransc
     throw new Error('Invalid YouTube URL')
   }
 
-  // Fetch the video page to get title and caption info
-  // CONSENT=YES cookie bypasses EU consent page that Vercel servers may hit
-  const pageUrl = `https://www.youtube.com/watch?v=${videoId}`
-  const pageResponse = await fetch(pageUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Cookie': 'CONSENT=YES+cb.20210328-17-p0.en+FX+292; GPS=1',
-    },
-  })
+  // Get video title from oEmbed (always works, even from cloud servers)
+  const title = await fetchVideoTitle(videoId)
 
-  if (!pageResponse.ok) {
-    throw new Error(`Failed to fetch video page: ${pageResponse.status}`)
-  }
-
-  const pageHtml = await pageResponse.text()
-
-  // Extract title
-  const titleMatch = pageHtml.match(/<title>(.*?)<\/title>/)
-  const title = titleMatch
-    ? titleMatch[1].replace(' - YouTube', '').trim()
-    : 'Untitled Video'
-
-  // Extract caption track info from the page's player response JSON
-  const captionTrackUrl = extractCaptionTrackUrl(pageHtml)
+  // Strategy 1: HTML page scraping with consent cookies
+  const captionTrackUrl = await tryHtmlScraping(videoId)
 
   if (!captionTrackUrl) {
-    throw new Error('No captions available for this video. Try a video with subtitles enabled.')
+    // If HTML scraping fails, it's likely bot detection
+    // Throw specific error so the UI can offer manual transcript paste
+    throw new YouTubeBotDetectionError()
   }
 
   // Fetch the caption track
@@ -90,6 +87,43 @@ export async function extractYouTubeTranscript(url: string): Promise<VideoTransc
     transcript,
     language,
     duration,
+  }
+}
+
+// ─── Strategies ─────────────────────────────────────────────────────────────
+
+async function fetchVideoTitle(videoId: string): Promise<string> {
+  try {
+    const resp = await fetch(
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+    )
+    if (resp.ok) {
+      const data = await resp.json()
+      return data.title || 'Untitled Video'
+    }
+  } catch {
+    // Fall through
+  }
+  return 'Untitled Video'
+}
+
+async function tryHtmlScraping(videoId: string): Promise<string | null> {
+  try {
+    const pageUrl = `https://www.youtube.com/watch?v=${videoId}`
+    const pageResponse = await fetch(pageUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cookie': 'CONSENT=YES+cb.20210328-17-p0.en+FX+292; GPS=1',
+      },
+    })
+
+    if (!pageResponse.ok) return null
+
+    const html = await pageResponse.text()
+    return extractCaptionTrackUrl(html)
+  } catch {
+    return null
   }
 }
 

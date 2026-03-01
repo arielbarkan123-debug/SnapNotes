@@ -35,7 +35,7 @@ export default function ErrorDisplay({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div className="flex-1">
-              <p className="text-red-700 dark:text-red-400 text-sm">{error.message}</p>
+              <p className="text-red-700 dark:text-red-400 text-sm whitespace-pre-line">{error.message}</p>
               {error.code && (
                 <p className="mt-1 text-xs text-red-500/70 dark:text-red-400/70">
                   Code: <code className="font-mono">{error.code}</code>

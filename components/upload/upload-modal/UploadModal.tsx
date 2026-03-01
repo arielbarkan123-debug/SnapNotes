@@ -315,6 +315,10 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
             try {
               const data = JSON.parse(line.slice(6))
               if (currentEvent === 'error') {
+                // Handle bot detection with specific translated message + tip
+                if (data.message === 'YOUTUBE_BOT_DETECTION' || data.code === 'BOT_DETECTION') {
+                  throw new Error(`${ty('botDetection')}\n\n${ty('botDetectionTip')}`)
+                }
                 throw new Error(data.message || ty('error'))
               } else if (currentEvent === 'complete' && data.courseId) {
                 courseId = data.courseId

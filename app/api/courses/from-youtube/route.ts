@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/api/errors'
-import { extractYouTubeTranscript, parseVideoId } from '@/lib/youtube/transcript'
+import { extractYouTubeTranscript, parseVideoId, YouTubeBotDetectionError } from '@/lib/youtube/transcript'
 import { generateCourseFromVideo } from '@/lib/youtube/course-from-video'
 
 export const maxDuration = 180
@@ -110,8 +110,15 @@ export async function POST(request: NextRequest) {
 
           controller.close()
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Unknown error'
-          send('error', { message })
+          if (error instanceof YouTubeBotDetectionError) {
+            send('error', {
+              message: 'YOUTUBE_BOT_DETECTION',
+              code: 'BOT_DETECTION',
+            })
+          } else {
+            const message = error instanceof Error ? error.message : 'Unknown error'
+            send('error', { message })
+          }
           controller.close()
         }
       },

@@ -382,8 +382,8 @@ export default function HomeworkResultsPage() {
           </div>
         </header>
 
-        {/* Question Summary Card */}
-        {helpSession.question_text && (
+        {/* Question Summary Card — show user's submitted question, comfort level, and initial attempt */}
+        {(helpSession.question_text || helpSession.question_image_url) && (
           <div className="bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 border-b border-purple-200 dark:border-purple-800/50">
             <div className="container mx-auto px-4 py-3 max-w-2xl">
               <div className="flex items-start gap-3">
@@ -409,6 +409,7 @@ export default function HomeworkResultsPage() {
 
                 {/* Question info */}
                 <div className="flex-1 min-w-0">
+                  {/* Badges row: subject, topic, difficulty, comfort level */}
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     {helpSession.detected_subject && (
                       <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-800/30 text-purple-700 dark:text-purple-300 text-xs font-medium rounded-full">
@@ -420,15 +421,38 @@ export default function HomeworkResultsPage() {
                         {helpSession.detected_topic}
                       </span>
                     )}
+                    {helpSession.comfort_level && (
+                      <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-800/30 text-amber-700 dark:text-amber-300 text-xs font-medium rounded-full">
+                        {helpSession.comfort_level === 'new' && `🌱 ${t('help.comfortNew')}`}
+                        {helpSession.comfort_level === 'some_idea' && `💭 ${t('help.comfortSomeIdea')}`}
+                        {helpSession.comfort_level === 'just_stuck' && `🤔 ${t('help.comfortStuck')}`}
+                      </span>
+                    )}
                     {helpSession.difficulty_estimate && (
                       <span className="text-xs text-gray-500 dark:text-gray-400">
                         {'⭐'.repeat(Math.min(5, helpSession.difficulty_estimate))}
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
-                    {helpSession.question_text}
-                  </p>
+
+                  {/* Question text */}
+                  {helpSession.question_text && (
+                    <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
+                      {helpSession.question_text}
+                    </p>
+                  )}
+
+                  {/* Initial attempt — what the student already tried */}
+                  {helpSession.initial_attempt && (
+                    <div className="mt-2 ps-3 border-s-2 border-violet-300 dark:border-violet-600">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-0.5">
+                        {t('help.whatTriedLabel')}
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2">
+                        {helpSession.initial_attempt}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

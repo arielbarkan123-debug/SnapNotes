@@ -10,5 +10,7 @@
   "saving": "Saving course...",
   "error": "Failed to generate course from video",
   "preview": "Video Preview",
-  "duration": "{minutes} min video"
+  "duration": "{minutes} min video",
+  "botDetection": "YouTube is blocking automatic transcript extraction. Please copy the video transcript and paste it in the \"Enter Text\" tab instead.",
+  "botDetectionTip": "Tip: Open the video on YouTube → click \"...\" below the video → \"Show transcript\" → copy all text."
 }
