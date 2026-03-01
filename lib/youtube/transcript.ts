@@ -42,11 +42,13 @@ export async function extractYouTubeTranscript(url: string): Promise<VideoTransc
   }
 
   // Fetch the video page to get title and caption info
+  // CONSENT=YES cookie bypasses EU consent page that Vercel servers may hit
   const pageUrl = `https://www.youtube.com/watch?v=${videoId}`
   const pageResponse = await fetch(pageUrl, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
       'Accept-Language': 'en-US,en;q=0.9',
+      'Cookie': 'CONSENT=YES+cb.20210328-17-p0.en+FX+292; GPS=1',
     },
   })
 

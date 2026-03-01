@@ -69,5 +69,9 @@
   "confirmModal": {
     "confirm": "Confirm",
     "cancel": "Cancel"
+  },
+  "settings": {
+    "diagramsEnabled": "AI Diagrams: ON",
+    "diagramsDisabled": "AI Diagrams: OFF"
   }
 }

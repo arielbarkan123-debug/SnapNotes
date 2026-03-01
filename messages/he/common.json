@@ -69,5 +69,9 @@
   "confirmModal": {
     "confirm": "אשר",
     "cancel": "ביטול"
+  },
+  "settings": {
+    "diagramsEnabled": "דיאגרמות AI: פעיל",
+    "diagramsDisabled": "דיאגרמות AI: כבוי"
   }
 }
