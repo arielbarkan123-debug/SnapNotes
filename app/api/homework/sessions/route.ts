@@ -9,7 +9,7 @@ import type {
 } from '@/lib/homework/types'
 import { analyzeQuestion, analyzeQuestionText } from '@/lib/homework/question-analyzer'
 import { analyzeReferences } from '@/lib/homework/reference-analyzer'
-import { generateInitialGreeting } from '@/lib/homework/tutor-engine'
+// generateInitialGreeting removed — template greeting used for speed (avoids 504 timeout)
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import { loadUserProfile } from '@/lib/user-profile'
 
@@ -37,9 +37,8 @@ function formatApiError(code: string, message: string, details?: string): string
   return `[${code}] ${message}${detailSuffix}`
 }
 
-// Allow 90 seconds for session creation (includes AI analysis)
-// Allow 120 seconds — engine diagram generation can take 10-60s on top of AI response
-export const maxDuration = 120
+// Optimized: parallelize profile + analysis, use template greeting (no AI greeting call)
+export const maxDuration = 60
 
 // ============================================================================
 // POST - Create a new homework help session with AI analysis
@@ -82,19 +81,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Step 1: Analyze the question (image or text)
+    // Step 1: Analyze question + load user profile in PARALLEL (saves 3-5s)
+    const profilePromise = loadUserProfile(supabase, user.id).catch(() => null)
+
     let questionAnalysis: QuestionAnalysis
     try {
       if (inputMode === 'text') {
-        // Text mode: analyze the text directly
         questionAnalysis = await analyzeQuestionText(body.questionText!)
       } else {
-        // Image mode: use vision to analyze the image
         questionAnalysis = await analyzeQuestion(body.questionImageUrl!)
       }
     } catch (error) {
       console.error(`[API/HomeworkSessions/Analysis] Question analysis error (${inputMode} mode):`, error)
-      // Fall back to minimal analysis if analysis fails
       questionAnalysis = {
         questionText: inputMode === 'text' ? body.questionText! : 'Could not extract question text',
         subject: 'other',
@@ -118,9 +116,11 @@ export async function POST(request: NextRequest) {
         )
       } catch (error) {
         console.error('Reference analysis error:', error)
-        // Continue without reference analysis
       }
     }
+
+    // Await the profile that was loading in parallel
+    const profile = await profilePromise
 
     // Step 3: Create the session with analysis data
     const { data: session, error: insertError } = await supabase
@@ -163,59 +163,16 @@ export async function POST(request: NextRequest) {
 
     const createdSession = session as HomeworkSession
 
-    // Load user profile for language/grade/studySystem
-    let userLanguage: 'en' | 'he' | undefined
-    let userGrade: string | undefined
-    let userStudySystem: string | undefined
-    try {
-      const profile = await loadUserProfile(supabase, user.id)
-      if (profile) {
-        userLanguage = profile.language as 'en' | 'he'
-        userGrade = profile.grade || undefined
-        userStudySystem = profile.studySystem
-      }
-    } catch {
-      // Continue without profile data
-    }
+    // Use profile that was loaded in parallel
+    const userLanguage = (profile?.language as 'en' | 'he') || undefined
 
-    // Step 4: Generate warm initial greeting from tutor
-    let greetingMessage: ConversationMessage
-    try {
-      console.log(`[Sessions] Calling generateInitialGreeting for question: "${questionAnalysis.questionText.slice(0, 80)}..."`)
-      const enableDiagrams = body.enableDiagrams !== false
-      const greeting = await generateInitialGreeting({
-        session: createdSession,
-        questionAnalysis,
-        referenceAnalysis,
-        recentMessages: [],
-        hintsUsed: 0,
-        currentProgress: 0,
-        language: userLanguage,
-        grade: userGrade,
-        studySystem: userStudySystem,
-      }, enableDiagrams)
-
-      console.log(`[Sessions] Greeting received. Has diagram: ${!!greeting.diagram}, type: ${greeting.diagram?.type}`)
-      if (greeting.diagram) {
-        console.log(`[Sessions] Diagram data keys: ${Object.keys(greeting.diagram.data || {})}`)
-      }
-
-      greetingMessage = {
-        role: 'tutor',
-        content: greeting.message,
-        timestamp: new Date().toISOString(),
-        pedagogicalIntent: 'probe_understanding',
-        diagram: greeting.diagram,
-      }
-    } catch (error) {
-      console.error('Greeting generation error:', error)
-      // Fall back to a default greeting
-      greetingMessage = {
-        role: 'tutor',
-        content: getDefaultGreeting(questionAnalysis, body.comfortLevel),
-        timestamp: new Date().toISOString(),
-        pedagogicalIntent: 'probe_understanding',
-      }
+    // Step 4: Use fast template greeting (AI greeting was causing 504 timeouts)
+    // The first chat message from the tutor will be AI-powered via the /chat endpoint
+    const greetingMessage: ConversationMessage = {
+      role: 'tutor',
+      content: getDefaultGreeting(questionAnalysis, body.comfortLevel, userLanguage),
+      timestamp: new Date().toISOString(),
+      pedagogicalIntent: 'probe_understanding',
     }
 
     // Step 5: Add greeting to conversation
@@ -251,14 +208,24 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Generate a default greeting if AI fails
+ * Generate a template-based greeting (fast, no AI call)
  */
 function getDefaultGreeting(
   questionAnalysis: QuestionAnalysis,
-  comfortLevel?: string
+  comfortLevel?: string,
+  language?: 'en' | 'he'
 ): string {
   const subject = questionAnalysis.subject || 'this problem'
   const topic = questionAnalysis.topic || 'the topic'
+
+  if (language === 'he') {
+    if (comfortLevel === 'new') {
+      return `שלום! אני רואה שאתה עובד על בעיה ב${subject} בנושא ${topic}. אל תדאג אם זה מרגיש חדש - זה לגמרי נורמלי! בוא נתחיל מהיסודות. מה הדבר הראשון שאתה שם לב אליו בבעיה הזו?`
+    } else if (comfortLevel === 'just_stuck') {
+      return `אני רואה שאתה עובד על בעיה ב${subject} בנושא ${topic}. נשמע שיש לך חשיבה טובה - פשוט נתקעת במשהו ספציפי. על איזה חלק אתה מתקשה?`
+    }
+    return `שאלה מעולה בנושא ${topic}! זו נראית בעיה מעניינת ב${subject}. בוא נעבוד על זה יחד. מה האינטואיציה הראשונה שלך לגבי איך לגשת לזה?`
+  }
 
   if (comfortLevel === 'new') {
     return `Welcome! I see you're working on a ${subject} problem about ${topic}. Don't worry if this feels new - that's totally normal! Let's start with the basics. What's the first thing you notice about this problem?`

@@ -297,10 +297,11 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
         throw new Error(errData.error || ty('error'))
       }
 
-      // SSE streaming
+      // SSE streaming — API sends: event: progress/complete/error + data: {step, message, courseId, ...}
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let courseId: string | null = null
+      let currentEvent = ''
 
       while (true) {
         const { done, value } = await reader.read()
@@ -308,16 +309,28 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
         const text = decoder.decode(value, { stream: true })
         const lines = text.split('\n')
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
+          if (line.startsWith('event: ')) {
+            currentEvent = line.slice(7).trim()
+          } else if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6))
-              if (data.status === 'extracting') setYoutubeProgress(ty('extracting'))
-              else if (data.status === 'generating') setYoutubeProgress(ty('generating'))
-              else if (data.status === 'complete' && data.courseId) {
+              if (currentEvent === 'error') {
+                throw new Error(data.message || ty('error'))
+              } else if (currentEvent === 'complete' && data.courseId) {
                 courseId = data.courseId
-              } else if (data.status === 'error') {
-                throw new Error(data.error || ty('error'))
+              } else if (currentEvent === 'progress') {
+                // Use the human-readable message from the API
+                if (data.step === 'extracting' || data.step === 'extracted') {
+                  setYoutubeProgress(data.message || ty('extracting'))
+                } else if (data.step === 'generating') {
+                  setYoutubeProgress(data.message || ty('generating'))
+                } else if (data.step === 'saving') {
+                  setYoutubeProgress(data.message || ty('saving'))
+                } else {
+                  setYoutubeProgress(data.message || ty('extracting'))
+                }
               }
+              currentEvent = ''
             } catch (e) {
               if (e instanceof SyntaxError) continue
               throw e

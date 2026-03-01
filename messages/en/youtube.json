@@ -7,6 +7,7 @@
   "noTranscript": "No captions available for this video",
   "invalidUrl": "Please enter a valid YouTube URL",
   "success": "Course generated successfully!",
+  "saving": "Saving course...",
   "error": "Failed to generate course from video",
   "preview": "Video Preview",
   "duration": "{minutes} min video"
