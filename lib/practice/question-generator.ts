@@ -498,7 +498,9 @@ export async function generatePracticeQuestions(
   )
 
   // Call Anthropic API
-  const anthropic = new Anthropic()
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set')
+  const anthropic = new Anthropic({ apiKey })
 
   const response = await anthropic.messages.create({
     model: AI_MODEL,

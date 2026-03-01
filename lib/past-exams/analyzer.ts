@@ -7,7 +7,11 @@ import Anthropic from '@anthropic-ai/sdk'
 import type { ExamAnalysis, ImageAnalysis, DiagramType, LabelingStyle } from '@/types/past-exam'
 import { AI_MODEL } from '@/lib/ai/claude'
 
-const anthropic = new Anthropic()
+function getAnalyzerClient(): Anthropic {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set')
+  return new Anthropic({ apiKey })
+}
 
 const ANALYSIS_PROMPT = `You are an expert exam analyzer. Analyze this past exam/test and extract detailed patterns that can be used to generate similar exams.
 
@@ -158,7 +162,7 @@ export async function analyzeExamImage(
   imageBase64: string,
   mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
 ): Promise<ExamAnalysis> {
-  const response = await anthropic.messages.create({
+  const response = await getAnalyzerClient().messages.create({
     model: AI_MODEL,
     max_tokens: 4000,
     messages: [
@@ -199,7 +203,7 @@ export async function analyzeExamImage(
 export async function analyzeExamText(
   extractedText: string
 ): Promise<ExamAnalysis> {
-  const response = await anthropic.messages.create({
+  const response = await getAnalyzerClient().messages.create({
     model: AI_MODEL,
     max_tokens: 4000,
     messages: [
