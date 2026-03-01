@@ -9,6 +9,12 @@ import { createClient } from '@/lib/supabase/client'
 import type { PastExamTemplate, AnalysisStatus } from '@/types/past-exam'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { ToastContainer, type Toast } from '@/components/ui/Toast'
+import dynamic from 'next/dynamic'
+
+const ExamPredictionPanel = dynamic(
+  () => import('@/components/exams/ExamPredictionPanel'),
+  { ssr: false }
+)
 
 // =============================================================================
 // Types
@@ -847,6 +853,19 @@ export default function PastExamsPage() {
                 isAnalyzing={analyzingId === template.id}
               />
             ))}
+          </div>
+        )}
+
+        {/* Exam Prediction Panel */}
+        {!pageLoading && !error && (
+          <div className="mt-6">
+            <ExamPredictionPanel
+              examTemplateIds={
+                templates
+                  .filter((t) => t.analysis_status === 'completed')
+                  .map((t) => t.id)
+              }
+            />
           </div>
         )}
 
