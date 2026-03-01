@@ -28,6 +28,12 @@ import courses from './courses.json'
 import landing from './landing.json'
 import legal from './legal.json'
 import onboarding from './onboarding.json'
+import explanationStyles from './explanationStyles.json'
+import formulaScanner from './formulaScanner.json'
+import insights from './insights.json'
+import examPrediction from './examPrediction.json'
+import youtube from './youtube.json'
+import cheatsheet from './cheatsheet.json'
 
 const messages = {
   common,
@@ -60,6 +66,12 @@ const messages = {
   landing,
   legal,
   onboarding,
+  explanationStyles,
+  formulaScanner,
+  insights,
+  examPrediction,
+  youtube,
+  cheatsheet,
 }
 
 export default messages

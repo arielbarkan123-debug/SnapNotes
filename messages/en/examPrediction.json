@@ -1,0 +1,29 @@
+{
+  "title": "Exam Prediction",
+  "generate": "Generate Prediction",
+  "generating": "Generating...",
+  "analyzing": "Analyzing past papers...",
+  "basedOn": "Based on {count} analyzed papers",
+  "confidence": "{percent}% confidence",
+  "needMorePapers": "Upload at least 3 past papers to enable prediction ({count}/3)",
+  "studyPlan": "Study Priorities",
+  "createStudyPlan": "Create Study Plan from Predictions",
+  "minutes": "min",
+  "difficulty": {
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard"
+  },
+  "priority": {
+    "critical": "Critical",
+    "important": "Important",
+    "recommended": "Recommended"
+  },
+  "trend": {
+    "increasing": "Trending up",
+    "stable": "Stable",
+    "decreasing": "Trending down"
+  },
+  "tryAgain": "Try Again",
+  "error": "Failed to generate prediction"
+}

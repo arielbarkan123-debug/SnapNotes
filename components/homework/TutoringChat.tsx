@@ -4,6 +4,8 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import DiagramToggle from '@/components/ui/DiagramToggle'
 import type { HomeworkSession, ConversationMessage, HintLevel } from '@/lib/homework/types'
+import ExplanationStyleSelector from './ExplanationStyleSelector'
+import type { ExplanationStyleId } from '@/lib/homework/explanation-styles'
 
 // Import diagram components
 import {
@@ -18,7 +20,7 @@ import {
 
 interface TutoringChatProps {
   session: HomeworkSession
-  onSendMessage: (message: string) => Promise<void>
+  onSendMessage: (message: string, explanationStyle?: string) => Promise<void>
   onRequestHint: (level: HintLevel) => Promise<void>
   onComplete: () => Promise<void>
   isLoading?: boolean
@@ -275,6 +277,7 @@ export default function TutoringChat({
   const t = useTranslations('chat')
   const [input, setInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [explanationStyle, setExplanationStyle] = useState<ExplanationStyleId>('step_by_step')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -321,12 +324,12 @@ export default function TutoringChat({
         clearDraft(session.id)
       }
       try {
-        await onSendMessage(message)
+        await onSendMessage(message, explanationStyle)
       } finally {
         setIsSubmitting(false)
       }
     },
-    [input, isLoading, isSubmitting, onSendMessage, session.id]
+    [input, isLoading, isSubmitting, onSendMessage, session.id, explanationStyle]
   )
 
   const handleKeyDown = useCallback(
@@ -393,6 +396,15 @@ export default function TutoringChat({
           disabled={isLoading}
           t={t}
         />
+
+        {/* Explanation Style Selector */}
+        <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700">
+          <ExplanationStyleSelector
+            value={explanationStyle}
+            onChange={setExplanationStyle}
+            compact
+          />
+        </div>
 
         {/* Input Area */}
         <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">

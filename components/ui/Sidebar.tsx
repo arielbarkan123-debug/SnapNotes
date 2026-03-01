@@ -57,7 +57,7 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
 
   // Prefetch all navigation routes on mount
   useEffect(() => {
-    const routes = ['/dashboard', '/courses', '/review', '/practice', '/homework', '/progress', '/exams', '/study-plan', '/prepare', '/settings']
+    const routes = ['/dashboard', '/courses', '/review', '/practice', '/homework', '/progress', '/exams', '/study-plan', '/prepare', '/formula-scanner', '/cheatsheets', '/settings']
     routes.forEach(route => {
       router.prefetch(route)
     })
@@ -126,6 +126,8 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
     { href: '/prepare', icon: '📖', label: t('nav.prepare'), active: isActive('/prepare') },
     { href: '/study-plan', icon: '📅', label: t('nav.studyPlan'), active: isActive('/study-plan') },
     { href: '/progress', icon: '📊', label: t('nav.progress'), active: isActive('/progress') },
+    { href: '/formula-scanner', icon: '🔬', label: t('nav.formulaScanner'), active: isActive('/formula-scanner') },
+    { href: '/cheatsheets', icon: '📄', label: t('nav.cheatsheets'), active: isActive('/cheatsheets') },
     { href: '/settings', icon: '⚙️', label: t('nav.settings'), active: isActive('/settings') },
   ]
 

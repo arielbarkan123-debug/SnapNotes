@@ -26,8 +26,10 @@ export default function CourseView({ course, progress }: CourseViewProps) {
   const tc = useTranslations('course')
   const router = useRouter()
   const { success: showSuccess } = useToast()
+  const tcs = useTranslations('cheatsheet')
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false)
+  const [isGeneratingCheatsheet, setIsGeneratingCheatsheet] = useState(false)
 
   // Safely parse generated_course - handle null/undefined cases
   const generatedCourse = (course.generated_course || {}) as GeneratedCourse & { sections?: Lesson[] }
@@ -83,6 +85,25 @@ export default function CourseView({ course, progress }: CourseViewProps) {
     return lessons[lessonIndex]?.steps?.length || 0
   }
 
+  const handleGenerateCheatsheet = useCallback(async () => {
+    setIsGeneratingCheatsheet(true)
+    try {
+      const res = await fetch('/api/cheatsheets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseId: course.id }),
+      })
+      if (!res.ok) throw new Error('Failed to generate cheatsheet')
+      const data = await res.json()
+      showSuccess(tcs('generateButton'))
+      router.push(`/cheatsheets/${data.id}`)
+    } catch {
+      // Error handled silently
+    } finally {
+      setIsGeneratingCheatsheet(false)
+    }
+  }, [course.id, router, showSuccess, tcs])
+
   return (
     <div className="min-h-screen bg-transparent">
       {/* Temporary version tag for debugging — remove after confirming fix reaches user */}
@@ -104,6 +125,16 @@ export default function CourseView({ course, progress }: CourseViewProps) {
               {tc('backToDashboard')}
             </Link>
             <div className="flex items-center gap-2">
+              <button
+                onClick={handleGenerateCheatsheet}
+                disabled={isGeneratingCheatsheet}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-lg transition-colors disabled:opacity-50"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                {isGeneratingCheatsheet ? tcs('generating') : tcs('generateButton')}
+              </button>
               <ExportCourseButton courseTitle={generatedCourse?.title || course.title || ''} />
               <button
                 onClick={() => setIsAddMaterialOpen(true)}

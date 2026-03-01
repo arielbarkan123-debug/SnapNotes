@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/aggregate-analytics",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/reports/weekly/send-all",
+      "schedule": "0 8 * * 0"
     }
   ]
 }

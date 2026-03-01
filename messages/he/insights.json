@@ -1,0 +1,43 @@
+{
+  "title": "תובנות למידה",
+  "subtitle": "דפוסים שזוהו מהיסטוריית התרגול שלך",
+  "patterns": "דפוסי שגיאות",
+  "noPatterns": "עדיין לא זוהו דפוסים",
+  "insufficientData": "השלם לפחות 20 שאלות תרגול כדי לפתוח ניתוח שגיאות",
+  "insufficientDataShort": "צריך עוד נתוני תרגול",
+  "attemptsCompleted": "{count} ניסיונות עד כה",
+  "severity": {
+    "low": "קל",
+    "medium": "בינוני",
+    "high": "קריטי"
+  },
+  "frequency": "{count} מופעים",
+  "fixThis": "תקן את זה",
+  "refreshAnalysis": "רענן ניתוח",
+  "refreshing": "מנתח...",
+  "lastAnalyzed": "ניתוח אחרון {date}",
+  "viewAll": "הצג את כל הדפוסים",
+  "remediation": {
+    "title": "תיקון: {pattern}",
+    "instructions": "ענה על שאלות התרגול כדי לטפל בדפוס זה. השג 80%+ כדי לסמן כנפתר.",
+    "question": "שאלה {number}",
+    "yourAnswer": "הקלד את תשובתך...",
+    "submit": "שלח תשובה",
+    "correct": "נכון!",
+    "incorrect": "לא בדיוק. התשובה הנכונה היא:",
+    "score": "ציון: {score}%",
+    "resolved": "הדפוס טופל! שיפור מעולה.",
+    "needsWork": "המשך לתרגל. נסה שוב לשפר את הציון שלך.",
+    "tryAgain": "נסה שוב",
+    "close": "סגור",
+    "next": "שאלה הבאה"
+  },
+  "gap": {
+    "detected": "זוהה פער בידע",
+    "description": "ייתכן שאתה מתקשה עם {current} כי {prerequisite} דורש חזרה",
+    "review": "חזור על {topic}",
+    "continueAnyway": "המשך בכל זאת",
+    "prerequisiteMastery": "{percent}% שליטה"
+  },
+  "error": "טעינת תובנות נכשלה"
+}

@@ -1,0 +1,13 @@
+{
+  "tabTitle": "קישור YouTube",
+  "placeholder": "הדבק קישור YouTube כאן...",
+  "generate": "צור קורס",
+  "generating": "יוצר קורס...",
+  "extracting": "מחלץ תמלול...",
+  "noTranscript": "אין כתוביות זמינות לסרטון זה",
+  "invalidUrl": "אנא הזן קישור YouTube תקין",
+  "success": "הקורס נוצר בהצלחה!",
+  "error": "יצירת קורס מהסרטון נכשלה",
+  "preview": "תצוגה מקדימה",
+  "duration": "{minutes} דקות סרטון"
+}

@@ -1,0 +1,29 @@
+{
+  "title": "חיזוי מבחן",
+  "generate": "צור חיזוי",
+  "generating": "יוצר...",
+  "analyzing": "מנתח מבחנים קודמים...",
+  "basedOn": "מבוסס על {count} מבחנים מנותחים",
+  "confidence": "{percent}% ביטחון",
+  "needMorePapers": "העלו לפחות 3 מבחנים קודמים כדי לאפשר חיזוי ({count}/3)",
+  "studyPlan": "סדרי עדיפויות ללמידה",
+  "createStudyPlan": "צור תוכנית למידה מהחיזויים",
+  "minutes": "דק׳",
+  "difficulty": {
+    "easy": "קל",
+    "medium": "בינוני",
+    "hard": "קשה"
+  },
+  "priority": {
+    "critical": "קריטי",
+    "important": "חשוב",
+    "recommended": "מומלץ"
+  },
+  "trend": {
+    "increasing": "עולה",
+    "stable": "יציב",
+    "decreasing": "יורד"
+  },
+  "tryAgain": "נסה שוב",
+  "error": "יצירת חיזוי נכשלה"
+}

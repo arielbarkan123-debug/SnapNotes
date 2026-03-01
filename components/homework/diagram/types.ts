@@ -16,17 +16,19 @@ export interface DiagramState {
 }
 
 // Engine-generated image types (E2B/TikZ/Recraft pipeline)
-export const ENGINE_DIAGRAM_TYPES = ['engine_image']
+export const ENGINE_DIAGRAM_TYPES = ['engine_image', 'step_sequence']
 
 // Components that manage their own step controls
-// Only engine_image is relevant now, but kept for FullScreenDiagramView compatibility
+// engine_image and step_sequence both manage their own navigation
 export const SELF_MANAGING_DIAGRAM_TYPES = new Set([
   'engine_image',
+  'step_sequence',
 ])
 
 // Human-readable diagram type names
 export const DIAGRAM_TYPE_NAMES: Record<string, string> = {
   engine_image: 'AI Generated Diagram',
+  step_sequence: 'Step-by-Step Breakdown',
 }
 
 /**

@@ -59,5 +59,18 @@
       "lowAngle": "What if launched at a low angle?",
       "doubleVelocity": "What if velocity was doubled?"
     }
+  },
+
+  "stepSequence": {
+    "ariaLabel": "Step-by-step solution breakdown",
+    "previous": "Previous",
+    "next": "Next",
+    "play": "Auto-play",
+    "pause": "Pause",
+    "restart": "Restart",
+    "summary": "Solution Summary",
+    "diagramUnavailable": "Diagram could not be generated for this step",
+    "partialWarning": "Some step diagrams could not be generated",
+    "stepOf": "Step {current} of {total}"
   }
 }

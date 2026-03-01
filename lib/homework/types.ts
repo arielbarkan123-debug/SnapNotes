@@ -369,6 +369,8 @@ export interface TutorDiagramState {
     | 'process_flow'
     // Engine-generated image diagram (E2B/TikZ/Recraft pipeline)
     | 'engine_image'
+    // Step-by-step animated diagram sequence
+    | 'step_sequence'
   /** Diagram-specific data */
   data: Record<string, unknown>
   /** Current step to display */
@@ -394,6 +396,23 @@ export interface TutorDiagramState {
   }>
   /** Enable interactive "What If?" mode for exploration (physics diagrams only) */
   enableInteractive?: boolean
+}
+
+/** Step sequence diagram data shape */
+export interface StepSequenceDiagramData {
+  steps: Array<{
+    stepNumber: number
+    title: string
+    titleHe: string
+    explanation: string
+    explanationHe: string
+    diagramImageUrl: string | null
+    pipeline: string | null
+    highlightWhat: string
+  }>
+  summary: string
+  summaryHe: string
+  partial: boolean
 }
 
 export interface HintResponse {

@@ -59,5 +59,18 @@
       "lowAngle": "מה אם נשגר בזווית נמוכה?",
       "doubleVelocity": "מה אם המהירות הייתה כפולה?"
     }
+  },
+
+  "stepSequence": {
+    "ariaLabel": "פירוק פתרון צעד אחר צעד",
+    "previous": "הקודם",
+    "next": "הבא",
+    "play": "הפעלה אוטומטית",
+    "pause": "השהה",
+    "restart": "התחל מחדש",
+    "summary": "סיכום הפתרון",
+    "diagramUnavailable": "לא ניתן היה ליצור תרשים לשלב זה",
+    "partialWarning": "חלק מתרשימי השלבים לא נוצרו",
+    "stepOf": "שלב {current} מתוך {total}"
   }
 }

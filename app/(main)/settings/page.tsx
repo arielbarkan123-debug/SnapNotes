@@ -76,6 +76,12 @@ export default function SettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
+  // Parent Reports state
+  const [parentEmail, setParentEmail] = useState('')
+  const [reportsEnabled, setReportsEnabled] = useState(false)
+  const [lastReportSent, setLastReportSent] = useState<string | null>(null)
+  const [isSendingTestReport, setIsSendingTestReport] = useState(false)
+
   const [settings, setSettings] = useState<UserSettings>({
     displayName: '',
     email: '',
@@ -104,7 +110,7 @@ export default function SettingsPage() {
         // Only select columns that exist from migrations
         const { data: learningProfile } = await supabase
           .from('user_learning_profile')
-          .select('study_system, grade, subjects, subject_levels, exam_format, language')
+          .select('study_system, grade, subjects, subject_levels, exam_format, language, parent_email, reports_enabled, last_report_sent')
           .eq('user_id', user.id)
           .single()
 
@@ -131,6 +137,15 @@ export default function SettingsPage() {
           examFormat: learningProfile?.exam_format || 'match_real',
           language: savedLanguage,
         })
+
+        // Load parent report settings
+        try {
+          setParentEmail((learningProfile as Record<string, unknown>)?.parent_email as string || '')
+          setReportsEnabled((learningProfile as Record<string, unknown>)?.reports_enabled as boolean || false)
+          setLastReportSent((learningProfile as Record<string, unknown>)?.last_report_sent as string || null)
+        } catch {
+          // Columns may not exist yet
+        }
 
         // Load theme preference (safe access for mobile/private mode)
         try {
@@ -288,7 +303,7 @@ export default function SettingsPage() {
       // From 20241217_education_level.sql: education_level, grade, study_system
       // From 20241229_curriculum_profile.sql: subjects, subject_levels, exam_format
       // From 20250102_language_support.sql: language
-      const profileData = {
+      const profileData: Record<string, unknown> = {
         user_id: user.id,
         study_system: settings.studySystem || 'general',
         grade: settings.grade,
@@ -296,6 +311,12 @@ export default function SettingsPage() {
         subject_levels: subjectLevels,
         exam_format: settings.examFormat || 'match_real',
         language: settings.language,
+      }
+
+      // Add parent report fields (columns may not exist if migration not applied)
+      if (parentEmail.trim()) {
+        profileData.parent_email = parentEmail.trim()
+        profileData.reports_enabled = reportsEnabled
       }
 
       if (existingProfile) {
@@ -875,6 +896,119 @@ export default function SettingsPage() {
                   ))}
                 </div>
               </div>
+            </div>
+          </SettingsCard>
+        </section>
+
+        {/* Parent Reports Section */}
+        <section className="mb-6">
+          <SettingsCard
+            icon={
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+            }
+            title={t('parentReports.title')}
+            description={t('parentReports.description')}
+          >
+            <div className="space-y-4">
+              {/* Parent Email */}
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('parentReports.email')}
+                </label>
+                <input
+                  type="email"
+                  value={parentEmail}
+                  onChange={(e) => {
+                    setParentEmail(e.target.value)
+                    setHasChanges(true)
+                  }}
+                  placeholder={t('parentReports.emailPlaceholder')}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                />
+              </div>
+
+              {/* Enable Toggle */}
+              <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {t('parentReports.enabled')}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {t('parentReports.enabledDesc')}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setReportsEnabled(!reportsEnabled)
+                    setHasChanges(true)
+                  }}
+                  disabled={!parentEmail.trim()}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${
+                    reportsEnabled ? 'bg-violet-600' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    reportsEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+
+              {/* Send Test Report Button */}
+              {parentEmail.trim() && (
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={async () => {
+                      setIsSendingTestReport(true)
+                      try {
+                        // Save email first
+                        await supabase
+                          .from('user_learning_profile')
+                          .update({
+                            parent_email: parentEmail,
+                            reports_enabled: reportsEnabled,
+                          })
+                          .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+
+                        const res = await fetch('/api/reports/weekly', { method: 'POST' })
+                        const json = await res.json()
+                        if (json.success) {
+                          toast.success(t('parentReports.sent'))
+                        } else {
+                          toast.error(t('parentReports.sendError'))
+                        }
+                      } catch {
+                        toast.error(t('parentReports.sendError'))
+                      } finally {
+                        setIsSendingTestReport(false)
+                      }
+                    }}
+                    disabled={isSendingTestReport}
+                    className="flex items-center gap-2 rounded-xl border border-violet-300 bg-violet-50 px-4 py-2.5 text-sm font-medium text-violet-700 transition-all hover:bg-violet-100 disabled:opacity-50 dark:border-violet-700 dark:bg-violet-900/20 dark:text-violet-400 dark:hover:bg-violet-900/30"
+                  >
+                    {isSendingTestReport ? (
+                      <>
+                        <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        {t('parentReports.sending')}
+                      </>
+                    ) : (
+                      t('parentReports.sendTest')
+                    )}
+                  </button>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                    {lastReportSent
+                      ? t('parentReports.lastSent', { date: new Date(lastReportSent).toLocaleDateString() })
+                      : t('parentReports.neverSent')
+                    }
+                  </span>
+                </div>
+              )}
             </div>
           </SettingsCard>
         </section>

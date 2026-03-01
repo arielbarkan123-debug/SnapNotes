@@ -1,0 +1,23 @@
+{
+  "selectorLabel": "Explanation Style",
+  "stepByStep": {
+    "label": "Step by Step",
+    "description": "Clear numbered steps"
+  },
+  "eli5": {
+    "label": "ELI5",
+    "description": "Simple analogies, no jargon"
+  },
+  "visualBuilder": {
+    "label": "Visual Builder",
+    "description": "Every step with a diagram"
+  },
+  "workedExample": {
+    "label": "Worked Example",
+    "description": "Learn from solved examples first"
+  },
+  "socratic": {
+    "label": "Socratic",
+    "description": "Guided questions only"
+  }
+}

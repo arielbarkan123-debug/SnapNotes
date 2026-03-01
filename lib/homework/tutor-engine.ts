@@ -16,6 +16,8 @@ import type {
 // Old diagram-generator imports removed — engine is now the only diagram source
 import { validateSchema, autoCorrectDiagram, type DiagramType as VisualDiagramType, type StructuredDiagram, SCHEMA_VERSION } from '@/lib/visual-learning'
 import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
+import { generateStepSequence, isMultiStepProblem } from '@/lib/diagram-engine/step-sequence'
+import { getExplanationStyle, type ExplanationStyleId } from '@/lib/homework/explanation-styles'
 import { classifyTopicType, inferDifficultyFromTopic, resolveEffectiveLanguageLevel, type TopicType } from '@/lib/ai/content-classifier'
 
 import { AI_MODEL } from '@/lib/ai/claude'
@@ -587,7 +589,7 @@ Keep it brief - 2-3 sentences max.`
 /**
  * Generate the initial greeting when a session starts
  */
-export async function generateInitialGreeting(context: TutorContext, enableDiagrams = true): Promise<TutorResponse> {
+export async function generateInitialGreeting(context: TutorContext, enableDiagrams = true, explanationStyle?: ExplanationStyleId): Promise<TutorResponse> {
   const client = getAnthropicClient()
   const questionText = context.questionAnalysis.questionText
 
@@ -617,10 +619,20 @@ export async function generateInitialGreeting(context: TutorContext, enableDiagr
     context.questionAnalysis.subject
   )
 
+  // Apply explanation style to system prompt
+  const style = getExplanationStyle(explanationStyle)
+  let systemPrompt = buildSocraticTutorSystem(context.language, context.grade, context.studySystem, contentDifficulty, topicType)
+  if (style.systemPromptModifier) {
+    systemPrompt += '\n\n' + style.systemPromptModifier
+  }
+  if (style.forceLanguageLevel === 'simple') {
+    systemPrompt += '\n\nIMPORTANT: Use only simple vocabulary suitable for a young learner. No jargon.'
+  }
+
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
-    system: buildSocraticTutorSystem(context.language, context.grade, context.studySystem, contentDifficulty, topicType),
+    system: systemPrompt,
     messages: [{ role: 'user', content: prompt }],
   })
 
@@ -634,6 +646,39 @@ export async function generateInitialGreeting(context: TutorContext, enableDiagr
   // Await engine result (was started in parallel with the AI call above)
   // The engine is the ONLY diagram source — clear any AI-returned diagram
   delete tutorResponse.diagram  // Don't use AI's old-format diagram
+
+  // Respect diagram mode from explanation style
+  const diagramMode = style.diagramMode
+
+  // Skip diagrams entirely for Socratic mode
+  if (diagramMode === 'none') {
+    return tutorResponse
+  }
+
+  // For step_sequence mode (Visual Builder) or multi-step problems, try step sequence
+  if (enableDiagrams && (diagramMode === 'step_sequence' || isMultiStepProblem(questionText))) {
+    try {
+      console.log(`[TutorEngine] Multi-step problem detected, generating step sequence`)
+      const sequence = await generateStepSequence(questionText)
+      if (sequence.steps.length > 0) {
+        tutorResponse.diagram = {
+          type: 'step_sequence' as const,
+          visibleStep: 0,
+          totalSteps: sequence.totalSteps,
+          data: {
+            steps: sequence.steps,
+            summary: sequence.summary,
+            summaryHe: sequence.summaryHe,
+            partial: sequence.partial,
+          },
+        }
+        return tutorResponse
+      }
+    } catch (err) {
+      console.warn('[TutorEngine] Step sequence failed, falling back to single diagram:', err)
+      // Fall through to single diagram
+    }
+  }
 
   const engineResult = await enginePromise
   console.log(`[TutorEngine] Engine result received: ${engineResult ? 'success' : 'undefined'}`)
@@ -663,6 +708,7 @@ export async function generateTutorResponse(
   context: TutorContext,
   studentMessage: string,
   enableDiagrams = true,
+  explanationStyle?: ExplanationStyleId,
 ): Promise<TutorResponse> {
   const client = getAnthropicClient()
 
@@ -727,10 +773,20 @@ export async function generateTutorResponse(
     context.questionAnalysis.subject
   )
 
+  // Apply explanation style to system prompt
+  const style = getExplanationStyle(explanationStyle)
+  let chatSystemPrompt = buildSocraticTutorSystem(context.language, context.grade, context.studySystem, contentDifficulty, topicType)
+  if (style.systemPromptModifier) {
+    chatSystemPrompt += '\n\n' + style.systemPromptModifier
+  }
+  if (style.forceLanguageLevel === 'simple') {
+    chatSystemPrompt += '\n\nIMPORTANT: Use only simple vocabulary suitable for a young learner. No jargon.'
+  }
+
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
-    system: buildSocraticTutorSystem(context.language, context.grade, context.studySystem, contentDifficulty, topicType),
+    system: chatSystemPrompt,
     messages,
   })
 
@@ -744,6 +800,42 @@ export async function generateTutorResponse(
   // Await engine result (was started in parallel with the AI call above)
   // The engine is the ONLY diagram source — clear any AI-returned diagram
   delete tutorResponse.diagram  // Don't use AI's old-format diagram
+
+  // Respect diagram mode from explanation style
+  const chatDiagramMode = style.diagramMode
+
+  // Skip diagrams entirely for Socratic mode
+  if (chatDiagramMode === 'none') {
+    return tutorResponse
+  }
+
+  // For step_sequence mode (Visual Builder) or multi-step problems with guide/show_answer intent
+  const intent = tutorResponse.pedagogicalIntent
+  if (enableDiagrams && !previousDiagram &&
+      (chatDiagramMode === 'step_sequence' ||
+       (isMultiStepProblem(diagramTopic) && (intent === 'show_answer' || intent === 'guide_next_step')))) {
+    try {
+      console.log(`[TutorEngine] Multi-step problem with ${intent} intent, generating step sequence`)
+      const sequence = await generateStepSequence(diagramTopic)
+      if (sequence.steps.length > 0) {
+        tutorResponse.diagram = {
+          type: 'step_sequence' as const,
+          visibleStep: 0,
+          totalSteps: sequence.totalSteps,
+          data: {
+            steps: sequence.steps,
+            summary: sequence.summary,
+            summaryHe: sequence.summaryHe,
+            partial: sequence.partial,
+          },
+        }
+        return tutorResponse
+      }
+    } catch (err) {
+      console.warn('[TutorEngine] Step sequence failed, falling back to single diagram:', err)
+      // Fall through to single diagram
+    }
+  }
 
   const engineResult = await enginePromise
   if (engineResult) {

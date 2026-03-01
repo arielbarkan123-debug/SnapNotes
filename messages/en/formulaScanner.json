@@ -1,0 +1,29 @@
+{
+  "title": "Formula Scanner",
+  "subtitle": "Upload or type a formula to get a complete breakdown of every symbol, its meaning, and units",
+  "tabs": {
+    "typeLatex": "Type Formula",
+    "uploadImage": "Upload Image"
+  },
+  "placeholders": {
+    "latex": "Type LaTeX here... e.g., E = mc^2",
+    "dropImage": "Click to upload or drag an image"
+  },
+  "removeImage": "Remove image",
+  "analyzeButton": "Analyze Formula",
+  "analyzing": "Analyzing...",
+  "symbols": "Symbol Breakdown",
+  "derivation": "Derivation & Background",
+  "relatedFormulas": "Related Formulas",
+  "practiceQuestion": "Practice with this Formula",
+  "showAnswer": "Show Answer",
+  "range": "Range",
+  "errors": {
+    "notImage": "Please select an image file",
+    "fileTooLarge": "Image must be under 10MB",
+    "noFormula": "Please enter a formula",
+    "noImage": "Please upload an image",
+    "invalidLatex": "Invalid LaTeX",
+    "analysisFailed": "Failed to analyze formula. Please try again."
+  }
+}

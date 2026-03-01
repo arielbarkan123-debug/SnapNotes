@@ -65,6 +65,12 @@ const WelcomeModal = dynamic(
   { ssr: false }
 )
 
+// Lazy load MistakeInsightsCard
+const MistakeInsightsCard = dynamic(
+  () => import('@/components/insights/MistakeInsightsCard'),
+  { ssr: false }
+)
+
 interface DashboardContentProps {
   initialCourses: Course[]
   userName?: string
@@ -335,6 +341,13 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
             </div>
           </div>
         )}
+
+        {/* Mistake Insights Widget */}
+        <SilentErrorBoundary componentName="MistakeInsightsCard">
+          <div className="mb-8 animate-fadeSlideIn stagger-5">
+            <MistakeInsightsCard />
+          </div>
+        </SilentErrorBoundary>
 
         {/* My Courses Section */}
         <div className="animate-fadeSlideIn stagger-5">

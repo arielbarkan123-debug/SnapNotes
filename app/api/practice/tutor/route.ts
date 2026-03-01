@@ -5,6 +5,7 @@ import type { TutorDiagramState, PedagogicalIntent, HintLevel } from '@/lib/home
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import { getFilteredDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-schemas'
 import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
+import { getExplanationStyle } from '@/lib/homework/explanation-styles'
 import { AI_MODEL } from '@/lib/ai/claude'
 
 // Allow 120 seconds — engine diagram generation can take 10-60s on top of AI response
@@ -45,6 +46,8 @@ interface PracticeTutorRequest {
   grade?: number
   /** Whether to generate engine diagrams (default: true) */
   enableDiagrams?: boolean
+  /** Explanation style (step_by_step, eli5, visual_builder, worked_example, socratic) */
+  explanationStyle?: string
 }
 
 interface TutorResponseData {
@@ -171,8 +174,15 @@ export async function POST(request: NextRequest) {
       return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Either message or hintLevel is required')
     }
 
-    // Build conversation for AI
-    const systemPrompt = buildSystemPrompt(language, subject, grade)
+    // Build conversation for AI with explanation style
+    const style = getExplanationStyle(body.explanationStyle)
+    let systemPrompt = buildSystemPrompt(language, subject, grade)
+    if (style.systemPromptModifier) {
+      systemPrompt += '\n\n' + style.systemPromptModifier
+    }
+    if (style.forceLanguageLevel === 'simple') {
+      systemPrompt += '\n\nIMPORTANT: Use only simple vocabulary suitable for a young learner. No jargon.'
+    }
 
     const contextMessage = language === 'he'
       ? `## הקשר

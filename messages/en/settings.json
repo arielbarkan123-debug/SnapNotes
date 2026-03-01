@@ -141,6 +141,20 @@
     "complexityDesc": "Adjusts diagram detail level based on your grade"
   },
   "saveChangesRefreshHint": "Save changes and refresh the page to apply the new language.",
+  "parentReports": {
+    "title": "Parent Reports",
+    "description": "Send weekly progress reports to a parent or guardian",
+    "email": "Parent Email",
+    "emailPlaceholder": "parent@example.com",
+    "enabled": "Weekly Reports Enabled",
+    "enabledDesc": "Sends a progress report every Sunday morning",
+    "sendTest": "Send Test Report",
+    "sending": "Sending...",
+    "sent": "Test report sent!",
+    "sendError": "Failed to send test report",
+    "lastSent": "Last sent: {date}",
+    "neverSent": "No reports sent yet"
+  },
   "account": {
     "title": "Account",
     "description": "Manage your account",

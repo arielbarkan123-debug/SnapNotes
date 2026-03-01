@@ -1,0 +1,13 @@
+{
+  "tabTitle": "YouTube URL",
+  "placeholder": "Paste YouTube URL here...",
+  "generate": "Generate Course",
+  "generating": "Generating course...",
+  "extracting": "Extracting transcript...",
+  "noTranscript": "No captions available for this video",
+  "invalidUrl": "Please enter a valid YouTube URL",
+  "success": "Course generated successfully!",
+  "error": "Failed to generate course from video",
+  "preview": "Video Preview",
+  "duration": "{minutes} min video"
+}

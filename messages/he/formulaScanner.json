@@ -1,0 +1,29 @@
+{
+  "title": "סורק נוסחאות",
+  "subtitle": "העלו תמונה או הקלידו נוסחה כדי לקבל פירוט מלא של כל סמל, משמעותו ויחידותיו",
+  "tabs": {
+    "typeLatex": "הקלד נוסחה",
+    "uploadImage": "העלה תמונה"
+  },
+  "placeholders": {
+    "latex": "הקלד LaTeX כאן... למשל E = mc^2",
+    "dropImage": "לחץ להעלאה או גרור תמונה"
+  },
+  "removeImage": "הסר תמונה",
+  "analyzeButton": "נתח נוסחה",
+  "analyzing": "מנתח...",
+  "symbols": "פירוט סמלים",
+  "derivation": "גזירה ורקע",
+  "relatedFormulas": "נוסחאות קשורות",
+  "practiceQuestion": "תרגול עם הנוסחה",
+  "showAnswer": "הצג תשובה",
+  "range": "טווח",
+  "errors": {
+    "notImage": "אנא בחר קובץ תמונה",
+    "fileTooLarge": "התמונה חייבת להיות עד 10MB",
+    "noFormula": "אנא הזן נוסחה",
+    "noImage": "אנא העלה תמונה",
+    "invalidLatex": "LaTeX לא תקין",
+    "analysisFailed": "ניתוח הנוסחה נכשל. נסה שוב."
+  }
+}

@@ -141,6 +141,20 @@
     "complexityDesc": "מתאים את רמת הפירוט בדיאגרמות לפי הכיתה שלך"
   },
   "saveChangesRefreshHint": "שמור שינויים ורענן את הדף כדי להחיל את השפה החדשה.",
+  "parentReports": {
+    "title": "דוחות להורים",
+    "description": "שלח דוחות התקדמות שבועיים להורה או אפוטרופוס",
+    "email": "אימייל הורה",
+    "emailPlaceholder": "parent@example.com",
+    "enabled": "דוחות שבועיים מופעלים",
+    "enabledDesc": "שולח דוח התקדמות כל יום ראשון בבוקר",
+    "sendTest": "שלח דוח ניסיון",
+    "sending": "שולח...",
+    "sent": "דוח ניסיון נשלח!",
+    "sendError": "שליחת דוח הניסיון נכשלה",
+    "lastSent": "נשלח לאחרונה: {date}",
+    "neverSent": "עדיין לא נשלחו דוחות"
+  },
   "account": {
     "title": "חשבון",
     "description": "נהל את החשבון שלך",

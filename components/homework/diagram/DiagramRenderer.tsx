@@ -1,8 +1,10 @@
 'use client'
 
-import { Component, type ReactNode } from 'react'
+import { Component, type ReactNode, lazy, Suspense } from 'react'
 import { type DiagramState, getDiagramTypeName } from './types'
 import EngineDiagramImage from './EngineDiagramImage'
+
+const StepSequencePlayer = lazy(() => import('./StepSequencePlayer'))
 
 // ============================================================================
 // Error Boundary for Diagram Rendering
@@ -106,6 +108,7 @@ interface DiagramRendererProps {
  */
 export default function DiagramRenderer({
   diagram,
+  language,
   onRenderError,
 }: DiagramRendererProps) {
   // Validate diagram prop
@@ -142,6 +145,45 @@ export default function DiagramRenderer({
   }
 
   const diagramType = diagram.type
+
+  // Step sequence diagram (multi-step animated breakdown)
+  if (diagramType === 'step_sequence') {
+    const seqData = diagram.data as {
+      steps?: Array<{
+        stepNumber: number
+        title: string
+        titleHe: string
+        explanation: string
+        explanationHe: string
+        diagramImageUrl: string | null
+        pipeline: string | null
+        highlightWhat: string
+      }>
+      summary?: string
+      summaryHe?: string
+      partial?: boolean
+    } | undefined
+
+    if (seqData?.steps && seqData.steps.length > 0) {
+      return (
+        <DiagramErrorBoundary diagramType={diagramType} diagramData={seqData} onError={onRenderError}>
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-48">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600" />
+            </div>
+          }>
+            <StepSequencePlayer
+              steps={seqData.steps}
+              language={language}
+              summary={seqData.summary}
+              summaryHe={seqData.summaryHe}
+              partial={seqData.partial}
+            />
+          </Suspense>
+        </DiagramErrorBoundary>
+      )
+    }
+  }
 
   // Engine-generated image diagram (E2B LaTeX, Matplotlib, TikZ, Recraft)
   if (diagramType === 'engine_image') {

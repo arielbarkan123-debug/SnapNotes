@@ -41,7 +41,7 @@ export interface UploadFileError {
 
 export type FileCategory = 'image' | 'pdf' | 'pptx' | 'docx'
 
-export type InputMode = 'files' | 'text'
+export type InputMode = 'files' | 'text' | 'youtube'
 
 export interface SelectedFile {
   file: File

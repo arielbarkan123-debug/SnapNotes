@@ -66,6 +66,9 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
   const [failedFiles, setFailedFiles] = useState<UploadFileError[]>([])
+  const [youtubeUrl, setYoutubeUrl] = useState('')
+  const [youtubeProgress, setYoutubeProgress] = useState<string | null>(null)
+  const ty = useTranslations('youtube')
 
   // Handle escape key
   useEffect(() => {
@@ -269,7 +272,78 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
     }
   }
 
+  const handleYouTubeSubmit = async () => {
+    if (!youtubeUrl.trim()) return
+    // Validate URL format
+    const ytRegex = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)/
+    if (!ytRegex.test(youtubeUrl)) {
+      setError({ message: ty('invalidUrl'), isRetryable: false })
+      return
+    }
+
+    setIsUploading(true)
+    setError(null)
+    setYoutubeProgress(ty('extracting'))
+
+    try {
+      const res = await fetch('/api/courses/from-youtube', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ youtubeUrl: youtubeUrl.trim() }),
+      })
+
+      if (!res.ok || !res.body) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || ty('error'))
+      }
+
+      // SSE streaming
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let courseId: string | null = null
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const text = decoder.decode(value, { stream: true })
+        const lines = text.split('\n')
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6))
+              if (data.status === 'extracting') setYoutubeProgress(ty('extracting'))
+              else if (data.status === 'generating') setYoutubeProgress(ty('generating'))
+              else if (data.status === 'complete' && data.courseId) {
+                courseId = data.courseId
+              } else if (data.status === 'error') {
+                throw new Error(data.error || ty('error'))
+              }
+            } catch (e) {
+              if (e instanceof SyntaxError) continue
+              throw e
+            }
+          }
+        }
+      }
+
+      if (courseId) {
+        onClose()
+        router.push(`/processing?courseId=${courseId}`)
+      }
+    } catch (err) {
+      setError({ message: err instanceof Error ? err.message : ty('error'), isRetryable: true })
+    } finally {
+      setIsUploading(false)
+      setYoutubeProgress(null)
+    }
+  }
+
   const handleSubmit = async () => {
+    // Handle YouTube mode
+    if (inputMode === 'youtube') {
+      await handleYouTubeSubmit()
+      return
+    }
     // Handle text mode submission
     if (inputMode === 'text') {
       if (!textContent.trim() || textContent.trim().length < 20) {
@@ -663,6 +737,27 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
               {t('enterText')}
             </span>
           </button>
+          {!isAddMode && (
+            <button
+              onClick={() => { setInputMode('youtube'); setError(null) }}
+              disabled={isUploading}
+              className={`
+                flex-1 py-3 text-sm font-medium border-b-2 transition-colors
+                ${inputMode === 'youtube'
+                  ? 'border-red-500 text-red-600 dark:text-red-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }
+                disabled:opacity-50
+              `}
+            >
+              <span className="flex items-center justify-center gap-2">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+                {ty('tabTitle')}
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Content */}
@@ -697,7 +792,35 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
           )}
 
           {/* Content based on input mode */}
-          {inputMode === 'text' ? (
+          {inputMode === 'youtube' ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {ty('tabTitle')}
+                </label>
+                <input
+                  type="url"
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  placeholder={ty('placeholder')}
+                  disabled={isUploading}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-colors disabled:opacity-50"
+                  dir="ltr"
+                />
+              </div>
+              {youtubeProgress && (
+                <div className="flex items-center gap-3 p-4 bg-violet-50 dark:bg-violet-900/20 rounded-xl">
+                  <div className="animate-spin h-5 w-5 border-2 border-violet-500 border-t-transparent rounded-full" />
+                  <span className="text-sm text-violet-700 dark:text-violet-300">{youtubeProgress}</span>
+                </div>
+              )}
+              {!youtubeProgress && youtubeUrl && (
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 text-center">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{ty('preview')}</p>
+                </div>
+              )}
+            </div>
+          ) : inputMode === 'text' ? (
             <TextInputArea
               textContent={textContent}
               onTextChange={setTextContent}
@@ -803,23 +926,27 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
           <Button
             onClick={handleSubmit}
             disabled={
-              inputMode === 'text'
-                ? textContent.trim().length < 20 || isUploading
-                : selectedFiles.length === 0 || isUploading
+              inputMode === 'youtube'
+                ? !youtubeUrl.trim() || isUploading
+                : inputMode === 'text'
+                  ? textContent.trim().length < 20 || isUploading
+                  : selectedFiles.length === 0 || isUploading
             }
             isLoading={isUploading}
             loadingText={
-              inputMode === 'text'
-                ? t('processing')
-                : uploadProgress?.status === 'uploading'
-                  ? (selectedFiles.length === 1 ? t('uploadingFile', { count: 1 }) : t('uploadingFiles', { count: selectedFiles.length }))
-                  : t('processing')
+              inputMode === 'youtube'
+                ? (youtubeProgress || ty('generating'))
+                : inputMode === 'text'
+                  ? t('processing')
+                  : uploadProgress?.status === 'uploading'
+                    ? (selectedFiles.length === 1 ? t('uploadingFile', { count: 1 }) : t('uploadingFiles', { count: selectedFiles.length }))
+                    : t('processing')
             }
             className="w-full sm:w-auto min-h-[48px] sm:min-h-[44px]"
           >
             {isAddMode
               ? t('addMaterial')
-              : inputMode === 'text' ? t('generateFromText') : t('generateCourse')
+              : inputMode === 'youtube' ? ty('generate') : inputMode === 'text' ? t('generateFromText') : t('generateCourse')
             }
           </Button>
         </div>

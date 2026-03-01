@@ -8,6 +8,7 @@ import type {
   TutorContext,
 } from '@/lib/homework/types'
 import { generateTutorResponse, checkForSolution } from '@/lib/homework/tutor-engine'
+import type { ExplanationStyleId } from '@/lib/homework/explanation-styles'
 import { addMessage, updateProgress, getRecentMessages } from '@/lib/homework/session-manager'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import { loadUserProfile } from '@/lib/user-profile'
@@ -38,7 +39,7 @@ export async function POST(
     }
 
     // Parse request
-    let body: { message: string; enableDiagrams?: boolean }
+    let body: { message: string; enableDiagrams?: boolean; explanationStyle?: string }
     try {
       body = await request.json()
     } catch {
@@ -50,6 +51,7 @@ export async function POST(
     }
 
     const enableDiagrams = body.enableDiagrams !== false
+    const explanationStyle = body.explanationStyle
 
     // Get the session
     const { data: session, error: sessionError } = await supabase
@@ -124,7 +126,7 @@ export async function POST(
     }
 
     // Step 3: Generate Socratic tutor response
-    const tutorResponse = await generateTutorResponse(context, body.message, enableDiagrams)
+    const tutorResponse = await generateTutorResponse(context, body.message, enableDiagrams, explanationStyle as ExplanationStyleId | undefined)
 
     // Step 4: Check if student solved the problem (if high progress)
     let solutionCheck = { solved: false, feedback: '' }

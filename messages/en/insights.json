@@ -1,0 +1,43 @@
+{
+  "title": "Learning Insights",
+  "subtitle": "Patterns detected from your practice history",
+  "patterns": "Mistake Patterns",
+  "noPatterns": "No patterns detected yet",
+  "insufficientData": "Complete at least 20 practice questions to unlock mistake analysis",
+  "insufficientDataShort": "Need more practice data",
+  "attemptsCompleted": "{count} attempts so far",
+  "severity": {
+    "low": "Minor",
+    "medium": "Moderate",
+    "high": "Critical"
+  },
+  "frequency": "{count} occurrences",
+  "fixThis": "Fix This",
+  "refreshAnalysis": "Refresh Analysis",
+  "refreshing": "Analyzing...",
+  "lastAnalyzed": "Last analyzed {date}",
+  "viewAll": "View All Patterns",
+  "remediation": {
+    "title": "Fix: {pattern}",
+    "instructions": "Answer these practice questions to address this pattern. Score 80%+ to mark as resolved.",
+    "question": "Question {number}",
+    "yourAnswer": "Type your answer...",
+    "submit": "Submit Answer",
+    "correct": "Correct!",
+    "incorrect": "Not quite. The correct answer is:",
+    "score": "Score: {score}%",
+    "resolved": "Pattern addressed! Great improvement.",
+    "needsWork": "Keep practicing. Try again to improve your score.",
+    "tryAgain": "Try Again",
+    "close": "Close",
+    "next": "Next Question"
+  },
+  "gap": {
+    "detected": "Knowledge Gap Detected",
+    "description": "You may be struggling with {current} because {prerequisite} needs review",
+    "review": "Review {topic}",
+    "continueAnyway": "Continue Anyway",
+    "prerequisiteMastery": "{percent}% mastery"
+  },
+  "error": "Failed to load insights"
+}

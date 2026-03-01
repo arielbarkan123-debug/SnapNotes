@@ -1,0 +1,23 @@
+{
+  "selectorLabel": "סגנון הסבר",
+  "stepByStep": {
+    "label": "צעד אחר צעד",
+    "description": "צעדים ממוספרים וברורים"
+  },
+  "eli5": {
+    "label": "תסביר לי בפשטות",
+    "description": "אנלוגיות פשוטות, בלי מונחים מקצועיים"
+  },
+  "visualBuilder": {
+    "label": "בנייה ויזואלית",
+    "description": "כל שלב עם תרשים"
+  },
+  "workedExample": {
+    "label": "דוגמה פתורה",
+    "description": "ללמוד מדוגמאות פתורות קודם"
+  },
+  "socratic": {
+    "label": "שיטת סוקרטס",
+    "description": "רק שאלות מנחות"
+  }
+}
