@@ -41,11 +41,16 @@ export default function HomeworkHistoryPage() {
   useEffect(() => {
     async function fetchHistory() {
       try {
-        // Fetch homework checks
-        const checksRes = await fetch('/api/homework/check?limit=50')
+        // Fetch homework checks AND help sessions in parallel
+        const [checksRes, sessionsRes] = await Promise.all([
+          fetch('/api/homework/check?limit=50'),
+          fetch('/api/homework/sessions?limit=50'),
+        ])
+
+        let formattedChecks: HomeworkItem[] = []
         if (checksRes.ok) {
           const { checks } = await checksRes.json()
-          const formattedChecks: HomeworkItem[] = (checks || []).map((check: HomeworkCheckResponse) => ({
+          formattedChecks = (checks || []).map((check: HomeworkCheckResponse) => ({
             id: check.id,
             type: 'check' as const,
             title: check.topic || 'Homework Check',
@@ -54,8 +59,27 @@ export default function HomeworkHistoryPage() {
             status: check.status,
             grade: check.feedback?.gradeEstimate,
           }))
-          setItems(formattedChecks)
         }
+
+        let formattedSessions: HomeworkItem[] = []
+        if (sessionsRes.ok) {
+          const { sessions } = await sessionsRes.json()
+          formattedSessions = (sessions || []).map((session: { id: string; detected_topic?: string; question_text?: string; detected_subject?: string; created_at: string; status: string }) => ({
+            id: session.id,
+            type: 'help' as const,
+            title: session.detected_topic || session.question_text?.slice(0, 50) || 'Help Session',
+            subject: session.detected_subject || 'General',
+            createdAt: session.created_at,
+            status: session.status,
+          }))
+        }
+
+        // Merge and sort by date (newest first)
+        const allItems = [...formattedChecks, ...formattedSessions].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+
+        setItems(allItems)
       } catch {
         // Error handled silently - UI shows empty state
       } finally {
@@ -196,7 +220,7 @@ export default function HomeworkHistoryPage() {
             {filteredItems.map((item, idx) => (
               <Link
                 key={item.id}
-                href={`/homework/${item.id}`}
+                href={item.type === 'help' ? `/homework/${item.id}?type=help` : `/homework/${item.id}`}
                 className={`flex items-center justify-between px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
                   idx !== filteredItems.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''
                 }`}

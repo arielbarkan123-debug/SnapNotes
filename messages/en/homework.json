@@ -172,6 +172,7 @@
     "progress": "Progress",
     "stepOf": "Step {current} of {total}",
     "socraticSession": "Socratic tutoring session",
+    "noSessionsYet": "No help sessions yet. Start one from the Homework Hub!",
     "gradeExcellent": "Excellent",
     "gradeGood": "Good",
     "gradeNeedsImprovement": "Needs Improvement",

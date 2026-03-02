@@ -171,11 +171,18 @@ export default function HomeworkHubPage() {
   useEffect(() => {
     async function fetchRecent() {
       try {
-        // Fetch recent homework checks
-        const checksRes = await fetch('/api/homework/check?limit=3')
+        // Fetch recent homework checks AND help sessions in parallel
+        const [checksRes, sessionsRes] = await Promise.all([
+          fetch('/api/homework/check?limit=3'),
+          fetch('/api/homework/sessions?limit=5'),
+        ])
+
+        let recentChecks: RecentItem[] = []
+        let checksCount = 0
+
         if (checksRes.ok) {
           const { checks } = await checksRes.json()
-          const recentChecks: RecentItem[] = (checks || []).map((check: HomeworkCheckResponse) => ({
+          recentChecks = (checks || []).map((check: HomeworkCheckResponse) => ({
             id: check.id,
             type: 'check' as const,
             title: check.topic || t('homeworkCheck'),
@@ -184,9 +191,32 @@ export default function HomeworkHubPage() {
             status: check.status,
             grade: check.feedback?.gradeEstimate,
           }))
-          setRecentItems(recentChecks)
-          setStats(prev => ({ ...prev, checksCount: checks?.length || 0 }))
+          checksCount = checks?.length || 0
         }
+
+        let helpItems: RecentItem[] = []
+        let helpCount = 0
+
+        if (sessionsRes.ok) {
+          const { sessions } = await sessionsRes.json()
+          helpItems = (sessions || []).map((session: { id: string; detected_topic?: string; question_text?: string; detected_subject?: string; created_at: string; status: string }) => ({
+            id: session.id,
+            type: 'help' as const,
+            title: session.detected_topic || session.question_text?.slice(0, 50) || t('homeworkHelper'),
+            subject: session.detected_subject || 'General',
+            date: new Date(session.created_at).toLocaleDateString(),
+            status: session.status,
+          }))
+          helpCount = sessions?.length || 0
+        }
+
+        // Merge and sort by date (newest first)
+        const allItems = [...recentChecks, ...helpItems].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        ).slice(0, 5)
+
+        setRecentItems(allItems)
+        setStats(prev => ({ ...prev, checksCount, helpSessions: helpCount }))
       } catch {
         // Error handled silently - UI shows empty state
       } finally {
@@ -334,7 +364,7 @@ export default function HomeworkHubPage() {
               {recentItems.map((item, idx) => (
                 <Link
                   key={item.id}
-                  href={`/homework/${item.id}`}
+                  href={item.type === 'help' ? `/homework/${item.id}?type=help` : `/homework/${item.id}`}
                   className={`flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
                     idx !== recentItems.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''
                   }`}

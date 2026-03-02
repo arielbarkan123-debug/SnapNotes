@@ -105,6 +105,9 @@ export default function HomeworkResultsPage() {
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
   // State for loading during chat/hint operations - moved to top level to fix hooks rule
   const [isChatLoading, setIsChatLoading] = useState(false)
+  // Sessions sidebar state
+  const [sessionsList, setSessionsList] = useState<HomeworkSession[]>([])
+  const [showSessionsSidebar, setShowSessionsSidebar] = useState(true)
 
   useEffect(() => {
     async function fetchData() {
@@ -160,6 +163,25 @@ export default function HomeworkResultsPage() {
 
     fetchData()
   }, [sessionId, isHelpSession, router, toast, trackStep, trackFeature])
+
+  // Fetch all help sessions for sidebar
+  useEffect(() => {
+    if (!isHelpSession) return
+
+    async function fetchSessions() {
+      try {
+        const res = await fetch('/api/homework/sessions?limit=20')
+        if (res.ok) {
+          const { sessions } = await res.json()
+          setSessionsList(sessions || [])
+        }
+      } catch {
+        // Silently fail - sidebar is non-critical
+      }
+    }
+
+    fetchSessions()
+  }, [isHelpSession])
 
   // Award XP when check results are loaded
   useEffect(() => {
@@ -346,10 +368,82 @@ export default function HomeworkResultsPage() {
     }
 
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex">
+        {/* Sessions Sidebar - Desktop */}
+        <aside
+          className={`hidden md:flex flex-col w-[280px] flex-shrink-0 bg-white dark:bg-gray-800 border-e border-gray-200 dark:border-gray-700 transition-all duration-300 ${
+            showSessionsSidebar ? 'translate-x-0' : '-translate-x-full absolute'
+          }`}
+        >
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-gray-900 dark:text-white text-sm">
+                {t('helpSessions')}
+              </h2>
+              <Link
+                href="/homework/help"
+                className="p-1.5 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg transition-colors"
+                title="New session"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </Link>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {sessionsList.length === 0 ? (
+              <div className="p-4 text-center">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {t('results.noSessionsYet')}
+                </p>
+              </div>
+            ) : (
+              <div className="p-2 space-y-1">
+                {sessionsList.map((s) => (
+                  <Link
+                    key={s.id}
+                    href={`/homework/${s.id}?type=help`}
+                    className={`block p-3 rounded-xl transition-colors ${
+                      s.id === sessionId
+                        ? 'bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      {s.detected_subject && (
+                        <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-800/30 text-purple-700 dark:text-purple-300 text-[10px] font-medium rounded-full truncate max-w-[80px]">
+                          {s.detected_subject}
+                        </span>
+                      )}
+                      <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded-full ${
+                        s.status === 'active'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                          : s.status === 'completed'
+                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                      }`}>
+                        {s.status}
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
+                      {s.detected_topic || s.question_text?.slice(0, 60) || t('homeworkHelper')}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {new Date(s.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <header className="sticky top-14 md:top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-          <div className="container mx-auto px-4 py-4 max-w-2xl">
+          <div className="px-4 py-4 max-w-2xl mx-auto md:max-w-none">
             <div className="flex items-center gap-3">
               <Link
                 href="/homework"
@@ -359,6 +453,16 @@ export default function HomeworkResultsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </Link>
+              {/* Toggle sidebar button - desktop only */}
+              <button
+                onClick={() => setShowSessionsSidebar((prev) => !prev)}
+                className="hidden md:flex p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                title="Toggle sessions"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                </svg>
+              </button>
               <div className="flex-1">
                 <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
                   {t('homeworkHelper')}
@@ -522,6 +626,7 @@ export default function HomeworkResultsPage() {
             </div>
           </div>
         )}
+        </div>
       </div>
     )
   }

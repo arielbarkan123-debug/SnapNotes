@@ -172,6 +172,7 @@
     "progress": "התקדמות",
     "stepOf": "שלב {current} מתוך {total}",
     "socraticSession": "שיעור הדרכה סוקרטי",
+    "noSessionsYet": "אין עדיין פגישות עזרה. התחל אחת מהמרכז!",
     "gradeExcellent": "מצוין",
     "gradeGood": "טוב",
     "gradeNeedsImprovement": "דורש שיפור",
