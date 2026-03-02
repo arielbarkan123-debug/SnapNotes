@@ -10,9 +10,55 @@ import { type Course } from '@/types'
 import { useCourses } from '@/hooks'
 import { useToast } from '@/contexts/ToastContext'
 import { useStudyPlan } from '@/hooks/useStudyPlan'
-import { ChevronRight, Check, ArrowRight } from 'lucide-react'
+import { ChevronRight, Check, ArrowRight, Flame, Zap, Trophy, Coffee } from 'lucide-react'
 import type { StudyPlanTask } from '@/lib/study-plan/types'
 import { useFeatureTracker } from '@/lib/student-context/feature-tracker'
+
+// =============================================================================
+// Dashboard Intelligence Hook
+// =============================================================================
+
+interface DashboardIntelligence {
+  primaryAction: {
+    type: 'review_cards' | 'continue_lesson' | 'practice_weak' | 'start_exam_prep' | 'take_break'
+    label: string
+    courseId?: string
+    count?: number
+  }
+  nudge: string | null
+  courseOrder: string[]
+  streakRisk: boolean
+  celebrationDue: string | null
+  weeklyGoalProgress: number
+  cardsDueToday: number
+  currentStreak: number
+  rollingAccuracy: number
+  trendDirection: 'improving' | 'declining' | 'stable'
+  totalStudyTimeThisWeekMinutes: number
+  sessionsThisWeek: number
+}
+
+function useDashboardIntelligence() {
+  const [intelligence, setIntelligence] = useState<DashboardIntelligence | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      try {
+        const res = await fetch('/api/dashboard/intelligence')
+        if (!res.ok) return
+        const data = await res.json()
+        if (!cancelled) setIntelligence(data)
+      } catch {
+        // Intelligence is non-critical — dashboard works without it
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
+
+  return intelligence
+}
 
 // ============================================================================
 // Component-Level Error Boundary
@@ -86,6 +132,18 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
   const t = useTranslations('dashboard')
   const tTask = useTranslations('studyPlan.taskTypes')
   const { error: showError, success: showSuccess } = useToast()
+
+  // Load intelligence from the Learning Intelligence Engine (non-blocking)
+  const intelligence = useDashboardIntelligence()
+
+  // Show celebration toast if the engine says so
+  const celebrationShown = useRef(false)
+  useEffect(() => {
+    if (intelligence?.celebrationDue && !celebrationShown.current) {
+      celebrationShown.current = true
+      showSuccess(intelligence.celebrationDue)
+    }
+  }, [intelligence?.celebrationDue, showSuccess])
 
   // Recommendation click tracking — fire and forget
   const trackRecommendationClick = useCallback((trackingId: string) => {
@@ -224,6 +282,81 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
             <GamificationBar />
           </div>
         </SilentErrorBoundary>
+
+        {/* Intelligence-Driven Smart Bar */}
+        {intelligence && (
+          <SilentErrorBoundary componentName="IntelligenceBar">
+            <div className="mb-6 animate-fadeSlideIn stagger-2">
+              {/* Streak Risk Warning */}
+              {intelligence.streakRisk && intelligence.currentStreak > 0 && (
+                <div className="mb-3 flex items-center gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl">
+                  <Flame className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    <span className="font-semibold">{intelligence.currentStreak}-day streak</span> — study today to keep it!
+                  </p>
+                </div>
+              )}
+
+              {/* Primary Action + Nudge */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* AI-recommended action */}
+                <Link
+                  href={
+                    intelligence.primaryAction.type === 'review_cards' ? '/review' :
+                    intelligence.primaryAction.type === 'continue_lesson' ? (intelligence.primaryAction.courseId ? `/course/${intelligence.primaryAction.courseId}` : '/dashboard') :
+                    intelligence.primaryAction.type === 'practice_weak' ? '/practice' :
+                    intelligence.primaryAction.type === 'start_exam_prep' ? '/exams' :
+                    '/dashboard'
+                  }
+                  className="flex-1 flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 border border-violet-200 dark:border-violet-800/50 rounded-2xl group hover:shadow-md transition-shadow"
+                  onClick={() => trackRecommendationClick(`intel_${intelligence.primaryAction.type}`)}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center flex-shrink-0">
+                    {intelligence.primaryAction.type === 'review_cards' ? <Zap className="w-5 h-5 text-violet-600 dark:text-violet-400" /> :
+                     intelligence.primaryAction.type === 'take_break' ? <Coffee className="w-5 h-5 text-violet-600 dark:text-violet-400" /> :
+                     intelligence.primaryAction.type === 'practice_weak' ? <Zap className="w-5 h-5 text-violet-600 dark:text-violet-400" /> :
+                     <ArrowRight className="w-5 h-5 text-violet-600 dark:text-violet-400" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-violet-900 dark:text-violet-100 truncate">
+                      {intelligence.primaryAction.label}
+                    </p>
+                    {intelligence.primaryAction.count != null && intelligence.primaryAction.count > 0 && (
+                      <p className="text-xs text-violet-600 dark:text-violet-400">
+                        {intelligence.primaryAction.count} {intelligence.primaryAction.type === 'review_cards' ? 'cards due' : 'items'}
+                      </p>
+                    )}
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-violet-400 group-hover:translate-x-1 transition-transform flex-shrink-0" />
+                </Link>
+
+                {/* Nudge */}
+                {intelligence.nudge && (
+                  <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl sm:max-w-[280px]">
+                    <Trophy className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                    <p className="text-xs text-gray-600 dark:text-gray-300">{intelligence.nudge}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Weekly progress mini-bar */}
+              {intelligence.weeklyGoalProgress > 0 && (
+                <div className="mt-3 flex items-center gap-3">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">This week</span>
+                  <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-violet-500 to-rose-500 rounded-full transition-all duration-700"
+                      style={{ width: `${Math.min(intelligence.weeklyGoalProgress * 100, 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                    {Math.round(intelligence.weeklyGoalProgress * 100)}%
+                  </span>
+                </div>
+              )}
+            </div>
+          </SilentErrorBoundary>
+        )}
 
         {/* Quick Actions Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-fadeSlideIn stagger-3">

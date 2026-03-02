@@ -10,6 +10,7 @@ import { shouldIncludeImages, detectVisualContentMentions } from '@/lib/images/s
 import type { PastExamTemplate, ImageAnalysis } from '@/types/past-exam'
 import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { getStudentContext, generateDirectives } from '@/lib/student-context'
 
 // Type for AI-generated exam questions
 interface GeneratedQuestion {
@@ -183,6 +184,35 @@ export async function POST(request: NextRequest) {
     }
     const imageDecision = shouldIncludeImages(imageSearchContext)
 
+    // Load student intelligence for adaptive exam generation
+    let examIntelligenceSection = ''
+    try {
+      const studentCtx = await getStudentContext(supabase, user.id)
+      if (studentCtx) {
+        const directives = generateDirectives(studentCtx)
+        const ed = directives.exams
+
+        // Build weak topic emphasis instructions
+        // Resolve course IDs to titles so the AI can understand them
+        const courseMap = new Map(studentCtx.activeCourses.map(c => [c.courseId, c.title]))
+        const weakTopics = Object.entries(ed.weakTopicWeights)
+          .filter(([, weight]) => weight > 1.0)
+          .map(([courseId]) => courseMap.get(courseId) || null)
+          .filter((title): title is string => title !== null)
+
+        examIntelligenceSection = `
+=== STUDENT INTELLIGENCE (Adaptive) ===
+Target difficulty: ${ed.targetDifficulty}/5
+Estimated current score: ${ed.estimatedScore}%
+Focus question types: ${ed.focusQuestionTypes.join(', ')}
+${weakTopics.length > 0 ? `Weak areas needing more coverage: ${weakTopics.join(', ')}` : ''}
+Adapt question difficulty to match the target level. Include more questions from weak areas.
+`
+      }
+    } catch {
+      // Continue without exam intelligence
+    }
+
     let courseContent = ''
     const lessonList: { index: number; title: string }[] = []
 
@@ -247,7 +277,7 @@ COURSE: ${course.title}
 ${curriculumSection ? `\n${curriculumSection}` : ''}
 ${examFormatInstruction}
 ${examStyleGuide ? `\n${examStyleGuide}` : ''}
-CONTENT:
+${examIntelligenceSection}CONTENT:
 ${courseContent}
 
 AVAILABLE LESSONS:

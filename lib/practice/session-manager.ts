@@ -373,18 +373,18 @@ export async function recordAnswer(
     revisionHelped = !existingAnswer.is_correct && isCorrect
   }
 
-  // time_to_first_action_ms: time from question shown (started_at) to first answer
-  if (!existingAnswer && existingAnswer !== null) {
-    // First answer, no started_at yet
+  // time_to_first_action_ms: time from question shown to first answer
+  if (!existingAnswer) {
+    // First answer — use responseTimeMs as the best approximation
     timeToFirstActionMs = responseTimeMs || null
-  } else if (existingAnswer?.started_at) {
-    // Question had a started_at timestamp
+  } else if (existingAnswer.started_at) {
+    // Revision — question had a started_at timestamp, compute from that
     timeToFirstActionMs = Math.round(
       Date.now() - new Date(existingAnswer.started_at).getTime()
     )
   } else {
-    // Use responseTimeMs as best approximation for first action
-    timeToFirstActionMs = !existingAnswer ? (responseTimeMs || null) : null
+    // Revision but no started_at — no meaningful time to record
+    timeToFirstActionMs = null
   }
 
   // Record the answer (including evaluation + revision details)

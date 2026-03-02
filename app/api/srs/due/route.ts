@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes, logError } from '@/lib/api/errors'
 import { isQuestionQualityAcceptable, regenerateCardQuestion } from '@/lib/srs'
 import type { ReviewCard, ReviewSession } from '@/types'
+import { getStudentContext } from '@/lib/student-context'
 
 // =============================================================================
 // GET /api/srs/due - Get cards due for review today
@@ -28,6 +29,20 @@ export async function GET(): Promise<NextResponse> {
     const maxNewCards = settings?.max_new_cards_per_day ?? 20
     const maxReviews = settings?.max_reviews_per_day ?? 100
     const shouldInterleave = settings?.interleave_reviews ?? true // Default: on
+
+    // Load student intelligence for adaptive SRS card ordering
+    // Note: We NEVER override user's explicit settings (maxNewCards, interleave).
+    // Intelligence only influences card ordering (weak concepts first).
+    let weakConceptIds: string[] = []
+    try {
+      const studentCtx = await getStudentContext(supabase, user.id)
+      if (studentCtx) {
+        weakConceptIds = studentCtx.weakConceptIds
+      }
+    } catch (err) {
+      // Non-critical: continue with defaults
+      console.warn('[SRS:due] Failed to load student context:', err)
+    }
 
     const now = new Date().toISOString()
     const todayStart = new Date()
@@ -79,6 +94,16 @@ export async function GET(): Promise<NextResponse> {
       ...(newCards || []),
       ...(dueCards || []),
     ]
+
+    // Prioritize weak-concept cards before interleaving
+    if (weakConceptIds.length > 0) {
+      const weakSet = new Set(weakConceptIds)
+      allCards.sort((a, b) => {
+        const aWeak = a.concept_ids?.some((id: string) => weakSet.has(id)) ? 1 : 0
+        const bWeak = b.concept_ids?.some((id: string) => weakSet.has(id)) ? 1 : 0
+        return bWeak - aWeak // Weak concepts first
+      })
+    }
 
     // Apply interleaving if enabled
     if (shouldInterleave && allCards.length > 1) {

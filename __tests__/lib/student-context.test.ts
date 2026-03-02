@@ -171,9 +171,9 @@ const ANSWER_BEHAVIOR = [
 // for both study_sessions queries (weekly + fatigue). The compute functions
 // filter for the fields they need, so this works correctly.
 const STUDY_SESSIONS_WITH_FATIGUE = [
-  { duration_seconds: 1200, started_at: '2026-03-01T17:00:00Z', fatigue_detected: true, fatigue_onset_minute: 25 },
-  { duration_seconds: 900, started_at: '2026-03-01T17:30:00Z', fatigue_detected: null, fatigue_onset_minute: null },
-  { duration_seconds: 1500, started_at: '2026-02-28T10:00:00Z', fatigue_detected: true, fatigue_onset_minute: 30 },
+  { duration_seconds: 1200, started_at: '2026-03-01T17:00:00Z', fatigue_detected: true, fatigue_detected_at_minute: 25 },
+  { duration_seconds: 900, started_at: '2026-03-01T17:30:00Z', fatigue_detected: null, fatigue_detected_at_minute: null },
+  { duration_seconds: 1500, started_at: '2026-02-28T10:00:00Z', fatigue_detected: true, fatigue_detected_at_minute: 30 },
 ]
 
 function fullTableResponses() {
@@ -189,7 +189,8 @@ function fullTableResponses() {
     // New implicit data tables
     explanation_engagement: { data: EXPLANATION_ENGAGEMENT, error: null },
     feature_affinity: { data: FEATURE_AFFINITY, error: null },
-    practice_session_questions: { data: ANSWER_BEHAVIOR, error: null },
+    // Answer behavior is now queried via practice_sessions join
+    practice_sessions: { data: [{ practice_session_questions: ANSWER_BEHAVIOR }], error: null },
   }
 }
 
@@ -582,7 +583,8 @@ describe('getStudentContext', () => {
     // New implicit data tables
     expect(tables).toContain('explanation_engagement')
     expect(tables).toContain('feature_affinity')
-    expect(tables).toContain('practice_session_questions')
+    // practice_session_questions is queried via practice_sessions join
+    expect(tables).toContain('practice_sessions')
   })
 
   it('handles rejected promises gracefully (returns defaults)', async () => {

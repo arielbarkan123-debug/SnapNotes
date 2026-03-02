@@ -629,6 +629,18 @@ export async function generateInitialGreeting(context: TutorContext, enableDiagr
     systemPrompt += '\n\nIMPORTANT: Use only simple vocabulary suitable for a young learner. No jargon.'
   }
 
+  // Inject student intelligence from Learning Intelligence Engine
+  if (context.studentIntelligence) {
+    const si = context.studentIntelligence
+    systemPrompt += `\n\n## About This Student
+${si.studentAbilitySummary}
+Explanation depth: ${si.explanationDepth}
+Preferred style: ${si.preferredExplanationStyle}
+Scaffolding level: ${si.scaffoldingLevel}/5
+${si.anticipatedMisconceptions.length > 0 ? `Common mistakes: ${si.anticipatedMisconceptions.slice(0, 3).join('; ')}` : ''}
+${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisiteGaps.slice(0, 5).join(', ')}` : ''}`
+  }
+
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
@@ -781,6 +793,18 @@ export async function generateTutorResponse(
   }
   if (style.forceLanguageLevel === 'simple') {
     chatSystemPrompt += '\n\nIMPORTANT: Use only simple vocabulary suitable for a young learner. No jargon.'
+  }
+
+  // Inject student intelligence from Learning Intelligence Engine
+  if (context.studentIntelligence) {
+    const si = context.studentIntelligence
+    chatSystemPrompt += `\n\n## About This Student
+${si.studentAbilitySummary}
+Explanation depth: ${si.explanationDepth}
+Preferred style: ${si.preferredExplanationStyle}
+Scaffolding level: ${si.scaffoldingLevel}/5
+${si.anticipatedMisconceptions.length > 0 ? `Common mistakes: ${si.anticipatedMisconceptions.slice(0, 3).join('; ')}` : ''}
+${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisiteGaps.slice(0, 5).join(', ')}` : ''}`
   }
 
   const response = await client.messages.create({

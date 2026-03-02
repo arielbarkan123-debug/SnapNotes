@@ -37,6 +37,7 @@ import { checkRateLimit, RATE_LIMITS, getIdentifier } from '@/lib/rate-limit'
 import { validateLearningObjectives, type LearningObjective } from '@/lib/curriculum/learning-objectives'
 import { scoreExtraction, type ExtractionConfidence } from '@/lib/extraction/confidence-scorer'
 import { generateDiagramsForSteps } from '@/lib/diagram-engine/integration'
+import { getStudentContext, generateDirectives } from '@/lib/student-context'
 
 // ============================================================================
 // Route Configuration
@@ -210,6 +211,22 @@ export async function POST(request: NextRequest): Promise<Response> {
         }
       } catch {
         // Continue without personalization if profile fetch fails
+      }
+
+      // 1.7. Load student intelligence for adaptive lesson pacing
+      try {
+        const studentCtx = await getStudentContext(supabase, user.id)
+        if (studentCtx && userContext) {
+          const directives = generateDirectives(studentCtx)
+          userContext.lessonPacing = {
+            pacing: directives.lessons.pacing,
+            skipWorkedExamples: directives.lessons.skipWorkedExamples,
+            extraPracticeSteps: directives.lessons.extraPracticeSteps,
+            contentFormat: directives.lessons.contentFormat,
+          }
+        }
+      } catch {
+        // Continue without lesson pacing — non-critical
       }
 
       // 2. Parse request body

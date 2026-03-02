@@ -37,8 +37,10 @@ export function useFeatureTracker(featureName: string, isVoluntary: boolean = tr
       })
 
       // Use sendBeacon for reliability (works on page unload)
+      // Wrap in Blob with explicit Content-Type to ensure proper JSON parsing
       if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-        navigator.sendBeacon('/api/tracking/feature-affinity', payload)
+        const blob = new Blob([payload], { type: 'application/json' })
+        navigator.sendBeacon('/api/tracking/feature-affinity', blob)
       } else {
         fetch('/api/tracking/feature-affinity', {
           method: 'POST',

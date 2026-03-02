@@ -436,6 +436,15 @@ export interface TutorContext {
   grade?: string
   /** Student's study system (e.g., 'israeli_bagrut', 'ib', 'ap') */
   studySystem?: string
+  /** Student intelligence from Learning Intelligence Engine */
+  studentIntelligence?: {
+    studentAbilitySummary: string
+    explanationDepth: 'brief' | 'standard' | 'detailed'
+    preferredExplanationStyle: 'visual' | 'step-by-step' | 'analogy' | 'mixed'
+    scaffoldingLevel: number
+    anticipatedMisconceptions: string[]
+    knownPrerequisiteGaps: string[]
+  }
 }
 
 export interface HintContext {

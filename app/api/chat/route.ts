@@ -7,6 +7,7 @@ import type { StudySystem } from '@/lib/curriculum/types'
 import { getAnthropicApiKey } from '@/lib/env'
 import { createErrorResponse, ErrorCodes, mapClaudeAPIError } from '@/lib/api/errors'
 import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
+import { getStudentContext, generateDirectives } from '@/lib/student-context'
 
 // Allow 90 seconds for chat responses (Claude API can be slow with long context)
 export const maxDuration = 90
@@ -152,6 +153,26 @@ Generate ALL responses in Hebrew (עברית).
 - Maintain a supportive, encouraging tone in Hebrew
 ` : ''
 
+    // Load student intelligence from Learning Intelligence Engine
+    let studentIntelligenceSection = ''
+    try {
+      const studentCtx = await getStudentContext(supabase, user.id)
+      if (studentCtx) {
+        const directives = generateDirectives(studentCtx)
+        const hw = directives.homework
+        studentIntelligenceSection = `\n## About This Student
+${hw.studentAbilitySummary}
+Explanation depth: ${hw.explanationDepth}
+Preferred style: ${hw.preferredExplanationStyle}
+Scaffolding level: ${hw.scaffoldingLevel}/5
+${hw.anticipatedMisconceptions.length > 0 ? `Common mistakes: ${hw.anticipatedMisconceptions.slice(0, 3).join('; ')}` : ''}
+${hw.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${hw.knownPrerequisiteGaps.slice(0, 5).join(', ')}` : ''}
+`
+      }
+    } catch {
+      // Continue without student intelligence
+    }
+
     // Create system prompt with curriculum awareness
     const systemPrompt = `You are a helpful AI tutor for NoteSnap, a study app. You're helping a student understand their study material.
 ${hebrewInstruction}
@@ -164,7 +185,7 @@ Use this curriculum context to:
 - Prepare the student for the specific exam format they'll face
 - Use appropriate depth and complexity for their level
 
-` : ''}${courseContext ? `The student is studying "${courseName}". Here's the course content for context:
+` : ''}${studentIntelligenceSection}${courseContext ? `The student is studying "${courseName}". Here's the course content for context:
 
 ${courseContext}
 

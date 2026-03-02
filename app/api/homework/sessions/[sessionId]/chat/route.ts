@@ -12,6 +12,7 @@ import type { ExplanationStyleId } from '@/lib/homework/explanation-styles'
 import { addMessage, updateProgress, getRecentMessages } from '@/lib/homework/session-manager'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import { loadUserProfile } from '@/lib/user-profile'
+import { getStudentContext, generateDirectives } from '@/lib/student-context'
 
 // Allow 120 seconds — engine diagram generation can take 10-60s on top of AI response
 export const maxDuration = 120
@@ -113,6 +114,25 @@ export async function POST(
       // Continue without profile data
     }
 
+    // Load student intelligence from Learning Intelligence Engine
+    let studentIntelligence: TutorContext['studentIntelligence'] | undefined
+    try {
+      const studentCtx = await getStudentContext(supabase, user.id)
+      if (studentCtx) {
+        const directives = generateDirectives(studentCtx)
+        studentIntelligence = {
+          studentAbilitySummary: directives.homework.studentAbilitySummary,
+          explanationDepth: directives.homework.explanationDepth,
+          preferredExplanationStyle: directives.homework.preferredExplanationStyle,
+          scaffoldingLevel: directives.homework.scaffoldingLevel,
+          anticipatedMisconceptions: directives.homework.anticipatedMisconceptions,
+          knownPrerequisiteGaps: directives.homework.knownPrerequisiteGaps,
+        }
+      }
+    } catch {
+      // Continue without student intelligence
+    }
+
     const context: TutorContext = {
       session: sessionAfterStudentMsg,
       questionAnalysis,
@@ -123,6 +143,7 @@ export async function POST(
       language: userLanguage,
       grade: userGrade,
       studySystem: userStudySystem,
+      studentIntelligence,
     }
 
     // Step 3: Generate Socratic tutor response

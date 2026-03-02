@@ -37,6 +37,13 @@ export interface UserLearningContext {
   grade?: string
   // Language preference for content generation
   language?: 'en' | 'he'
+  // Lesson pacing from Learning Intelligence Engine
+  lessonPacing?: {
+    pacing: 'accelerated' | 'standard' | 'reinforced'
+    skipWorkedExamples: boolean
+    extraPracticeSteps: number
+    contentFormat: 'concise' | 'detailed'
+  }
 }
 
 // Helper function to get education level description for prompts (kept for backwards compatibility)
@@ -289,6 +296,23 @@ function buildPersonalizationSection(
       parts.push('## Topic Specifics')
       parts.push(curriculumContext.tier3)
     }
+  }
+
+  // Inject lesson pacing directives from Learning Intelligence Engine
+  if (userContext.lessonPacing) {
+    const lp = userContext.lessonPacing
+    const pacingExplanations: Record<string, string> = {
+      accelerated: 'Student is performing well and improving — move faster, skip basics they already know',
+      standard: 'Steady pace — balanced mix of explanation and practice',
+      reinforced: 'Student is struggling or declining — slow down, add more examples and scaffolding',
+    }
+    parts.push(`\n## Adaptive Lesson Pacing`)
+    parts.push(`- Pacing: ${lp.pacing} (${pacingExplanations[lp.pacing]})`)
+    parts.push(`- ${lp.skipWorkedExamples ? 'Skip worked examples — student learns faster by doing' : 'Include worked examples — student needs to see solutions before attempting'}`)
+    if (lp.extraPracticeSteps > 0) {
+      parts.push(`- Add ${lp.extraPracticeSteps} extra practice problem(s) per lesson`)
+    }
+    parts.push(`- Content detail: ${lp.contentFormat}`)
   }
 
   parts.push(`\n**CRITICAL**: Vocabulary, examples, and complexity MUST match the student's education level (${ageConfig.name}).

@@ -133,6 +133,11 @@ CREATE OR REPLACE FUNCTION upsert_feature_affinity(
   p_is_voluntary BOOLEAN
 ) RETURNS VOID AS $$
 BEGIN
+  -- Ensure the caller can only modify their own data
+  IF p_user_id != auth.uid() THEN
+    RAISE EXCEPTION 'Cannot modify another user''s data';
+  END IF;
+
   INSERT INTO feature_affinity (user_id, feature_name, visit_count, total_time_ms, last_used_at, voluntary_usage_count, nudged_usage_count)
   VALUES (p_user_id, p_feature_name, 1, p_time_spent_ms, NOW(),
     CASE WHEN p_is_voluntary THEN 1 ELSE 0 END,

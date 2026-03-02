@@ -49,8 +49,10 @@ export function useExplanationTracker(sourceType: string, sourceId?: string) {
     })
 
     // Use sendBeacon for reliability (works on page unload)
+    // Wrap in Blob with explicit Content-Type to ensure proper JSON parsing
     if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-      navigator.sendBeacon('/api/tracking/explanation-engagement', payload)
+      const blob = new Blob([payload], { type: 'application/json' })
+      navigator.sendBeacon('/api/tracking/explanation-engagement', blob)
     } else {
       // Fallback to fetch
       fetch('/api/tracking/explanation-engagement', {

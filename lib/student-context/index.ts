@@ -148,7 +148,7 @@ export async function getStudentContext(
     // 11. study_sessions: fatigue data (last 30 days, where fatigue was detected)
     supabase
       .from('study_sessions')
-      .select('fatigue_detected, fatigue_onset_minute, started_at')
+      .select('fatigue_detected, fatigue_detected_at_minute, started_at')
       .eq('user_id', userId)
       .eq('is_completed', true)
       .gte('started_at', thirtyDaysAgo.toISOString())
@@ -171,12 +171,14 @@ export async function getStudentContext(
       .limit(20),
 
     // 14. practice_session_questions: answer behavior (revision data)
+    // Note: practice_session_questions has no user_id column, so we query
+    // practice_sessions filtered by user_id and select related questions.
     supabase
-      .from('practice_session_questions')
-      .select('answer_revision_count, revision_helped, time_to_first_action_ms')
+      .from('practice_sessions')
+      .select('practice_session_questions(answer_revision_count, revision_helped, time_to_first_action_ms, created_at)')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .limit(100),
+      .limit(20),
   ])
 
   // ─── Extract results with safe fallbacks ─────────────────────────────────
@@ -201,7 +203,12 @@ export async function getStudentContext(
   const fatigueSessions = extractSettledArray(fatigueSessionsResult) as unknown as FatigueSessionRow[]
   const explanationRows = extractSettledArray(explanationEngagementResult) as unknown as ExplanationEngagementRow[]
   const featureAffinityRows = extractSettledArray(featureAffinityResult) as unknown as FeatureAffinityRow[]
-  const answerBehaviorRows = extractSettledArray(answerBehaviorResult) as unknown as AnswerBehaviorRow[]
+  // Answer behavior comes from sessions with nested questions — flatten
+  const answerBehaviorSessions = extractSettledArray(answerBehaviorResult) as unknown as Array<{
+    practice_session_questions: AnswerBehaviorRow[]
+  }>
+  const answerBehaviorRows: AnswerBehaviorRow[] = answerBehaviorSessions
+    .flatMap(s => s.practice_session_questions || [])
 
   // Counts from head: true queries use the `count` property
   const cardsDueToday = extractSettledCount(cardsDueTodayResult)
@@ -586,7 +593,7 @@ function getStartOfWeek(date: Date): Date {
 
 interface FatigueSessionRow {
   fatigue_detected: boolean | null
-  fatigue_onset_minute: number | null
+  fatigue_detected_at_minute: number | null
   started_at: string
 }
 
@@ -600,8 +607,8 @@ function computeFatigueSignals(sessions: FatigueSessionRow[]): {
 
   // Compute average fatigue onset minute from sessions that have it
   const onsetMinutes = sessions
-    .filter(s => s.fatigue_onset_minute != null && s.fatigue_onset_minute > 0)
-    .map(s => s.fatigue_onset_minute!)
+    .filter(s => s.fatigue_detected_at_minute != null && s.fatigue_detected_at_minute > 0)
+    .map(s => s.fatigue_detected_at_minute!)
 
   const avgFatigueOnsetMinute = onsetMinutes.length > 0
     ? Math.round(onsetMinutes.reduce((a, b) => a + b, 0) / onsetMinutes.length)
