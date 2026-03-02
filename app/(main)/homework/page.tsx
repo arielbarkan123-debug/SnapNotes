@@ -16,6 +16,7 @@ interface RecentItem {
   title: string
   subject: string
   date: string
+  rawDate: string
   status: string
   grade?: string
 }
@@ -188,6 +189,7 @@ export default function HomeworkHubPage() {
             title: check.topic || t('homeworkCheck'),
             subject: check.subject || 'General',
             date: new Date(check.created_at).toLocaleDateString(),
+            rawDate: check.created_at,
             status: check.status,
             grade: check.feedback?.gradeEstimate,
           }))
@@ -205,6 +207,7 @@ export default function HomeworkHubPage() {
             title: session.detected_topic || session.question_text?.slice(0, 50) || t('homeworkHelper'),
             subject: session.detected_subject || 'General',
             date: new Date(session.created_at).toLocaleDateString(),
+            rawDate: session.created_at,
             status: session.status,
           }))
           helpCount = sessions?.length || 0
@@ -212,7 +215,7 @@ export default function HomeworkHubPage() {
 
         // Merge and sort by date (newest first)
         const allItems = [...recentChecks, ...helpItems].sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+          (a, b) => new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime()
         ).slice(0, 5)
 
         setRecentItems(allItems)

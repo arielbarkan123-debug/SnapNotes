@@ -371,7 +371,7 @@ export default function HomeworkResultsPage() {
       <div className="min-h-screen flex">
         {/* Sessions Sidebar - Desktop */}
         <aside
-          className={`hidden md:flex flex-col w-[280px] flex-shrink-0 bg-white dark:bg-gray-800 border-e border-gray-200 dark:border-gray-700 transition-all duration-300 ${
+          className={`hidden md:flex flex-col w-[280px] flex-shrink-0 sticky top-0 h-screen bg-white dark:bg-gray-800 border-e border-gray-200 dark:border-gray-700 transition-all duration-300 ${
             showSessionsSidebar ? 'translate-x-0' : '-translate-x-full absolute'
           }`}
         >
