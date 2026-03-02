@@ -63,6 +63,23 @@ export interface StudentContext {
   weakestCourseId: string | null
   strongestCourseId: string | null
 
+  // Fatigue Signals (from study_sessions)
+  avgFatigueOnsetMinute: number | null    // when fatigue typically kicks in
+  lastSessionFatigued: boolean
+
+  // Explanation Engagement (from explanation_engagement)
+  avgExplanationReadTimeMs: number
+  explanationEffectiveness: number        // 0-1, correlates reading → next question correct
+
+  // Feature Affinity (from feature_affinity)
+  preferredFeatures: string[]             // top 3 most-used features
+  underusedFeatures: string[]             // features that could help but aren't used
+
+  // Answer Behavior (from practice_session_questions)
+  revisionRate: number                    // 0-1, % of answers revised
+  revisionHelpsRate: number               // 0-1, % of revisions that improved answer
+  avgTimeToFirstActionMs: number          // average thinking time before answering
+
   // Meta
   contextGeneratedAt: string         // ISO timestamp
 }

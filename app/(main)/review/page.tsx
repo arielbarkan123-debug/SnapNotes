@@ -10,6 +10,7 @@ import RatingButtons from '@/components/srs/RatingButtons'
 import DifficultyFeedback from '@/components/shared/DifficultyFeedback'
 import { useEventTracking } from '@/lib/analytics'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
+import { useFeatureTracker } from '@/lib/student-context/feature-tracker'
 import type { Rating, ReviewSession } from '@/types'
 import type { MistakeItem } from '@/components/practice/MistakeReview'
 
@@ -37,6 +38,9 @@ interface SessionStats {
 // =============================================================================
 
 export default function ReviewPage() {
+  // Track feature usage for implicit data collection
+  useFeatureTracker('review')
+
   const router = useRouter()
   const { trackFeature } = useEventTracking()
   const t = useTranslations('review')

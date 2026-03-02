@@ -7,8 +7,12 @@ import { useTranslations } from 'next-intl'
 import { useExams, useCourses, EXAMS_CACHE_KEY } from '@/hooks'
 import { usePastExamTemplates } from '@/hooks/usePastExamTemplates'
 import { useSWRConfig } from 'swr'
+import { useFeatureTracker } from '@/lib/student-context/feature-tracker'
 
 export default function ExamsPage() {
+  // Track feature usage for implicit data collection
+  useFeatureTracker('exams')
+
   const router = useRouter()
   const { mutate: globalMutate } = useSWRConfig()
   const t = useTranslations('exam')

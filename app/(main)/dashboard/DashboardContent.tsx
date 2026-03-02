@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, Component, type ReactNode, type ErrorInfo, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, Component, type ReactNode, type ErrorInfo, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -12,6 +12,7 @@ import { useToast } from '@/contexts/ToastContext'
 import { useStudyPlan } from '@/hooks/useStudyPlan'
 import { ChevronRight, Check, ArrowRight } from 'lucide-react'
 import type { StudyPlanTask } from '@/lib/study-plan/types'
+import { useFeatureTracker } from '@/lib/student-context/feature-tracker'
 
 // ============================================================================
 // Component-Level Error Boundary
@@ -78,10 +79,23 @@ interface DashboardContentProps {
 }
 
 export default function DashboardContent({ initialCourses, userName, dbError }: DashboardContentProps) {
+  // Track feature usage for implicit data collection
+  useFeatureTracker('dashboard')
+
   const router = useRouter()
   const t = useTranslations('dashboard')
   const tTask = useTranslations('studyPlan.taskTypes')
   const { error: showError, success: showSuccess } = useToast()
+
+  // Recommendation click tracking — fire and forget
+  const trackRecommendationClick = useCallback((trackingId: string) => {
+    fetch('/api/tracking/recommendation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recommendationId: trackingId }),
+    }).catch(() => {}) // silent fail
+  }, [])
+
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [isGeneratingCovers, setIsGeneratingCovers] = useState(false)
 
@@ -217,6 +231,7 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
           <Link
             href={currentCourse ? `/course/${currentCourse.course.id}/lesson/${currentCourse.lessonIndex}` : '/dashboard'}
             className="bg-gradient-to-br from-violet-500 to-purple-600 rounded-[22px] p-5 text-white shadow-card card-hover-lift relative overflow-hidden group"
+            onClick={() => trackRecommendationClick('continue_learning')}
           >
             <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
             <h3 className="font-bold text-lg mb-1">{t('continueLearningTitle')}</h3>
@@ -237,6 +252,7 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
           <Link
             href="/homework"
             className="bg-white dark:bg-gray-800 rounded-[22px] p-5 border border-gray-200 dark:border-gray-700 shadow-card card-hover-lift group"
+            onClick={() => trackRecommendationClick('check_homework')}
           >
             <div className="w-14 h-14 rounded-2xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center mb-3">
               <span className="text-3xl">📝</span>
@@ -249,6 +265,7 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
           <Link
             href="/practice"
             className="bg-white dark:bg-gray-800 rounded-[22px] p-5 border border-gray-200 dark:border-gray-700 shadow-card card-hover-lift group relative"
+            onClick={() => trackRecommendationClick('quick_practice')}
           >
             <span className="absolute top-4 end-4 text-xs font-semibold px-2 py-0.5 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-full">
               {t('newBadge')}

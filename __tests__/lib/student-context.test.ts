@@ -147,6 +147,35 @@ const PROGRESS_ROWS = [
   },
 ]
 
+const EXPLANATION_ENGAGEMENT = [
+  { time_spent_reading_ms: 5000, next_similar_question_correct: true },
+  { time_spent_reading_ms: 3000, next_similar_question_correct: false },
+  { time_spent_reading_ms: 4000, next_similar_question_correct: true },
+]
+
+const FEATURE_AFFINITY = [
+  { feature_name: 'practice', visit_count: 15, total_time_ms: 120000 },
+  { feature_name: 'homework', visit_count: 10, total_time_ms: 90000 },
+  { feature_name: 'dashboard', visit_count: 8, total_time_ms: 30000 },
+  { feature_name: 'review', visit_count: 1, total_time_ms: 5000 },
+]
+
+const ANSWER_BEHAVIOR = [
+  { answer_revision_count: 2, revision_helped: true, time_to_first_action_ms: 3000 },
+  { answer_revision_count: 0, revision_helped: null, time_to_first_action_ms: 2500 },
+  { answer_revision_count: 1, revision_helped: false, time_to_first_action_ms: 4000 },
+  { answer_revision_count: 0, revision_helped: null, time_to_first_action_ms: 3500 },
+]
+
+// Study sessions that include fatigue data — the mock returns same response
+// for both study_sessions queries (weekly + fatigue). The compute functions
+// filter for the fields they need, so this works correctly.
+const STUDY_SESSIONS_WITH_FATIGUE = [
+  { duration_seconds: 1200, started_at: '2026-03-01T17:00:00Z', fatigue_detected: true, fatigue_onset_minute: 25 },
+  { duration_seconds: 900, started_at: '2026-03-01T17:30:00Z', fatigue_detected: null, fatigue_onset_minute: null },
+  { duration_seconds: 1500, started_at: '2026-02-28T10:00:00Z', fatigue_detected: true, fatigue_onset_minute: 30 },
+]
+
 function fullTableResponses() {
   return {
     user_learning_profile: { data: FULL_PROFILE, error: null },
@@ -154,9 +183,13 @@ function fullTableResponses() {
     mistake_patterns: { data: FULL_MISTAKE_PATTERNS, error: null },
     user_gamification: { data: FULL_GAMIFICATION, error: null },
     review_cards: { data: null, error: null, count: 12 },
-    study_sessions: { data: STUDY_SESSIONS, error: null },
+    study_sessions: { data: STUDY_SESSIONS_WITH_FATIGUE, error: null },
     user_mastery: { data: MASTERY_ROWS, error: null },
     user_progress: { data: PROGRESS_ROWS, error: null },
+    // New implicit data tables
+    explanation_engagement: { data: EXPLANATION_ENGAGEMENT, error: null },
+    feature_affinity: { data: FEATURE_AFFINITY, error: null },
+    practice_session_questions: { data: ANSWER_BEHAVIOR, error: null },
   }
 }
 
@@ -295,6 +328,57 @@ describe('getStudentContext', () => {
     expect(ctx.contextGeneratedAt <= after).toBe(true)
   })
 
+  // ─── New behavioral data ─────────────────────────────────────────────────
+
+  it('computes fatigue signals from study sessions', async () => {
+    const responses = fullTableResponses()
+    const supabase = createMockSupabase(responses)
+
+    const ctx = (await getStudentContext(supabase as any, USER_ID))!
+    // avgFatigueOnsetMinute: (25 + 30) / 2 = 27.5 -> 28 (rounded)
+    expect(ctx.avgFatigueOnsetMinute).toBe(28)
+    // The mock returns same data for both study_sessions queries (weekly + fatigue).
+    // Most recent by started_at is 17:30 with fatigue_detected = null -> false
+    expect(ctx.lastSessionFatigued).toBe(false)
+  })
+
+  it('computes explanation engagement metrics', async () => {
+    const responses = fullTableResponses()
+    const supabase = createMockSupabase(responses)
+
+    const ctx = (await getStudentContext(supabase as any, USER_ID))!
+    // avg read time: (5000 + 3000 + 4000) / 3 = 4000
+    expect(ctx.avgExplanationReadTimeMs).toBe(4000)
+    // effectiveness: 2/3 correct after = 0.67
+    expect(ctx.explanationEffectiveness).toBe(0.67)
+  })
+
+  it('computes feature affinity data', async () => {
+    const responses = fullTableResponses()
+    const supabase = createMockSupabase(responses)
+
+    const ctx = (await getStudentContext(supabase as any, USER_ID))!
+    // Top 3 by visit_count: practice (15), homework (10), dashboard (8)
+    expect(ctx.preferredFeatures).toEqual(['practice', 'homework', 'dashboard'])
+    // 'review' has visit_count 1 (< 3), so underused; 'exams', 'courses', 'study-plan' not present
+    expect(ctx.underusedFeatures).toContain('review')
+    expect(ctx.underusedFeatures).toContain('exams')
+    expect(ctx.underusedFeatures).toContain('courses')
+  })
+
+  it('computes answer behavior metrics', async () => {
+    const responses = fullTableResponses()
+    const supabase = createMockSupabase(responses)
+
+    const ctx = (await getStudentContext(supabase as any, USER_ID))!
+    // 2 out of 4 had revision_count > 0 = 0.5
+    expect(ctx.revisionRate).toBe(0.5)
+    // Of revised (2): 1 had revision_helped = true = 0.5
+    expect(ctx.revisionHelpsRate).toBe(0.5)
+    // avg time: (3000 + 2500 + 4000 + 3500) / 4 = 3250
+    expect(ctx.avgTimeToFirstActionMs).toBe(3250)
+  })
+
   // ─── Safe defaults ───────────────────────────────────────────────────────
 
   it('provides safe defaults when only profile exists (all other tables empty)', async () => {
@@ -355,6 +439,23 @@ describe('getStudentContext', () => {
     expect(ctx.activeCourses).toEqual([])
     expect(ctx.weakestCourseId).toBeNull()
     expect(ctx.strongestCourseId).toBeNull()
+
+    // Fatigue defaults
+    expect(ctx.avgFatigueOnsetMinute).toBeNull()
+    expect(ctx.lastSessionFatigued).toBe(false)
+
+    // Explanation engagement defaults
+    expect(ctx.avgExplanationReadTimeMs).toBe(0)
+    expect(ctx.explanationEffectiveness).toBe(0)
+
+    // Feature affinity defaults
+    expect(ctx.preferredFeatures).toEqual([])
+    expect(ctx.underusedFeatures).toEqual(expect.arrayContaining(['practice', 'homework', 'review']))
+
+    // Answer behavior defaults
+    expect(ctx.revisionRate).toBe(0)
+    expect(ctx.revisionHelpsRate).toBe(0)
+    expect(ctx.avgTimeToFirstActionMs).toBe(0)
   })
 
   it('handles English language correctly', async () => {
@@ -478,6 +579,10 @@ describe('getStudentContext', () => {
     expect(tables).toContain('study_sessions')
     expect(tables).toContain('user_mastery')
     expect(tables).toContain('user_progress')
+    // New implicit data tables
+    expect(tables).toContain('explanation_engagement')
+    expect(tables).toContain('feature_affinity')
+    expect(tables).toContain('practice_session_questions')
   })
 
   it('handles rejected promises gracefully (returns defaults)', async () => {

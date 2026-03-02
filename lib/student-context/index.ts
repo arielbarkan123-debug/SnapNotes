@@ -40,8 +40,9 @@ export async function getStudentContext(
   const now = new Date()
   const startOfWeek = getStartOfWeek(now)
   const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
-  // Run all 10 queries in parallel
+  // Run all 14 queries in parallel
   const [
     profileResult,
     refinementResult,
@@ -53,6 +54,10 @@ export async function getStudentContext(
     studySessionsResult,
     masteryResult,
     progressResult,
+    fatigueSessionsResult,
+    explanationEngagementResult,
+    featureAffinityResult,
+    answerBehaviorResult,
   ] = await Promise.allSettled([
     // 1. user_learning_profile
     supabase
@@ -139,6 +144,39 @@ export async function getStudentContext(
         'courses!inner(id, title, generated_course)'
       )
       .eq('user_id', userId),
+
+    // 11. study_sessions: fatigue data (last 30 days, where fatigue was detected)
+    supabase
+      .from('study_sessions')
+      .select('fatigue_detected, fatigue_onset_minute, started_at')
+      .eq('user_id', userId)
+      .eq('is_completed', true)
+      .gte('started_at', thirtyDaysAgo.toISOString())
+      .not('fatigue_detected', 'is', null),
+
+    // 12. explanation_engagement: reading time and effectiveness
+    supabase
+      .from('explanation_engagement')
+      .select('time_spent_reading_ms, next_similar_question_correct')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50),
+
+    // 13. feature_affinity: most-used features
+    supabase
+      .from('feature_affinity')
+      .select('feature_name, visit_count, total_time_ms')
+      .eq('user_id', userId)
+      .order('visit_count', { ascending: false })
+      .limit(20),
+
+    // 14. practice_session_questions: answer behavior (revision data)
+    supabase
+      .from('practice_session_questions')
+      .select('answer_revision_count, revision_helped, time_to_first_action_ms')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(100),
   ])
 
   // ─── Extract results with safe fallbacks ─────────────────────────────────
@@ -158,6 +196,12 @@ export async function getStudentContext(
   const studySessions = extractSettledArray(studySessionsResult) as unknown as StudySessionRow[]
   const masteryRows = extractSettledArray(masteryResult) as unknown as MasteryRow[]
   const progressRows = extractSettledArray(progressResult) as unknown as ProgressRow[]
+
+  // New implicit data queries
+  const fatigueSessions = extractSettledArray(fatigueSessionsResult) as unknown as FatigueSessionRow[]
+  const explanationRows = extractSettledArray(explanationEngagementResult) as unknown as ExplanationEngagementRow[]
+  const featureAffinityRows = extractSettledArray(featureAffinityResult) as unknown as FeatureAffinityRow[]
+  const answerBehaviorRows = extractSettledArray(answerBehaviorResult) as unknown as AnswerBehaviorRow[]
 
   // Counts from head: true queries use the `count` property
   const cardsDueToday = extractSettledCount(cardsDueTodayResult)
@@ -187,6 +231,20 @@ export async function getStudentContext(
 
   // Weakest / strongest course
   const { weakestCourseId, strongestCourseId } = findWeakestStrongest(activeCourses)
+
+  // Fatigue signals
+  const { avgFatigueOnsetMinute, lastSessionFatigued } = computeFatigueSignals(fatigueSessions)
+
+  // Explanation engagement
+  const { avgExplanationReadTimeMs, explanationEffectiveness } =
+    computeExplanationEngagement(explanationRows)
+
+  // Feature affinity
+  const { preferredFeatures, underusedFeatures } = computeFeatureAffinity(featureAffinityRows)
+
+  // Answer behavior
+  const { revisionRate, revisionHelpsRate, avgTimeToFirstActionMs } =
+    computeAnswerBehavior(answerBehaviorRows)
 
   // ─── Assemble context ────────────────────────────────────────────────────
 
@@ -242,6 +300,23 @@ export async function getStudentContext(
     activeCourses,
     weakestCourseId,
     strongestCourseId,
+
+    // Fatigue Signals
+    avgFatigueOnsetMinute,
+    lastSessionFatigued,
+
+    // Explanation Engagement
+    avgExplanationReadTimeMs,
+    explanationEffectiveness,
+
+    // Feature Affinity
+    preferredFeatures,
+    underusedFeatures,
+
+    // Answer Behavior
+    revisionRate,
+    revisionHelpsRate,
+    avgTimeToFirstActionMs,
 
     // Meta
     contextGeneratedAt: now.toISOString(),
@@ -503,4 +578,153 @@ function getStartOfWeek(date: Date): Date {
   d.setDate(diff)
   d.setHours(0, 0, 0, 0)
   return d
+}
+
+// =============================================================================
+// Fatigue signals from study_sessions
+// =============================================================================
+
+interface FatigueSessionRow {
+  fatigue_detected: boolean | null
+  fatigue_onset_minute: number | null
+  started_at: string
+}
+
+function computeFatigueSignals(sessions: FatigueSessionRow[]): {
+  avgFatigueOnsetMinute: number | null
+  lastSessionFatigued: boolean
+} {
+  if (sessions.length === 0) {
+    return { avgFatigueOnsetMinute: null, lastSessionFatigued: false }
+  }
+
+  // Compute average fatigue onset minute from sessions that have it
+  const onsetMinutes = sessions
+    .filter(s => s.fatigue_onset_minute != null && s.fatigue_onset_minute > 0)
+    .map(s => s.fatigue_onset_minute!)
+
+  const avgFatigueOnsetMinute = onsetMinutes.length > 0
+    ? Math.round(onsetMinutes.reduce((a, b) => a + b, 0) / onsetMinutes.length)
+    : null
+
+  // Check if most recent session had fatigue
+  // Sessions come from query ordered by started_at via gte filter — pick most recent
+  const sorted = [...sessions].sort(
+    (a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
+  )
+  const lastSessionFatigued = sorted[0]?.fatigue_detected === true
+
+  return { avgFatigueOnsetMinute, lastSessionFatigued }
+}
+
+// =============================================================================
+// Explanation engagement
+// =============================================================================
+
+interface ExplanationEngagementRow {
+  time_spent_reading_ms: number | null
+  next_similar_question_correct: boolean | null
+}
+
+function computeExplanationEngagement(rows: ExplanationEngagementRow[]): {
+  avgExplanationReadTimeMs: number
+  explanationEffectiveness: number
+} {
+  if (rows.length === 0) {
+    return { avgExplanationReadTimeMs: 0, explanationEffectiveness: 0 }
+  }
+
+  // Average read time
+  const readTimes = rows
+    .filter(r => r.time_spent_reading_ms != null && r.time_spent_reading_ms > 0)
+    .map(r => r.time_spent_reading_ms!)
+
+  const avgExplanationReadTimeMs = readTimes.length > 0
+    ? Math.round(readTimes.reduce((a, b) => a + b, 0) / readTimes.length)
+    : 0
+
+  // Effectiveness: ratio of rows where next_similar_question_correct = true
+  const withOutcome = rows.filter(r => r.next_similar_question_correct !== null)
+  const correctAfter = withOutcome.filter(r => r.next_similar_question_correct === true).length
+  const explanationEffectiveness = withOutcome.length > 0
+    ? Number((correctAfter / withOutcome.length).toFixed(2))
+    : 0
+
+  return { avgExplanationReadTimeMs, explanationEffectiveness }
+}
+
+// =============================================================================
+// Feature affinity
+// =============================================================================
+
+interface FeatureAffinityRow {
+  feature_name: string
+  visit_count: number
+  total_time_ms: number | null
+}
+
+// All features the app offers — used to compute underused features
+const ALL_APP_FEATURES = [
+  'practice', 'homework', 'review', 'exams', 'dashboard', 'courses', 'study-plan',
+]
+
+function computeFeatureAffinity(rows: FeatureAffinityRow[]): {
+  preferredFeatures: string[]
+  underusedFeatures: string[]
+} {
+  if (rows.length === 0) {
+    return { preferredFeatures: [], underusedFeatures: [...ALL_APP_FEATURES] }
+  }
+
+  // Top 3 by visit_count (already sorted DESC from query)
+  const preferredFeatures = rows.slice(0, 3).map(r => r.feature_name)
+
+  // Features the user hasn't used much (visit_count < 3)
+  const usedFeatureSet = new Set(rows.filter(r => r.visit_count >= 3).map(r => r.feature_name))
+  const underusedFeatures = ALL_APP_FEATURES.filter(f => !usedFeatureSet.has(f))
+
+  return { preferredFeatures, underusedFeatures }
+}
+
+// =============================================================================
+// Answer behavior from practice_session_questions
+// =============================================================================
+
+interface AnswerBehaviorRow {
+  answer_revision_count: number | null
+  revision_helped: boolean | null
+  time_to_first_action_ms: number | null
+}
+
+function computeAnswerBehavior(rows: AnswerBehaviorRow[]): {
+  revisionRate: number
+  revisionHelpsRate: number
+  avgTimeToFirstActionMs: number
+} {
+  if (rows.length === 0) {
+    return { revisionRate: 0, revisionHelpsRate: 0, avgTimeToFirstActionMs: 0 }
+  }
+
+  // Revision rate: % of rows where answer_revision_count > 0
+  const revisedRows = rows.filter(
+    r => r.answer_revision_count != null && r.answer_revision_count > 0
+  )
+  const revisionRate = Number((revisedRows.length / rows.length).toFixed(2))
+
+  // Revision helps rate: % of revised rows where revision_helped = true
+  const helpedRows = revisedRows.filter(r => r.revision_helped === true)
+  const revisionHelpsRate = revisedRows.length > 0
+    ? Number((helpedRows.length / revisedRows.length).toFixed(2))
+    : 0
+
+  // Average time to first action
+  const actionTimes = rows
+    .filter(r => r.time_to_first_action_ms != null && r.time_to_first_action_ms > 0)
+    .map(r => r.time_to_first_action_ms!)
+
+  const avgTimeToFirstActionMs = actionTimes.length > 0
+    ? Math.round(actionTimes.reduce((a, b) => a + b, 0) / actionTimes.length)
+    : 0
+
+  return { revisionRate, revisionHelpsRate, avgTimeToFirstActionMs }
 }

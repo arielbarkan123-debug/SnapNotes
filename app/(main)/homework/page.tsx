@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import Button from '@/components/ui/Button'
 import { useEventTracking } from '@/lib/analytics/hooks'
+import { useFeatureTracker } from '@/lib/student-context/feature-tracker'
 
 // ============================================================================
 // Types
@@ -155,6 +156,9 @@ function StatsCard({ value, label, icon }: { value: string; label: string; icon:
 // ============================================================================
 
 export default function HomeworkHubPage() {
+  // Track feature usage for implicit data collection
+  useFeatureTracker('homework')
+
   const t = useTranslations('homework')
   const [recentItems, setRecentItems] = useState<RecentItem[]>([])
   const [stats, setStats] = useState({ checksCount: 0, helpSessions: 0, avgGrade: '-' })

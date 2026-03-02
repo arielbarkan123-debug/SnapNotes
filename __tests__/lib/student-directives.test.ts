@@ -84,6 +84,23 @@ function makeContext(overrides: Partial<StudentContext> = {}): StudentContext {
     weakestCourseId: 'course-physics',
     strongestCourseId: 'course-math',
 
+    // Fatigue Signals
+    avgFatigueOnsetMinute: null,
+    lastSessionFatigued: false,
+
+    // Explanation Engagement
+    avgExplanationReadTimeMs: 0,
+    explanationEffectiveness: 0,
+
+    // Feature Affinity
+    preferredFeatures: [],
+    underusedFeatures: [],
+
+    // Answer Behavior
+    revisionRate: 0,
+    revisionHelpsRate: 0,
+    avgTimeToFirstActionMs: 0,
+
     contextGeneratedAt: '2026-03-02T10:00:00Z',
   }
 
@@ -1083,5 +1100,164 @@ describe('generateDirectives — integration edge cases', () => {
     expect(d.lessons.extraPracticeSteps).toBe(3)
     expect(d.srs.adjustedNewCardLimit).toBe(5) // overwhelmed
     expect(d.exams.estimatedScore).toBe(30)
+  })
+})
+
+// =============================================================================
+// 7. Behavioral Data Integration Tests
+// =============================================================================
+
+describe('behavioral data — fatigue-capped sessions', () => {
+  it('caps session length to fatigue onset minus 5 minutes', () => {
+    const ctx = makeContext({
+      avgSessionLengthMinutes: 30,
+      avgFatigueOnsetMinute: 20,
+    })
+    const { practice } = generateDirectives(ctx)
+    // Cap = 20 - 5 = 15. Session would be 30 but capped to 15
+    expect(practice.recommendedSessionLength).toBe(15)
+  })
+
+  it('does not cap when fatigue onset is null', () => {
+    const ctx = makeContext({
+      avgSessionLengthMinutes: 30,
+      avgFatigueOnsetMinute: null,
+    })
+    const { practice } = generateDirectives(ctx)
+    expect(practice.recommendedSessionLength).toBe(30)
+  })
+
+  it('caps at minimum 5 minutes even with very early fatigue', () => {
+    const ctx = makeContext({
+      avgSessionLengthMinutes: 30,
+      avgFatigueOnsetMinute: 3,
+    })
+    const { practice } = generateDirectives(ctx)
+    expect(practice.recommendedSessionLength).toBe(5)
+  })
+
+  it('allows sessions shorter than fatigue cap', () => {
+    const ctx = makeContext({
+      avgSessionLengthMinutes: 10,
+      avgFatigueOnsetMinute: 25,
+    })
+    const { practice } = generateDirectives(ctx)
+    // Cap = 20. Session avg is 10, which is below cap. Result = 10
+    expect(practice.recommendedSessionLength).toBe(10)
+  })
+})
+
+describe('behavioral data — explanation style switching', () => {
+  it('switches from visual to step-by-step when effectiveness < 0.3', () => {
+    const ctx = makeContext({
+      learningStyles: ['visual'],
+      explanationEffectiveness: 0.2,
+    })
+    const { homework } = generateDirectives(ctx)
+    expect(homework.preferredExplanationStyle).toBe('step-by-step')
+  })
+
+  it('switches from step-by-step to visual when effectiveness < 0.3', () => {
+    const ctx = makeContext({
+      learningStyles: ['reading'],
+      explanationEffectiveness: 0.1,
+    })
+    const { homework } = generateDirectives(ctx)
+    // reading -> step-by-step (base), then switched to visual
+    expect(homework.preferredExplanationStyle).toBe('visual')
+  })
+
+  it('keeps style when effectiveness >= 0.3', () => {
+    const ctx = makeContext({
+      learningStyles: ['visual'],
+      explanationEffectiveness: 0.5,
+    })
+    const { homework } = generateDirectives(ctx)
+    expect(homework.preferredExplanationStyle).toBe('visual')
+  })
+
+  it('keeps style when effectiveness is 0 (no data)', () => {
+    const ctx = makeContext({
+      learningStyles: ['visual'],
+      explanationEffectiveness: 0,
+    })
+    const { homework } = generateDirectives(ctx)
+    expect(homework.preferredExplanationStyle).toBe('visual')
+  })
+})
+
+describe('behavioral data — feature affinity nudges', () => {
+  it('nudges practice when underused and student has weak concepts', () => {
+    const ctx = makeContext({
+      underusedFeatures: ['practice', 'review'],
+      weakConceptIds: ['algebra'],
+    })
+    const { dashboard } = generateDirectives(ctx)
+    expect(dashboard.nudge).toContain('practice')
+  })
+
+  it('nudges review when underused and cards are due', () => {
+    const ctx = makeContext({
+      underusedFeatures: ['review'],
+      weakConceptIds: [],
+      cardsDueToday: 10,
+    })
+    const { dashboard } = generateDirectives(ctx)
+    expect(dashboard.nudge).toContain('review')
+  })
+
+  it('does not nudge practice when not underused', () => {
+    const ctx = makeContext({
+      underusedFeatures: ['exams'],
+      weakConceptIds: ['algebra'],
+      trendDirection: 'stable',
+      sessionsThisWeek: 3,
+    })
+    const { dashboard } = generateDirectives(ctx)
+    // No practice nudge, and stable with sessions -> null
+    expect(dashboard.nudge).toBeNull()
+  })
+})
+
+describe('behavioral data — revision-adjusted SRS', () => {
+  it('reduces new card limit by 5 when revisionRate > 0.3', () => {
+    const ctx = makeContext({
+      cardsDueToday: 15,
+      rollingAccuracy: 0.70,
+      revisionRate: 0.4,
+    })
+    const { srs } = generateDirectives(ctx)
+    // Base: 20 (normal conditions), minus 5 for high revision = 15
+    expect(srs.adjustedNewCardLimit).toBe(15)
+  })
+
+  it('does not reduce below 5', () => {
+    const ctx = makeContext({
+      cardsDueToday: 50,
+      rollingAccuracy: 0.70,
+      revisionRate: 0.5,
+    })
+    const { srs } = generateDirectives(ctx)
+    // Base: 10 (cards > 40), minus 5 for revision = 5
+    expect(srs.adjustedNewCardLimit).toBe(5)
+  })
+
+  it('does not reduce when revisionRate <= 0.3', () => {
+    const ctx = makeContext({
+      cardsDueToday: 15,
+      rollingAccuracy: 0.70,
+      revisionRate: 0.2,
+    })
+    const { srs } = generateDirectives(ctx)
+    expect(srs.adjustedNewCardLimit).toBe(20)
+  })
+
+  it('does not reduce when already at 5 (overwhelmed)', () => {
+    const ctx = makeContext({
+      cardsDueToday: 75,
+      revisionRate: 0.5,
+    })
+    const { srs } = generateDirectives(ctx)
+    expect(srs.adjustedNewCardLimit).toBe(5)
   })
 })

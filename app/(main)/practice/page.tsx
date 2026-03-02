@@ -10,6 +10,7 @@ import type { ReviewCard as ReviewCardType } from '@/types/srs'
 import { useCourses } from '@/hooks'
 import { useEventTracking } from '@/lib/analytics'
 import { useVisuals } from '@/contexts/VisualsContext'
+import { useFeatureTracker } from '@/lib/student-context/feature-tracker'
 import DifficultyFeedback from '@/components/shared/DifficultyFeedback'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import DiagramToggle from '@/components/ui/DiagramToggle'
@@ -140,6 +141,9 @@ const SESSION_EXPIRY_MS = 2 * 60 * 60 * 1000 // 2 hours
 // =============================================================================
 
 export default function PracticePage() {
+  // Track feature usage for implicit data collection
+  useFeatureTracker('practice')
+
   // SWR hook for courses with caching
   const { courses, isLoading: coursesLoading, error: coursesError } = useCourses()
 

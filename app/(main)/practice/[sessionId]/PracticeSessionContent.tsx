@@ -13,6 +13,7 @@ import { useToast } from '@/contexts/ToastContext'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import DifficultyFeedback from '@/components/shared/DifficultyFeedback'
 import ConfirmModal from '@/components/ui/ConfirmModal'
+import { useExplanationTracker } from '@/lib/student-context/explanation-tracker'
 import type {
   PracticeSession,
   PracticeQuestion,
@@ -427,6 +428,10 @@ export default function PracticeSessionContent({
   const { trackFeature } = useEventTracking()
   const { trackStep } = useFunnelTracking('adaptive_practice')
 
+  // Explanation engagement tracking
+  const { startTracking: startExplanationTracking, stopTracking: stopExplanationTracking } =
+    useExplanationTracker('practice', session.id)
+
   // State
   const [currentIndex, setCurrentIndex] = useState(session.current_question_index)
   const [view, setView] = useState<SessionView>('question')
@@ -529,6 +534,11 @@ export default function PracticeSessionContent({
         setCorrectCount(result.sessionProgress.questionsCorrect)
         setView('result')
 
+        // Start explanation engagement tracking when result/explanation is shown
+        if (currentQuestion?.explanation) {
+          startExplanationTracking(currentQuestion.id)
+        }
+
         // Track answer submitted
         trackFeature('practice_answer_submitted', {
           sessionId: session.id,
@@ -552,6 +562,9 @@ export default function PracticeSessionContent({
 
   // Handle next question
   const handleNext = useCallback(async () => {
+    // Stop explanation tracking when moving to next question
+    stopExplanationTracking()
+
     const nextIndex = currentIndex + 1
 
     if (nextIndex >= questions.length) {
@@ -582,7 +595,7 @@ export default function PracticeSessionContent({
       setLastResult(null)
       startTimeRef.current = Date.now()
     }
-  }, [currentIndex, questions.length, session.id, session.session_type, answeredCount, correctCount, trackStep, trackFeature])
+  }, [currentIndex, questions.length, session.id, session.session_type, answeredCount, correctCount, trackStep, trackFeature, stopExplanationTracking])
 
   // Handle abandon
   const handleAbandon = useCallback(async () => {

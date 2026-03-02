@@ -51,7 +51,13 @@ export function buildPracticeDirectives(ctx: StudentContext): PracticeDirectives
   }
 
   // Session length: use actual average, bounded 5-45
-  const recommendedSessionLength = Math.max(5, Math.min(45, ctx.avgSessionLengthMinutes || 15))
+  // Cap by fatigue onset if known — never recommend sessions longer than when they fatigue
+  let sessionCap = 45
+  if (ctx.avgFatigueOnsetMinute != null && ctx.avgFatigueOnsetMinute > 0) {
+    // Allow up to 5 minutes before typical fatigue onset
+    sessionCap = Math.max(5, ctx.avgFatigueOnsetMinute - 5)
+  }
+  const recommendedSessionLength = Math.max(5, Math.min(sessionCap, ctx.avgSessionLengthMinutes || 15))
 
   // Question type weights: start balanced, adjust for mistake patterns
   const questionTypeWeights: Record<string, number> = {
@@ -139,6 +145,17 @@ export function buildHomeworkDirectives(ctx: StudentContext): HomeworkDirectives
     preferredExplanationStyle = 'step-by-step'
   } else {
     preferredExplanationStyle = 'mixed'
+  }
+
+  // If explanation effectiveness is low (< 0.3), current style isn't helping — try a different one
+  if (ctx.explanationEffectiveness > 0 && ctx.explanationEffectiveness < 0.3) {
+    const fallbackStyles: Record<string, 'visual' | 'step-by-step' | 'analogy' | 'mixed'> = {
+      'visual': 'step-by-step',
+      'step-by-step': 'visual',
+      'analogy': 'step-by-step',
+      'mixed': 'step-by-step',
+    }
+    preferredExplanationStyle = fallbackStyles[preferredExplanationStyle] || 'step-by-step'
   }
 
   // Anticipated misconceptions from mistake patterns
@@ -304,6 +321,22 @@ function determinePrimaryAction(ctx: StudentContext): DashboardAction {
 }
 
 function buildNudge(ctx: StudentContext): string | null {
+  // Feature affinity nudge: student has weak areas but never uses practice mode
+  if (
+    ctx.underusedFeatures.includes('practice') &&
+    ctx.weakConceptIds.length > 0
+  ) {
+    return 'You have weak areas that could improve with practice mode. Give it a try!'
+  }
+
+  // Feature affinity nudge: student never uses review (SRS) but has cards
+  if (
+    ctx.underusedFeatures.includes('review') &&
+    ctx.cardsDueToday > 0
+  ) {
+    return `You have ${ctx.cardsDueToday} review cards waiting. Spaced repetition is powerful!`
+  }
+
   if (ctx.trendDirection === 'improving') {
     if (ctx.sessionsThisWeek >= 5) {
       return "You're on fire! Great progress this week."
@@ -339,6 +372,12 @@ export function buildSrsDirectives(ctx: StudentContext): SrsDirectives {
     adjustedNewCardLimit = 10
   } else {
     adjustedNewCardLimit = 20
+  }
+
+  // If student frequently revises answers (> 0.3), they may be second-guessing.
+  // Reduce new card limit slightly to avoid cognitive overload.
+  if (ctx.revisionRate > 0.3 && adjustedNewCardLimit > 5) {
+    adjustedNewCardLimit = Math.max(5, adjustedNewCardLimit - 5)
   }
 
   // Interleave: recommended when studying 2+ subjects
