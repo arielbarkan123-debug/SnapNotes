@@ -18,6 +18,10 @@ export * from './types'
 // Re-export directives engine
 export { generateDirectives } from './directives'
 
+// Re-export fatigue detection
+export { detectSessionFatigue, computeAccuracyIntervals } from './fatigue-detector'
+export type { FatigueSignal, AccuracyInterval } from './fatigue-detector'
+
 // =============================================================================
 // Main function
 // =============================================================================

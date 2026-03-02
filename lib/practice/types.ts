@@ -147,6 +147,11 @@ export interface PracticeSessionQuestion {
   evaluation_score: number | null
   evaluation_feedback: string | null
   evaluation_method: string | null
+  // Answer revision tracking
+  time_to_first_action_ms: number | null
+  answer_revision_count: number
+  original_answer: string | null
+  revision_helped: boolean | null
   // Timestamps
   created_at: string
 }

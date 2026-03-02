@@ -14,10 +14,12 @@ import type {
   CreateSessionRequest,
   AnswerQuestionResponse,
 } from './types'
+import type { DifficultyLevel } from '@/lib/adaptive/types'
 import { selectExistingQuestions, generateAndStoreQuestions } from './question-generator'
 import { evaluateAnswer } from '@/lib/evaluation/answer-checker'
 import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
+import { getStudentContext, generateDirectives } from '@/lib/student-context'
 
 // -----------------------------------------------------------------------------
 // Session Creation
@@ -28,6 +30,18 @@ export async function createPracticeSession(
   request: CreateSessionRequest
 ): Promise<{ sessionId: string; questionCount: number }> {
   const supabase = await createClient()
+
+  // ─── Student Intelligence Injection ────────────────────────────────────────
+  // Load student context + directives for adaptive session configuration
+  let practiceDirectives: Awaited<ReturnType<typeof generateDirectives>>['practice'] | null = null
+  try {
+    const studentCtx = await getStudentContext(supabase, userId)
+    if (studentCtx) {
+      practiceDirectives = generateDirectives(studentCtx).practice
+    }
+  } catch (err) {
+    console.warn('[SessionManager] Failed to load student context, continuing with defaults:', err)
+  }
 
   // Determine target concepts based on session type
   let targetConceptIds = request.targetConceptIds || []
@@ -45,9 +59,25 @@ export async function createPracticeSession(
     targetConceptIds = gaps?.map((g) => g.concept_id) || []
   }
 
-  // Get question count
+  // For mixed sessions without explicit target concepts, use directive recommendations
+  if (request.sessionType === 'mixed' && !targetConceptIds.length && practiceDirectives) {
+    targetConceptIds = practiceDirectives.recommendedConceptIds.slice(0, 5)
+  }
+
+  // If no difficulty specified by the user, use the adaptive target from directives
+  const rawDifficulty = request.targetDifficulty ??
+    (practiceDirectives ? practiceDirectives.targetDifficulty : undefined)
+  // Ensure difficulty is a valid DifficultyLevel (1-5)
+  const effectiveDifficulty: DifficultyLevel | undefined = rawDifficulty
+    ? (Math.max(1, Math.min(5, Math.round(rawDifficulty))) as DifficultyLevel)
+    : undefined
+
+  // Get question count — use directive-based session length if not specified
   const questionCount =
     request.questionCount ||
+    (practiceDirectives
+      ? Math.max(5, Math.round(practiceDirectives.recommendedSessionLength * 2))
+      : null) ||
     {
       targeted: 10,
       mixed: 15,
@@ -60,7 +90,7 @@ export async function createPracticeSession(
   let questionIds = await selectExistingQuestions({
     courseId: request.courseId,
     conceptIds: targetConceptIds.length ? targetConceptIds : undefined,
-    difficulty: request.targetDifficulty,
+    difficulty: effectiveDifficulty,
     count: questionCount,
   })
 
@@ -94,7 +124,7 @@ export async function createPracticeSession(
       session_type: request.sessionType,
       course_id: request.courseId || null,
       target_concept_ids: targetConceptIds.length ? targetConceptIds : null,
-      target_difficulty: request.targetDifficulty || null,
+      target_difficulty: effectiveDifficulty || null,
       question_count: questionIds.length,
       time_limit_minutes: request.timeLimitMinutes || null,
       question_order: questionIds,
@@ -320,7 +350,44 @@ export async function recordAnswer(
     isCorrect = checkAnswer(question, userAnswer)
   }
 
-  // Record the answer (including evaluation details for analytics)
+  // ── Answer revision tracking ──────────────────────────────────────────
+  // Check if this is a re-submission (revision) by looking for an existing answer
+  let answerRevisionCount = 0
+  let originalAnswer: string | null = null
+  let revisionHelped: boolean | null = null
+  let timeToFirstActionMs: number | null = null
+
+  const { data: existingAnswer } = await supabase
+    .from('practice_session_questions')
+    .select('user_answer, is_correct, answer_revision_count, original_answer, started_at')
+    .eq('session_id', sessionId)
+    .eq('question_index', questionIndex)
+    .maybeSingle()
+
+  if (existingAnswer) {
+    // This is a revision — student is changing their answer
+    answerRevisionCount = (existingAnswer.answer_revision_count || 0) + 1
+    // Preserve the very first answer as original_answer
+    originalAnswer = existingAnswer.original_answer || existingAnswer.user_answer
+    // Did the revision improve correctness? (was wrong, now correct)
+    revisionHelped = !existingAnswer.is_correct && isCorrect
+  }
+
+  // time_to_first_action_ms: time from question shown (started_at) to first answer
+  if (!existingAnswer && existingAnswer !== null) {
+    // First answer, no started_at yet
+    timeToFirstActionMs = responseTimeMs || null
+  } else if (existingAnswer?.started_at) {
+    // Question had a started_at timestamp
+    timeToFirstActionMs = Math.round(
+      Date.now() - new Date(existingAnswer.started_at).getTime()
+    )
+  } else {
+    // Use responseTimeMs as best approximation for first action
+    timeToFirstActionMs = !existingAnswer ? (responseTimeMs || null) : null
+  }
+
+  // Record the answer (including evaluation + revision details)
   const { error: answerError } = await supabase
     .from('practice_session_questions')
     .upsert(
@@ -335,6 +402,11 @@ export async function recordAnswer(
         evaluation_score: evaluationScore ?? null,
         evaluation_feedback: evaluationFeedback ?? null,
         evaluation_method: evaluationMethod ?? null,
+        // Revision tracking fields
+        answer_revision_count: answerRevisionCount,
+        original_answer: originalAnswer,
+        revision_helped: revisionHelped,
+        time_to_first_action_ms: existingAnswer ? existingAnswer.started_at ? timeToFirstActionMs : null : (responseTimeMs || null),
       },
       { onConflict: 'session_id,question_index' }
     )

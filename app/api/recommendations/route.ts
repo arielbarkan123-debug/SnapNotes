@@ -6,7 +6,10 @@ import { type UserLearningProfile } from '@/lib/profile/analysis'
 /**
  * GET /api/recommendations
  *
- * Returns personalized recommendations for the current user
+ * Returns personalized recommendations for the current user.
+ * Also inserts tracking records into recommendation_tracking
+ * and includes tracking IDs in the response so the client can
+ * report when the user acts on a recommendation.
  *
  * Query params:
  * - type: 'daily' | 'session' | 'all' (default: 'daily')
@@ -49,7 +52,10 @@ export async function GET(request: Request) {
         cardsDue || 0
       )
 
-      return NextResponse.json({ suggestion })
+      // Track the session suggestion (non-blocking, non-critical)
+      const trackingId = await trackRecommendation(supabase, user.id, 'session', suggestion)
+
+      return NextResponse.json({ suggestion, trackingId })
     }
 
     if (type === 'all') {
@@ -60,9 +66,23 @@ export async function GET(request: Request) {
         cardsDue || 0
       )
 
+      // Track all recommendations in parallel
+      const trackingIds = await Promise.all([
+        ...recommendations.map((_rec, i: number) =>
+          trackRecommendation(supabase, user.id, `recommendation_${i}`, _rec)
+        ),
+        trackRecommendation(supabase, user.id, 'session', suggestion),
+      ])
+
       return NextResponse.json({
-        recommendations,
-        session: suggestion,
+        recommendations: recommendations.map((rec, i: number) => ({
+          ...JSON.parse(JSON.stringify(rec)),
+          trackingId: trackingIds[i],
+        })),
+        session: {
+          ...JSON.parse(JSON.stringify(suggestion)),
+          trackingId: trackingIds[trackingIds.length - 1],
+        },
       })
     }
 
@@ -73,9 +93,21 @@ export async function GET(request: Request) {
       cardsDue || 0
     )
 
+    // Track both recommendations (non-blocking, non-critical)
+    const [recTrackingId, sessionTrackingId] = await Promise.all([
+      trackRecommendation(supabase, user.id, 'daily', recommendation),
+      trackRecommendation(supabase, user.id, 'session', suggestion),
+    ])
+
     return NextResponse.json({
-      recommendation,
-      session: suggestion,
+      recommendation: {
+        ...JSON.parse(JSON.stringify(recommendation)),
+        trackingId: recTrackingId,
+      },
+      session: {
+        ...JSON.parse(JSON.stringify(suggestion)),
+        trackingId: sessionTrackingId,
+      },
     })
   } catch (error) {
     console.error('Recommendations error:', error)
@@ -83,5 +115,40 @@ export async function GET(request: Request) {
       { error: 'Failed to get recommendations' },
       { status: 500 }
     )
+  }
+}
+
+/**
+ * Insert a tracking record for a recommendation shown to the user.
+ * Returns the tracking ID, or null if the insert fails (non-critical).
+ */
+async function trackRecommendation(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  userId: string,
+  recommendationType: string,
+  recommendationData: unknown
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('recommendation_tracking')
+      .insert({
+        user_id: userId,
+        recommendation_type: recommendationType,
+        recommendation_data: recommendationData ?? {},
+        shown_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single()
+
+    if (error) {
+      // Non-critical: don't block the recommendation response
+      console.warn('[Recommendations] Tracking insert error:', error.message)
+      return null
+    }
+
+    return data?.id ?? null
+  } catch {
+    return null
   }
 }

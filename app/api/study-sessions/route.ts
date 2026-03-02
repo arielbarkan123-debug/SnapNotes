@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { computeAccuracyIntervals, detectSessionFatigue } from '@/lib/student-context/fatigue-detector'
 
 export interface StartSessionRequest {
   sessionType: 'lesson' | 'practice' | 'review' | 'exam'
@@ -105,10 +106,64 @@ export async function PATCH(request: Request) {
       return createErrorResponse(ErrorCodes.ANLYT_SESSION_NOT_FOUND)
     }
 
+    // ── Fatigue detection ────────────────────────────────────────────────
+    // Fetch the session first to get started_at and course_id for fatigue analysis
+    const { data: sessionData } = await supabase
+      .from('study_sessions')
+      .select('started_at, course_id, lesson_index')
+      .eq('id', sessionId)
+      .eq('user_id', user.id)
+      .single()
+
+    let fatigueData: Record<string, unknown> = {}
+
+    if (sessionData?.started_at) {
+      try {
+        // Query step_performance for this user during this session's time window
+        const stepQuery = supabase
+          .from('step_performance')
+          .select('was_correct, created_at')
+          .eq('user_id', user.id)
+          .gte('created_at', sessionData.started_at)
+          .order('created_at', { ascending: true })
+
+        // Scope to course if available
+        if (sessionData.course_id) {
+          stepQuery.eq('course_id', sessionData.course_id)
+        }
+
+        const { data: steps } = await stepQuery
+
+        if (steps && steps.length >= 4) {
+          const intervals = computeAccuracyIntervals(
+            steps.map(s => ({
+              was_correct: s.was_correct === true,
+              created_at: s.created_at,
+            })),
+            sessionData.started_at
+          )
+
+          const fatigue = detectSessionFatigue(intervals)
+
+          fatigueData = {
+            accuracy_per_5min: intervals,
+            accuracy_at_session_start: intervals.length > 0 ? intervals[0].accuracy : null,
+            accuracy_at_session_end: intervals.length > 0 ? intervals[intervals.length - 1].accuracy : null,
+            fatigue_detected: fatigue.fatigueDetected,
+            fatigue_detected_at_minute: fatigue.fatigueDetectedAtMinute,
+          }
+        }
+      } catch (fatigueErr) {
+        // Non-critical: continue without fatigue data
+        console.warn('[Study Sessions API] Fatigue detection error:', fatigueErr)
+      }
+    }
+
     // Update session
     const updateData: Record<string, unknown> = {
       ended_at: new Date().toISOString(),
       is_completed: true,
+      ...fatigueData,
     }
 
     if (cardsReviewed !== undefined) {
