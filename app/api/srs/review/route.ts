@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes, logError } from '@/lib/api/errors'
 import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
-import { processReview, FSRS_PARAMS } from '@/lib/srs'
+import { processReview } from '@/lib/srs'
 import { getUserFSRSParams } from '@/lib/srs/fsrs-optimizer'
 import type { Rating, ReviewCard, SubmitReviewResponse } from '@/types'
 
