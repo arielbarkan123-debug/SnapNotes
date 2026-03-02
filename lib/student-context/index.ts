@@ -15,6 +15,9 @@ import type { StudentContext, CourseSnapshot } from './types'
 // Re-export all types for convenience
 export * from './types'
 
+// Re-export directives engine
+export { generateDirectives } from './directives'
+
 // =============================================================================
 // Main function
 // =============================================================================
