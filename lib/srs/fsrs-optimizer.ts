@@ -77,7 +77,7 @@ export async function getUserFSRSParams(
     .from('user_learning_profile')
     .select('fsrs_params')
     .eq('user_id', userId)
-    .single()
+    .maybeSingle()
 
   if (data?.fsrs_params && data.fsrs_params.w) {
     return {
@@ -183,7 +183,7 @@ export async function optimizeFSRSParams(
 
   // --- Persist to user_learning_profile ---
 
-  await supabase
+  const { error: updateError } = await supabase
     .from('user_learning_profile')
     .update({
       fsrs_params: {
@@ -193,6 +193,11 @@ export async function optimizeFSRSParams(
       },
     })
     .eq('user_id', userId)
+
+  if (updateError) {
+    console.error('[fsrs-optimizer] Failed to persist params:', updateError.message)
+    return { optimized: false, reviewCount: count || 0 }
+  }
 
   return {
     optimized: true,

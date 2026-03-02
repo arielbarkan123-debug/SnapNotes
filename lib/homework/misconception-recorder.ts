@@ -57,6 +57,7 @@ export async function recordHomeworkMisconception(
           stale_after: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         })
         .eq('id', existing.id)
+        .eq('user_id', record.userId)
     } else {
       await supabase
         .from('mistake_patterns')
