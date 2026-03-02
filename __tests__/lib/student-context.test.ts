@@ -320,7 +320,7 @@ describe('getStudentContext', () => {
 
     // Live Performance defaults
     expect(ctx.rollingAccuracy).toBe(0.5)
-    expect(ctx.rollingSpeed).toBe(0)
+    expect(ctx.rollingSpeed).toBe(1) // default 1.0 q/min when no speed data available
     expect(ctx.rollingConfidence).toBe(0)
     expect(ctx.estimatedAbility).toBe(0.38) // (2.5 - 1) / 4 = 0.375 -> 0.38
     expect(ctx.trendDirection).toBe('stable')

@@ -49,7 +49,7 @@ export interface StudentContext {
 
   // Activity Signals (computed from study_sessions)
   avgSessionLengthMinutes: number
-  peakStudyHour: number | null       // 0-23, actual not self-reported
+  peakStudyHour: number | null       // 0-23 UTC, actual not self-reported
   totalStudyTimeThisWeekMinutes: number
   sessionsThisWeek: number
 

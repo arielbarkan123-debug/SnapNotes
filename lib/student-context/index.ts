@@ -63,7 +63,7 @@ export async function getStudentContext(
       .from('profile_refinement_state')
       .select(
         'rolling_accuracy, rolling_response_time_ms, confidence_calibration, ' +
-        'estimated_ability, current_difficulty_target, accuracy_confidence'
+        'estimated_ability, current_difficulty_target, accuracy_confidence, weak_concept_ids'
       )
       .eq('user_id', userId)
       .maybeSingle(),
@@ -170,7 +170,7 @@ export async function getStudentContext(
   const rollingResponseTimeMs = refinement?.rolling_response_time_ms ?? 0
   const rollingSpeed = rollingResponseTimeMs > 0
     ? 60000 / rollingResponseTimeMs
-    : 0
+    : 1.0
 
   // Trend direction from accuracy_trend in profile, or derive from refinement data
   const trendDirection = deriveTrendDirection(profile)
@@ -208,7 +208,7 @@ export async function getStudentContext(
     currentDifficultyTarget: Number(refinement?.current_difficulty_target ?? 3),
 
     // Weaknesses
-    weakConceptIds: [], // profile_refinement_state doesn't store these yet — placeholder
+    weakConceptIds: Array.isArray(refinement?.weak_concept_ids) ? refinement.weak_concept_ids : [],
     mistakePatterns,
     mistakeDataSufficient,
 
@@ -248,7 +248,14 @@ export async function getStudentContext(
 function extractSettled<T>(
   result: PromiseSettledResult<{ data: T | null; error: unknown }>
 ): T | null {
-  if (result.status === 'fulfilled' && result.value?.data) {
+  if (result.status === 'rejected') {
+    console.warn('[student-context] Query rejected:', result.reason)
+    return null
+  }
+  if (result.value?.error) {
+    console.warn('[student-context] Supabase error:', result.value.error)
+  }
+  if (result.value?.data) {
     return result.value.data
   }
   return null
@@ -257,7 +264,14 @@ function extractSettled<T>(
 function extractSettledArray<T>(
   result: PromiseSettledResult<{ data: T[] | null; error: unknown }>
 ): T[] {
-  if (result.status === 'fulfilled' && Array.isArray(result.value?.data)) {
+  if (result.status === 'rejected') {
+    console.warn('[student-context] Query rejected:', result.reason)
+    return []
+  }
+  if (result.value?.error) {
+    console.warn('[student-context] Supabase error:', result.value.error)
+  }
+  if (Array.isArray(result.value?.data)) {
     return result.value.data
   }
   return []
@@ -266,7 +280,14 @@ function extractSettledArray<T>(
 function extractSettledCount(
   result: PromiseSettledResult<{ count: number | null; data: unknown; error: unknown }>
 ): number {
-  if (result.status === 'fulfilled' && result.value?.count != null) {
+  if (result.status === 'rejected') {
+    console.warn('[student-context] Query rejected:', result.reason)
+    return 0
+  }
+  if (result.value?.error) {
+    console.warn('[student-context] Supabase error:', result.value.error)
+  }
+  if (result.value?.count != null) {
     return result.value.count
   }
   return 0
