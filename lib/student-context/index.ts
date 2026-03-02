@@ -53,7 +53,7 @@ export async function getStudentContext(
       .select(
         'study_system, grade, subjects, subject_levels, exam_format, language, ' +
         'learning_styles, study_goal, preferred_study_time, difficulty_preference, ' +
-        'speed_preference'
+        'speed_preference, accuracy_trend'
       )
       .eq('user_id', userId)
       .maybeSingle(),
