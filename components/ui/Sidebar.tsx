@@ -367,7 +367,6 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
           <BottomNavLink href="/practice" icon="🎯" label={t('nav.practice')} active={isActive('/practice')} />
           <BottomNavLink href="/homework" icon="📝" label={t('nav.homework')} active={isActive('/homework')} />
           <BottomNavLink href="/prepare" icon="📖" label={t('nav.prepare')} active={isActive('/prepare')} />
-          <BottomNavLink href="/progress" icon="📊" label={t('nav.progress')} active={isActive('/progress')} />
         </div>
       </nav>
 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes, logError } from '@/lib/api/errors'
 import { isQuestionQualityAcceptable, regenerateCardQuestion } from '@/lib/srs'
+import { getUserFSRSParams } from '@/lib/srs/fsrs-optimizer'
 import type { ReviewCard, ReviewSession } from '@/types'
 import { getStudentContext } from '@/lib/student-context'
 
@@ -18,6 +19,10 @@ export async function GET(): Promise<NextResponse> {
     if (authError || !user) {
       return createErrorResponse(ErrorCodes.UNAUTHORIZED, 'Please log in to view due cards')
     }
+
+    // Load per-user optimized FSRS parameters (falls back to defaults)
+    // These are included in the response for the client-side interval preview
+    const userParams = await getUserFSRSParams(supabase, user.id)
 
     // Get user's SRS settings for daily limits and interleaving preference
     const { data: settings } = await supabase
@@ -160,11 +165,12 @@ export async function GET(): Promise<NextResponse> {
       })()
     }
 
-    const response: ReviewSession = {
+    const response: ReviewSession & { fsrs_params?: typeof userParams } = {
       cards_due: allCards.length,
       new_cards: newCardCount,
       review_cards: dueCards?.length || 0,
       cards: allCards,
+      fsrs_params: userParams,
     }
 
     return NextResponse.json(response)

@@ -1,5 +1,8 @@
 {
   "steps": {
+    "nameTitle": "What's your name?",
+    "nameSubtitle": "We'll use this to personalize your experience",
+    "namePlaceholder": "Enter your name",
     "system": {
       "title": "What study system are you in?",
       "subtitle": "This helps us tailor content to your curriculum"

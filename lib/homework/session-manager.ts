@@ -84,6 +84,28 @@ export async function getSession(
     throw new Error(`Failed to get session: ${error.message}`)
   }
 
+  if (!data) return null
+
+  // Reconstruct conversation from homework_turns (source of truth)
+  const { data: turns } = await supabase
+    .from('homework_turns')
+    .select('role, content, hint_level, pedagogical_intent, referenced_concept, shows_understanding, misconception_detected')
+    .eq('session_id', sessionId)
+    .order('turn_number', { ascending: true })
+
+  if (turns && turns.length > 0) {
+    data.conversation = turns.map(turn => ({
+      role: turn.role,
+      content: turn.content,
+      hintLevel: turn.hint_level,
+      pedagogicalIntent: turn.pedagogical_intent,
+      referencedConcept: turn.referenced_concept,
+      showsUnderstanding: turn.shows_understanding,
+      misconceptionDetected: turn.misconception_detected,
+    }))
+  }
+  // If no turns exist (legacy sessions), fall back to JSONB conversation field
+
   return data as HomeworkSession
 }
 
@@ -201,23 +223,15 @@ export async function addMessage(
 ): Promise<HomeworkSession> {
   const supabase = await createClient()
 
-  // Get current session
-  const session = await getSession(sessionId, userId)
-  if (!session) {
-    throw new Error('Session not found')
-  }
+  // Get current turn count
+  const { count } = await supabase
+    .from('homework_turns')
+    .select('*', { count: 'exact', head: true })
+    .eq('session_id', sessionId)
 
-  // Add message to conversation array
-  const updatedConversation = [...session.conversation, message]
+  const turnNumber = (count || 0) + 1
 
-  // Update progress if tutor message has progress estimate
-  const updateData: Record<string, unknown> = {
-    conversation: updatedConversation,
-  }
-
-  // Also save to homework_turns for detailed tracking
-  const turnNumber = updatedConversation.length
-
+  // Write to homework_turns (single source of truth)
   const { error: turnError } = await supabase.from('homework_turns').insert({
     session_id: sessionId,
     turn_number: turnNumber,
@@ -231,23 +245,23 @@ export async function addMessage(
   })
 
   if (turnError) {
-    console.error('Failed to save turn:', turnError)
-    // Continue anyway - main conversation is in session
+    throw new Error(`Failed to save turn: ${turnError.message}`)
   }
 
-  const { data, error } = await supabase
-    .from('homework_sessions')
-    .update(updateData)
-    .eq('id', sessionId)
-    .eq('user_id', userId)
-    .select()
-    .single()
-
-  if (error) {
-    throw new Error(`Failed to add message: ${error.message}`)
+  // Also update JSONB for backward compatibility (will be removed later)
+  const session = await getSession(sessionId, userId)
+  if (session) {
+    await supabase
+      .from('homework_sessions')
+      .update({ conversation: session.conversation })
+      .eq('id', sessionId)
+      .eq('user_id', userId)
   }
 
-  return data as HomeworkSession
+  // Return fresh session with reconstructed conversation
+  const freshSession = await getSession(sessionId, userId)
+  if (!freshSession) throw new Error('Session not found after message add')
+  return freshSession
 }
 
 /**

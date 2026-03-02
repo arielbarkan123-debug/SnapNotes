@@ -20,6 +20,7 @@ import { evaluateAnswer } from '@/lib/evaluation/answer-checker'
 import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
 import { getStudentContext, generateDirectives } from '@/lib/student-context'
+import { bridgePracticeGapsToSRS } from './practice-to-srs'
 
 // -----------------------------------------------------------------------------
 // Session Creation
@@ -524,7 +525,7 @@ export async function completeSession(sessionId: string): Promise<SessionResult>
     .from('practice_session_questions')
     .select(`
       *,
-      question:practice_questions(primary_concept_id)
+      question:practice_questions(primary_concept_id, question_text, correct_answer, explanation)
     `)
     .eq('session_id', sessionId)
 
@@ -561,6 +562,22 @@ export async function completeSession(sessionId: string): Promise<SessionResult>
     if (perf.correct / perf.total < 0.5) {
       gapsIdentified.push(conceptId)
     }
+  }
+
+  // Bridge gaps to SRS — create review cards for weak concepts
+  if (gapsIdentified.length > 0) {
+    const gapCards = gapsIdentified.map(conceptId => {
+      const wrongAnswer = (answers || []).find(
+        (a: { question?: { primary_concept_id?: string; question_text?: string; correct_answer?: string; explanation?: string | null } | null; is_correct?: boolean }) =>
+          a.question?.primary_concept_id === conceptId && !a.is_correct
+      )
+      return {
+        conceptId,
+        questionText: wrongAnswer?.question?.question_text || `Review concept: ${conceptId}`,
+        correctAnswer: wrongAnswer?.question?.correct_answer || wrongAnswer?.question?.explanation || 'Review this concept',
+      }
+    })
+    await bridgePracticeGapsToSRS(supabase, session.user_id, session.course_id, gapCards).catch(() => {})
   }
 
   // Update session

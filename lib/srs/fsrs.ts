@@ -134,13 +134,15 @@ export function calculateNextDifficulty(
  * @param difficulty - Card difficulty (0-1)
  * @param rating - User's rating (1-4)
  * @param elapsedDays - Days since last review
+ * @param params - Optional per-user FSRS parameters (defaults to FSRS_PARAMS)
  * @returns New stability in days
  */
 export function calculateNextStability(
   oldStability: number,
   difficulty: number,
   rating: Rating,
-  elapsedDays: number
+  elapsedDays: number,
+  params: typeof FSRS_PARAMS = FSRS_PARAMS
 ): number {
   // If rating is "Again", reset stability significantly
   if (rating === 1) {
@@ -174,10 +176,10 @@ export function calculateNextStability(
 
   // Apply easy bonus
   const withEasyBonus =
-    rating === 4 ? newStability * FSRS_PARAMS.easyBonus : newStability
+    rating === 4 ? newStability * params.easyBonus : newStability
 
   // Cap at maximum interval
-  return Math.min(withEasyBonus, FSRS_PARAMS.maximumInterval)
+  return Math.min(withEasyBonus, params.maximumInterval)
 }
 
 /**
@@ -190,11 +192,13 @@ export function calculateNextStability(
  *
  * @param stability - Current stability in days
  * @param targetRetention - Target retention rate (0-1, default 0.9)
+ * @param params - Optional per-user FSRS parameters (defaults to FSRS_PARAMS)
  * @returns Interval in days (minimum 1)
  */
 export function calculateNextInterval(
   stability: number,
-  targetRetention: number = FSRS_PARAMS.requestRetention
+  targetRetention: number = FSRS_PARAMS.requestRetention,
+  params: typeof FSRS_PARAMS = FSRS_PARAMS
 ): number {
   // Formula: when will retention reach target?
   // R(t) = e^(-t/S) = targetRetention
@@ -203,7 +207,7 @@ export function calculateNextInterval(
 
   // Round to nearest day, minimum 1, maximum as configured
   const rounded = Math.round(interval)
-  return Math.max(1, Math.min(rounded, FSRS_PARAMS.maximumInterval))
+  return Math.max(1, Math.min(rounded, params.maximumInterval))
 }
 
 /**
@@ -248,19 +252,21 @@ export function getLearningDueDate(intervalMinutes: number): Date {
  * @param card - The card being reviewed
  * @param rating - User's rating (1-4)
  * @param targetRetention - Target retention rate (default 0.9)
+ * @param params - Optional per-user FSRS parameters (defaults to FSRS_PARAMS)
  * @returns New card state with updated FSRS parameters
  */
 export function processReview(
   card: ReviewCard,
   rating: Rating,
-  targetRetention: number = FSRS_PARAMS.requestRetention
+  targetRetention: number = FSRS_PARAMS.requestRetention,
+  params: typeof FSRS_PARAMS = FSRS_PARAMS
 ): FSRSOutput {
   const { state, stability, difficulty, elapsed_days } = card
 
   // Handle based on current state
   switch (state) {
     case 'new':
-      return processNewCard(rating, targetRetention)
+      return processNewCard(rating, targetRetention, params)
 
     case 'learning':
     case 'relearning':
@@ -269,7 +275,8 @@ export function processReview(
         difficulty,
         rating,
         targetRetention,
-        state
+        state,
+        params
       )
 
     case 'review':
@@ -278,12 +285,13 @@ export function processReview(
         difficulty,
         rating,
         elapsed_days,
-        targetRetention
+        targetRetention,
+        params
       )
 
     default:
       // Fallback: treat as new card
-      return processNewCard(rating, targetRetention)
+      return processNewCard(rating, targetRetention, params)
   }
 }
 
@@ -292,7 +300,8 @@ export function processReview(
  */
 function processNewCard(
   rating: Rating,
-  targetRetention: number
+  targetRetention: number,
+  params: typeof FSRS_PARAMS = FSRS_PARAMS
 ): FSRSOutput {
   const initialDifficulty = calculateInitialDifficulty(rating)
   const initialStability = calculateInitialStability(rating)
@@ -321,7 +330,7 @@ function processNewCard(
   }
 
   // Good or Easy: graduate directly to review
-  const interval = calculateNextInterval(initialStability, targetRetention)
+  const interval = calculateNextInterval(initialStability, targetRetention, params)
 
   return {
     stability: initialStability,
@@ -340,7 +349,8 @@ function processLearningCard(
   difficulty: number,
   rating: Rating,
   targetRetention: number,
-  currentState: 'learning' | 'relearning'
+  currentState: 'learning' | 'relearning',
+  params: typeof FSRS_PARAMS = FSRS_PARAMS
 ): FSRSOutput {
   // Update difficulty based on performance
   const newDifficulty = calculateNextDifficulty(difficulty, rating)
@@ -369,8 +379,8 @@ function processLearningCard(
 
   // Good or Easy: graduate to review
   const newStability =
-    rating === 4 ? stability * FSRS_PARAMS.easyBonus : stability
-  const interval = calculateNextInterval(newStability, targetRetention)
+    rating === 4 ? stability * params.easyBonus : stability
+  const interval = calculateNextInterval(newStability, targetRetention, params)
 
   return {
     stability: newStability,
@@ -389,7 +399,8 @@ function processReviewCard(
   difficulty: number,
   rating: Rating,
   elapsedDays: number,
-  targetRetention: number
+  targetRetention: number,
+  params: typeof FSRS_PARAMS = FSRS_PARAMS
 ): FSRSOutput {
   // Calculate new difficulty
   const newDifficulty = calculateNextDifficulty(difficulty, rating)
@@ -412,15 +423,16 @@ function processReviewCard(
     stability,
     difficulty,
     rating,
-    elapsedDays
+    elapsedDays,
+    params
   )
 
   // Calculate next interval
-  let interval = calculateNextInterval(newStability, targetRetention)
+  let interval = calculateNextInterval(newStability, targetRetention, params)
 
   // Apply hard penalty
   if (rating === 2) {
-    interval = Math.max(1, Math.round(interval / FSRS_PARAMS.hardInterval))
+    interval = Math.max(1, Math.round(interval / params.hardInterval))
   }
 
   return {
@@ -441,11 +453,13 @@ function processReviewCard(
  *
  * @param card - The card to calculate intervals for
  * @param targetRetention - Target retention rate
+ * @param params - Optional per-user FSRS parameters (defaults to FSRS_PARAMS)
  * @returns Object with intervals for each rating
  */
 export function getIntervalPreview(
   card: ReviewCard,
-  targetRetention: number = FSRS_PARAMS.requestRetention
+  targetRetention: number = FSRS_PARAMS.requestRetention,
+  params: typeof FSRS_PARAMS = FSRS_PARAMS
 ): Record<Rating, string> {
   const results: Record<Rating, string> = {
     1: '',
@@ -455,7 +469,7 @@ export function getIntervalPreview(
   }
 
   for (const rating of [1, 2, 3, 4] as Rating[]) {
-    const output = processReview(card, rating, targetRetention)
+    const output = processReview(card, rating, targetRetention, params)
 
     if (output.scheduled_days === 0) {
       // Learning step (in minutes)

@@ -8,11 +8,13 @@ import type {
   TutorContext,
 } from '@/lib/homework/types'
 import { generateTutorResponse, checkForSolution } from '@/lib/homework/tutor-engine'
+import { searchYouTubeVideos } from '@/lib/prepare/youtube-search'
 import type { ExplanationStyleId } from '@/lib/homework/explanation-styles'
 import { addMessage, updateProgress, getRecentMessages } from '@/lib/homework/session-manager'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import { loadUserProfile } from '@/lib/user-profile'
 import { getStudentContext, generateDirectives } from '@/lib/student-context'
+import { recordHomeworkMisconception } from '@/lib/homework/misconception-recorder'
 
 // Allow 120 seconds — engine diagram generation can take 10-60s on top of AI response
 export const maxDuration = 120
@@ -163,6 +165,18 @@ export async function POST(
       }
     }
 
+    // Search for relevant YouTube videos for explanatory responses (non-blocking)
+    let relatedVideos: Array<{ videoId: string; title: string; channelTitle: string; thumbnailUrl: string }> = []
+    if (
+      tutorResponse.pedagogicalIntent === 'give_hint' ||
+      tutorResponse.pedagogicalIntent === 'clarify'
+    ) {
+      try {
+        const searchQuery = `${homeworkSession.detected_subject || ''} ${homeworkSession.detected_topic || ''} explained simply`
+        relatedVideos = await searchYouTubeVideos(searchQuery.trim(), 2)
+      } catch { /* silent - videos are optional */ }
+    }
+
     // Step 5: Add tutor response to conversation
     const tutorMessage: ConversationMessage = {
       role: 'tutor',
@@ -191,6 +205,17 @@ export async function POST(
         .select()
         .single()
       finalSession = updated as HomeworkSession
+    }
+
+    // Record misconception back to intelligence (non-blocking)
+    if (tutorResponse.detectedMisconception) {
+      recordHomeworkMisconception(supabase, {
+        userId: user.id,
+        misconceptionType: tutorResponse.detectedMisconception,
+        detectedSubject: homeworkSession.detected_subject,
+        detectedTopic: homeworkSession.detected_topic,
+        sessionId,
+      }).catch(() => {})
     }
 
     // Step 6: Update progress
@@ -233,6 +258,7 @@ export async function POST(
       tutorResponse,
       session: finalSession,
       solved: solutionCheck.solved,
+      relatedVideos,
     })
   } catch (error) {
     console.error('Chat error:', error)

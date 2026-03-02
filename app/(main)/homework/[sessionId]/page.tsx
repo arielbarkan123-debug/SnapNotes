@@ -105,6 +105,9 @@ export default function HomeworkResultsPage() {
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
   // State for loading during chat/hint operations - moved to top level to fix hooks rule
   const [isChatLoading, setIsChatLoading] = useState(false)
+  // Related YouTube videos from the latest tutor response
+  const [relatedVideos, setRelatedVideos] = useState<Array<{ videoId: string; title: string; channelTitle: string; thumbnailUrl: string }>>([])
+
 
   useEffect(() => {
     async function fetchData() {
@@ -225,8 +228,9 @@ export default function HomeworkResultsPage() {
         throw new Error(error.error || 'Failed to send message')
       }
 
-      const { session: updated, solved } = await res.json()
+      const { session: updated, solved, relatedVideos: videos } = await res.json()
       setHelpSession(updated)
+      setRelatedVideos(videos || [])
 
       if (solved) {
         toast.success('Congratulations! You solved it!')
@@ -485,6 +489,7 @@ export default function HomeworkResultsPage() {
             onRequestHint={handleRequestHint}
             onComplete={handleComplete}
             isLoading={isChatLoading}
+            relatedVideos={relatedVideos}
           />
         </div>
 

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes, logError } from '@/lib/api/errors'
 import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 import { processReview, FSRS_PARAMS } from '@/lib/srs'
+import { getUserFSRSParams } from '@/lib/srs/fsrs-optimizer'
 import type { Rating, ReviewCard, SubmitReviewResponse } from '@/types'
 
 // =============================================================================
@@ -130,14 +131,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return createErrorResponse(ErrorCodes.NOT_FOUND, 'Card not found')
     }
 
-    // Get user's target retention setting
+    // Load per-user optimized FSRS parameters (falls back to defaults)
+    const userParams = await getUserFSRSParams(supabase, user.id)
+
+    // Get user's target retention setting (explicit setting overrides optimized value)
     const { data: settings } = await supabase
       .from('user_srs_settings')
       .select('target_retention')
       .eq('user_id', user.id)
       .single()
 
-    const targetRetention = settings?.target_retention ?? FSRS_PARAMS.requestRetention
+    const targetRetention = settings?.target_retention ?? userParams.requestRetention
 
     // Calculate elapsed days since last review
     const now = new Date()
@@ -150,8 +154,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       elapsed_days: elapsedDays,
     }
 
-    // Process with FSRS algorithm
-    const fsrsOutput = processReview(cardForProcessing, rating as Rating, targetRetention)
+    // Process with FSRS algorithm using per-user optimized parameters
+    const fsrsOutput = processReview(cardForProcessing, rating as Rating, targetRetention, userParams)
 
     // Prepare update data
     const updateData = {

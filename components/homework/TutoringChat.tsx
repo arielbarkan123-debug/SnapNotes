@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import DiagramToggle from '@/components/ui/DiagramToggle'
 import type { HomeworkSession, ConversationMessage, HintLevel } from '@/lib/homework/types'
@@ -14,9 +15,19 @@ import {
   isEngineDiagram,
 } from './diagram'
 
+// Lazy-load YouTubeEmbed (client-only, no SSR)
+const YouTubeEmbed = dynamic(() => import('@/components/prepare/YouTubeEmbed'), { ssr: false })
+
 // ============================================================================
 // Types
 // ============================================================================
+
+interface RelatedVideo {
+  videoId: string
+  title: string
+  channelTitle: string
+  thumbnailUrl: string
+}
 
 interface TutoringChatProps {
   session: HomeworkSession
@@ -24,6 +35,7 @@ interface TutoringChatProps {
   onRequestHint: (level: HintLevel) => Promise<void>
   onComplete: () => Promise<void>
   isLoading?: boolean
+  relatedVideos?: RelatedVideo[]
 }
 
 // ============================================================================
@@ -273,6 +285,7 @@ export default function TutoringChat({
   onRequestHint,
   onComplete,
   isLoading = false,
+  relatedVideos = [],
 }: TutoringChatProps) {
   const t = useTranslations('chat')
   const [input, setInput] = useState('')
@@ -383,6 +396,25 @@ export default function TutoringChat({
               t={t}
             />
           ))}
+
+          {/* Related YouTube videos — shown after the latest tutor response */}
+          {relatedVideos.length > 0 && !isLoading && (
+            <div className="flex justify-start">
+              <div className="max-w-[85%]">
+                <div className="mt-1 space-y-2">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                    <span>📺</span>
+                    <span>Related videos</span>
+                  </p>
+                  <div className="grid grid-cols-1 gap-2 max-w-sm">
+                    {relatedVideos.map((video) => (
+                      <YouTubeEmbed key={video.videoId} video={{ ...video, searchQuery: '' }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {isLoading && <LoadingIndicator t={t} />}
 

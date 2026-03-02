@@ -156,6 +156,7 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [isGeneratingCovers, setIsGeneratingCovers] = useState(false)
+  const [lessonProgressMap, setLessonProgressMap] = useState<Record<string, number>>({})
 
   // Get courses data
   const {
@@ -169,6 +170,20 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
 
   // Get study plan data
   const { plan, todayTasks } = useStudyPlan()
+
+  // Fetch lesson progress for continue-learning and course rings
+  useEffect(() => {
+    async function fetchLessonProgress() {
+      try {
+        const res = await fetch('/api/progress/lesson-map')
+        if (res.ok) {
+          const data = await res.json()
+          setLessonProgressMap(data.progressMap || {})
+        }
+      } catch { /* silent */ }
+    }
+    fetchLessonProgress()
+  }, [])
 
   // Calculate greeting based on time of day
   const greeting = useMemo(() => {
@@ -197,16 +212,16 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
   // Find current course/lesson to continue
   const currentCourse = useMemo(() => {
     if (!filteredCourses || filteredCourses.length === 0) return null
-    // Find course with lessons to continue
     for (const course of filteredCourses) {
       const lessons = course.generated_course?.lessons
       if (lessons && lessons.length > 0) {
-        // For now, just return first course with lessons - lesson completion is tracked separately
-        return { course, lessonIndex: 0 }
+        const lastCompleted = lessonProgressMap[course.id] ?? -1
+        const nextLesson = Math.min(lastCompleted + 1, lessons.length - 1)
+        return { course, lessonIndex: nextLesson }
       }
     }
     return { course: filteredCourses[0], lessonIndex: 0 }
-  }, [filteredCourses])
+  }, [filteredCourses, lessonProgressMap])
 
   // Check for courses without covers
   const coursesWithoutCovers = (initialCourses || []).filter(c => !c.cover_image_url).length
@@ -499,6 +514,13 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
           </div>
         </SilentErrorBoundary>
 
+        {/* Exam Prediction CTA */}
+        <SilentErrorBoundary componentName="ExamPredictionCTA">
+          <div className="mb-8 animate-fadeSlideIn stagger-5">
+            <ExamPredictionCTA />
+          </div>
+        </SilentErrorBoundary>
+
         {/* My Courses Section */}
         <div className="animate-fadeSlideIn stagger-5">
           <div className="flex items-center justify-between mb-4">
@@ -534,7 +556,7 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
           ) : !dbError ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredCourses.slice(0, 6).map((course) => (
-                <CompactCourseCard key={course.id} course={course} />
+                <CompactCourseCard key={course.id} course={course} completedLessons={lessonProgressMap[course.id] !== undefined ? lessonProgressMap[course.id] + 1 : 0} />
               ))}
             </div>
           ) : null}
@@ -617,12 +639,11 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
 // Compact Course Card
 // ============================================================================
 
-function CompactCourseCard({ course }: { course: Course }) {
+function CompactCourseCard({ course, completedLessons = 0 }: { course: Course; completedLessons?: number }) {
   const t = useTranslations('dashboard')
   const lessons = course.generated_course?.lessons
   const lessonsCount = lessons?.length || 0
-  // Progress would come from user_progress table - for now show 0%
-  const progress = 0
+  const progress = lessonsCount > 0 ? Math.round((completedLessons / lessonsCount) * 100) : 0
 
   // Generate gradient based on course title
   const getGradient = (title: string) => {
@@ -716,5 +737,59 @@ function EmptyState({ onUploadClick }: EmptyStateProps) {
         {t('uploadFirstNotebook')}
       </Button>
     </div>
+  )
+}
+
+// ============================================================================
+// Exam Prediction CTA
+// ============================================================================
+
+function ExamPredictionCTA() {
+  const t = useTranslations('dashboard')
+  const [predictionReady, setPredictionReady] = useState(false)
+  const [analyzedCount, setAnalyzedCount] = useState(0)
+
+  useEffect(() => {
+    async function checkPrediction() {
+      try {
+        const res = await fetch('/api/exam-prediction/status')
+        if (res.ok) {
+          const data = await res.json()
+          setAnalyzedCount(data.analyzedCount || 0)
+          setPredictionReady(data.analyzedCount >= 3)
+        }
+      } catch { /* silent */ }
+    }
+    checkPrediction()
+  }, [])
+
+  if (analyzedCount === 0) return null
+
+  return (
+    <Link
+      href="/settings/past-exams"
+      className={`block rounded-[22px] p-5 shadow-card card-hover-lift relative overflow-hidden group ${
+        predictionReady
+          ? 'bg-gradient-to-br from-amber-500 to-orange-600 text-white'
+          : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <span className="text-2xl" role="img" aria-hidden="true">&#x1F52E;</span>
+        <div className="flex-1">
+          <h3 className={`font-bold text-sm ${predictionReady ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+            {predictionReady
+              ? t('examPredictionReady', { defaultMessage: 'Exam Prediction Ready!' })
+              : t('examPredictionProgress', { count: analyzedCount, defaultMessage: `${analyzedCount}/3 exams analyzed` })}
+          </h3>
+          <p className={`text-xs ${predictionReady ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
+            {predictionReady
+              ? t('examPredictionReadyDesc', { defaultMessage: 'See what topics are likely on your next exam' })
+              : t('examPredictionProgressDesc', { defaultMessage: 'Upload more past exams to unlock predictions' })}
+          </p>
+        </div>
+        <span className="text-lg">&rarr;</span>
+      </div>
+    </Link>
   )
 }

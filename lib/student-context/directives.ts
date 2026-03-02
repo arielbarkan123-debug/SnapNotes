@@ -158,10 +158,15 @@ export function buildHomeworkDirectives(ctx: StudentContext): HomeworkDirectives
     preferredExplanationStyle = fallbackStyles[preferredExplanationStyle] || 'step-by-step'
   }
 
-  // Anticipated misconceptions from mistake patterns
+  // Build specific misconception directives with frequency data
+  const totalPatternCount = Object.values(ctx.mistakePatterns).reduce((sum, freq) => sum + freq, 0)
   const anticipatedMisconceptions: string[] = Object.entries(ctx.mistakePatterns)
     .sort(([, a], [, b]) => b - a)
-    .map(([key]) => `Watch for ${key} errors — this student frequently makes this type of mistake`)
+    .slice(0, 5)
+    .map(([patternName, frequency]) => {
+      const pct = totalPatternCount > 0 ? Math.round((frequency / totalPatternCount) * 100) : 0
+      return `${patternName}: occurred ${frequency} times (${pct}% of all errors). When this student reaches a step involving ${patternName.toLowerCase()}, pause and ask them to verify before proceeding.`
+    })
 
   // Known prerequisite gaps: top 5 weak concepts
   const knownPrerequisiteGaps = ctx.weakConceptIds.slice(0, 5)

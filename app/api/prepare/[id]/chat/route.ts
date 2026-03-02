@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { ErrorCodes, createErrorResponse } from '@/lib/api/errors'
-import { getDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-schemas'
+import { getFilteredDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-schemas'
 import { AI_MODEL } from '@/lib/ai/claude'
 import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
 
@@ -74,7 +74,7 @@ function sanitizeDiagram(raw: unknown): Record<string, unknown> | null {
   return d
 }
 
-function buildSystemPrompt(guideContent: string, language: 'en' | 'he', action?: string): string {
+function buildSystemPrompt(guideContent: string, language: 'en' | 'he', action?: string, subject?: string): string {
   const langInstruction = language === 'he'
     ? `\n## Language: Respond ONLY in Hebrew (עברית). Keep math notation standard.\n`
     : ''
@@ -105,7 +105,7 @@ ${guideContent.slice(0, 15000)}
 - "Explain More": Explain the referenced section in simpler terms with an analogy
 - "Draw Diagram": Generate a visual diagram to help explain a concept.
 - When explaining a concept, you can include a "diagram" field to show a visual. Available types (${Object.keys(DIAGRAM_SCHEMAS).length} total): ${Object.keys(DIAGRAM_SCHEMAS).slice(0, 30).join(', ')}, and many more.
-${action === 'diagram' ? `\nYou MUST include a diagram in your response. Use one of these exact schemas:\n\n${getDiagramSchemaPrompt()}` : ''}
+${action === 'diagram' ? `\nYou MUST include a diagram in your response. Use one of these exact schemas:\n\n${getFilteredDiagramSchemaPrompt(subject)}` : ''}
 ## Response Format
 Return ONLY valid JSON:
 {"message": "Your markdown explanation", "diagram": null}
@@ -144,7 +144,7 @@ export async function POST(
     // Fetch guide
     const { data: guide, error: guideError } = await supabase
       .from('prepare_guides')
-      .select('generated_guide')
+      .select('generated_guide, subject')
       .eq('id', guideId)
       .eq('user_id', user.id)
       .single()
@@ -227,7 +227,7 @@ export async function POST(
     const response = await client.messages.create({
       model: AI_MODEL,
       max_tokens: MAX_TOKENS,
-      system: buildSystemPrompt(guideContent, language, action),
+      system: buildSystemPrompt(guideContent, language, action, guide.subject || undefined),
       messages,
     })
 

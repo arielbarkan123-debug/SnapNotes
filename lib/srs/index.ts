@@ -43,6 +43,14 @@ export {
   default as cardGenerator,
 } from './card-generator'
 
+// FSRS Parameter Optimizer (per-user)
+export {
+  shouldOptimize,
+  getUserFSRSParams,
+  optimizeFSRSParams,
+  type FSRSParamsConfig,
+} from './fsrs-optimizer'
+
 // Daily Session Generator (gap-aware)
 export {
   generateDailySession,

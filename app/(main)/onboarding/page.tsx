@@ -20,6 +20,7 @@ type PreferredTime = 'morning' | 'afternoon' | 'evening' | 'varies'
 type LearningStyle = 'reading' | 'visual' | 'practice'
 
 interface OnboardingData {
+  name: string
   studySystem: StudySystem | null
   grade: string | null
   subjects: SelectedSubject[]
@@ -115,6 +116,7 @@ export default function OnboardingPage() {
   const [pendingComplete, setPendingComplete] = useState(false)
 
   const [data, setData] = useState<OnboardingData>({
+    name: '',
     studySystem: null,
     grade: null,
     subjects: [],
@@ -189,11 +191,11 @@ export default function OnboardingPage() {
   // Determine if we should show subject selection step
   const showSubjectStep = data.studySystem && hasCurriculumData(data.studySystem)
 
-  // Step flow: 1=system, 2=grade, 3=subjects (if curriculum), 4=goal, 5=time, 6=preferred, 7=learning
-  // Quick mode: 1=system, 2=grade, 3=goal → complete
-  const QUICK_STEPS = 3
-  const BASE_STEPS = 6 // system, grade, goal, time, preferred, learning
-  const EXTENDED_STEPS = 7 // +subjects
+  // Step flow: 1=name, 2=system, 3=grade, 4=subjects (if curriculum), 5=goal, 6=time, 7=preferred, 8=learning
+  // Quick mode: 1=name, 2=system, 3=grade, 4=goal → complete
+  const QUICK_STEPS = 4
+  const BASE_STEPS = 7 // name, system, grade, goal, time, preferred, learning
+  const EXTENDED_STEPS = 8 // +subjects
   const totalSteps = isQuickMode ? QUICK_STEPS : (showSubjectStep ? EXTENDED_STEPS : BASE_STEPS)
 
   // Analytics tracking
@@ -203,8 +205,8 @@ export default function OnboardingPage() {
   // Track step changes
   const trackOnboardingStep = useCallback((step: number) => {
     const stepNames = showSubjectStep
-      ? ['start', 'study_system', 'grade', 'subjects', 'study_goal', 'time_availability', 'preferred_time', 'learning_style']
-      : ['start', 'study_system', 'grade', 'study_goal', 'time_availability', 'preferred_time', 'learning_style']
+      ? ['name', 'study_system', 'grade', 'subjects', 'study_goal', 'time_availability', 'preferred_time', 'learning_style']
+      : ['name', 'study_system', 'grade', 'study_goal', 'time_availability', 'preferred_time', 'learning_style']
     if (step >= 1 && step <= stepNames.length) {
       trackStep(stepNames[step - 1], step)
     }
@@ -244,16 +246,16 @@ export default function OnboardingPage() {
   // Get the actual step content based on current step and whether subjects are shown
   const getStepContent = (step: number): string => {
     if (isQuickMode) {
-      // Quick mode: 1=system, 2=grade, 3=goal
-      const steps = ['system', 'grade', 'goal']
+      // Quick mode: 1=name, 2=system, 3=grade, 4=goal
+      const steps = ['name', 'system', 'grade', 'goal']
       return steps[step - 1] || ''
     } else if (showSubjectStep) {
-      // With subject selection: 1=system, 2=grade, 3=subjects, 4=goal, 5=time, 6=preferred, 7=learning
-      const steps = ['system', 'grade', 'subjects', 'goal', 'time', 'preferred', 'learning']
+      // With subject selection: 1=name, 2=system, 3=grade, 4=subjects, 5=goal, 6=time, 7=preferred, 8=learning
+      const steps = ['name', 'system', 'grade', 'subjects', 'goal', 'time', 'preferred', 'learning']
       return steps[step - 1] || ''
     } else {
-      // Without subject selection: 1=system, 2=grade, 3=goal, 4=time, 5=preferred, 6=learning
-      const steps = ['system', 'grade', 'goal', 'time', 'preferred', 'learning']
+      // Without subject selection: 1=name, 2=system, 3=grade, 4=goal, 5=time, 6=preferred, 7=learning
+      const steps = ['name', 'system', 'grade', 'goal', 'time', 'preferred', 'learning']
       return steps[step - 1] || ''
     }
   }
@@ -363,6 +365,13 @@ export default function OnboardingPage() {
       if (!user) {
         router.replace('/login')
         return
+      }
+
+      // Update user's display name
+      if (data.name.trim()) {
+        await supabase.auth.updateUser({
+          data: { name: data.name.trim() }
+        })
       }
 
       // Map time availability to session length in minutes
@@ -512,6 +521,32 @@ export default function OnboardingPage() {
               direction === 'forward' ? 'slide-in-from-right-8' : 'slide-in-from-left-8'
             } fade-in duration-300`}
           >
+            {getStepContent(currentStep) === 'name' && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white">
+                  {t('steps.nameTitle', { defaultMessage: "What's your name?" })}
+                </h2>
+                <p className="text-center text-gray-500 dark:text-gray-400">
+                  {t('steps.nameSubtitle', { defaultMessage: "We'll use this to personalize your experience" })}
+                </p>
+                <input
+                  type="text"
+                  value={data.name}
+                  onChange={(e) => setData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder={t('steps.namePlaceholder', { defaultMessage: 'Enter your name' })}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center text-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none"
+                  autoFocus
+                  maxLength={50}
+                />
+                <button
+                  onClick={nextStep}
+                  className="w-full py-4 px-6 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl transition-colors"
+                >
+                  {t('ui.continueButton', { defaultMessage: 'Continue' })}
+                </button>
+              </div>
+            )}
+
             {getStepContent(currentStep) === 'system' && (
               <div>
                 <StepContent

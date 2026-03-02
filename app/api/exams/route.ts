@@ -213,22 +213,37 @@ Adapt question difficulty to match the target level. Include more questions from
       // Continue without exam intelligence
     }
 
-    let courseContent = ''
+    const MAX_CONTENT_CHARS = 6000
     const lessonList: { index: number; title: string }[] = []
 
+    // First pass: collect all lesson content
+    const lessonContents: string[] = []
     for (let i = 0; i < lessons.length; i++) {
       const lesson = lessons[i]
       if (!lesson) continue
       lessonList.push({ index: i, title: lesson.title || `Lesson ${i + 1}` })
-      courseContent += `\n=== LESSON ${i}: ${lesson.title || 'Untitled'} ===\n`
+      let content = `\n=== LESSON ${i}: ${lesson.title || 'Untitled'} ===\n`
       const steps = lesson.steps || []
       for (const step of steps) {
-        const content = step.content || step.question || step.explanation || ''
-        if (content) courseContent += `${content}\n`
+        const stepContent = step.content || step.question || step.explanation || ''
+        if (stepContent) content += `${stepContent}\n`
       }
+      lessonContents.push(content)
     }
 
-    courseContent = courseContent.slice(0, 6000)
+    // Proportional sampling: give each lesson equal character budget
+    const charsPerLesson = lessonContents.length > 0
+      ? Math.floor(MAX_CONTENT_CHARS / lessonContents.length)
+      : MAX_CONTENT_CHARS
+
+    let courseContent = ''
+    for (const content of lessonContents) {
+      if (content.length <= charsPerLesson) {
+        courseContent += content
+      } else {
+        courseContent += content.slice(0, charsPerLesson) + '\n[...truncated]\n'
+      }
+    }
 
     // Build curriculum context for exam generation
     const curriculumContext = await buildExamContext(
