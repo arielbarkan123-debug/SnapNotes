@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import type { VisualUpdate } from '@/lib/homework/types'
 
 // Lazy-load heavy renderers (client-only)
@@ -48,6 +48,7 @@ export default function VisualSolvingPanel({
   darkMode = false,
 }: VisualSolvingPanelProps) {
   const t = useTranslations('chat')
+  const locale = useLocale()
   const [currentStep, setCurrentStep] = useState(0)
   const [isFullScreen, setIsFullScreen] = useState(false)
 
@@ -148,9 +149,11 @@ export default function VisualSolvingPanel({
 
       {/* Diagram Area */}
       <div className="flex-1 overflow-auto p-4">
-        {currentUpdate.title && (
+        {(currentUpdate.title || currentUpdate.titleHe) && (
           <h4 className="mb-2 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
-            {currentUpdate.title}
+            {locale === 'he'
+              ? (currentUpdate.titleHe || currentUpdate.title)
+              : currentUpdate.title}
           </h4>
         )}
 
@@ -221,9 +224,11 @@ export default function VisualSolvingPanel({
             <span className="text-xs text-gray-600 dark:text-gray-400">
               {t('visualStep', { current: currentStep + 1, total: totalSteps })}
             </span>
-            {currentUpdate.stepLabel && (
+            {(currentUpdate.stepLabel || currentUpdate.stepLabelHe) && (
               <p className="text-xs font-medium text-gray-800 dark:text-gray-200">
-                {currentUpdate.stepLabel}
+                {locale === 'he'
+                  ? (currentUpdate.stepLabelHe || currentUpdate.stepLabel)
+                  : currentUpdate.stepLabel}
               </p>
             )}
           </div>

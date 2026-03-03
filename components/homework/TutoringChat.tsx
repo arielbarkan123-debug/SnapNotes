@@ -130,16 +130,6 @@ function MessageBubble({
   const isTutor = message.role === 'tutor'
   const hasDiagram = isTutor && message.diagram
 
-  // Debug logging for diagram rendering
-  if (isTutor) {
-    console.log('[MessageBubble] Message:', {
-      role: message.role,
-      hasDiagram: !!message.diagram,
-      diagramType: message.diagram?.type,
-      diagramDataKeys: message.diagram?.data ? Object.keys(message.diagram.data) : 'no data',
-    })
-  }
-
   // Convert diagram to correct type if present
   const diagramState = hasDiagram ? convertToDiagramState(message.diagram!) : null
 
@@ -555,6 +545,7 @@ export default function TutoringChat({
         <button
           type="button"
           onClick={() => setIsVisualPanelOpen(true)}
+          aria-label={t('showDiagram')}
           className="fixed bottom-24 end-4 z-40 md:hidden flex items-center gap-2 rounded-full bg-violet-600 px-4 py-3 text-sm font-medium text-white shadow-lg hover:bg-violet-700 transition-colors"
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
