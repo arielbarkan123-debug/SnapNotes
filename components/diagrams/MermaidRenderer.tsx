@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import DOMPurify from 'dompurify'
 
@@ -34,6 +34,12 @@ function injectSanitizedSvg(container: HTMLElement, rawSvg: string): void {
 }
 
 // ---------------------------------------------------------------------------
+// Module-level mermaid theme tracker (avoid re-initializing on every render)
+// ---------------------------------------------------------------------------
+
+let lastMermaidTheme: string | null = null
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -48,67 +54,70 @@ export default function MermaidRenderer({
   const [error, setError] = useState<string | null>(null)
   const idRef = useRef(`mermaid-${Math.random().toString(36).slice(2, 10)}`)
 
-  const renderDiagram = useCallback(async () => {
-    try {
-      // Dynamic import to keep bundle small and avoid SSR issues
-      const mermaid = (await import('mermaid')).default
-
-      mermaid.initialize({
-        startOnLoad: false,
-        theme: darkMode ? 'dark' : 'default',
-        securityLevel: 'strict',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        themeVariables: darkMode
-          ? {
-              primaryColor: '#6366f1',
-              primaryTextColor: '#e5e7eb',
-              primaryBorderColor: '#4f46e5',
-              lineColor: '#9ca3af',
-              secondaryColor: '#1e293b',
-              tertiaryColor: '#0f172a',
-              background: '#111827',
-              mainBkg: '#1e293b',
-              nodeBorder: '#4f46e5',
-              clusterBkg: '#1e293b',
-              clusterBorder: '#374151',
-              titleColor: '#e5e7eb',
-              edgeLabelBackground: '#1e293b',
-            }
-          : {
-              primaryColor: '#6366f1',
-              primaryTextColor: '#1f2937',
-              primaryBorderColor: '#4f46e5',
-              lineColor: '#6b7280',
-              secondaryColor: '#ede9fe',
-              tertiaryColor: '#f3f4f6',
-            },
-      })
-
-      const { svg } = await mermaid.render(idRef.current, definition)
-
-      if (containerRef.current) {
-        injectSanitizedSvg(containerRef.current, svg)
-      }
-
-      setLoading(false)
-    } catch (err) {
-      console.error('[MermaidRenderer] Render error:', err)
-      setError(t('mermaidError'))
-      setLoading(false)
-    }
-  }, [definition, darkMode, t])
-
   useEffect(() => {
-    let cancelled = false
+    const signal = { cancelled: false }
 
-    if (!cancelled) {
-      renderDiagram()
+    async function render() {
+      try {
+        // Dynamic import to keep bundle small and avoid SSR issues
+        const mermaid = (await import('mermaid')).default
+        if (signal.cancelled) return
+
+        // Only re-initialize if theme changed (avoid global config fights)
+        const theme = darkMode ? 'dark' : 'default'
+        if (lastMermaidTheme !== theme) {
+          mermaid.initialize({
+            startOnLoad: false,
+            theme,
+            securityLevel: 'strict',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            themeVariables: darkMode
+              ? {
+                  primaryColor: '#6366f1',
+                  primaryTextColor: '#e5e7eb',
+                  primaryBorderColor: '#4f46e5',
+                  lineColor: '#9ca3af',
+                  secondaryColor: '#1e293b',
+                  tertiaryColor: '#0f172a',
+                  background: '#111827',
+                  mainBkg: '#1e293b',
+                  nodeBorder: '#4f46e5',
+                  clusterBkg: '#1e293b',
+                  clusterBorder: '#374151',
+                  titleColor: '#e5e7eb',
+                  edgeLabelBackground: '#1e293b',
+                }
+              : {
+                  primaryColor: '#6366f1',
+                  primaryTextColor: '#1f2937',
+                  primaryBorderColor: '#4f46e5',
+                  lineColor: '#6b7280',
+                  secondaryColor: '#ede9fe',
+                  tertiaryColor: '#f3f4f6',
+                },
+          })
+          lastMermaidTheme = theme
+        }
+
+        const { svg } = await mermaid.render(idRef.current, definition)
+        if (signal.cancelled) return
+
+        if (containerRef.current) {
+          injectSanitizedSvg(containerRef.current, svg)
+        }
+
+        setLoading(false)
+      } catch (err) {
+        if (signal.cancelled) return
+        console.error('[MermaidRenderer] Render error:', err)
+        setError(t('mermaidError'))
+        setLoading(false)
+      }
     }
 
-    return () => {
-      cancelled = true
-    }
-  }, [renderDiagram])
+    render()
+    return () => { signal.cancelled = true }
+  }, [definition, darkMode, t])
 
   if (error) {
     return (

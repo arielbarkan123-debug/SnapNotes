@@ -18,13 +18,11 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-import { useTranslations } from 'next-intl'
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type ChartType = 'bar' | 'histogram' | 'pie' | 'line' | 'scatter' | 'dot_plot' | 'box_plot'
+export type ChartType = 'bar' | 'bar_chart' | 'histogram' | 'pie' | 'pie_chart' | 'line' | 'line_chart' | 'scatter' | 'dot_plot' | 'box_plot' | 'stem_leaf_plot' | 'frequency_table'
 
 export interface ChartDataPoint {
   name: string
@@ -204,7 +202,6 @@ function DotPlotChart({
   title?: string
   xAxisLabel?: string
 }) {
-  const t = useTranslations('diagram')
   const textColor = darkMode ? '#d1d5db' : '#374151'
   const gridColor = darkMode ? '#374151' : '#e5e7eb'
 
@@ -227,7 +224,7 @@ function DotPlotChart({
   const xStep = (svgWidth - plotLeft - 30) / Math.max(labels.length, 1)
 
   return (
-    <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full" role="img" aria-label={title || t('dotPlotLabel')}>
+    <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full" role="img" aria-label={title || 'Dot plot'}>
       {title && (
         <text x={svgWidth / 2} y={16} textAnchor="middle" fontSize={13} fill={textColor} fontWeight="600">
           {title}
@@ -315,10 +312,43 @@ export default function RechartsRenderer({
     )
   }
 
+  // Stem-and-leaf plot rendered as a styled table
+  if (chartType === 'stem_leaf_plot') {
+    return (
+      <div className="w-full">
+        {title && (
+          <h3 className="mb-2 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+            {title}
+          </h3>
+        )}
+        <div className="mx-auto max-w-md overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+          <table className="w-full text-sm" role="table" aria-label={title || 'Stem-and-leaf plot'}>
+            <thead>
+              <tr className="bg-gray-100 dark:bg-gray-800">
+                <th className="px-4 py-2 text-right font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-700">Stem</th>
+                <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Leaf</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((d, i) => (
+                <tr key={i} className="border-t border-gray-200 dark:border-gray-700">
+                  <td className="px-4 py-1.5 text-right font-mono font-medium text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700">{d.name}</td>
+                  <td className="px-4 py-1.5 text-left font-mono text-gray-600 dark:text-gray-400">{d.value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
+  }
+
   const renderChart = () => {
     switch (chartType) {
       case 'bar':
-      case 'histogram': {
+      case 'bar_chart':
+      case 'histogram':
+      case 'frequency_table': {
         const keys = seriesKeys || ['value']
         return (
           <BarChart data={data}>
@@ -335,6 +365,7 @@ export default function RechartsRenderer({
       }
 
       case 'pie':
+      case 'pie_chart':
         return (
           <PieChart>
             <Pie
@@ -355,7 +386,8 @@ export default function RechartsRenderer({
           </PieChart>
         )
 
-      case 'line': {
+      case 'line':
+      case 'line_chart': {
         const keys = seriesKeys || ['value']
         return (
           <LineChart data={data}>

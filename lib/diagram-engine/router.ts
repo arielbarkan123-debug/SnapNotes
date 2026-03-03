@@ -203,7 +203,7 @@ export function routeQuestion(question: string): Pipeline {
   // ── Phase 1: Explicit topic rules (first match wins) ──
   // These are ordered by specificity — more specific patterns first
   for (const rule of TOPIC_RULES) {
-    if (rule.pattern && rule.pattern.test(lower)) {
+    if (rule.pattern.test(lower)) {
       return rule.pipeline;
     }
   }

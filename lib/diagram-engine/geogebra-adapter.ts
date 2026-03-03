@@ -265,7 +265,7 @@ export function transformationToGeoGebra(data: Record<string, unknown>): GeoGebr
       break
     }
     case 'rotation': {
-      const angle = data.angle as number ?? 90
+      const angle = (data.angle as number | undefined) ?? 90
       const centerPt = data.center as { x: number; y: number } | undefined
       if (centerPt) {
         commands.push({
@@ -306,7 +306,7 @@ export function transformationToGeoGebra(data: Record<string, unknown>): GeoGebr
       break
     }
     case 'dilation': {
-      const factor = data.factor as number ?? 2
+      const factor = (data.factor as number | undefined) ?? 2
       const centerPt2 = data.center as { x: number; y: number } | undefined
       const cx = centerPt2?.x ?? 0
       const cy = centerPt2?.y ?? 0

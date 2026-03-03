@@ -82,7 +82,10 @@ function loadDesmosScript(): Promise<void> {
     script.src = 'https://www.desmos.com/api/v1.9/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6'
     script.async = true
     script.onload = () => resolve()
-    script.onerror = () => reject(new Error('Failed to load Desmos API'))
+    script.onerror = () => {
+      desmosLoadPromise = null  // allow retry on next mount
+      reject(new Error('Failed to load Desmos API'))
+    }
     document.head.appendChild(script)
   })
 
@@ -201,17 +204,6 @@ export default function DesmosRenderer({
       }
     }
   }, [initCalculator])
-
-  // Handle resize
-  useEffect(() => {
-    const observer = new ResizeObserver(() => {
-      // Desmos handles resize internally once mounted
-    })
-    if (containerRef.current) {
-      observer.observe(containerRef.current)
-    }
-    return () => observer.disconnect()
-  }, [])
 
   if (error) {
     return (

@@ -24,6 +24,7 @@ export interface GeoGebraRendererProps {
   yMax?: number
   title?: string
   darkMode?: boolean
+  locale?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -70,7 +71,10 @@ function loadGeoGebraScript(): Promise<void> {
     script.src = 'https://www.geogebra.org/apps/deployggb.js'
     script.async = true
     script.onload = () => resolve()
-    script.onerror = () => reject(new Error('Failed to load GeoGebra API'))
+    script.onerror = () => {
+      geogebraLoadPromise = null  // allow retry on next mount
+      reject(new Error('Failed to load GeoGebra API'))
+    }
     document.head.appendChild(script)
   })
 
@@ -103,6 +107,7 @@ export default function GeoGebraRenderer({
   yMax = 10,
   title,
   darkMode = false,
+  locale = 'en',
 }: GeoGebraRendererProps) {
   const t = useTranslations('diagram')
   const containerIdRef = useRef<string>(`ggb_${Math.random().toString(36).slice(2, 10)}`)
@@ -153,7 +158,7 @@ export default function GeoGebraRenderer({
       enableRightClick: false,
       enableShiftDragZoom: true,
       showResetIcon: false,
-      language: 'en',
+      language: locale || 'en',
       borderColor: darkMode ? '#374151' : '#e5e7eb',
       appletOnLoad: (api: GGBApi) => {
         const fn = window[callbackName] as ((api: GGBApi) => void) | undefined
@@ -163,7 +168,7 @@ export default function GeoGebraRenderer({
 
     const applet = new window.GGBApplet(params, true)
     applet.inject(containerId)
-  }, [commands, showGrid, showAxes, xMin, xMax, yMin, yMax, darkMode])
+  }, [commands, showGrid, showAxes, xMin, xMax, yMin, yMax, darkMode, locale])
 
   useEffect(() => {
     let cancelled = false
@@ -184,6 +189,13 @@ export default function GeoGebraRenderer({
       // Clean up global callback
       const callbackName = `${containerIdRef.current}_onLoad`
       delete window[callbackName]
+      // Remove injected GeoGebra iframe to prevent stacking on re-render
+      const container = document.getElementById(containerIdRef.current)
+      if (container) {
+        while (container.firstChild) {
+          container.removeChild(container.firstChild)
+        }
+      }
     }
   }, [initApplet])
 
