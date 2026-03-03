@@ -128,6 +128,15 @@ export async function POST(request: NextRequest) {
           return
         }
 
+        // Parse mode (default to standard)
+        const mode = body.mode || 'standard'
+        const validModes = ['standard', 'batch_worksheet', 'before_submit', 'rubric']
+        if (!validModes.includes(mode)) {
+          send({ type: 'error', error: formatApiError('API_CHK_VAL_004', `Invalid mode: ${mode}`) })
+          closeStream()
+          return
+        }
+
         // Validate based on input mode
         const inputMode = body.inputMode || 'image'
 
@@ -160,6 +169,9 @@ export async function POST(request: NextRequest) {
             reference_image_urls: body.referenceImageUrls || [],
             teacher_review_urls: body.teacherReviewUrls || [],
             status: 'analyzing',
+            mode: mode,
+            rubric_image_urls: body.rubricImageUrls || [],
+            additional_image_urls: body.additionalImageUrls || [],
           })
           .select()
           .single()
@@ -204,6 +216,10 @@ export async function POST(request: NextRequest) {
             // Pass extracted document text for DOCX files
             taskDocumentText: body.taskDocumentText,
             answerDocumentText: body.answerDocumentText,
+            // Mode-specific
+            mode,
+            additionalImageUrls: body.additionalImageUrls,
+            rubricImageUrls: body.rubricImageUrls,
           })
           console.log('[Homework Check] Analysis completed, grade:', result.feedback?.gradeEstimate)
         } catch (analysisError) {
@@ -241,6 +257,7 @@ export async function POST(request: NextRequest) {
               subject: result.subject,
               topic: result.topic,
               feedback: result.feedback,
+              mode_result: result.modeResult || null,
               status: 'completed',
               completed_at: new Date().toISOString(),
             })

@@ -6,12 +6,12 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import Button from '@/components/ui/Button'
-import { AnnotatedImageViewer, TutoringChat } from '@/components/homework'
+import { AnnotatedImageViewer, TutoringChat, BatchWorksheetResult as BatchWorksheetResultView } from '@/components/homework'
 import { useToast } from '@/contexts/ToastContext'
 import { useXP } from '@/contexts/XPContext'
 import { useVisuals } from '@/contexts/VisualsContext'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
-import type { HomeworkCheck, HomeworkFeedback, GradeLevel, AnnotatedFeedbackPoint, HomeworkSession } from '@/lib/homework/types'
+import type { HomeworkCheck, HomeworkFeedback, GradeLevel, AnnotatedFeedbackPoint, HomeworkSession, BatchWorksheetResult as BatchResult, BatchWorksheetItem, CheckMode } from '@/lib/homework/types'
 
 // ============================================================================
 // Helper Functions
@@ -550,6 +550,90 @@ export default function HomeworkResultsPage() {
 
   const feedback = check.feedback as HomeworkFeedback
   const gradeStyles = getGradeLevelStyles(feedback.gradeLevel, t)
+  const currentCheckMode = (check.mode || 'standard') as CheckMode
+  const modeResult = check.mode_result as BatchResult | null | undefined
+
+  // Handle practice from worksheet mistake
+  const handlePracticeFromMistake = (_item: BatchWorksheetItem, _idx: number) => {
+    // Navigate to practice with topic context
+    router.push('/practice')
+  }
+
+  // Batch worksheet mode result view
+  if (currentCheckMode === 'batch_worksheet' && modeResult && 'items' in modeResult) {
+    return (
+      <div className="min-h-screen bg-transparent">
+        {/* Header */}
+        <header className="sticky top-14 md:top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="container mx-auto px-4 py-4 max-w-2xl">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/homework"
+                className="p-2 -ms-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </Link>
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {t('results.worksheetResults')}
+                </h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {check.subject} {'\u2022'} {check.topic}
+                </p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-6 max-w-2xl space-y-6">
+          <BatchWorksheetResultView
+            result={modeResult as BatchResult}
+            onPractice={handlePracticeFromMistake}
+            practicedIndices={(check.practiced_items || []).map((p) => p.problemIndex)}
+          />
+
+          {/* Actions */}
+          <div className="space-y-3 pt-2">
+            <Button
+              onClick={() => router.push('/homework')}
+              variant="primary"
+              size="lg"
+              className="w-full"
+            >
+              {t('results.checkAnother')}
+            </Button>
+            <Button
+              onClick={() => router.push('/dashboard')}
+              variant="secondary"
+              size="lg"
+              className="w-full"
+            >
+              {t('backToDashboard')}
+            </Button>
+          </div>
+
+          {/* Practice CTA */}
+          <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-[22px] p-6 text-white shadow-card">
+            <div className="flex items-start gap-4">
+              <span className="text-3xl">{'\uD83C\uDFAF'}</span>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold mb-1">{t('results.practiceMore')}</h3>
+                <p className="text-sm text-white/80 mb-4">{t('results.practiceMoreDesc')}</p>
+                <Link
+                  href="/practice"
+                  className="inline-flex items-center justify-center px-5 py-2.5 bg-white text-purple-700 font-medium rounded-lg hover:bg-white/90 transition-colors"
+                >
+                  {t('results.startPractice')}
+                </Link>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -571,7 +655,7 @@ export default function HomeworkResultsPage() {
                   {t('results.homeworkResults')}
                 </h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {check.subject} • {check.topic}
+                  {check.subject} {'\u2022'} {check.topic}
                 </p>
               </div>
             </div>

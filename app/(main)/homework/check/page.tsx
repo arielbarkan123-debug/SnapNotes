@@ -615,6 +615,11 @@ export default function HomeworkCheckPage() {
   const [taskText, setTaskText] = useState('')
   const [answerText, setAnswerText] = useState('')
 
+  // Checker mode
+  const [checkMode, setCheckMode] = useState<'standard' | 'batch_worksheet' | 'before_submit' | 'rubric'>('standard')
+  // Batch worksheet additional pages (up to 3)
+  const [additionalPages, setAdditionalPages] = useState<UploadedImage[]>([])
+
   // Status message during submission (for HEIC conversion + upload + analysis)
   const [submissionStatus, setSubmissionStatus] = useState<string | null>(null)
   // HEIC warning modal - shows when user selects HEIC image
@@ -720,6 +725,23 @@ export default function HomeworkCheckPage() {
     const preview = createSafeObjectURL(file)
     setTeacherReviews(prev => [...prev, { file, preview, isHeic: false }])
   }, [createSafeObjectURL, teacherReviews.length])
+
+  // Handle additional page uploads for batch worksheet mode
+  const handleAdditionalPageUpload = useCallback((file: File) => {
+    if (additionalPages.length >= 3) return // Max 3 additional (total 4 with task)
+    const docType = isDocumentFile(file)
+    if (docType) {
+      setAdditionalPages(prev => [...prev, { file, preview: null, isHeic: false, isDocument: true, docType }])
+      return
+    }
+    const heic = isHeicFile(file)
+    if (heic) {
+      setError('Please use JPEG or PNG for additional worksheet pages.')
+      return
+    }
+    const preview = createSafeObjectURL(file)
+    setAdditionalPages(prev => [...prev, { file, preview, isHeic: false }])
+  }, [createSafeObjectURL, additionalPages.length])
 
   // Handle HEIC conversion when user clicks "Try Anyway" in the warning modal
   const tryHeicConversion = useCallback(async () => {
@@ -929,6 +951,10 @@ export default function HomeworkCheckPage() {
       if (answerImage) allFiles.push(answerImage.file)
       allFiles.push(...referenceImages.map(img => img.file))
       allFiles.push(...teacherReviews.map(img => img.file))
+      // Additional pages for batch worksheet mode
+      if (checkMode === 'batch_worksheet') {
+        allFiles.push(...additionalPages.map(img => img.file))
+      }
 
       // Upload all files to storage
       setSubmissionStatus(t('check.uploadingFiles'))
@@ -976,8 +1002,15 @@ export default function HomeworkCheckPage() {
         .map((img: { url: string }) => img.url)
       idx += referenceImages.length
       const teacherReviewUrls = uploadedFiles
-        .slice(idx)
+        .slice(idx, idx + teacherReviews.length)
         .map((img: { url: string }) => img.url)
+      idx += teacherReviews.length
+      // Additional page URLs for batch worksheet mode
+      const additionalImageUrls = checkMode === 'batch_worksheet'
+        ? uploadedFiles
+            .slice(idx, idx + additionalPages.length)
+            .map((img: { url: string }) => img.url)
+        : undefined
 
       if (!taskFileData && !answerFileData) {
         throw new Error(formatError(ERROR_CODES.HC_UPL_005, 'No files were uploaded successfully. Please try again.', 'HomeworkChecker/Upload/NoFiles'))
@@ -1084,6 +1117,9 @@ export default function HomeworkCheckPage() {
             // Include extracted DOCX text if available
             taskDocumentText,
             answerDocumentText,
+            // Mode fields
+            mode: checkMode,
+            additionalImageUrls: checkMode === 'batch_worksheet' ? additionalImageUrls : undefined,
           }),
         })
 
@@ -1335,6 +1371,35 @@ export default function HomeworkCheckPage() {
           </div>
         </div>
 
+        {/* Mode Selector */}
+        <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-200 dark:border-gray-700 p-4 mb-8">
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">
+            {t('check.modeLabel')}
+          </label>
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+            {(['standard', 'batch_worksheet'] as const).map((modeOption) => (
+              <button
+                key={modeOption}
+                onClick={() => setCheckMode(modeOption)}
+                className={`
+                  flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors
+                  ${checkMode === modeOption
+                    ? 'bg-violet-600 text-white shadow-sm'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }
+                `}
+              >
+                {t(`check.mode${modeOption === 'standard' ? 'Standard' : 'BatchWorksheet'}`)}
+              </button>
+            ))}
+          </div>
+          {checkMode === 'batch_worksheet' && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              {t('check.batchWorksheetDesc')}
+            </p>
+          )}
+        </div>
+
         {/* Error Message */}
         {error && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6">
@@ -1369,6 +1434,24 @@ export default function HomeworkCheckPage() {
                   />
                 </div>
               </div>
+
+              {/* Batch Worksheet Additional Pages */}
+              {checkMode === 'batch_worksheet' && (
+                <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-200 dark:border-gray-700 p-6">
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{t('check.additionalPages')}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                    {t('check.pageOf', { current: 1 + additionalPages.length, total: 1 + additionalPages.length })}
+                    {additionalPages.length >= 3 && ` \u2014 ${t('check.maxPages')}`}
+                  </p>
+                  <MultiImageUploader
+                    label={t('check.additionalPages')}
+                    images={additionalPages}
+                    onUpload={handleAdditionalPageUpload}
+                    onRemove={(index) => setAdditionalPages(prev => prev.filter((_, i) => i !== index))}
+                    maxImages={3}
+                  />
+                </div>
+              )}
 
               {/* Optional Uploads */}
               <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-200 dark:border-gray-700 p-6">

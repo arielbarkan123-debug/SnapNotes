@@ -26,6 +26,8 @@ import type {
   FeedbackPoint,
   CheckMode,
   ExtendedCheckerOutput,
+  BatchWorksheetItem,
+  BatchWorksheetResult,
 } from './types'
 import { verifyAnswer, answersMatch } from './math-verifier'
 import { readStudentWork } from './student-work-reader'
@@ -401,6 +403,139 @@ export interface CheckerInput {
 
 export type CheckerOutput = ExtendedCheckerOutput
 
+// ============================================================================
+// BATCH WORKSHEET MODE
+// ============================================================================
+
+/**
+ * Analyze a full worksheet with multiple problems from 1-4 images.
+ * All problems are analyzed in a single Claude Vision call.
+ */
+async function analyzeWorksheetBatch(
+  client: Anthropic,
+  imageContents: Array<{ type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'; data: string } }>,
+  referenceContent: string | null
+): Promise<{ worksheetResult: BatchWorksheetResult; subject: string; topic: string; taskText: string }> {
+  const referenceBlock = referenceContent
+    ? `\n\nREFERENCE MATERIAL:\n${referenceContent}`
+    : ''
+
+  const systemPrompt = `You are a meticulous homework grader. You will receive 1-4 photos of a student's worksheet.
+
+TASK: Identify EVERY problem on the worksheet pages. For each problem, extract:
+1. The problem number/label
+2. The problem text (the question being asked)
+3. The student's written answer
+4. The correct answer (solve it yourself)
+5. Whether the student's answer is correct, incorrect, or unclear/unreadable
+6. A brief explanation of any error
+7. The mathematical/subject topic this problem tests
+8. The error type if incorrect
+
+RULES:
+- Be thorough — do NOT skip any problems
+- If a student's handwriting is unreadable, mark isCorrect as null
+- Solve each problem independently to verify correctness
+- Identify the topic for each problem (e.g., "fractions", "linear equations", "area")
+- Detect the language of the worksheet and respond in that language${referenceBlock}
+
+Respond ONLY with valid JSON matching this exact schema:
+{
+  "subject": "string (e.g., math, physics, chemistry)",
+  "topic": "string (overall worksheet topic)",
+  "items": [
+    {
+      "problemNumber": "number or string",
+      "problemText": "the question",
+      "studentAnswer": "what the student wrote",
+      "correctAnswer": "the actual correct answer",
+      "isCorrect": true | false | null,
+      "explanation": "explanation of error or confirmation of correctness",
+      "topic": "specific topic for this problem",
+      "errorType": "factual | conceptual | calculation | formatting | incomplete (only if incorrect)"
+    }
+  ]
+}`
+
+  const response = await client.messages.create({
+    model: AI_MODEL,
+    max_tokens: MAX_TOKENS,
+    system: systemPrompt,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          ...imageContents,
+          { type: 'text', text: 'Analyze all problems on this worksheet. Return JSON.' },
+        ],
+      },
+    ],
+  })
+
+  const text = response.content
+    .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+    .map((block) => block.text)
+    .join('')
+
+  // Extract JSON from response (handle markdown code blocks)
+  let jsonStr = text
+  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (jsonMatch) {
+    jsonStr = jsonMatch[1].trim()
+  }
+
+  const parsed = JSON.parse(jsonStr)
+  const items: BatchWorksheetItem[] = (parsed.items || []).map((item: Record<string, unknown>) => ({
+    problemNumber: item.problemNumber ?? '?',
+    problemText: String(item.problemText || ''),
+    studentAnswer: String(item.studentAnswer || ''),
+    correctAnswer: String(item.correctAnswer || ''),
+    isCorrect: item.isCorrect === null ? null : Boolean(item.isCorrect),
+    explanation: String(item.explanation || ''),
+    topic: String(item.topic || ''),
+    errorType: item.errorType as BatchWorksheetItem['errorType'],
+  }))
+
+  const correct = items.filter((i) => i.isCorrect === true).length
+  const incorrect = items.filter((i) => i.isCorrect === false).length
+  const unclear = items.filter((i) => i.isCorrect === null).length
+  const total = items.length
+  const scoreDenom = total - unclear
+  const score = scoreDenom > 0 ? Math.round((correct / scoreDenom) * 100) : 0
+
+  // Build topic breakdown
+  const topicBreakdown: Record<string, { correct: number; total: number }> = {}
+  for (const item of items) {
+    const t = item.topic || 'Other'
+    if (!topicBreakdown[t]) topicBreakdown[t] = { correct: 0, total: 0 }
+    topicBreakdown[t].total++
+    if (item.isCorrect === true) topicBreakdown[t].correct++
+  }
+
+  // Build combined task text from all problems
+  const taskText = items
+    .map((item) => `${item.problemNumber}. ${item.problemText}`)
+    .join('\n')
+
+  const worksheetResult: BatchWorksheetResult = {
+    mode: 'batch_worksheet',
+    totalProblems: total,
+    correct,
+    incorrect,
+    unclear,
+    items,
+    topicBreakdown,
+    score,
+  }
+
+  return {
+    worksheetResult,
+    subject: String(parsed.subject || 'math'),
+    topic: String(parsed.topic || 'worksheet'),
+    taskText,
+  }
+}
+
 export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutput> {
   try {
     const client = getAnthropicClient()
@@ -411,6 +546,91 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
     if (input.inputMode === 'text') {
       console.log('[Checker] Text mode - skipping image fetch, analyzing text directly...')
       return analyzeHomeworkText(client, input)
+    }
+
+    // ============================================================================
+    // MODE ROUTING: Batch Worksheet
+    // ============================================================================
+    const mode: CheckMode = input.mode || 'standard'
+
+    if (mode === 'batch_worksheet') {
+      console.log('[Checker] Batch worksheet mode — analyzing full worksheet...')
+      if (!input.taskImageUrl) {
+        throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_IMG_004, 'Task image URL is required for batch worksheet mode'))
+      }
+
+      // Collect all worksheet images (task + additional pages)
+      const allImageUrls = [input.taskImageUrl, ...(input.additionalImageUrls || [])]
+      const fetchedImages = await Promise.all(
+        allImageUrls.filter(Boolean).map((url) => fetchImageAsBase64(url!))
+      )
+
+      // Convert fetched images to Claude Vision content blocks
+      const imageContents = fetchedImages.map((img) => ({
+        type: 'image' as const,
+        source: {
+          type: 'base64' as const,
+          media_type: img.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+          data: img.base64,
+        },
+      }))
+
+      // Fetch reference content if provided
+      let referenceContent: string | null = null
+      if (input.referenceImageUrls?.length) {
+        referenceContent = `[${input.referenceImageUrls.length} reference image(s) provided]`
+      }
+
+      const { worksheetResult, subject, topic, taskText } = await analyzeWorksheetBatch(
+        client,
+        imageContents,
+        referenceContent
+      )
+
+      // Build a minimal HomeworkFeedback for backward compatibility
+      const correctPoints: FeedbackPoint[] = worksheetResult.items
+        .filter((i) => i.isCorrect === true)
+        .slice(0, 5)
+        .map((i) => ({ title: `Problem ${i.problemNumber}`, description: i.explanation }))
+
+      const improvementPoints: FeedbackPoint[] = worksheetResult.items
+        .filter((i) => i.isCorrect === false)
+        .map((i) => ({
+          title: `Problem ${i.problemNumber}: ${i.topic}`,
+          description: i.explanation,
+          severity: (i.errorType === 'conceptual' || i.errorType === 'factual') ? 'major' as const : 'minor' as const,
+        }))
+
+      const gradeLevel: GradeLevel = worksheetResult.score >= 90 ? 'excellent'
+        : worksheetResult.score >= 70 ? 'good'
+        : worksheetResult.score >= 50 ? 'needs_improvement'
+        : 'incomplete'
+
+      const feedback: HomeworkFeedback = {
+        gradeLevel,
+        gradeEstimate: `${worksheetResult.score}/100`,
+        summary: `Worksheet: ${worksheetResult.correct}/${worksheetResult.totalProblems} correct (${worksheetResult.score}%)`,
+        correctPoints,
+        improvementPoints,
+        suggestions: Object.entries(worksheetResult.topicBreakdown)
+          .filter(([, v]) => v.correct < v.total)
+          .map(([topicName, v]) => `Review ${topicName}: ${v.correct}/${v.total} correct`),
+        teacherStyleNotes: null,
+        expectationComparison: null,
+        encouragement: worksheetResult.score >= 80
+          ? 'Great work on this worksheet! Keep it up!'
+          : 'Keep practicing — each worksheet makes you stronger!',
+      }
+
+      return {
+        feedback,
+        subject,
+        topic,
+        taskText,
+        answerText: '',
+        mode: 'batch_worksheet',
+        modeResult: worksheetResult,
+      }
     }
 
     // ============================================================================
