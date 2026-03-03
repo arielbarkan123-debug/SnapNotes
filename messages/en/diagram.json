@@ -13,6 +13,15 @@
   "fullscreen": "View fullscreen",
   "exitFullscreen": "Exit fullscreen",
 
+  "loadingDesmos": "Loading graph...",
+  "loadingGeoGebra": "Loading geometry tool...",
+  "loadingMermaid": "Loading diagram...",
+  "mermaidError": "Failed to render diagram",
+  "dotPlotLabel": "Dot Plot",
+  "hybridEngine": "Interactive",
+  "switchToImage": "Switch to image",
+  "switchToInteractive": "Switch to interactive",
+
   "interactive": {
     "whatIf": "What If?",
     "whatIfSubtitle": "Adjust parameters to explore",

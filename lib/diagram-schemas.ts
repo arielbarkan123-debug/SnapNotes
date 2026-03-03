@@ -12,6 +12,8 @@ export interface DiagramSchema {
   gradeRange: string
   description: string
   jsonExample: string
+  /** Preferred client-side rendering engine for this diagram type */
+  engine?: 'desmos' | 'geogebra' | 'recharts' | 'mermaid' | 'svg' | 'tikz' | 'recraft'
 }
 
 export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
@@ -21,6 +23,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'number_line',
     subject: 'math',
     gradeRange: '1-12',
+    engine: 'svg',
     description: 'Number line with points, intervals, and inequalities. Use points array to plot values and intervals array to highlight distances or ranges between them.',
     jsonExample: JSON.stringify({
       type: 'number_line',
@@ -45,6 +48,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'coordinate_plane',
     subject: 'math',
     gradeRange: '5-12',
+    engine: 'desmos',
     description: 'Coordinate plane with curves, points, and lines. Expressions: x^2, sin(x), cos(x), sqrt(x), abs(x), exp(x), log(x)',
     jsonExample: JSON.stringify({
       type: 'coordinate_plane',
@@ -64,6 +68,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'long_division',
     subject: 'math',
     gradeRange: '3-6',
+    engine: 'svg',
     description: 'Step-by-step long division visualization showing the full divide-multiply-subtract-bring down algorithm. Each quotient digit produces one cycle of 4 step types: divide → multiply → subtract → bring_down. The "position" field is the 0-indexed column of the RIGHTMOST digit being worked on in the dividend (e.g., for dividend 156: position 1 means columns 0-1 cover "15", position 2 means the column for "6"). totalSteps in the outer wrapper = 1 (setup) + number_of_quotient_digits (division iterations) + 1 (result). Provide explanation/explanationHe on each step to narrate the algorithm for students. Include calculation strings showing the arithmetic.',
     jsonExample: JSON.stringify({
       type: 'long_division',
@@ -155,6 +160,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'equation',
     subject: 'math',
     gradeRange: '6-12',
+    engine: 'svg',
     description: 'Step-by-step equation solving with highlighted operations. Each step MUST have leftSide and rightSide (the two sides of the equation separated by "="). Show the operation applied to BOTH sides at each step so students see the balance principle. Include a final verification step using "simplify" operation. Also provide variable and solution at the top level for the final answer display.',
     jsonExample: JSON.stringify({
       type: 'equation',
@@ -181,6 +187,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'fraction',
     subject: 'math',
     gradeRange: '3-8',
+    engine: 'svg',
     description: 'Fraction operation visualization (add, subtract, multiply, divide)',
     jsonExample: JSON.stringify({
       type: 'fraction',
@@ -205,6 +212,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'factoring',
     subject: 'math',
     gradeRange: '8-12',
+    engine: 'svg',
     description: 'Polynomial factoring with step-by-step breakdown',
     jsonExample: JSON.stringify({
       type: 'factoring',
@@ -235,6 +243,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'completing_square',
     subject: 'math',
     gradeRange: '9-12',
+    engine: 'svg',
     description: 'Completing the square method visualization',
     jsonExample: JSON.stringify({
       type: 'completing_square',
@@ -268,6 +277,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'polynomial',
     subject: 'math',
     gradeRange: '8-12',
+    engine: 'svg',
     description: 'Polynomial operations (add, subtract, multiply, divide)',
     jsonExample: JSON.stringify({
       type: 'polynomial',
@@ -310,6 +320,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'radical',
     subject: 'math',
     gradeRange: '8-12',
+    engine: 'svg',
     description: 'Radical simplification step-by-step',
     jsonExample: JSON.stringify({
       type: 'radical',
@@ -343,6 +354,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'systems',
     subject: 'math',
     gradeRange: '8-12',
+    engine: 'svg',
     description: 'Systems of equations solving (substitution, elimination, or graphing)',
     jsonExample: JSON.stringify({
       type: 'systems',
@@ -370,6 +382,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'inequality',
     subject: 'math',
     gradeRange: '7-12',
+    engine: 'svg',
     description: 'Inequality solving with number line visualization',
     jsonExample: JSON.stringify({
       type: 'inequality',
@@ -392,6 +405,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'triangle',
     subject: 'math',
     gradeRange: '5-12',
+    engine: 'geogebra',
     description: 'Triangle with labeled vertices, sides, angles, and optional altitude',
     jsonExample: JSON.stringify({
       type: 'triangle',
@@ -423,6 +437,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'circle',
     subject: 'math',
     gradeRange: '5-12',
+    engine: 'geogebra',
     description: 'Circle with radius, diameter, and optional chords/sectors. IMPORTANT: Always set showRadius:true and radiusLabel to the actual value from the question (e.g. "r = 15 cm"). Use the exact number and units the student provided. Only include centerLabel when center coordinates are relevant (coordinate geometry, equation of a circle). For area/circumference questions, omit centerLabel and centerX/centerY — just use centerX:0, centerY:0.',
     jsonExample: JSON.stringify({
       type: 'circle',
@@ -443,6 +458,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'unit_circle',
     subject: 'math',
     gradeRange: '9-12',
+    engine: 'svg',
     description: 'Unit circle showing angles with sin/cos values and optional quadrant highlighting',
     jsonExample: JSON.stringify({
       type: 'unit_circle',
@@ -465,6 +481,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'tree_diagram',
     subject: 'math',
     gradeRange: '5-12',
+    engine: 'mermaid',
     description: 'Probability tree diagram with branching nodes and probabilities',
     jsonExample: JSON.stringify({
       type: 'tree_diagram',
@@ -502,6 +519,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'interactive_coordinate_plane',
     subject: 'math',
     gradeRange: '7-12',
+    engine: 'desmos',
     description: 'Interactive coordinate plane where students can drag points and add new points. Uses the same data format as coordinate_plane.',
     jsonExample: JSON.stringify({
       type: 'interactive_coordinate_plane',
@@ -522,6 +540,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'equation_grapher',
     subject: 'math',
     gradeRange: '8-12',
+    engine: 'desmos',
     description: 'Interactive equation grapher for plotting and comparing functions. Students can type equations to see live graphs.',
     jsonExample: JSON.stringify({
       type: 'equation_grapher',
@@ -544,6 +563,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'triangle_geometry',
     subject: 'geometry',
     gradeRange: '7-12',
+    engine: 'geogebra',
     description: 'Geometry triangle with side lengths, angles, height, area/perimeter calculations',
     jsonExample: JSON.stringify({
       type: 'triangle_geometry',
@@ -570,6 +590,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'regular_polygon',
     subject: 'geometry',
     gradeRange: '7-12',
+    engine: 'geogebra',
     description: 'Regular polygon with side length, apothem, central angle, and interior angle',
     jsonExample: JSON.stringify({
       type: 'regular_polygon',
@@ -594,6 +615,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'fbd',
     subject: 'physics',
     gradeRange: '9-12',
+    engine: 'svg',
     description: 'Free body diagram with forces on an object. Object types: block, sphere, wedge, particle, car, person. Force angles: 0=right, 90=up, -90=down, 180=left.',
     jsonExample: JSON.stringify({
       type: 'fbd',
@@ -623,6 +645,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'counting_objects_array',
     subject: 'math',
     gradeRange: '1-3',
+    engine: 'svg',
     description: 'Array of objects for counting, addition, or subtraction with grouping. 3 steps: 1) Show grid outlines, 2) Place colored objects in grid, 3) Show result label. Object types: circle, star, heart, square. For addition use two groups with different colors. groupSize controls objects per row (default 5).',
     jsonExample: JSON.stringify({
       type: 'counting_objects_array',
@@ -642,6 +665,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'ten_frame',
     subject: 'math',
     gradeRange: '1-2',
+    engine: 'svg',
     description: 'Ten frame (2x5 grid) showing filled and empty circles for number sense. 3 steps: 1) Show empty ten frame grid, 2) Place colored counters, 3) Show the count total. Use total=10 for one frame, total=20 for two frames. highlightFilled is an array of 0-based indices to highlight specific counters (e.g. to show 7 = 5 + 2, highlight indices 5,6).',
     jsonExample: JSON.stringify({
       type: 'ten_frame',
@@ -661,6 +685,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'part_part_whole',
     subject: 'math',
     gradeRange: '1-3',
+    engine: 'svg',
     description: 'Part-part-whole model (number bond) showing how two parts combine into a whole. 4 steps: 1) Show circles and connecting lines, 2) Reveal the whole number, 3) Reveal the two part numbers, 4) Show the relationship equation. Set showParts=true to show equation as "part1 + part2 = whole", or false for "whole = part1 + part2". Use labels to give meaningful names to parts.',
     jsonExample: JSON.stringify({
       type: 'part_part_whole',
@@ -681,6 +706,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'bar_model',
     subject: 'math',
     gradeRange: '1-5',
+    engine: 'svg',
     description: 'Bar model (tape diagram) for word problem visualization. 4 steps: 1) Show bar outline with part dividers, 2) Fill parts with colors, 3) Add value and name labels, 4) Show total bracket underneath. Operations: add, subtract, compare, multiply, divide. Set unknownPart to the 0-based index of the part to show as "?" (for subtraction/missing-addend problems).',
     jsonExample: JSON.stringify({
       type: 'bar_model',
@@ -700,6 +726,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'place_value_chart',
     subject: 'math',
     gradeRange: '1-4',
+    engine: 'svg',
     description: 'Place value chart showing digits in columns. Steps: 1) Show column headers, 2) Reveal digits, 3) Show expanded form (only if showExpanded=true, making totalSteps=3; otherwise totalSteps=2). Columns: ones, tens, hundreds, thousands, ten_thousands. List all columns the number needs. Use highlightColumn to emphasize a specific place value.',
     jsonExample: JSON.stringify({
       type: 'place_value_chart',
@@ -719,6 +746,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'base_10_blocks',
     subject: 'math',
     gradeRange: '1-4',
+    engine: 'svg',
     description: 'Base-10 blocks (manipulatives) representing a number with unit cubes (ones), rods (tens), and flats (hundreds). 3 steps: 1) Show the number, 2) Show decomposition text (e.g. "2 x 100 + 3 x 10 + 5 x 1"), 3) Draw the actual blocks. Set showDecomposition=true to show the decomposition text in step 2.',
     jsonExample: JSON.stringify({
       type: 'base_10_blocks',
@@ -736,6 +764,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'picture_graph',
     subject: 'math',
     gradeRange: '1-3',
+    engine: 'recharts',
     description: 'Picture graph (pictograph) with icons representing data. 3 steps: 1) Show category labels and row lines, 2) Place icons row by row with count at end, 3) Show the key. Icon types: circle, star, heart, square, triangle, diamond. Use the SAME icon for all categories (the icon represents one unit). symbolValue sets how much each icon is worth (default 1). Use symbolValue=2 for scaled pictographs.',
     jsonExample: JSON.stringify({
       type: 'picture_graph',
@@ -759,6 +788,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'bar_graph',
     subject: 'math',
     gradeRange: '2-4',
+    engine: 'recharts',
     description: 'Bar graph with labeled categories and a scale. 3 steps: 1) Draw axes and grid lines, 2) Grow the bars, 3) Add category and value labels. scale controls the grid line spacing (e.g. scale=2 puts grid lines at 2,4,6...). orientation: vertical (default) or horizontal. Use yAxisLabel and xAxisLabel for axis titles. Max value should be a multiple of scale for clean grid lines.',
     jsonExample: JSON.stringify({
       type: 'bar_graph',
@@ -784,6 +814,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'fraction_circle',
     subject: 'math',
     gradeRange: '2-4',
+    engine: 'svg',
     description: 'Circle divided into equal parts showing a fraction',
     jsonExample: JSON.stringify({
       type: 'fraction_circle',
@@ -803,6 +834,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'fraction_bar',
     subject: 'math',
     gradeRange: '2-4',
+    engine: 'svg',
     description: 'Bar divided into equal parts showing a fraction',
     jsonExample: JSON.stringify({
       type: 'fraction_bar',
@@ -822,6 +854,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'fraction_number_line',
     subject: 'math',
     gradeRange: '3-5',
+    engine: 'svg',
     description: 'Number line with fraction tick marks and plotted fractions',
     jsonExample: JSON.stringify({
       type: 'fraction_number_line',
@@ -845,6 +878,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'multiplication_array',
     subject: 'math',
     gradeRange: '2-4',
+    engine: 'svg',
     description: 'Array of dots/objects showing multiplication as rows x columns',
     jsonExample: JSON.stringify({
       type: 'multiplication_array',
@@ -864,6 +898,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'area_model_multiplication',
     subject: 'math',
     gradeRange: '3-5',
+    engine: 'svg',
     description: 'Area model for multi-digit multiplication with partial products',
     jsonExample: JSON.stringify({
       type: 'area_model_multiplication',
@@ -884,6 +919,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'scaled_bar_graph',
     subject: 'math',
     gradeRange: '3-5',
+    engine: 'recharts',
     description: 'Bar graph with scaled axis (each gridline represents more than 1)',
     jsonExample: JSON.stringify({
       type: 'scaled_bar_graph',
@@ -907,6 +943,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'equivalent_fraction_model',
     subject: 'math',
     gradeRange: '3-5',
+    engine: 'svg',
     description: 'Side-by-side models showing two equivalent fractions',
     jsonExample: JSON.stringify({
       type: 'equivalent_fraction_model',
@@ -926,6 +963,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'mixed_number_model',
     subject: 'math',
     gradeRange: '3-5',
+    engine: 'svg',
     description: 'Visual model of a mixed number showing wholes and a fractional part',
     jsonExample: JSON.stringify({
       type: 'mixed_number_model',
@@ -945,6 +983,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'decimal_grid',
     subject: 'math',
     gradeRange: '4-5',
+    engine: 'svg',
     description: 'Grid (10x10 or 10x1) showing decimal values as shaded cells',
     jsonExample: JSON.stringify({
       type: 'decimal_grid',
@@ -963,6 +1002,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'fraction_multiplication_area',
     subject: 'math',
     gradeRange: '4-5',
+    engine: 'svg',
     description: 'Area model for fraction multiplication showing overlap',
     jsonExample: JSON.stringify({
       type: 'fraction_multiplication_area',
@@ -982,6 +1022,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'fraction_division_model',
     subject: 'math',
     gradeRange: '5-6',
+    engine: 'svg',
     description: 'Visual model for fraction division showing how many groups fit',
     jsonExample: JSON.stringify({
       type: 'fraction_division_model',
@@ -1001,6 +1042,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'volume_model',
     subject: 'math',
     gradeRange: '5-6',
+    engine: 'svg',
     description: '3D rectangular prism with unit cubes to visualize volume',
     jsonExample: JSON.stringify({
       type: 'volume_model',
@@ -1022,6 +1064,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'order_of_operations_tree',
     subject: 'math',
     gradeRange: '5-6',
+    engine: 'mermaid',
     description: 'Tree diagram showing step-by-step PEMDAS evaluation. Each entry in the steps array becomes one tree node. The component builds stepDefs as: 1 (show expression) + steps.length (one per operation) + 1 (final answer) = steps.length + 2 total steps. Set totalSteps = steps.length + 2. Each step has { operation, result, highlighted? }. Use "highlighted: true" on the most important teaching step. Order the steps according to PEMDAS: Parentheses first, then Exponents, then Multiplication/Division left-to-right, then Addition/Subtraction left-to-right.',
     jsonExample: JSON.stringify({
       type: 'order_of_operations_tree',
@@ -1045,6 +1088,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'quadrant_one_coordinate_plane',
     subject: 'math',
     gradeRange: '5-6',
+    engine: 'desmos',
     description: 'Coordinate plane restricted to Quadrant I (positive x and y only)',
     jsonExample: JSON.stringify({
       type: 'quadrant_one_coordinate_plane',
@@ -1067,6 +1111,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'double_number_line',
     subject: 'math',
     gradeRange: '6-7',
+    engine: 'svg',
     description: 'Two aligned number lines showing proportional relationships',
     jsonExample: JSON.stringify({
       type: 'double_number_line',
@@ -1085,6 +1130,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'ratio_table',
     subject: 'math',
     gradeRange: '6-7',
+    engine: 'svg',
     description: 'Table showing equivalent ratios in columns',
     jsonExample: JSON.stringify({
       type: 'ratio_table',
@@ -1105,6 +1151,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'tape_diagram_ratio',
     subject: 'math',
     gradeRange: '6-7',
+    engine: 'svg',
     description: 'Tape diagram showing a ratio with labeled parts',
     jsonExample: JSON.stringify({
       type: 'tape_diagram_ratio',
@@ -1123,6 +1170,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'percent_bar_model',
     subject: 'math',
     gradeRange: '6-7',
+    engine: 'svg',
     description: 'Bar showing parts as percentages of a whole',
     jsonExample: JSON.stringify({
       type: 'percent_bar_model',
@@ -1144,6 +1192,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'dot_plot',
     subject: 'math',
     gradeRange: '6-7',
+    engine: 'recharts',
     description: 'Dot plot showing frequency of data values on a number line',
     jsonExample: JSON.stringify({
       type: 'dot_plot',
@@ -1163,6 +1212,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'histogram',
     subject: 'math',
     gradeRange: '6-8',
+    engine: 'recharts',
     description: 'Histogram with bins showing distribution of continuous data',
     jsonExample: JSON.stringify({
       type: 'histogram',
@@ -1187,6 +1237,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'box_plot',
     subject: 'math',
     gradeRange: '6-8',
+    engine: 'recharts',
     description: 'Box-and-whisker plot showing five-number summary',
     jsonExample: JSON.stringify({
       type: 'box_plot',
@@ -1208,6 +1259,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'stem_and_leaf_plot',
     subject: 'math',
     gradeRange: '6-8',
+    engine: 'recharts',
     description: 'Stem-and-leaf plot organizing data by tens and ones digits',
     jsonExample: JSON.stringify({
       type: 'stem_and_leaf_plot',
@@ -1231,6 +1283,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'measures_of_center',
     subject: 'math',
     gradeRange: '6-8',
+    engine: 'recharts',
     description: 'Visualization of mean, median, and mode on a data set',
     jsonExample: JSON.stringify({
       type: 'measures_of_center',
@@ -1252,6 +1305,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'probability_tree',
     subject: 'math',
     gradeRange: '7-8',
+    engine: 'mermaid',
     description: 'Probability tree with levels of branches and outcome probabilities',
     jsonExample: JSON.stringify({
       type: 'probability_tree',
@@ -1272,6 +1326,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'sample_space_diagram',
     subject: 'math',
     gradeRange: '7-8',
+    engine: 'svg',
     description: 'Grid showing all outcomes for two independent events',
     jsonExample: JSON.stringify({
       type: 'sample_space_diagram',
@@ -1290,6 +1345,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'venn_diagram',
     subject: 'math',
     gradeRange: '6-8',
+    engine: 'svg',
     description: 'Venn diagram showing set relationships with intersections',
     jsonExample: JSON.stringify({
       type: 'venn_diagram',
@@ -1310,6 +1366,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'net_diagram_3d',
     subject: 'math',
     gradeRange: '6-8',
+    engine: 'svg',
     description: 'Unfolded net of a 3D shape with labeled dimensions',
     jsonExample: JSON.stringify({
       type: 'net_diagram_3d',
@@ -1329,6 +1386,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'cross_section_diagram',
     subject: 'math',
     gradeRange: '7-8',
+    engine: 'svg',
     description: 'Cross section of a 3D solid cut by a plane',
     jsonExample: JSON.stringify({
       type: 'cross_section_diagram',
@@ -1348,6 +1406,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'scale_drawing',
     subject: 'math',
     gradeRange: '7-8',
+    engine: 'svg',
     description: 'Scale drawing showing original and scaled shapes side by side',
     jsonExample: JSON.stringify({
       type: 'scale_drawing',
@@ -1368,6 +1427,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'slope_triangle',
     subject: 'math',
     gradeRange: '8',
+    engine: 'desmos',
     description: 'Right triangle on a coordinate plane showing rise and run for slope',
     jsonExample: JSON.stringify({
       type: 'slope_triangle',
@@ -1390,6 +1450,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'system_of_equations_graph',
     subject: 'math',
     gradeRange: '8',
+    engine: 'desmos',
     description: 'Graph of two linear equations showing their intersection point',
     jsonExample: JSON.stringify({
       type: 'system_of_equations_graph',
@@ -1411,6 +1472,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'scatter_plot_trend_line',
     subject: 'math',
     gradeRange: '8',
+    engine: 'desmos',
     description: 'Scatter plot with data points and an optional trend line',
     jsonExample: JSON.stringify({
       type: 'scatter_plot_trend_line',
@@ -1430,6 +1492,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'two_way_frequency_table',
     subject: 'math',
     gradeRange: '8',
+    engine: 'recharts',
     description: 'Two-way frequency table showing joint and marginal frequencies',
     jsonExample: JSON.stringify({
       type: 'two_way_frequency_table',
@@ -1451,6 +1514,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'pythagorean_theorem_diagram',
     subject: 'math',
     gradeRange: '8',
+    engine: 'geogebra',
     description: 'Right triangle with squares on each side illustrating a\u00b2 + b\u00b2 = c\u00b2',
     jsonExample: JSON.stringify({
       type: 'pythagorean_theorem_diagram',
@@ -1471,6 +1535,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'transformation_diagram',
     subject: 'math',
     gradeRange: '8',
+    engine: 'geogebra',
     description: 'Coordinate plane showing a shape before and after a geometric transformation',
     jsonExample: JSON.stringify({
       type: 'transformation_diagram',
@@ -1494,6 +1559,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'quadratic_graph',
     subject: 'math',
     gradeRange: '9-12',
+    engine: 'desmos',
     description: 'Parabola with vertex, roots, and axis of symmetry. 6-step progressive reveal: (0) axes with grid, (1) plot vertex point, (2) draw axis of symmetry, (3) trace parabola curve, (4) mark roots on x-axis, (5) show equation. Provide a, b, c coefficients. vertex, roots, axisOfSymmetry are optional (component can compute them), but providing them is recommended for educational accuracy. domain controls x-axis range.',
     jsonExample: JSON.stringify({
       type: 'quadratic_graph',
@@ -1520,6 +1586,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'residual_plot',
     subject: 'math',
     gradeRange: '9-12',
+    engine: 'desmos',
     description: 'Plot of residuals (predicted vs residual) to assess regression fit',
     jsonExample: JSON.stringify({
       type: 'residual_plot',
@@ -1542,6 +1609,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'complex_number_plane',
     subject: 'math',
     gradeRange: '10-12',
+    engine: 'desmos',
     description: 'Complex (Argand) plane with plotted complex numbers. Steps: (0) axes, (1) plot points, (2) show modulus/argument. Provide points array with real, imaginary, optional label and color. Set showModulus/showArgument for extra step.',
     jsonExample: JSON.stringify({
       type: 'complex_number_plane',
@@ -1563,6 +1631,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'conic_sections',
     subject: 'math',
     gradeRange: '10-12',
+    engine: 'desmos',
     description: 'Conic section. Steps: (0) axes, (1) mark center, (2) draw curve, (3) show features (foci, directrix, asymptotes), (4) show equation. totalSteps = 3 base + (showFoci||showDirectrix||showAsymptotes ? 1 : 0) + 1 for equation. Type: circle, ellipse, parabola, or hyperbola.',
     jsonExample: JSON.stringify({
       type: 'conic_sections',
@@ -1584,6 +1653,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'polynomial_graph',
     subject: 'math',
     gradeRange: '10-12',
+    engine: 'desmos',
     description: 'Polynomial function graph. 5 steps: (0) axes, (1) plot zeros on x-axis, (2) trace curve through zeros, (3) mark turning points, (4) show end behavior arrows. Provide coefficients, degree, zeros, turningPoints array, and endBehavior.',
     jsonExample: JSON.stringify({
       type: 'polynomial_graph',
@@ -1609,6 +1679,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'exponential_graph',
     subject: 'math',
     gradeRange: '9-12',
+    engine: 'desmos',
     description: 'Exponential function graph. 5 steps: (0) axes, (1) draw horizontal asymptote, (2) plot y-intercept, (3) trace exponential curve, (4) show equation. Provide base, coefficient, asymptote, yIntercept, and showAsymptote.',
     jsonExample: JSON.stringify({
       type: 'exponential_graph',
@@ -1632,6 +1703,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'logarithmic_graph',
     subject: 'math',
     gradeRange: '10-12',
+    engine: 'desmos',
     description: 'Logarithmic function graph. 5 steps: (0) axes, (1) draw vertical asymptote, (2) plot key points, (3) trace curve, (4) show equation. Provide base, coefficient, asymptote, keyPoints, showAsymptote.',
     jsonExample: JSON.stringify({
       type: 'logarithmic_graph',
@@ -1654,6 +1726,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'rational_function_graph',
     subject: 'math',
     gradeRange: '10-12',
+    engine: 'desmos',
     description: 'Rational function graph with asymptotes, holes, and intercepts',
     jsonExample: JSON.stringify({
       type: 'rational_function_graph',
@@ -1677,6 +1750,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'binomial_distribution',
     subject: 'math',
     gradeRange: '11-12',
+    engine: 'recharts',
     description: 'Binomial probability distribution bar chart',
     jsonExample: JSON.stringify({
       type: 'binomial_distribution',
@@ -1696,6 +1770,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'probability_distribution',
     subject: 'math',
     gradeRange: '11-12',
+    engine: 'recharts',
     description: 'Discrete or continuous probability distribution with expected value',
     jsonExample: JSON.stringify({
       type: 'probability_distribution',
@@ -1720,6 +1795,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'parametric_curve',
     subject: 'math',
     gradeRange: '11-12',
+    engine: 'desmos',
     description: 'Parametric curve defined by x(t) and y(t) expressions',
     jsonExample: JSON.stringify({
       type: 'parametric_curve',
@@ -1739,6 +1815,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'limit_visualization',
     subject: 'math',
     gradeRange: '11-12',
+    engine: 'desmos',
     description: 'Limit visualization. 4 steps: (0) draw function curve, (1) approach from left (x\u2192a\u207b), (2) approach from right (x\u2192a\u207a), (3) show limit value or DNE. Provide expression, approachValue, leftLimit, rightLimit. Set showApproachArrows and showDiscontinuity.',
     jsonExample: JSON.stringify({
       type: 'limit_visualization',
@@ -1761,6 +1838,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'derivative_tangent_line',
     subject: 'math',
     gradeRange: '11-12',
+    engine: 'desmos',
     description: 'Derivative tangent line. 4 steps: (0) draw function curve, (1) mark point on curve, (2) draw tangent line through point, (3) show slope value. With secantLines, adds extra step showing secant lines converging. Provide expression, point {x,y}, slope, tangentLine {slope, yIntercept}.',
     jsonExample: JSON.stringify({
       type: 'derivative_tangent_line',
@@ -1781,6 +1859,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'sequence_diagram',
     subject: 'math',
     gradeRange: '9-12',
+    engine: 'mermaid',
     description: 'Arithmetic or geometric sequence with terms, common difference/ratio, pattern arrows, and optional explicit formula',
     jsonExample: JSON.stringify({
       type: 'sequence_diagram',
@@ -1803,6 +1882,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'sampling_distribution',
     subject: 'math',
     gradeRange: '11-12',
+    engine: 'recharts',
     description: 'Sampling distribution visualization showing population curve, sampling process, histogram of sample means, and optional CLT normal overlay',
     jsonExample: JSON.stringify({
       type: 'sampling_distribution',
@@ -1826,6 +1906,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'angle_types',
     subject: 'geometry',
     gradeRange: '7-8',
+    engine: 'geogebra',
     description: 'Diagram showing different angle types (acute, right, obtuse, straight, reflex)',
     jsonExample: JSON.stringify({
       type: 'angle_types',
@@ -1845,6 +1926,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'complementary_supplementary',
     subject: 'geometry',
     gradeRange: '7-8',
+    engine: 'geogebra',
     description: 'Two angles that are complementary (sum to 90) or supplementary (sum to 180)',
     jsonExample: JSON.stringify({
       type: 'complementary_supplementary',
@@ -1865,6 +1947,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'vertical_angles',
     subject: 'geometry',
     gradeRange: '7-8',
+    engine: 'geogebra',
     description: 'Two intersecting lines forming vertical (opposite) angle pairs',
     jsonExample: JSON.stringify({
       type: 'vertical_angles',
@@ -1884,6 +1967,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'parallel_lines_transversal',
     subject: 'geometry',
     gradeRange: '7-8',
+    engine: 'geogebra',
     description: 'Two parallel lines cut by a transversal showing angle relationships',
     jsonExample: JSON.stringify({
       type: 'parallel_lines_transversal',
@@ -1904,6 +1988,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'triangle_angle_sum',
     subject: 'geometry',
     gradeRange: '7-8',
+    engine: 'geogebra',
     description: 'Triangle showing that interior angles sum to 180 degrees',
     jsonExample: JSON.stringify({
       type: 'triangle_angle_sum',
@@ -1923,6 +2008,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'exterior_angle_theorem',
     subject: 'geometry',
     gradeRange: '7-8',
+    engine: 'geogebra',
     description: 'Triangle exterior angle equals sum of two non-adjacent interior angles',
     jsonExample: JSON.stringify({
       type: 'exterior_angle_theorem',
@@ -1943,6 +2029,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'perpendicular_bisector_construction',
     subject: 'geometry',
     gradeRange: '9-10',
+    engine: 'geogebra',
     description: 'Compass-and-straightedge construction of a perpendicular bisector',
     jsonExample: JSON.stringify({
       type: 'perpendicular_bisector_construction',
@@ -1964,6 +2051,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'rotation_coordinate_plane',
     subject: 'geometry',
     gradeRange: '8-10',
+    engine: 'geogebra',
     description: 'Shape rotated about a center point on the coordinate plane',
     jsonExample: JSON.stringify({
       type: 'rotation_coordinate_plane',
@@ -1985,6 +2073,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'dilation_coordinate_plane',
     subject: 'geometry',
     gradeRange: '8-10',
+    engine: 'geogebra',
     description: 'Shape dilated from a center point by a scale factor',
     jsonExample: JSON.stringify({
       type: 'dilation_coordinate_plane',
@@ -2006,6 +2095,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'tessellation_pattern',
     subject: 'geometry',
     gradeRange: '8-10',
+    engine: 'geogebra',
     description: 'Tiling pattern with repeated congruent shapes covering a plane',
     jsonExample: JSON.stringify({
       type: 'tessellation_pattern',
@@ -2026,6 +2116,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'inscribed_angle_theorem',
     subject: 'geometry',
     gradeRange: '9-12',
+    engine: 'geogebra',
     description: 'Circle showing inscribed angle is half the central angle subtending the same arc',
     jsonExample: JSON.stringify({
       type: 'inscribed_angle_theorem',
@@ -2048,6 +2139,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'triangle_congruence',
     subject: 'geometry',
     gradeRange: '9-12',
+    engine: 'geogebra',
     description: 'Two triangles with marked congruent parts and a congruence criterion (SSS, SAS, ASA, AAS, HL)',
     jsonExample: JSON.stringify({
       type: 'triangle_congruence',
@@ -2068,6 +2160,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'triangle_similarity',
     subject: 'geometry',
     gradeRange: '9-12',
+    engine: 'geogebra',
     description: 'Two similar triangles with proportional sides and equal angles',
     jsonExample: JSON.stringify({
       type: 'triangle_similarity',
@@ -2088,6 +2181,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'law_of_sines_cosines',
     subject: 'geometry',
     gradeRange: '10-12',
+    engine: 'geogebra',
     description: 'Triangle with labeled sides and angles for Law of Sines or Law of Cosines',
     jsonExample: JSON.stringify({
       type: 'law_of_sines_cosines',
@@ -2113,6 +2207,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'transformations_composition',
     subject: 'geometry',
     gradeRange: '9-12',
+    engine: 'geogebra',
     description: 'Composition of multiple geometric transformations applied in sequence',
     jsonExample: JSON.stringify({
       type: 'transformations_composition',
@@ -2136,6 +2231,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'orthographic_views_3d',
     subject: 'geometry',
     gradeRange: '9-12',
+    engine: 'svg',
     description: 'Front, side, and top orthographic views of a 3D solid',
     jsonExample: JSON.stringify({
       type: 'orthographic_views_3d',
@@ -2158,6 +2254,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'tangent_radius_perpendicularity',
     subject: 'geometry',
     gradeRange: '9-12',
+    engine: 'geogebra',
     description: 'Circle showing that a radius to a tangent point is perpendicular to the tangent line',
     jsonExample: JSON.stringify({
       type: 'tangent_radius_perpendicularity',
@@ -2182,6 +2279,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'square',
     subject: 'geometry',
     gradeRange: '3-8',
+    engine: 'geogebra',
     description: 'Square with side length, area, perimeter, and optional diagonals',
     jsonExample: JSON.stringify({
       type: 'square',
@@ -2203,6 +2301,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'rectangle',
     subject: 'geometry',
     gradeRange: '3-8',
+    engine: 'geogebra',
     description: 'Rectangle with width, height, area, perimeter, and optional diagonals',
     jsonExample: JSON.stringify({
       type: 'rectangle',
@@ -2226,6 +2325,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'parallelogram',
     subject: 'geometry',
     gradeRange: '6-10',
+    engine: 'geogebra',
     description: 'Parallelogram with base, side, height, and angle',
     jsonExample: JSON.stringify({
       type: 'parallelogram',
@@ -2251,6 +2351,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'rhombus',
     subject: 'geometry',
     gradeRange: '6-10',
+    engine: 'geogebra',
     description: 'Rhombus with side length and diagonals',
     jsonExample: JSON.stringify({
       type: 'rhombus',
@@ -2275,6 +2376,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'trapezoid',
     subject: 'geometry',
     gradeRange: '6-10',
+    engine: 'geogebra',
     description: 'Trapezoid with parallel bases and height',
     jsonExample: JSON.stringify({
       type: 'trapezoid',
@@ -2304,6 +2406,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'area_model',
     subject: 'math',
     gradeRange: '3-8',
+    engine: 'svg',
     description: 'Area model for multiplication showing partitioned rectangle',
     jsonExample: JSON.stringify({
       type: 'area_model',
@@ -2324,6 +2427,7 @@ export const DIAGRAM_SCHEMAS: Record<string, DiagramSchema> = {
     type: 'math_table',
     subject: 'math',
     gradeRange: '3-12',
+    engine: 'svg',
     description: 'General-purpose data table for math problems',
     jsonExample: JSON.stringify({
       type: 'math_table',

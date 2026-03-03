@@ -2,6 +2,9 @@ import { detectTopic } from './tikz';
 
 export type Pipeline = 'e2b-latex' | 'e2b-matplotlib' | 'tikz' | 'recraft';
 
+// New hybrid pipelines for client-side rendering (no server image generation needed)
+export type HybridPipeline = Pipeline | 'desmos' | 'geogebra' | 'recharts' | 'mermaid';
+
 // ─── Topic → Pipeline Mapping ───────────────────────────────────────────────
 //
 // The key insight: each topic has a "best renderer" based on what it looks like.
@@ -118,6 +121,50 @@ const TOPIC_RULES: TopicRule[] = [
   { pattern: /\b(polynomial division|synthetic division)\b/i, pipeline: 'e2b-latex' },
   { pattern: /\b(quadratic formula)\b/i, pipeline: 'e2b-latex' },
 ];
+
+// --- Hybrid Pipeline Type Mappings ----------------------------------------
+export const DESMOS_TYPES = [
+  'coordinate_plane', 'function_graph', 'linear_equation', 'quadratic_graph',
+  'inequality_graph', 'system_of_equations', 'scatter_plot_regression',
+  'trigonometric_graph', 'piecewise_function', 'parametric_curve', 'polar_graph',
+] as const;
+
+export const GEOGEBRA_TYPES = [
+  'triangle', 'circle_geometry', 'angle_measurement', 'parallel_lines',
+  'polygon', 'transformation', 'congruence', 'similarity',
+  'pythagorean_theorem', 'circle_theorems', 'construction',
+] as const;
+
+export const RECHARTS_TYPES = [
+  'box_plot', 'histogram', 'dot_plot', 'bar_chart', 'pie_chart',
+  'line_chart', 'stem_leaf_plot', 'frequency_table',
+] as const;
+
+export const MERMAID_TYPES = [
+  'tree_diagram', 'flowchart', 'sequence_diagram', 'factor_tree', 'probability_tree',
+] as const;
+
+/**
+ * Get the hybrid pipeline for a given diagram type.
+ * Returns null if the type should use a server-side pipeline.
+ */
+export function getHybridPipeline(diagramType: string): HybridPipeline | null {
+  if ((DESMOS_TYPES as readonly string[]).includes(diagramType)) return 'desmos';
+  if ((GEOGEBRA_TYPES as readonly string[]).includes(diagramType)) return 'geogebra';
+  if ((RECHARTS_TYPES as readonly string[]).includes(diagramType)) return 'recharts';
+  if ((MERMAID_TYPES as readonly string[]).includes(diagramType)) return 'mermaid';
+  return null;
+}
+
+/**
+ * Fallback server-side pipelines for when a hybrid renderer fails client-side.
+ */
+export const HYBRID_FALLBACKS: Record<string, Pipeline> = {
+  'desmos': 'e2b-matplotlib',
+  'geogebra': 'tikz',
+  'recharts': 'e2b-matplotlib',
+  'mermaid': 'tikz',
+};
 
 // ─── Fallback keyword scoring (lower priority) ─────────────────────────────
 

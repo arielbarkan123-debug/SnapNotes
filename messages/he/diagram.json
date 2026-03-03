@@ -13,6 +13,15 @@
   "fullscreen": "מסך מלא",
   "exitFullscreen": "יציאה ממסך מלא",
 
+  "loadingDesmos": "...טוען גרף",
+  "loadingGeoGebra": "...טוען כלי גיאומטריה",
+  "loadingMermaid": "...טוען תרשים",
+  "mermaidError": "נכשל בטעינת התרשים",
+  "dotPlotLabel": "דיאגרמת נקודות",
+  "hybridEngine": "אינטראקטיבי",
+  "switchToImage": "עבור לתמונה",
+  "switchToInteractive": "עבור לאינטראקטיבי",
+
   "interactive": {
     "whatIf": "מה אם?",
     "whatIfSubtitle": "התאם פרמטרים לחקירה",
