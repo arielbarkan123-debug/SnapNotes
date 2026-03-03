@@ -102,6 +102,19 @@
   "quickCheckIncorrect": "Not quite. The answer is: {answer}",
   "depthError": "Could not generate deeper content. Please try again.",
   "relatedExtension": "Related Extension",
+  "workedExample": {
+    "title": "Let's work through this together",
+    "step": "Step {number}",
+    "mistakeIdentified": "Where the mistake happened",
+    "tryASimilarOne": "Try a Similar One",
+    "checkSimilar": "Check",
+    "similarCorrect": "Got it! Great job!",
+    "similarIncorrect": "Not quite. Let's look at another way.",
+    "loading": "Preparing a worked example...",
+    "error": "Could not generate a worked example.",
+    "secondExample": "Let's try a different approach",
+    "maxExamplesReached": "Keep studying this topic — you'll get it!"
+  },
   "help": {
     "needHelp": "Need Help?",
     "askQuestion": "Ask a Question",

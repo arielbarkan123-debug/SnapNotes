@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { type Step, type HelpContext } from '@/types'
@@ -11,6 +11,11 @@ import { useConceptMastery, useAdaptiveDifficulty, useResponseTimer } from '@/ho
 
 // Lazy load PracticeMore since it's only shown after wrong answers
 const PracticeMore = dynamic(() => import('@/components/practice/PracticeMore').then(mod => ({ default: mod.PracticeMore })), {
+  ssr: false,
+})
+
+// Lazy load WorkedExampleCard since it's only shown after wrong answers
+const WorkedExampleCard = dynamic(() => import('@/components/lesson/WorkedExampleCard'), {
   ssr: false,
 })
 
@@ -67,6 +72,17 @@ export default function QuestionStep({
   const [showHelp, setShowHelp] = useState(false)
   const [showPracticeMore, setShowPracticeMore] = useState(false)
   const [adaptiveFeedback, setAdaptiveFeedback] = useState<string | null>(null)
+
+  // Worked example state
+  const [showWorkedExample, setShowWorkedExample] = useState(false)
+  const [workedExampleData, setWorkedExampleData] = useState<{
+    steps: Array<{ text: string; math?: string | null }>
+    tryAnother: { question: string; correctAnswer: string }
+    errorDiagnosis: string
+  } | null>(null)
+  const [workedExampleAttempt, setWorkedExampleAttempt] = useState(0)
+  const [isLoadingWorkedExample, setIsLoadingWorkedExample] = useState(false)
+  const [workedExampleError, setWorkedExampleError] = useState<string | null>(null)
 
   // Concept mastery tracking
   const { recordPerformance } = useConceptMastery()
@@ -145,6 +161,10 @@ export default function QuestionStep({
 
     if (!correct) {
       setWrongAttempts((prev) => prev + 1)
+      // Auto-fetch worked example on first wrong answer
+      if (workedExampleAttempt === 0) {
+        fetchWorkedExample(1)
+      }
     }
 
     // Get response time
@@ -214,6 +234,34 @@ export default function QuestionStep({
     setCurrentHint(null)
     setHintDismissed(true)
   }
+
+  // Fetch a worked example from the API
+  const fetchWorkedExample = useCallback(async (attemptNum: number) => {
+    if (!courseId || lessonIndex === undefined) return
+    setIsLoadingWorkedExample(true)
+    setWorkedExampleError(null)
+    try {
+      const res = await fetch(`/api/courses/${courseId}/lessons/${lessonIndex}/worked-example`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question,
+          studentAnswer: selectedAnswer !== null ? options[selectedAnswer] : '',
+          correctAnswer: options[correct_answer],
+          attemptNumber: attemptNum,
+        }),
+      })
+      if (!res.ok) throw new Error('Failed to fetch')
+      const data = await res.json()
+      setWorkedExampleData(data)
+      setShowWorkedExample(true)
+      setWorkedExampleAttempt(attemptNum)
+    } catch {
+      setWorkedExampleError(t('workedExample.error'))
+    } finally {
+      setIsLoadingWorkedExample(false)
+    }
+  }, [courseId, lessonIndex, question, selectedAnswer, options, correct_answer, t])
 
   // Show hint button only after first wrong attempt and before checking
   const showHintButton = !hasChecked && wrongAttempts > 0 && !currentHint && !hintDismissed
@@ -445,6 +493,45 @@ export default function QuestionStep({
                 </button>
               </div>
             </div>
+          )}
+
+          {/* Worked Example Card */}
+          {!isCorrect && isLoadingWorkedExample && (
+            <div className="mt-4 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 animate-pulse">
+              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              {t('workedExample.loading')}
+            </div>
+          )}
+
+          {!isCorrect && showWorkedExample && workedExampleData && (
+            <WorkedExampleCard
+              steps={workedExampleData.steps}
+              tryAnother={workedExampleData.tryAnother}
+              errorDiagnosis={workedExampleData.errorDiagnosis}
+              attemptNumber={workedExampleAttempt}
+              onTryAnotherResult={(correct) => {
+                if (!correct && workedExampleAttempt < 2) {
+                  // Wrong on "Try a Similar One" — fetch second worked example
+                  setShowWorkedExample(false)
+                  setWorkedExampleData(null)
+                  fetchWorkedExample(2)
+                }
+              }}
+              onDismiss={() => setShowWorkedExample(false)}
+            />
+          )}
+
+          {!isCorrect && workedExampleAttempt >= 2 && !showWorkedExample && (
+            <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 italic text-center">
+              {t('workedExample.maxExamplesReached')}
+            </p>
+          )}
+
+          {workedExampleError && (
+            <p className="mt-2 text-sm text-red-500 dark:text-red-400">{workedExampleError}</p>
           )}
         </div>
       )}

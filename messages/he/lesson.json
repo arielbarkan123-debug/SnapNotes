@@ -102,6 +102,19 @@
   "quickCheckIncorrect": "לא בדיוק. התשובה היא: {answer}",
   "depthError": "לא ניתן לייצר תוכן מעמיק. אנא נסה שוב.",
   "relatedExtension": "הרחבה קשורה",
+  "workedExample": {
+    "title": "בוא נעבור על זה ביחד",
+    "step": "שלב {number}",
+    "mistakeIdentified": "איפה הייתה הטעות",
+    "tryASimilarOne": "נסה אחד דומה",
+    "checkSimilar": "בדוק",
+    "similarCorrect": "הבנת! כל הכבוד!",
+    "similarIncorrect": "לא בדיוק. בוא ננסה בדרך אחרת.",
+    "loading": "מכין דוגמה מפורטת...",
+    "error": "לא ניתן לייצר דוגמה מפורטת.",
+    "secondExample": "בוא ננסה גישה אחרת",
+    "maxExamplesReached": "המשך ללמוד את הנושא הזה — אתה תצליח!"
+  },
   "help": {
     "needHelp": "צריך עזרה?",
     "askQuestion": "שאל שאלה",
