@@ -380,6 +380,8 @@ export interface ConversationMessage {
   misconceptionDetected?: string
   /** Physics diagram state for this message (tutor messages only) */
   diagram?: TutorDiagramState
+  /** Visual update for the persistent VisualSolvingPanel (tutor messages only) */
+  visualUpdate?: VisualUpdate
 }
 
 export interface SessionSummary {
@@ -427,6 +429,8 @@ export interface TutorResponse {
   celebrationMessage?: string
   /** Physics diagram state for visual explanations */
   diagram?: TutorDiagramState
+  /** Visual update for the persistent VisualSolvingPanel */
+  visualUpdate?: VisualUpdate
 }
 
 /**
@@ -498,6 +502,59 @@ export interface TutorDiagramState {
   }>
   /** Enable interactive "What If?" mode for exploration (physics diagrams only) */
   enableInteractive?: boolean
+}
+
+/**
+ * Visual update for the VisualSolvingPanel — describes one step of a
+ * persistent diagram that lives alongside the tutoring chat.
+ */
+export interface VisualUpdate {
+  tool: 'desmos' | 'geogebra' | 'recharts' | 'svg' | 'engine_image'
+  action: 'add' | 'replace' | 'clear'
+  stepNumber: number
+  stepLabel: string
+  stepLabelHe?: string
+  desmosExpressions?: Array<{
+    id?: string
+    latex: string
+    color?: string
+    label?: string
+    hidden?: boolean
+  }>
+  desmosConfig?: {
+    xRange?: [number, number]
+    yRange?: [number, number]
+    showGrid?: boolean
+  }
+  geogebraCommands?: Array<{
+    command: string
+    label?: string
+    color?: string
+    showLabel?: boolean
+  }>
+  rechartsData?: {
+    chartType: 'bar' | 'histogram' | 'pie' | 'line' | 'scatter' | 'box_plot'
+    data?: Array<{
+      name: string
+      value: number
+      value2?: number
+      color?: string
+    }>
+    boxPlotData?: Array<{
+      name: string
+      min: number
+      q1: number
+      median: number
+      q3: number
+      max: number
+      outliers?: number[]
+    }>
+    xLabel?: string
+    yLabel?: string
+  }
+  svgDiagram?: TutorDiagramState
+  title?: string
+  titleHe?: string
 }
 
 /** Step sequence diagram data shape */

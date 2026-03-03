@@ -221,6 +221,7 @@ export async function POST(
       showsUnderstanding: tutorResponse.detectedUnderstanding,
       misconceptionDetected: tutorResponse.detectedMisconception || undefined,
       diagram: tutorResponse.diagram,
+      visualUpdate: tutorResponse.visualUpdate,
     }
 
     let finalSession: HomeworkSession

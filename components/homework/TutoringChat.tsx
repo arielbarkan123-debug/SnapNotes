@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import DiagramToggle from '@/components/ui/DiagramToggle'
-import type { HomeworkSession, ConversationMessage, HintLevel } from '@/lib/homework/types'
+import type { HomeworkSession, ConversationMessage, HintLevel, VisualUpdate } from '@/lib/homework/types'
 import ExplanationStyleSelector from './ExplanationStyleSelector'
 import EscalationButton from './EscalationButton'
 import type { EscalationLevel, EscalationAction } from './EscalationButton'
@@ -19,6 +19,9 @@ import {
 
 // Lazy-load YouTubeEmbed (client-only, no SSR)
 const YouTubeEmbed = dynamic(() => import('@/components/prepare/YouTubeEmbed'), { ssr: false })
+
+// Lazy-load VisualSolvingPanel (client-only, no SSR)
+const VisualSolvingPanel = dynamic(() => import('./VisualSolvingPanel'), { ssr: false })
 
 // ============================================================================
 // Types
@@ -207,6 +210,7 @@ function HintButtons({
       <div className="flex gap-2 overflow-x-auto pb-1">
         {hints.map(({ level, labelKey, icon }) => (
           <button
+            type="button"
             key={level}
             onClick={() => onRequestHint(level)}
             disabled={disabled}
@@ -294,8 +298,27 @@ export default function TutoringChat({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [explanationStyle, setExplanationStyle] = useState<ExplanationStyleId>('step_by_step')
   const [escalationLevels, setEscalationLevels] = useState<Record<number, EscalationLevel>>({})
+  const [isVisualPanelOpen, setIsVisualPanelOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  // Extract visual updates from conversation messages
+  const visualUpdates = useMemo<VisualUpdate[]>(() => {
+    return session.conversation
+      .filter((msg): msg is ConversationMessage & { visualUpdate: VisualUpdate } =>
+        msg.role === 'tutor' && !!msg.visualUpdate
+      )
+      .map((msg) => msg.visualUpdate)
+  }, [session.conversation])
+
+  // Auto-open visual panel when first visual update arrives
+  useEffect(() => {
+    if (visualUpdates.length > 0 && !isVisualPanelOpen) {
+      setIsVisualPanelOpen(true)
+    }
+    // Only auto-open, not auto-close
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visualUpdates.length])
 
   // Restore draft from localStorage on mount
   useEffect(() => {
@@ -387,10 +410,12 @@ export default function TutoringChat({
     return diagramState && isEngineDiagram(diagramState)
   })
 
+  const hasVisualUpdates = visualUpdates.length > 0
+
   return (
     <div className="flex h-full bg-gray-50 dark:bg-gray-900">
       {/* Main Chat Area */}
-      <div className="flex flex-col w-full">
+      <div className={`flex flex-col ${hasVisualUpdates && isVisualPanelOpen ? 'w-full md:w-[60%]' : 'w-full'}`}>
         {/* Diagram toggle */}
         <div className="flex justify-end px-4 pt-2">
           <DiagramToggle compact />
@@ -424,7 +449,7 @@ export default function TutoringChat({
             </div>
           ))}
 
-          {/* Related YouTube videos — shown after the latest tutor response */}
+          {/* Related YouTube videos -- shown after the latest tutor response */}
           {relatedVideos.length > 0 && !isLoading && (
             <div className="flex justify-start">
               <div className="max-w-[85%]">
@@ -492,6 +517,7 @@ export default function TutoringChat({
           {/* Complete Button */}
           <div className="flex justify-center mt-3">
             <button
+              type="button"
               onClick={onComplete}
               disabled={isLoading}
               className="text-sm text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 font-medium transition-colors disabled:opacity-50"
@@ -502,6 +528,41 @@ export default function TutoringChat({
         </div>
       </div>
 
+      {/* Visual Solving Panel -- desktop side panel */}
+      {hasVisualUpdates && isVisualPanelOpen && (
+        <div className="hidden md:flex md:w-[40%] border-s border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          <VisualSolvingPanel
+            visualUpdates={visualUpdates}
+            isOpen={isVisualPanelOpen}
+            onClose={() => setIsVisualPanelOpen(false)}
+          />
+        </div>
+      )}
+
+      {/* Visual Solving Panel -- mobile full-screen overlay */}
+      {hasVisualUpdates && isVisualPanelOpen && (
+        <div className="fixed inset-0 z-50 md:hidden bg-white dark:bg-gray-900">
+          <VisualSolvingPanel
+            visualUpdates={visualUpdates}
+            isOpen={isVisualPanelOpen}
+            onClose={() => setIsVisualPanelOpen(false)}
+          />
+        </div>
+      )}
+
+      {/* Mobile floating diagram button */}
+      {hasVisualUpdates && !isVisualPanelOpen && (
+        <button
+          type="button"
+          onClick={() => setIsVisualPanelOpen(true)}
+          className="fixed bottom-24 end-4 z-40 md:hidden flex items-center gap-2 rounded-full bg-violet-600 px-4 py-3 text-sm font-medium text-white shadow-lg hover:bg-violet-700 transition-colors"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          {t('showDiagram')}
+        </button>
+      )}
     </div>
   )
 }

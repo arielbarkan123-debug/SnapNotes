@@ -12,12 +12,16 @@ import type {
   PedagogicalIntent,
   ConversationMessage,
   TutorDiagramState,
+  VisualUpdate,
 } from './types'
 // Old diagram-generator imports removed — engine is now the only diagram source
 import { validateSchema, autoCorrectDiagram, type DiagramType as VisualDiagramType, type StructuredDiagram, SCHEMA_VERSION } from '@/lib/visual-learning'
 import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
 import { generateStepSequence, isMultiStepProblem } from '@/lib/diagram-engine/step-sequence'
 import { getExplanationStyle, type ExplanationStyleId } from '@/lib/homework/explanation-styles'
+import { getHybridPipeline } from '@/lib/diagram-engine/router'
+import { adaptToDesmosProps } from '@/lib/diagram-engine/desmos-adapter'
+import { adaptToGeoGebraProps } from '@/lib/diagram-engine/geogebra-adapter'
 import { classifyTopicType, inferDifficultyFromTopic, resolveEffectiveLanguageLevel, type TopicType } from '@/lib/ai/content-classifier'
 
 import { AI_MODEL } from '@/lib/ai/claude'
@@ -583,6 +587,138 @@ Your opening should:
 Keep it brief - 2-3 sentences max.`
 
 // ============================================================================
+// Visual Update Conversion
+// ============================================================================
+
+/**
+ * Convert a TutorDiagramState to a VisualUpdate for the VisualSolvingPanel.
+ * Returns null for engine_image and step_sequence (they use inline rendering).
+ */
+function diagramToVisualUpdate(
+  diagram: TutorDiagramState,
+  stepNumber: number,
+): VisualUpdate | null {
+  const diagramType = diagram.type
+
+  // engine_image and step_sequence are rendered inline, not in the panel
+  if (diagramType === 'engine_image' || diagramType === 'step_sequence') {
+    return null
+  }
+
+  const stepLabel = diagram.stepConfig?.[diagram.visibleStep]?.stepLabel || `Step ${stepNumber}`
+  const stepLabelHe = diagram.stepConfig?.[diagram.visibleStep]?.stepLabelHe
+
+  // Check if this diagram type has a hybrid (client-side) pipeline
+  const hybridPipeline = getHybridPipeline(diagramType)
+
+  if (hybridPipeline === 'desmos') {
+    const desmosProps = adaptToDesmosProps(diagramType, diagram.data)
+    if (desmosProps) {
+      return {
+        tool: 'desmos',
+        action: 'replace',
+        stepNumber,
+        stepLabel,
+        stepLabelHe,
+        desmosExpressions: desmosProps.expressions.map((e) => ({
+          id: e.id,
+          latex: e.latex,
+          color: e.color,
+          label: e.label,
+          hidden: e.hidden,
+        })),
+        desmosConfig: {
+          xRange: [desmosProps.xMin ?? -10, desmosProps.xMax ?? 10],
+          yRange: [desmosProps.yMin ?? -10, desmosProps.yMax ?? 10],
+          showGrid: desmosProps.showGrid,
+        },
+        title: desmosProps.title,
+      }
+    }
+  }
+
+  if (hybridPipeline === 'geogebra') {
+    const geogebraProps = adaptToGeoGebraProps(diagramType, diagram.data)
+    if (geogebraProps) {
+      return {
+        tool: 'geogebra',
+        action: 'replace',
+        stepNumber,
+        stepLabel,
+        stepLabelHe,
+        geogebraCommands: geogebraProps.commands.map((c) => ({
+          command: c.command,
+          label: c.label,
+          color: c.color,
+          showLabel: c.showLabel,
+        })),
+        title: geogebraProps.title,
+      }
+    }
+  }
+
+  if (hybridPipeline === 'recharts') {
+    // Map the diagram data to recharts format
+    const data = diagram.data
+    const chartType = (data.chartType as string) || diagramType
+    const chartTypeMap: Record<string, 'bar' | 'histogram' | 'pie' | 'line' | 'scatter' | 'box_plot'> = {
+      bar_chart: 'bar',
+      histogram: 'histogram',
+      pie_chart: 'pie',
+      line_chart: 'line',
+      dot_plot: 'scatter',
+      box_plot: 'box_plot',
+      frequency_table: 'bar',
+      stem_leaf_plot: 'bar',
+    }
+    const mappedType = chartTypeMap[chartType] || 'bar'
+
+    return {
+      tool: 'recharts',
+      action: 'replace',
+      stepNumber,
+      stepLabel,
+      stepLabelHe,
+      rechartsData: {
+        chartType: mappedType,
+        data: data.data as VisualUpdate['rechartsData'] extends { data?: infer D } ? D : never,
+        boxPlotData: data.boxPlotData as VisualUpdate['rechartsData'] extends { boxPlotData?: infer B } ? B : never,
+        xLabel: data.xLabel as string | undefined,
+        yLabel: data.yLabel as string | undefined,
+      },
+      title: data.title as string | undefined,
+    }
+  }
+
+  // For non-hybrid types (SVG-based), wrap the diagram in the svgDiagram field
+  return {
+    tool: 'svg',
+    action: 'replace',
+    stepNumber,
+    stepLabel,
+    stepLabelHe,
+    svgDiagram: diagram,
+    title: diagram.data.title as string | undefined,
+  }
+}
+
+/**
+ * Attach a visual update to a tutor response if it contains a diagram.
+ * Mutates tutorResponse in place.
+ */
+function attachVisualUpdate(tutorResponse: TutorResponse, context: TutorContext): void {
+  if (!tutorResponse.diagram) return
+
+  const stepNumber = context.session.conversation
+    .filter((m) => m.role === 'tutor')
+    .length + 1
+  const visualUpdate = diagramToVisualUpdate(tutorResponse.diagram, stepNumber)
+  if (visualUpdate) {
+    tutorResponse.visualUpdate = visualUpdate
+  }
+}
+
+// ============================================================================
 // Main Functions
 // ============================================================================
 
@@ -684,6 +820,8 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
             partial: sequence.partial,
           },
         }
+        // Generate visual update for the panel
+        attachVisualUpdate(tutorResponse, context)
         return tutorResponse
       }
     } catch (err) {
@@ -709,6 +847,9 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
   } else {
     console.log(`[TutorEngine] No engine result - diagram will be undefined`)
   }
+
+  // Generate visual update for the panel
+  attachVisualUpdate(tutorResponse, context)
 
   return tutorResponse
 }
@@ -853,6 +994,8 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
             partial: sequence.partial,
           },
         }
+        // Generate visual update for the panel
+        attachVisualUpdate(tutorResponse, context)
         return tutorResponse
       }
     } catch (err) {
@@ -875,6 +1018,9 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     }
   }
   // If engine failed or previous diagram exists, no new diagram is shown
+
+  // Generate visual update for the panel
+  attachVisualUpdate(tutorResponse, context)
 
   return tutorResponse
 }

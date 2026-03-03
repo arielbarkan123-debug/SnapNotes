@@ -40,5 +40,17 @@
   "escalation6": "שאל את המורה",
   "escalationTeacherMessage": "לפעמים עוזר לדבר עם המורה ישירות. תוכל לומר: \"אני עובד על {topic} ואני מתקשה להבין את {concept}. תוכל להסביר לי אחרת?\"",
   "escalationTeacherShare": "העתק לשיתוף עם המורה",
-  "escalationCopied": "הועתק!"
+  "escalationCopied": "הועתק!",
+
+  "visualPanel": "פתרון ויזואלי",
+  "toolDesmos": "גרף",
+  "toolGeogebra": "גיאומטריה",
+  "toolRecharts": "תרשים",
+  "toolSvg": "דיאגרמה",
+  "toolEngineImage": "דיאגרמה",
+  "visualStep": "שלב {current} מתוך {total}",
+  "showDiagram": "הצג תרשים",
+  "hideDiagram": "הסתר תרשים",
+  "fullScreen": "מסך מלא",
+  "exitFullScreen": "צא ממסך מלא"
 }
