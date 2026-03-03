@@ -3,12 +3,14 @@
 import { useState, useCallback } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useToast } from '@/contexts/ToastContext'
-import { ScanLine, Upload, Type, Loader2 } from 'lucide-react'
+import { ScanLine, Upload, Type, Loader2, Calculator } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import 'katex/dist/katex.min.css'
 import { BlockMath } from 'react-katex'
 import FormulaBreakdown from '@/components/formula-scanner/FormulaBreakdown'
+import SolveResult from '@/components/formula-scanner/SolveResult'
 import type { FormulaAnalysis } from '@/lib/formula-scanner/analyzer'
+import type { FormulaSolution } from '@/lib/formula-scanner/solver'
 import { createClient } from '@/lib/supabase/client'
 
 type InputTab = 'image' | 'text'
@@ -25,6 +27,8 @@ export default function FormulaScannerContent() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<FormulaAnalysis | null>(null)
+  const [isSolving, setIsSolving] = useState(false)
+  const [solution, setSolution] = useState<FormulaSolution | null>(null)
 
   // ─── Image Upload ──────────────────────────────────────────────────────────
 
@@ -45,6 +49,7 @@ export default function FormulaScannerContent() {
     setSelectedFile(file)
     setPreviewUrl(URL.createObjectURL(file))
     setAnalysis(null)
+    setSolution(null)
   }
 
   // ─── Upload to Supabase Storage ────────────────────────────────────────────
@@ -72,6 +77,7 @@ export default function FormulaScannerContent() {
   const handleAnalyze = useCallback(async () => {
     setIsAnalyzing(true)
     setAnalysis(null)
+    setSolution(null)
 
     try {
       let body: { imageUrl?: string; latexText?: string } = {}
@@ -115,6 +121,36 @@ export default function FormulaScannerContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputTab, latexInput, selectedFile, showError, t])
 
+  // ─── Solve ───────────────────────────────────────────────────────────────
+
+  const handleSolve = useCallback(async () => {
+    if (!analysis) return
+
+    setIsSolving(true)
+    try {
+      const context = `Formula: ${analysis.name}. Subject: ${analysis.subject}.`
+
+      const response = await fetch('/api/formula-scanner/solve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latex: analysis.latex, context }),
+      })
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err.error?.message || 'Solve failed')
+      }
+
+      const data = await response.json()
+      setSolution(data.solution)
+    } catch (err) {
+      console.error('[FormulaScanner] Solve error:', err)
+      showError(err instanceof Error ? err.message : t('errors.solveFailed'))
+    } finally {
+      setIsSolving(false)
+    }
+  }, [analysis, showError, t])
+
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -137,7 +173,7 @@ export default function FormulaScannerContent() {
       {/* Input Tabs */}
       <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg mb-4">
         <button
-          onClick={() => { setInputTab('text'); setAnalysis(null) }}
+          onClick={() => { setInputTab('text'); setAnalysis(null); setSolution(null) }}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-colors
             ${inputTab === 'text'
               ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
@@ -148,7 +184,7 @@ export default function FormulaScannerContent() {
           {t('tabs.typeLatex')}
         </button>
         <button
-          onClick={() => { setInputTab('image'); setAnalysis(null) }}
+          onClick={() => { setInputTab('image'); setAnalysis(null); setSolution(null) }}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-colors
             ${inputTab === 'image'
               ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
@@ -166,7 +202,7 @@ export default function FormulaScannerContent() {
           <div className="space-y-3">
             <textarea
               value={latexInput}
-              onChange={(e) => { setLatexInput(e.target.value); setAnalysis(null) }}
+              onChange={(e) => { setLatexInput(e.target.value); setAnalysis(null); setSolution(null) }}
               placeholder={t('placeholders.latex')}
               className="w-full h-24 px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-violet-500 font-mono"
             />
@@ -196,7 +232,7 @@ export default function FormulaScannerContent() {
                   className="max-h-48 mx-auto rounded-lg"
                 />
                 <button
-                  onClick={() => { setSelectedFile(null); setPreviewUrl(null); setAnalysis(null) }}
+                  onClick={() => { setSelectedFile(null); setPreviewUrl(null); setAnalysis(null); setSolution(null) }}
                   className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                   aria-label={t('removeImage')}
                 >
@@ -247,12 +283,42 @@ export default function FormulaScannerContent() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="mt-6"
+            className="mt-6 space-y-4"
           >
             <FormulaBreakdown
               analysis={analysis}
               language={locale as 'en' | 'he'}
             />
+
+            {/* Solve This Button */}
+            <button
+              type="button"
+              onClick={handleSolve}
+              disabled={isSolving}
+              className="w-full py-3 px-6 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 disabled:from-gray-300 disabled:to-gray-400 dark:disabled:from-gray-700 dark:disabled:to-gray-600 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed shadow-sm"
+            >
+              {isSolving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {t('solve.solving')}
+                </>
+              ) : (
+                <>
+                  <Calculator className="w-4 h-4" />
+                  {t('solve.solveThis')}
+                </>
+              )}
+            </button>
+
+            {/* Solution */}
+            {solution && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <SolveResult solution={solution} />
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

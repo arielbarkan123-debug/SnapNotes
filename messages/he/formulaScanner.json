@@ -18,12 +18,23 @@
   "practiceQuestion": "תרגול עם הנוסחה",
   "showAnswer": "הצג תשובה",
   "range": "טווח",
+  "solve": {
+    "solveThis": "פתור את זה",
+    "solving": "...פותר",
+    "stepByStep": "פתרון שלב אחר שלב",
+    "interactiveGraph": "גרף אינטראקטיבי",
+    "graphHint": "גרור לזוז, גלול לזום",
+    "explanation": "מה זה אומר?",
+    "originalFormula": "הנוסחה המקורית",
+    "noGraph": "אין גרף רלוונטי לנוסחה זו"
+  },
   "errors": {
     "notImage": "אנא בחר קובץ תמונה",
     "fileTooLarge": "התמונה חייבת להיות עד 10MB",
     "noFormula": "אנא הזן נוסחה",
     "noImage": "אנא העלה תמונה",
     "invalidLatex": "LaTeX לא תקין",
-    "analysisFailed": "ניתוח הנוסחה נכשל. נסה שוב."
+    "analysisFailed": "ניתוח הנוסחה נכשל. נסה שוב.",
+    "solveFailed": "נכשל בפתרון הנוסחה. נסה שוב."
   }
 }

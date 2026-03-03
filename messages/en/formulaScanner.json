@@ -18,12 +18,23 @@
   "practiceQuestion": "Practice with this Formula",
   "showAnswer": "Show Answer",
   "range": "Range",
+  "solve": {
+    "solveThis": "Solve This",
+    "solving": "Solving...",
+    "stepByStep": "Step-by-Step Solution",
+    "interactiveGraph": "Interactive Graph",
+    "graphHint": "Drag to pan, scroll to zoom",
+    "explanation": "What Does This Mean?",
+    "originalFormula": "Original formula",
+    "noGraph": "No graph applicable for this formula"
+  },
   "errors": {
     "notImage": "Please select an image file",
     "fileTooLarge": "Image must be under 10MB",
     "noFormula": "Please enter a formula",
     "noImage": "Please upload an image",
     "invalidLatex": "Invalid LaTeX",
-    "analysisFailed": "Failed to analyze formula. Please try again."
+    "analysisFailed": "Failed to analyze formula. Please try again.",
+    "solveFailed": "Failed to solve formula. Please try again."
   }
 }
