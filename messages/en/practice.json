@@ -175,5 +175,7 @@
   "deepDiveQuickCheckPlaceholder": "Type your answer...",
   "deepDiveQuickCheckCorrect": "Correct! You've got it.",
   "deepDiveQuickCheckWrong": "Not quite. The answer is: {answer}",
-  "deepDiveGotIt": "Got it"
+  "deepDiveGotIt": "Got it",
+  "homeworkErrorBanner": "Practicing: {topic} from your homework",
+  "backToHomework": "\u2190 Back to Homework"
 }

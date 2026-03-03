@@ -126,6 +126,9 @@ export interface PracticeSession {
   // Status
   status: SessionStatus
   created_at: string
+  // Source tracking (for homework error practice)
+  source_type?: PracticeSourceType
+  error_context?: HomeworkErrorContext
 }
 
 export interface PracticeSessionQuestion {

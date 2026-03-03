@@ -666,6 +666,21 @@ export default function PracticeSessionContent({
           </button>
         </div>
 
+        {/* Homework Error Context Banner */}
+        {session.source_type === 'homework_error' && session.error_context && (
+          <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl p-3 mb-4">
+            <p className="text-sm text-violet-700 dark:text-violet-300">
+              {tp('homeworkErrorBanner', { topic: session.error_context.topic })}
+            </p>
+            <button
+              onClick={() => router.push(`/homework/${session.error_context!.checkId}`)}
+              className="text-xs text-violet-600 dark:text-violet-400 hover:underline mt-1"
+            >
+              {tp('backToHomework')}
+            </button>
+          </div>
+        )}
+
         {/* Progress */}
         <ProgressBar current={answeredCount} total={questions.length} correct={correctCount} />
 

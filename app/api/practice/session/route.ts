@@ -94,11 +94,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       )
     }
 
+    // Handle homework error source — use error topic as pseudo concept ID
+    let effectiveTargetConceptIds = targetConceptIds
+    if (sourceType === 'homework_error' && errorContext && !targetConceptIds?.length) {
+      effectiveTargetConceptIds = [`homework_error:${errorContext.topic}`]
+    }
+
     // Create session
     const result = await createPracticeSession(user.id, {
       sessionType,
       courseId,
-      targetConceptIds,
+      targetConceptIds: effectiveTargetConceptIds,
       targetDifficulty,
       questionCount,
       timeLimitMinutes,

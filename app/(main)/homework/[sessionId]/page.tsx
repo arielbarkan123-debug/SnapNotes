@@ -11,11 +11,41 @@ import { useToast } from '@/contexts/ToastContext'
 import { useXP } from '@/contexts/XPContext'
 import { useVisuals } from '@/contexts/VisualsContext'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
-import type { HomeworkCheck, HomeworkFeedback, GradeLevel, AnnotatedFeedbackPoint, HomeworkSession, BatchWorksheetResult as BatchResult, BatchWorksheetItem, CheckMode, BeforeSubmitResult, RubricResult } from '@/lib/homework/types'
+import type { HomeworkCheck, HomeworkFeedback, GradeLevel, AnnotatedFeedbackPoint, FeedbackPoint, HomeworkSession, BatchWorksheetResult as BatchResult, BatchWorksheetItem, CheckMode, BeforeSubmitResult, RubricResult } from '@/lib/homework/types'
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+/** Offset applied to improvement point indices to avoid collision with worksheet item indices */
+const IMPROVEMENT_INDEX_OFFSET = 1000
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+/** Build a BatchWorksheetItem-like object from a FeedbackPoint for practice-from-mistake */
+function feedbackPointToWorksheetItem(
+  point: FeedbackPoint,
+  topic: string
+): BatchWorksheetItem {
+  return {
+    problemNumber: 0,
+    problemText: point.title,
+    studentAnswer: '',
+    correctAnswer: '',
+    isCorrect: false,
+    explanation: point.description,
+    topic,
+    errorType: (
+      point.severity === 'major'
+        ? 'conceptual'
+        : point.severity === 'moderate'
+          ? 'calculation'
+          : 'factual'
+    ) as BatchWorksheetItem['errorType'],
+  }
+}
 
 function getGradeLevelStyles(level: GradeLevel, t: (key: string) => string) {
   switch (level) {
@@ -556,8 +586,14 @@ export default function HomeworkResultsPage() {
   const modeResult = check.mode_result as BatchResult | BeforeSubmitResult | RubricResult | null | undefined
 
   // Handle practice from worksheet mistake or standard feedback improvement point
-  const handlePracticeFromMistake = async (item: BatchWorksheetItem, idx: number) => {
+  const handlePracticeFromMistake = useCallback(async (item: BatchWorksheetItem | FeedbackPoint, idx: number) => {
     if (!check) return
+
+    // Normalize FeedbackPoint to BatchWorksheetItem shape
+    const worksheetItem: BatchWorksheetItem = 'problemNumber' in item
+      ? item as BatchWorksheetItem
+      : feedbackPointToWorksheetItem(item as FeedbackPoint, check.topic || check.subject || 'General')
+
     setPracticingIndex(idx)
     try {
       // 1. Create a practice session with homework_error source
@@ -571,11 +607,11 @@ export default function HomeworkResultsPage() {
           errorContext: {
             checkId: check.id,
             problemIndex: idx,
-            problemText: item.problemText,
-            topic: item.topic,
-            errorType: item.errorType,
-            studentAnswer: item.studentAnswer,
-            correctAnswer: item.correctAnswer,
+            problemText: worksheetItem.problemText,
+            topic: worksheetItem.topic,
+            errorType: worksheetItem.errorType,
+            studentAnswer: worksheetItem.studentAnswer,
+            correctAnswer: worksheetItem.correctAnswer,
           },
         }),
       })
@@ -588,7 +624,7 @@ export default function HomeworkResultsPage() {
       const { sessionId: practiceSessionId } = await sessionRes.json()
 
       // 2. Record the practice link on the homework check
-      await fetch(`/api/homework/check/${check.id}/practice-complete`, {
+      const practiceCompleteRes = await fetch(`/api/homework/check/${check.id}/practice-complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -597,21 +633,25 @@ export default function HomeworkResultsPage() {
         }),
       })
 
-      // 3. Update local state to reflect the practiced item
-      setCheck((prev) => {
-        if (!prev) return prev
-        const currentItems = prev.practiced_items || []
-        return {
-          ...prev,
-          practiced_items: [...currentItems, { problemIndex: idx, practiceSessionId }],
-        }
-      })
+      if (practiceCompleteRes.ok) {
+        // 3. Optimistic local state update
+        setCheck((prev) => {
+          if (!prev) return prev
+          const currentItems = prev.practiced_items || []
+          return {
+            ...prev,
+            practiced_items: [...currentItems, { problemIndex: idx, practiceSessionId }],
+          }
+        })
+      } else {
+        console.warn('[PracticeFromMistake] Failed to record practice link:', await practiceCompleteRes.text())
+      }
 
       trackFeature('homework_practice_from_mistake', {
         checkId: check.id,
         problemIndex: idx,
-        topic: item.topic,
-        errorType: item.errorType,
+        topic: worksheetItem.topic,
+        errorType: worksheetItem.errorType,
       })
 
       // 4. Navigate to the practice session
@@ -622,7 +662,7 @@ export default function HomeworkResultsPage() {
     } finally {
       setPracticingIndex(null)
     }
-  }
+  }, [check, router, toast, trackFeature])
 
   // Batch worksheet mode result view
   if (currentCheckMode === 'batch_worksheet' && modeResult && 'items' in modeResult) {
@@ -988,26 +1028,17 @@ export default function HomeworkResultsPage() {
                         {/* Practice This button for improvement points */}
                         {(() => {
                           const isPracticed = (check.practiced_items || []).some(
-                            (p) => p.problemIndex === idx + 1000
+                            (p) => p.problemIndex === idx + IMPROVEMENT_INDEX_OFFSET
                           )
-                          const isLoading = practicingIndex === idx + 1000
+                          const isLoading = practicingIndex === idx + IMPROVEMENT_INDEX_OFFSET
                           return (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
                                 if (!isPracticed && !isLoading) {
                                   handlePracticeFromMistake(
-                                    {
-                                      problemNumber: idx + 1,
-                                      problemText: point.title,
-                                      studentAnswer: '',
-                                      correctAnswer: '',
-                                      isCorrect: false,
-                                      explanation: point.description,
-                                      topic: check.topic || check.subject || 'General',
-                                      errorType: (point.severity === 'major' ? 'conceptual' : point.severity === 'moderate' ? 'calculation' : 'factual') as 'factual' | 'conceptual' | 'calculation' | 'formatting' | 'incomplete',
-                                    },
-                                    idx + 1000 // offset to avoid collision with worksheet indices
+                                    point,
+                                    idx + IMPROVEMENT_INDEX_OFFSET
                                   )
                                 }
                               }}

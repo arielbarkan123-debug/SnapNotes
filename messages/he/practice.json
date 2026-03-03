@@ -175,5 +175,7 @@
   "deepDiveQuickCheckPlaceholder": "הקלד את התשובה שלך...",
   "deepDiveQuickCheckCorrect": "נכון! הבנת.",
   "deepDiveQuickCheckWrong": "לא בדיוק. התשובה היא: {answer}",
-  "deepDiveGotIt": "הבנתי"
+  "deepDiveGotIt": "הבנתי",
+  "homeworkErrorBanner": "מתרגלים: {topic} מהשיעורי בית שלך",
+  "backToHomework": "\u2192 חזרה לשיעורי בית"
 }
