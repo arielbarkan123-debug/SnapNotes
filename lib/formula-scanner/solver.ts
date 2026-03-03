@@ -127,7 +127,12 @@ export async function solveFormula(
     throw new Error('Failed to parse formula solution response')
   }
 
-  const parsed = JSON.parse(jsonMatch[0]) as Omit<FormulaSolution, 'originalLatex'>
+  let parsed: Omit<FormulaSolution, 'originalLatex'>
+  try {
+    parsed = JSON.parse(jsonMatch[0]) as Omit<FormulaSolution, 'originalLatex'>
+  } catch {
+    throw new Error('Failed to parse formula solution: malformed JSON from AI')
+  }
 
   return {
     ...parsed,

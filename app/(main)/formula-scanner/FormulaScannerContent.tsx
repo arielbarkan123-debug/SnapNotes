@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useToast } from '@/contexts/ToastContext'
 import { ScanLine, Upload, Type, Loader2, Calculator } from 'lucide-react'
@@ -30,6 +30,15 @@ export default function FormulaScannerContent() {
   const [isSolving, setIsSolving] = useState(false)
   const [solution, setSolution] = useState<FormulaSolution | null>(null)
 
+  // Track previewUrl for cleanup on unmount
+  const previewUrlRef = useRef<string | null>(null)
+  useEffect(() => { previewUrlRef.current = previewUrl }, [previewUrl])
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+    }
+  }, [])
+
   // ─── Image Upload ──────────────────────────────────────────────────────────
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,6 +55,7 @@ export default function FormulaScannerContent() {
       return
     }
 
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
     setSelectedFile(file)
     setPreviewUrl(URL.createObjectURL(file))
     setAnalysis(null)
@@ -232,7 +242,7 @@ export default function FormulaScannerContent() {
                   className="max-h-48 mx-auto rounded-lg"
                 />
                 <button
-                  onClick={() => { setSelectedFile(null); setPreviewUrl(null); setAnalysis(null); setSolution(null) }}
+                  onClick={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setSelectedFile(null); setPreviewUrl(null); setAnalysis(null); setSolution(null) }}
                   className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                   aria-label={t('removeImage')}
                 >

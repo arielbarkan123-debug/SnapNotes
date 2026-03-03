@@ -10,6 +10,34 @@ import { BlockMath, InlineMath } from 'react-katex'
 import type { FormulaSolution } from '@/lib/formula-scanner/solver'
 import type { DesmosExpression } from '@/components/diagrams/DesmosRenderer'
 
+// Safe wrappers for KaTeX rendering — react-katex handles errors inline by default,
+// but we use renderError for a cleaner fallback display
+function SafeBlockMath({ math }: { math: string }) {
+  return (
+    <BlockMath
+      math={math}
+      renderError={(error) => (
+        <code className="text-xs text-red-400 block p-2 bg-red-50 dark:bg-red-900/20 rounded">
+          {error.message}
+        </code>
+      )}
+    />
+  )
+}
+
+function SafeInlineMath({ math }: { math: string }) {
+  return (
+    <InlineMath
+      math={math}
+      renderError={(error) => (
+        <code className="text-xs text-red-400">
+          {error.message}
+        </code>
+      )}
+    />
+  )
+}
+
 const DesmosRenderer = dynamic(() => import('@/components/diagrams/DesmosRenderer'), {
   ssr: false,
   loading: () => (
@@ -55,6 +83,7 @@ export default function SolveResult({ solution }: SolveResultProps) {
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <button
           type="button"
+          aria-expanded={showSteps}
           onClick={() => setShowSteps(!showSteps)}
           className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
         >
@@ -79,7 +108,11 @@ export default function SolveResult({ solution }: SolveResultProps) {
               className="overflow-hidden"
             >
               <div className="px-4 pb-4 border-t border-gray-100 dark:border-gray-700 pt-3 space-y-4">
-                {solution.steps.map((step, i) => (
+                {(solution.steps ?? []).length === 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                    {t('solve.noSteps')}
+                  </p>
+                ) : (solution.steps ?? []).map((step, i) => (
                   <motion.div
                     key={step.stepNumber}
                     initial={{ opacity: 0, x: isHe ? 20 : -20 }}
@@ -97,7 +130,7 @@ export default function SolveResult({ solution }: SolveResultProps) {
                     <div className="flex-1 min-w-0">
                       {/* KaTeX expression */}
                       <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg mb-1.5 overflow-x-auto">
-                        <BlockMath math={step.expression} />
+                        <SafeBlockMath math={step.expression} />
                       </div>
                       {/* Text explanation */}
                       <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
@@ -117,6 +150,7 @@ export default function SolveResult({ solution }: SolveResultProps) {
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           <button
             type="button"
+            aria-expanded={showGraph}
             onClick={() => setShowGraph(!showGraph)}
             className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
           >
@@ -162,6 +196,7 @@ export default function SolveResult({ solution }: SolveResultProps) {
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <button
           type="button"
+          aria-expanded={showExplanation}
           onClick={() => setShowExplanation(!showExplanation)}
           className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
         >
@@ -196,7 +231,7 @@ export default function SolveResult({ solution }: SolveResultProps) {
                 {/* Original formula reference */}
                 <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
                   <span>{t('solve.originalFormula')}:</span>
-                  <InlineMath math={solution.originalLatex} />
+                  <SafeInlineMath math={solution.originalLatex} />
                 </div>
               </div>
             </motion.div>

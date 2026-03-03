@@ -26,7 +26,8 @@
     "graphHint": "Drag to pan, scroll to zoom",
     "explanation": "What Does This Mean?",
     "originalFormula": "Original formula",
-    "noGraph": "No graph applicable for this formula"
+    "noGraph": "No graph applicable for this formula",
+    "noSteps": "No solution steps available"
   },
   "errors": {
     "notImage": "Please select an image file",

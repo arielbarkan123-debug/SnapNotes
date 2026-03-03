@@ -46,8 +46,7 @@ export async function POST(request: NextRequest) {
       solution,
     })
   } catch (error) {
-    console.error('[FormulaScanner/Solve] Error:', error)
-    const message = error instanceof Error ? error.message : 'Failed to solve formula'
-    return createErrorResponse(ErrorCodes.INTERNAL_ERROR, message)
+    console.error('[FormulaSolver] Error:', error)
+    return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to solve formula. Please try again.')
   }
 }
