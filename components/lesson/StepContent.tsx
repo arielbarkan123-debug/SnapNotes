@@ -583,6 +583,7 @@ function GoDeeper({ courseId, lessonIndex, stepIndex }: {
 
       {/* Toggle button */}
       <button
+        type="button"
         onClick={handleExpand}
         disabled={isLoading}
         className={`

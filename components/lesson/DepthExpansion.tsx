@@ -76,6 +76,7 @@ export default function DepthExpansion({
             </AnimatePresence>
           ) : (
             <button
+              type="button"
               onClick={() => onRequestExpand(depth)}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
             >
@@ -162,10 +163,12 @@ function QuickCheckInline({ question, answer }: { question: string; answer: stri
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && userInput.trim()) handleCheck() }}
+            aria-label={question}
             className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-400 focus:border-transparent"
             placeholder="..."
           />
           <button
+            type="button"
             onClick={handleCheck}
             disabled={!userInput.trim()}
             className="px-3 py-1.5 text-sm font-medium bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

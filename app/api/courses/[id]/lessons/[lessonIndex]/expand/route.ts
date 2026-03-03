@@ -48,8 +48,21 @@ export async function POST(
     }
 
     // Parse body
-    const body = await request.json()
-    const { stepIndex, currentDepth = 0 } = body as { stepIndex: number; currentDepth?: number }
+    let body: { stepIndex: number; currentDepth?: number }
+    try {
+      body = await request.json()
+    } catch {
+      return createErrorResponse(ErrorCodes.VALIDATION_ERROR, 'Invalid request body')
+    }
+    const { stepIndex, currentDepth = 0 } = body
+
+    // Validate stepIndex and currentDepth
+    if (typeof stepIndex !== 'number' || !Number.isInteger(stepIndex) || stepIndex < 0) {
+      return createErrorResponse(ErrorCodes.VALIDATION_ERROR, 'Invalid step index')
+    }
+    if (typeof currentDepth !== 'number' || !Number.isInteger(currentDepth) || currentDepth < 0) {
+      return createErrorResponse(ErrorCodes.VALIDATION_ERROR, 'Invalid depth')
+    }
 
     // Validate depth limit
     if (currentDepth >= 2) {
