@@ -86,7 +86,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     } = body as CreateSessionRequest
 
     // Validate session type
-    const validTypes = ['targeted', 'mixed', 'exam_prep', 'quick', 'custom']
+    const validTypes = ['targeted', 'mixed', 'exam_prep', 'quick', 'custom', 'infinite']
     if (!sessionType || !validTypes.includes(sessionType)) {
       return createErrorResponse(
         ErrorCodes.VALIDATION_ERROR,

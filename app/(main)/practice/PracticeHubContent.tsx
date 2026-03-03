@@ -122,6 +122,7 @@ function RecentSessionCard({ session, onClick }: RecentSessionCardProps) {
     exam_prep: 'Exam Prep',
     quick: 'Quick Practice',
     custom: 'Custom',
+    infinite: 'Infinite',
   }
 
   const accuracy = session.questions_answered > 0

@@ -93,6 +93,7 @@ export type SessionType =
   | 'exam_prep'  // Course-specific intensive
   | 'quick'      // Fast 5-10 question session
   | 'custom'     // User-defined criteria
+  | 'infinite'   // Never-ending practice with difficulty calibration
 
 export type SessionStatus = 'active' | 'paused' | 'completed' | 'abandoned'
 
@@ -508,6 +509,7 @@ export const PRACTICE_CONFIG = {
     exam_prep: 30,
     quick: 5,
     custom: 10,
+    infinite: 3,
   } as Record<SessionType, number>,
 
   // Time estimates (minutes per question by type)
@@ -529,6 +531,7 @@ export const PRACTICE_CONFIG = {
     exam_prep: 10,
     quick: 3,
     custom: 1,
+    infinite: 1,
   } as Record<SessionType, number>,
 
   // Maximum questions

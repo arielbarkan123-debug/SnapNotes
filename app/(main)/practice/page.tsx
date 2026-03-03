@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { useTranslations, useLocale } from 'next-intl'
 import type { HelpContext } from '@/types'
@@ -144,11 +145,14 @@ export default function PracticePage() {
   // Track feature usage for implicit data collection
   useFeatureTracker('practice')
 
+  const router = useRouter()
+
   // SWR hook for courses with caching
   const { courses, isLoading: coursesLoading, error: coursesError } = useCourses()
 
   // Translations
   const t = useTranslations('practice.page')
+  const tp = useTranslations('practice')
   const locale = useLocale()
   const isRTL = locale === 'he'
 
@@ -165,6 +169,7 @@ export default function PracticePage() {
   const [error, setError] = useState<string | null>(null)
   const [isNoQuestionsError, setIsNoQuestionsError] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isStartingInfinite, setIsStartingInfinite] = useState(false)
 
   // Practice session state
   const [cards, setCards] = useState<PracticeCard[]>([])
@@ -408,6 +413,37 @@ export default function PracticePage() {
       setIsGenerating(false)
     }
   }, [courses, selectedCourseIds, questionCount, locale, trackFeature, t])
+
+  // ==========================================================================
+  // Start Infinite Practice Session
+  // ==========================================================================
+
+  const startInfinitePractice = useCallback(async () => {
+    if (selectedCourseIds.length === 0) return
+    setIsStartingInfinite(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/practice/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionType: 'infinite',
+          courseId: selectedCourseIds[0], // Use first selected course
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error?.message || 'Failed to start infinite practice')
+      }
+      const data = await res.json()
+      router.push(`/practice/${data.sessionId}`)
+    } catch (err) {
+      console.error('[Practice] Failed to start infinite:', err)
+      setError(t('failedToStartPractice'))
+    } finally {
+      setIsStartingInfinite(false)
+    }
+  }, [selectedCourseIds, router, t])
 
   // ==========================================================================
   // Toggle course selection
@@ -1141,6 +1177,36 @@ export default function PracticePage() {
                   t('startPractice')
                 )}
               </button>
+
+              {/* Infinite Practice Card */}
+              <div className="mt-4 p-4 bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-2xl" aria-hidden="true">{'\u267E\uFE0F'}</span>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">
+                      {tp('infinite.title')}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {tp('infinite.subtitle')}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={startInfinitePractice}
+                  disabled={selectedCourseIds.length === 0 || isStartingInfinite}
+                  className="w-full mt-2 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                >
+                  {isStartingInfinite ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                      {t('generatingQuestions')}
+                    </span>
+                  ) : (
+                    tp('infinite.start')
+                  )}
+                </button>
+              </div>
 
               {/* Back link */}
               <div className="text-center mt-4">

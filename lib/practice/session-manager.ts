@@ -155,6 +155,7 @@ export async function createPracticeSession(
       exam_prep: 30,
       quick: 5,
       custom: 10,
+      infinite: 3,
     }[request.sessionType]
 
   // Select existing questions first

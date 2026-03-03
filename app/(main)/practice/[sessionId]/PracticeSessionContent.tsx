@@ -9,6 +9,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { useToast } from '@/contexts/ToastContext'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import DifficultyFeedback from '@/components/shared/DifficultyFeedback'
@@ -22,6 +23,9 @@ import type {
   DeepDiveAnalysis,
 } from '@/lib/practice/types'
 import DeepDiveCard from '@/components/practice/DeepDiveCard'
+
+// Lazy load InfiniteHeader - only loaded for infinite sessions
+const InfiniteHeader = dynamic(() => import('@/components/practice/InfiniteHeader'), { ssr: false })
 
 // -----------------------------------------------------------------------------
 // Types
@@ -362,58 +366,83 @@ interface SessionCompleteProps {
   session: PracticeSession
   answeredCount: number
   correctCount: number
+  infiniteData?: {
+    longestStreak: number
+    recentResults: boolean[]
+  }
+  onKeepGoing?: () => void
 }
 
-function SessionComplete({ session: _session, answeredCount, correctCount }: SessionCompleteProps) {
+function SessionComplete({ session, answeredCount, correctCount, infiniteData, onKeepGoing }: SessionCompleteProps) {
+  const tp = useTranslations('practice')
   const accuracy = answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0
+  const isInfinite = session.session_type === 'infinite'
 
   const getGrade = (acc: number) => {
-    if (acc >= 90) return { label: 'Excellent!', color: 'text-green-600 dark:text-green-400' }
-    if (acc >= 75) return { label: 'Good Job!', color: 'text-blue-600 dark:text-blue-400' }
-    if (acc >= 60) return { label: 'Keep Practicing', color: 'text-amber-600 dark:text-amber-400' }
-    return { label: 'Needs Work', color: 'text-red-600 dark:text-red-400' }
+    if (acc >= 90) return { label: tp('greatJob'), color: 'text-green-600 dark:text-green-400' }
+    if (acc >= 75) return { label: tp('keepPracticing'), color: 'text-blue-600 dark:text-blue-400' }
+    if (acc >= 60) return { label: tp('gettingHangOfThis'), color: 'text-amber-600 dark:text-amber-400' }
+    return { label: tp('reviewAndTryAgain'), color: 'text-red-600 dark:text-red-400' }
   }
 
   const grade = getGrade(accuracy)
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card p-8 border border-gray-200 dark:border-gray-700 text-center">
-      <div className="text-6xl mb-4">🎉</div>
+      <div className="text-6xl mb-4" aria-hidden="true">{isInfinite ? '\u267E\uFE0F' : '\uD83C\uDF89'}</div>
       <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-        Session Complete!
+        {isInfinite ? tp('infinite.sessionSummary') : tp('sessionComplete')}
       </h2>
       <p className={`text-xl font-semibold ${grade.color} mb-6`}>{grade.label}</p>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className={`grid ${isInfinite && infiniteData ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} gap-4 mb-8`}>
         <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
           <p className="text-3xl font-bold text-gray-900 dark:text-white">{answeredCount}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Questions</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{tp('questionsAnswered')}</p>
         </div>
         <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
           <p className="text-3xl font-bold text-green-600 dark:text-green-400">{correctCount}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Correct</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{tp('correctAnswers')}</p>
         </div>
         <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
           <p className={`text-3xl font-bold ${grade.color}`}>{accuracy}%</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Accuracy</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{tp('page.accuracy')}</p>
         </div>
+        {isInfinite && infiniteData && (
+          <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+            <p className="text-3xl font-bold text-violet-600 dark:text-violet-400">{infiniteData.longestStreak}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{tp('infinite.streak')}</p>
+          </div>
+        )}
       </div>
 
       {/* Actions */}
-      <div className="flex gap-4">
-        <Link
-          href="/practice"
-          className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-medium rounded-lg transition-colors"
-        >
-          Back to Practice Hub
-        </Link>
-        <Link
-          href="/dashboard"
-          className="flex-1 py-3 px-4 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg transition-colors"
-        >
-          Go to Dashboard
-        </Link>
+      <div className="flex flex-col gap-3">
+        {/* Keep Going button (infinite mode or any session) */}
+        {onKeepGoing && (
+          <button
+            type="button"
+            onClick={onKeepGoing}
+            className="w-full py-3 px-4 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg transition-colors"
+          >
+            {tp('infinite.keepGoing')}
+          </button>
+        )}
+        <div className="flex gap-4">
+          <Link
+            href="/practice"
+            className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-medium rounded-lg transition-colors text-center"
+          >
+            {tp('page.backToDashboard')}
+          </Link>
+          <Link
+            href="/dashboard"
+            className="flex-1 py-3 px-4 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-white font-medium rounded-lg transition-colors text-center"
+          >
+            {tp('page.goToDashboard')}
+          </Link>
+        </div>
       </div>
     </div>
   )
@@ -441,6 +470,9 @@ export default function PracticeSessionContent({
   const { startTracking: startExplanationTracking, stopTracking: stopExplanationTracking } =
     useExplanationTracker('practice', session.id)
 
+  // Infinite mode detection
+  const isInfinite = session.session_type === 'infinite'
+
   // State
   const [currentIndex, setCurrentIndex] = useState(session.current_question_index)
   const [view, setView] = useState<SessionView>('question')
@@ -453,8 +485,20 @@ export default function PracticeSessionContent({
   const [_submitError, setSubmitError] = useState<{ answer: string; error: string } | null>(null)
   const [showQuitConfirm, setShowQuitConfirm] = useState(false)
 
+  // Infinite mode state
+  const [infiniteStreak, setInfiniteStreak] = useState(0)
+  const [infiniteLongestStreak, setInfiniteLongestStreak] = useState(0)
+  const [infiniteRecentResults, setInfiniteRecentResults] = useState<boolean[]>([])
+  const [currentDifficulty, setCurrentDifficulty] = useState(session.target_difficulty || 3)
+  const [isFetchingBatch, setIsFetchingBatch] = useState(false)
+  const [allQuestions, setAllQuestions] = useState<PracticeQuestion[]>(questions)
+  const [showStopConfirm, setShowStopConfirm] = useState(false)
+
+  // Use allQuestions for infinite mode, original questions for normal mode
+  const activeQuestions = isInfinite ? allQuestions : questions
+
   // Current question
-  const currentQuestion = questions[currentIndex]
+  const currentQuestion = activeQuestions[currentIndex]
 
   // Track session view on mount
   useEffect(() => {
@@ -462,20 +506,56 @@ export default function PracticeSessionContent({
       trackFeature('practice_session_view', {
         sessionId: session.id,
         sessionType: session.session_type,
-        questionCount: questions.length,
+        questionCount: activeQuestions.length,
         currentIndex: session.current_question_index,
         isResume: session.current_question_index > 0,
       })
       setHasTrackedView(true)
     }
-  }, [trackFeature, session, questions.length, hasTrackedView])
+  }, [trackFeature, session, activeQuestions.length, hasTrackedView])
 
-  // Check if session is already complete
+  // Check if session is already complete (skip for infinite mode)
   useEffect(() => {
-    if (session.status === 'completed' || currentIndex >= questions.length) {
+    if (!isInfinite && (session.status === 'completed' || currentIndex >= activeQuestions.length)) {
       setView('complete')
     }
-  }, [session.status, currentIndex, questions.length])
+  }, [session.status, currentIndex, activeQuestions.length, isInfinite])
+
+  // Infinite: pre-fetch next batch when buffer runs low
+  const fetchNextBatch = useCallback(async () => {
+    if (isFetchingBatch || !isInfinite) return
+    setIsFetchingBatch(true)
+    try {
+      const last5 = infiniteRecentResults.slice(-5)
+      const recentAccuracy = last5.length > 0 ? last5.filter(Boolean).length / last5.length : 0.5
+      const weakConceptIds: string[] = []
+
+      const res = await fetch(`/api/practice/session/${session.id}/next-batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentDifficulty,
+          recentAccuracy,
+          questionsAnswered: answeredCount,
+          weakConceptIds: weakConceptIds.length ? weakConceptIds : undefined,
+        }),
+      })
+
+      if (!res.ok) throw new Error('Batch fetch failed')
+      const data = await res.json()
+
+      if (data.questions?.length > 0) {
+        setAllQuestions(prev => [...prev, ...data.questions])
+      }
+      if (data.newDifficulty !== undefined) {
+        setCurrentDifficulty(data.newDifficulty)
+      }
+    } catch {
+      // Non-critical: will try again before next question
+    } finally {
+      setIsFetchingBatch(false)
+    }
+  }, [isFetchingBatch, isInfinite, infiniteRecentResults, currentDifficulty, answeredCount, session.id])
 
   const handleDifficultyFeedback = useCallback(async (feedback: 'too_easy' | 'too_hard') => {
     try {
@@ -543,6 +623,21 @@ export default function PracticeSessionContent({
         setCorrectCount(result.sessionProgress.questionsCorrect)
         setView('result')
 
+        // Infinite mode: track streak and recent results
+        if (isInfinite) {
+          const correct = result.isCorrect
+          setInfiniteRecentResults(prev => [...prev.slice(-19), correct])
+          if (correct) {
+            setInfiniteStreak(prev => {
+              const newStreak = prev + 1
+              setInfiniteLongestStreak(longest => Math.max(longest, newStreak))
+              return newStreak
+            })
+          } else {
+            setInfiniteStreak(0)
+          }
+        }
+
         // Start explanation engagement tracking when result/explanation is shown
         if (currentQuestion?.explanation) {
           startExplanationTracking(currentQuestion.id)
@@ -566,7 +661,7 @@ export default function PracticeSessionContent({
         setIsSubmitting(false)
       }
     },
-    [currentQuestion, currentIndex, session.id, isSubmitting, trackFeature, showError]
+    [currentQuestion, currentIndex, session.id, isSubmitting, isInfinite, trackFeature, showError, startExplanationTracking]
   )
 
   // Handle next question
@@ -576,35 +671,87 @@ export default function PracticeSessionContent({
 
     const nextIndex = currentIndex + 1
 
-    if (nextIndex >= questions.length) {
-      // Complete session
-      try {
-        await fetch(`/api/practice/session/${session.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'complete' }),
-        })
-
-        // Track session completion
-        trackStep('session_completed', 5)
-        trackFeature('practice_session_completed', {
-          sessionId: session.id,
-          sessionType: session.session_type,
-          questionsAnswered: answeredCount + 1,
-          questionsCorrect: correctCount,
-          accuracy: Math.round((correctCount / (answeredCount + 1)) * 100),
-        })
-      } catch {
-        // Session completion failed - continue anyway
+    if (isInfinite) {
+      // Infinite mode: pre-fetch when buffer is low (2 or fewer questions left)
+      const remaining = allQuestions.length - nextIndex
+      if (remaining <= 2) {
+        fetchNextBatch()
       }
-      setView('complete')
+
+      // If we still have questions, continue
+      if (nextIndex < allQuestions.length) {
+        setCurrentIndex(nextIndex)
+        setView('question')
+        setLastResult(null)
+        startTimeRef.current = Date.now()
+      } else {
+        // No more questions available, try to fetch and show loading
+        if (!isFetchingBatch) {
+          fetchNextBatch()
+        }
+        // Still no questions? Show waiting state briefly, then try again
+        // If the fetch adds questions, the user will see the next one
+        setCurrentIndex(nextIndex)
+        setView('question')
+        setLastResult(null)
+        startTimeRef.current = Date.now()
+      }
     } else {
-      setCurrentIndex(nextIndex)
-      setView('question')
-      setLastResult(null)
-      startTimeRef.current = Date.now()
+      // Normal mode
+      if (nextIndex >= questions.length) {
+        // Complete session
+        try {
+          await fetch(`/api/practice/session/${session.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'complete' }),
+          })
+
+          // Track session completion
+          trackStep('session_completed', 5)
+          trackFeature('practice_session_completed', {
+            sessionId: session.id,
+            sessionType: session.session_type,
+            questionsAnswered: answeredCount + 1,
+            questionsCorrect: correctCount,
+            accuracy: Math.round((correctCount / (answeredCount + 1)) * 100),
+          })
+        } catch {
+          // Session completion failed - continue anyway
+        }
+        setView('complete')
+      } else {
+        setCurrentIndex(nextIndex)
+        setView('question')
+        setLastResult(null)
+        startTimeRef.current = Date.now()
+      }
     }
-  }, [currentIndex, questions.length, session.id, session.session_type, answeredCount, correctCount, trackStep, trackFeature, stopExplanationTracking])
+  }, [currentIndex, questions.length, allQuestions.length, session.id, session.session_type, answeredCount, correctCount, trackStep, trackFeature, stopExplanationTracking, isInfinite, fetchNextBatch, isFetchingBatch])
+
+  // Handle stop (infinite mode)
+  const handleStopInfinite = useCallback(async () => {
+    setShowStopConfirm(false)
+    try {
+      await fetch(`/api/practice/session/${session.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete' }),
+      })
+
+      trackFeature('practice_session_completed', {
+        sessionId: session.id,
+        sessionType: 'infinite',
+        questionsAnswered: answeredCount,
+        questionsCorrect: correctCount,
+        accuracy: answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0,
+        longestStreak: infiniteLongestStreak,
+      })
+    } catch {
+      // Non-critical
+    }
+    setView('complete')
+  }, [session.id, answeredCount, correctCount, infiniteLongestStreak, trackFeature])
 
   // Handle abandon
   const handleAbandon = useCallback(async () => {
@@ -622,7 +769,7 @@ export default function PracticeSessionContent({
         questionsAnswered: answeredCount,
         questionsCorrect: correctCount,
         currentIndex,
-        totalQuestions: questions.length,
+        totalQuestions: activeQuestions.length,
       })
 
       router.push('/practice')
@@ -630,7 +777,26 @@ export default function PracticeSessionContent({
       // Abandon failed - redirect anyway
       router.push('/practice')
     }
-  }, [session.id, session.session_type, router, answeredCount, correctCount, currentIndex, questions.length, trackFeature])
+  }, [session.id, session.session_type, router, answeredCount, correctCount, currentIndex, activeQuestions.length, trackFeature])
+
+  // Handle "Keep Going" — create a new infinite session
+  const handleKeepGoing = useCallback(async () => {
+    try {
+      const res = await fetch('/api/practice/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionType: 'infinite',
+          courseId: session.course_id || undefined,
+        }),
+      })
+      if (!res.ok) throw new Error('Failed to create session')
+      const data = await res.json()
+      router.push(`/practice/${data.sessionId}`)
+    } catch {
+      showError(tp('page.failedToStartPractice'))
+    }
+  }, [session.course_id, router, showError, tp])
 
   // Render complete view
   if (view === 'complete') {
@@ -641,6 +807,11 @@ export default function PracticeSessionContent({
             session={session}
             answeredCount={answeredCount}
             correctCount={correctCount}
+            infiniteData={isInfinite ? {
+              longestStreak: infiniteLongestStreak,
+              recentResults: infiniteRecentResults,
+            } : undefined}
+            onKeepGoing={handleKeepGoing}
           />
         </div>
       </div>
@@ -656,14 +827,17 @@ export default function PracticeSessionContent({
             href="/practice"
             className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
           >
-            ← Back
+            {'\u2190'} Back
           </Link>
-          <button
-            onClick={() => setShowQuitConfirm(true)}
-            className="text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-          >
-            Quit Session
-          </button>
+          {!isInfinite && (
+            <button
+              type="button"
+              onClick={() => setShowQuitConfirm(true)}
+              className="text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+            >
+              {tp('endSession')}
+            </button>
+          )}
         </div>
 
         {/* Homework Error Context Banner */}
@@ -673,6 +847,7 @@ export default function PracticeSessionContent({
               {tp('homeworkErrorBanner', { topic: session.error_context.topic })}
             </p>
             <button
+              type="button"
               onClick={() => router.push(`/homework/${session.error_context!.checkId}`)}
               className="text-xs text-violet-600 dark:text-violet-400 hover:underline mt-1"
             >
@@ -681,8 +856,26 @@ export default function PracticeSessionContent({
           </div>
         )}
 
-        {/* Progress */}
-        <ProgressBar current={answeredCount} total={questions.length} correct={correctCount} />
+        {/* Progress: InfiniteHeader for infinite mode, ProgressBar for normal mode */}
+        {isInfinite ? (
+          <InfiniteHeader
+            streak={infiniteStreak}
+            totalAnswered={answeredCount}
+            recentResults={infiniteRecentResults}
+            currentDifficulty={currentDifficulty}
+            onStop={() => setShowStopConfirm(true)}
+          />
+        ) : (
+          <ProgressBar current={answeredCount} total={questions.length} correct={correctCount} />
+        )}
+
+        {/* Loading state when infinite mode has no current question */}
+        {isInfinite && !currentQuestion && view === 'question' && (
+          <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card p-8 border border-gray-200 dark:border-gray-700 text-center">
+            <span className="animate-spin inline-block h-8 w-8 border-4 border-violet-600 border-t-transparent rounded-full mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">{tp('infinite.generatingNext')}</p>
+          </div>
+        )}
 
         {/* Question or Result */}
         {view === 'question' && currentQuestion && (
@@ -709,7 +902,7 @@ export default function PracticeSessionContent({
         )}
       </div>
 
-      {/* Quit Session Confirm Modal */}
+      {/* Quit Session Confirm Modal (normal mode) */}
       <ConfirmModal
         isOpen={showQuitConfirm}
         onClose={() => setShowQuitConfirm(false)}
@@ -719,6 +912,16 @@ export default function PracticeSessionContent({
         }}
         title={tp('endSession')}
         message={tp('quitSessionConfirm')}
+        variant="warning"
+      />
+
+      {/* Stop Infinite Session Confirm Modal */}
+      <ConfirmModal
+        isOpen={showStopConfirm}
+        onClose={() => setShowStopConfirm(false)}
+        onConfirm={handleStopInfinite}
+        title={tp('infinite.stop')}
+        message={tp('infinite.stopConfirm')}
         variant="warning"
       />
     </div>
