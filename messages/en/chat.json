@@ -29,5 +29,15 @@
 
   "diagramTitle": "Diagram",
   "diagramInstructions": "Use the controls to step through the diagram as you follow along with the explanation.",
-  "diagramAutoAdvance": "The diagram reveals more as the tutor explains each concept."
+  "diagramAutoAdvance": "The diagram reveals more as the tutor explains each concept.",
+
+  "escalationLabel": "Still confused?",
+  "escalation1": "I'm still confused",
+  "escalation2": "Try an analogy",
+  "escalation3": "Show me with numbers",
+  "escalation4": "Watch a video",
+  "escalation5": "Start easier",
+  "escalation6": "Ask your teacher",
+  "escalationTeacherMessage": "Sometimes it helps to talk to your teacher directly. You could say: \"I'm working on {topic} and I'm having trouble understanding {concept}. Could you explain it differently?\"",
+  "escalationTeacherShare": "Copy to share with your teacher"
 }

@@ -6,6 +6,8 @@ import { useTranslations } from 'next-intl'
 import DiagramToggle from '@/components/ui/DiagramToggle'
 import type { HomeworkSession, ConversationMessage, HintLevel } from '@/lib/homework/types'
 import ExplanationStyleSelector from './ExplanationStyleSelector'
+import EscalationButton from './EscalationButton'
+import type { EscalationLevel, EscalationAction } from './EscalationButton'
 import type { ExplanationStyleId } from '@/lib/homework/explanation-styles'
 
 // Import diagram components
@@ -291,6 +293,7 @@ export default function TutoringChat({
   const [input, setInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [explanationStyle, setExplanationStyle] = useState<ExplanationStyleId>('step_by_step')
+  const [escalationLevels, setEscalationLevels] = useState<Record<number, EscalationLevel>>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -363,6 +366,20 @@ export default function TutoringChat({
     [isLoading, isSubmitting, onRequestHint]
   )
 
+  const handleEscalation = useCallback(
+    async (messageIdx: number, action: EscalationAction, nextLevel: EscalationLevel) => {
+      if (isLoading || isSubmitting) return
+      setEscalationLevels((prev) => ({ ...prev, [messageIdx]: nextLevel }))
+      setIsSubmitting(true)
+      try {
+        await onSendMessage(`[ESCALATION:${action}] Please explain differently.`)
+      } finally {
+        setIsSubmitting(false)
+      }
+    },
+    [isLoading, isSubmitting, onSendMessage]
+  )
+
   // Check if session has engine-generated diagrams (no step progress needed)
   const hasEngineDiagram = session.conversation.some((msg) => {
     if (!msg.diagram) return false
@@ -390,11 +407,21 @@ export default function TutoringChat({
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           {session.conversation.map((msg, idx) => (
-            <MessageBubble
-              key={idx}
-              message={msg}
-              t={t}
-            />
+            <div key={idx}>
+              <MessageBubble
+                message={msg}
+                t={t}
+              />
+              {msg.role === 'tutor' && idx > 0 && (
+                <EscalationButton
+                  currentLevel={escalationLevels[idx] ?? 0}
+                  onEscalate={(action, nextLevel) => handleEscalation(idx, action, nextLevel)}
+                  disabled={isLoading || isSubmitting}
+                  topic={session.detected_topic || undefined}
+                  concept={session.detected_topic || undefined}
+                />
+              )}
+            </div>
           ))}
 
           {/* Related YouTube videos — shown after the latest tutor response */}

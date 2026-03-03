@@ -20,6 +20,27 @@ import { recordHomeworkMisconception } from '@/lib/homework/misconception-record
 export const maxDuration = 120
 
 // ============================================================================
+// Escalation ladder — maps action to AI instruction
+// ============================================================================
+
+function getEscalationInstruction(action: string): string {
+  switch (action) {
+    case 'REPHRASE':
+      return 'Rephrase your previous explanation using simpler words and shorter sentences.'
+    case 'ANALOGY':
+      return 'Explain using a real-world analogy from everyday life.'
+    case 'CONCRETE':
+      return 'Show a fully worked numerical example with actual numbers.'
+    case 'VIDEO':
+      return 'The student wants a video explanation. Search YouTube for a relevant tutorial.'
+    case 'EASIER':
+      return 'Create a simpler version of the same problem type and walk through it.'
+    default:
+      return 'Try a different explanation approach.'
+  }
+}
+
+// ============================================================================
 // POST - Send a message to the tutor
 // ============================================================================
 
@@ -56,6 +77,15 @@ export async function POST(
     const enableDiagrams = body.enableDiagrams !== false
     const explanationStyle = body.explanationStyle
 
+    // Detect escalation prefix (e.g. "[ESCALATION:REPHRASE] Please explain differently.")
+    let escalationAction: string | null = null
+    let cleanMessage = body.message
+    const escalationMatch = body.message.match(/^\[ESCALATION:(\w+)\]\s*/)
+    if (escalationMatch) {
+      escalationAction = escalationMatch[1]
+      cleanMessage = body.message.replace(escalationMatch[0], '').trim()
+    }
+
     // Get the session
     const { data: session, error: sessionError } = await supabase
       .from('homework_sessions')
@@ -70,10 +100,10 @@ export async function POST(
 
     const homeworkSession = session as HomeworkSession
 
-    // Step 1: Add student message to conversation
+    // Step 1: Add student message to conversation (store clean message, without escalation prefix)
     const studentMessage: ConversationMessage = {
       role: 'student',
-      content: body.message,
+      content: cleanMessage || body.message,
       timestamp: new Date().toISOString(),
     }
 
@@ -149,7 +179,11 @@ export async function POST(
     }
 
     // Step 3: Generate Socratic tutor response
-    const tutorResponse = await generateTutorResponse(context, body.message, enableDiagrams, explanationStyle as ExplanationStyleId | undefined)
+    // If escalation is active, prepend the escalation instruction to the student message
+    const messageForTutor = escalationAction
+      ? `${getEscalationInstruction(escalationAction)}\n\nStudent says: ${cleanMessage}`
+      : body.message
+    const tutorResponse = await generateTutorResponse(context, messageForTutor, enableDiagrams, explanationStyle as ExplanationStyleId | undefined)
 
     // Step 4: Check if student solved the problem (if high progress)
     let solutionCheck = { solved: false, feedback: '' }

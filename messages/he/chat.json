@@ -29,5 +29,15 @@
 
   "diagramTitle": "תרשים",
   "diagramInstructions": "השתמש בכפתורים כדי לעבור בין שלבי התרשים תוך כדי מעקב אחר ההסבר.",
-  "diagramAutoAdvance": "התרשים מתגלה בהדרגה ככל שהמורה מסביר כל מושג."
+  "diagramAutoAdvance": "התרשים מתגלה בהדרגה ככל שהמורה מסביר כל מושג.",
+
+  "escalationLabel": "עדיין לא ברור?",
+  "escalation1": "עדיין לא מבין",
+  "escalation2": "נסה אנלוגיה",
+  "escalation3": "הראה לי עם מספרים",
+  "escalation4": "צפה בסרטון",
+  "escalation5": "התחל יותר קל",
+  "escalation6": "שאל את המורה",
+  "escalationTeacherMessage": "לפעמים עוזר לדבר עם המורה ישירות. תוכל לומר: \"אני עובד על {topic} ואני מתקשה להבין את {concept}. תוכל להסביר לי אחרת?\"",
+  "escalationTeacherShare": "העתק לשיתוף עם המורה"
 }
