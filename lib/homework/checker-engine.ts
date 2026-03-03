@@ -24,6 +24,8 @@ import type {
   VerifiedProblem,
   StudentAnswerSet,
   FeedbackPoint,
+  CheckMode,
+  ExtendedCheckerOutput,
 } from './types'
 import { verifyAnswer, answersMatch } from './math-verifier'
 import { readStudentWork } from './student-work-reader'
@@ -390,15 +392,14 @@ export interface CheckerInput {
   // Extracted text from DOCX files (DOCX not supported by Claude Vision directly)
   taskDocumentText?: string
   answerDocumentText?: string
+
+  // Check mode configuration
+  mode?: CheckMode
+  additionalImageUrls?: string[]
+  rubricImageUrls?: string[]
 }
 
-export interface CheckerOutput {
-  feedback: HomeworkFeedback
-  subject: string
-  topic: string
-  taskText: string
-  answerText: string
-}
+export type CheckerOutput = ExtendedCheckerOutput
 
 export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutput> {
   try {
@@ -1499,6 +1500,7 @@ function parseCheckerResponse(response: Anthropic.Message): CheckerOutput {
         topic: String(parsed.topic || 'Homework'),
         taskText: String(parsed.taskText || ''),
         answerText: String(parsed.answerText || ''),
+        mode: 'standard' as const,
         feedback: {
           gradeLevel: validateGradeLevel(parsed.feedback?.gradeLevel),
           gradeEstimate: String(parsed.feedback?.gradeEstimate || 'Not graded'),
@@ -1615,6 +1617,7 @@ function getDefaultOutput(): CheckerOutput {
     topic: 'Homework',
     taskText: '',
     answerText: '',
+    mode: 'standard' as const,
     feedback: {
       gradeLevel: 'needs_improvement',
       gradeEstimate: 'Unable to grade',

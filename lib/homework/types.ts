@@ -9,6 +9,7 @@
 
 export type CheckStatus = 'pending' | 'analyzing' | 'completed' | 'error'
 export type GradeLevel = 'excellent' | 'good' | 'needs_improvement' | 'incomplete'
+export type CheckMode = 'standard' | 'batch_worksheet' | 'before_submit' | 'rubric'
 
 export interface HomeworkCheck {
   id: string
@@ -30,6 +31,13 @@ export interface HomeworkCheck {
 
   // Feedback
   feedback: HomeworkFeedback | null
+
+  // Check mode
+  mode: CheckMode
+  mode_result: BatchWorksheetResult | BeforeSubmitResult | RubricResult | null
+  rubric_image_urls: string[]
+  additional_image_urls: string[]
+  practiced_items: Array<{ problemIndex: number; practiceSessionId: string }> | null
 
   // Metadata
   created_at: string
@@ -129,6 +137,12 @@ export interface CreateCheckRequest {
   // Extracted text from DOCX files (DOCX not supported by Claude Vision directly)
   taskDocumentText?: string
   answerDocumentText?: string
+
+  // Check mode configuration
+  mode?: CheckMode
+  additionalImageUrls?: string[]
+  beforeSubmit?: boolean
+  rubricImageUrls?: string[]
 }
 
 export interface CreateCheckResponse {
@@ -208,6 +222,94 @@ export interface TeacherStyleAnalysis {
   focusAreas: string[] // What the teacher tends to focus on
   commonPhrases: string[] // Patterns from teacher's reviews
   gradingTendency: 'lenient' | 'moderate' | 'strict'
+}
+
+// ============================================================================
+// Batch Worksheet Mode Types
+// ============================================================================
+
+export interface BatchWorksheetItem {
+  problemNumber: number | string
+  problemText: string
+  studentAnswer: string
+  correctAnswer: string
+  isCorrect: boolean | null
+  explanation: string
+  topic: string
+  errorType?: 'factual' | 'conceptual' | 'calculation' | 'formatting' | 'incomplete'
+}
+
+export interface BatchWorksheetResult {
+  mode: 'batch_worksheet'
+  totalProblems: number
+  correct: number
+  incorrect: number
+  unclear: number
+  items: BatchWorksheetItem[]
+  topicBreakdown: Record<string, { correct: number; total: number }>
+  score: number
+}
+
+// ============================================================================
+// Before-Submit Mode Types
+// ============================================================================
+
+export type BeforeSubmitStatus = 'correct' | 'check_again' | 'needs_rework' | 'unclear'
+
+export interface BeforeSubmitItem {
+  problemIndex: number
+  problemText: string
+  status: BeforeSubmitStatus
+  hints: [string, string, string]
+}
+
+export interface BeforeSubmitResult {
+  mode: 'before_submit'
+  items: BeforeSubmitItem[]
+  summary: {
+    correct: number
+    checkAgain: number
+    needsRework: number
+    unclear: number
+    total: number
+  }
+}
+
+// ============================================================================
+// Rubric Mode Types
+// ============================================================================
+
+export interface RubricCriterion {
+  criterion: string
+  maxPoints: number
+  earnedPoints: number
+  percentage: number
+  reasoning: string
+  suggestions: string
+}
+
+export interface RubricResult {
+  mode: 'rubric'
+  rubricBreakdown: RubricCriterion[]
+  totalEarned: number
+  totalPossible: number
+  percentage: number
+  estimatedGrade: string
+  taggedFeedback: Array<FeedbackPoint & { rubricCriterion: string }>
+}
+
+// ============================================================================
+// Extended Checker Output
+// ============================================================================
+
+export interface ExtendedCheckerOutput {
+  feedback: HomeworkFeedback
+  subject: string
+  topic: string
+  taskText: string
+  answerText: string
+  mode: CheckMode
+  modeResult?: BatchWorksheetResult | BeforeSubmitResult | RubricResult
 }
 
 // ============================================================================
