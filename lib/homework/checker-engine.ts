@@ -617,7 +617,13 @@ Respond ONLY with valid JSON:
   const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
   if (jsonMatch) jsonStr = jsonMatch[1].trim()
 
-  const parsed = JSON.parse(jsonStr)
+  let parsed
+  try {
+    parsed = JSON.parse(jsonStr)
+  } catch (e) {
+    console.error('[Checker] Failed to parse before-submit AI response:', jsonStr.substring(0, 200))
+    throw new Error('Failed to parse AI response for before-submit check. Please try again.')
+  }
   const items: BeforeSubmitItem[] = (parsed.items || []).map((item: Record<string, unknown>, idx: number) => ({
     problemIndex: typeof item.problemIndex === 'number' ? item.problemIndex : idx,
     problemText: String(item.problemText || ''),
@@ -701,7 +707,13 @@ Respond ONLY with valid JSON:
   const rubricMatch = rubricText.match(/```(?:json)?\s*([\s\S]*?)```/)
   if (rubricMatch) rubricJson = rubricMatch[1].trim()
 
-  const parsedRubric = JSON.parse(rubricJson)
+  let parsedRubric
+  try {
+    parsedRubric = JSON.parse(rubricJson)
+  } catch (e) {
+    console.error('[Checker] Failed to parse rubric AI response:', rubricJson.substring(0, 200))
+    throw new Error('Failed to parse AI response for rubric extraction. Please try again.')
+  }
   const criteria: Array<{ criterion: string; maxPoints: number; description: string }> = parsedRubric.criteria || []
   const totalPossible = parsedRubric.totalPossible || criteria.reduce((sum: number, c: { maxPoints: number }) => sum + c.maxPoints, 0)
 
@@ -759,7 +771,13 @@ Respond ONLY with valid JSON:
   const gradingMatch = gradingText.match(/```(?:json)?\s*([\s\S]*?)```/)
   if (gradingMatch) gradingJson = gradingMatch[1].trim()
 
-  const parsed = JSON.parse(gradingJson)
+  let parsed
+  try {
+    parsed = JSON.parse(gradingJson)
+  } catch (e) {
+    console.error('[Checker] Failed to parse rubric grading AI response:', gradingJson.substring(0, 200))
+    throw new Error('Failed to parse AI response for rubric grading. Please try again.')
+  }
   const breakdown: RubricCriterion[] = (parsed.breakdown || []).map((item: Record<string, unknown>) => ({
     criterion: String(item.criterion || ''),
     maxPoints: Number(item.maxPoints || 0),
@@ -905,6 +923,11 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
     if (mode === 'before_submit') {
       console.log('[Checker] Before-submit mode — checking without revealing answers...')
 
+      const textContent = input.taskText || input.taskDocumentText || null
+      if (!input.taskImageUrl && !input.answerImageUrl && !textContent) {
+        throw new Error('At least one image or text input is required for before-submit mode')
+      }
+
       const imageContents: Array<{ type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'; data: string } }> = []
       if (input.taskImageUrl) {
         const fetched = await fetchImageAsBase64(input.taskImageUrl)
@@ -929,8 +952,6 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
         })
       }
 
-      const textContent = input.taskText || input.taskDocumentText || null
-
       let referenceContent: string | null = null
       if (input.referenceImageUrls?.length) {
         referenceContent = `[${input.referenceImageUrls.length} reference image(s) provided]`
@@ -946,14 +967,14 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
       // Build minimal HomeworkFeedback for backward compatibility
       const feedback: HomeworkFeedback = {
         gradeLevel: 'good',
-        gradeEstimate: `${beforeSubmitResult.summary.correct}/${beforeSubmitResult.summary.total} likely correct`,
-        summary: `Before-submit check: ${beforeSubmitResult.summary.correct} look correct, ${beforeSubmitResult.summary.checkAgain + beforeSubmitResult.summary.needsRework} need review`,
+        gradeEstimate: `${beforeSubmitResult.summary.correct}/${beforeSubmitResult.summary.total}`,
+        summary: `before_submit: ${beforeSubmitResult.summary.correct}/${beforeSubmitResult.summary.total}`,
         correctPoints: [],
         improvementPoints: [],
         suggestions: [],
         teacherStyleNotes: null,
         expectationComparison: null,
-        encouragement: 'Review the flagged items before submitting!',
+        encouragement: '',
       }
 
       return {
@@ -1033,7 +1054,7 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
       const feedback: HomeworkFeedback = {
         gradeLevel,
         gradeEstimate: `${rubricResult.totalEarned}/${rubricResult.totalPossible} (${rubricResult.estimatedGrade})`,
-        summary: `Rubric grade: ${rubricResult.totalEarned}/${rubricResult.totalPossible} (${rubricResult.percentage}%)`,
+        summary: `rubric: ${rubricResult.totalEarned}/${rubricResult.totalPossible} (${rubricResult.percentage}%)`,
         correctPoints: rubricResult.rubricBreakdown
           .filter((c) => c.percentage >= 80)
           .map((c) => ({ title: c.criterion, description: `${c.earnedPoints}/${c.maxPoints} — ${c.reasoning}` })),
@@ -1043,9 +1064,7 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
           .map((c) => c.suggestions),
         teacherStyleNotes: null,
         expectationComparison: null,
-        encouragement: rubricResult.percentage >= 80
-          ? 'Strong work against this rubric!'
-          : 'Use the rubric feedback to target your improvements!',
+        encouragement: '',
       }
 
       return {

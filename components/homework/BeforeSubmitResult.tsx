@@ -81,22 +81,28 @@ export default function BeforeSubmitResultView({ result, onRunFullCheck }: Befor
       <div className="bg-white dark:bg-gray-800 rounded-[22px] p-5 border border-gray-200 dark:border-gray-700 shadow-card">
         <div className="flex items-center justify-around">
           <div className="text-center">
-            <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-lg mx-auto">
+            <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-lg mx-auto" aria-label={`${result.summary.correct} ${t('looksCorrect')}`}>
               {result.summary.correct}
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('looksCorrect')}</p>
           </div>
           <div className="text-center">
-            <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold text-lg mx-auto">
+            <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold text-lg mx-auto" aria-label={`${result.summary.checkAgain} ${t('checkAgain')}`}>
               {result.summary.checkAgain}
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('checkAgain')}</p>
           </div>
           <div className="text-center">
-            <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-lg mx-auto">
+            <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-lg mx-auto" aria-label={`${result.summary.needsRework} ${t('needsRework')}`}>
               {result.summary.needsRework}
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('needsRework')}</p>
+          </div>
+          <div className="text-center">
+            <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center text-white font-bold text-lg mx-auto" aria-label={`${result.summary.unclear} ${t('unclear')}`}>
+              {result.summary.unclear}
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('unclear')}</p>
           </div>
         </div>
       </div>
@@ -112,7 +118,11 @@ export default function BeforeSubmitResultView({ result, onRunFullCheck }: Befor
             >
               <div className="flex items-start gap-3">
                 {/* Traffic light circle */}
-                <div className={`w-8 h-8 rounded-full ${config.color} ring-4 ${config.ring} flex items-center justify-center text-white text-sm font-bold flex-shrink-0 mt-0.5`}>
+                <div
+                  className={`w-8 h-8 rounded-full ${config.color} ring-4 ${config.ring} flex items-center justify-center text-white text-sm font-bold flex-shrink-0 mt-0.5`}
+                  aria-label={t(config.label)}
+                  role="img"
+                >
                   {config.icon}
                 </div>
                 <div className="flex-1">

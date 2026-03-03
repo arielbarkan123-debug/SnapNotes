@@ -24,6 +24,8 @@ function CriterionRow({ criterion, isExpanded, onToggle }: { criterion: RubricCr
       <button
         onClick={onToggle}
         className="w-full flex items-center gap-3 p-4 text-start"
+        aria-expanded={isExpanded}
+        aria-label={`${criterion.criterion}: ${criterion.earnedPoints}/${criterion.maxPoints}`}
       >
         {/* Score box */}
         <div className="w-12 h-12 rounded-lg bg-white dark:bg-gray-800 flex flex-col items-center justify-center flex-shrink-0 shadow-sm">
@@ -122,7 +124,7 @@ export default function RubricTable({ result }: RubricTableProps) {
       {/* Tagged Feedback */}
       {result.taggedFeedback.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-[22px] p-5 border border-gray-200 dark:border-gray-700 shadow-card">
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{t('suggestions')}</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{t('rubricSuggestions')}</h3>
           <div className="space-y-2">
             {result.taggedFeedback.map((item, idx) => (
               <div key={idx} className="flex items-start gap-2">
