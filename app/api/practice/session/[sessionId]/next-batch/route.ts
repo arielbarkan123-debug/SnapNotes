@@ -12,7 +12,7 @@ const BATCH_SIZE = 3
 interface NextBatchRequest {
   currentDifficulty: number   // 1-5 float
   recentAccuracy: number      // 0-1 float (last 5 questions)
-  questionsAnswered: number   // total answered so far
+  questionsAnswered?: number  // client-side count (ignored; server-side used instead)
   weakConceptIds?: string[]   // concepts to focus on
 }
 
@@ -52,7 +52,21 @@ export async function POST(
     } catch {
       return createErrorResponse(ErrorCodes.VALIDATION_ERROR, 'Invalid request body')
     }
-    const { currentDifficulty, recentAccuracy, questionsAnswered, weakConceptIds } = body
+    const { currentDifficulty, recentAccuracy, weakConceptIds } = body
+
+    // Validate body fields
+    if (typeof currentDifficulty !== 'number' || currentDifficulty < 1 || currentDifficulty > 5) {
+      return createErrorResponse(ErrorCodes.VALIDATION_ERROR, 'Invalid difficulty')
+    }
+    if (typeof recentAccuracy !== 'number' || recentAccuracy < 0 || recentAccuracy > 1) {
+      return createErrorResponse(ErrorCodes.VALIDATION_ERROR, 'Invalid accuracy')
+    }
+    if (weakConceptIds !== undefined && (!Array.isArray(weakConceptIds) || !weakConceptIds.every((id: unknown) => typeof id === 'string' && (id as string).length < 100))) {
+      return createErrorResponse(ErrorCodes.VALIDATION_ERROR, 'Invalid concept IDs')
+    }
+
+    // Use server-side questionsAnswered instead of trusting client
+    const questionsAnswered = session.questions_answered || 0
 
     // Calibrate difficulty
     let newDifficulty = currentDifficulty

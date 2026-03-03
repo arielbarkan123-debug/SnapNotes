@@ -166,6 +166,7 @@
   "fuzzyMatch": "fuzzy match",
   "exactMatch": "exact match",
   "numericMatch": "numeric match",
+  "back": "Back",
   "compareWithModelAnswer": "Please compare your answer with the model answer below.",
   "infinite": {
     "title": "Infinite Practice",

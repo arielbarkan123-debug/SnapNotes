@@ -491,6 +491,7 @@ export default function PracticeSessionContent({
   const [infiniteRecentResults, setInfiniteRecentResults] = useState<boolean[]>([])
   const [currentDifficulty, setCurrentDifficulty] = useState(session.target_difficulty || 3)
   const [isFetchingBatch, setIsFetchingBatch] = useState(false)
+  const fetchingBatchRef = useRef(false)
   const [allQuestions, setAllQuestions] = useState<PracticeQuestion[]>(questions)
   const [showStopConfirm, setShowStopConfirm] = useState(false)
 
@@ -523,7 +524,8 @@ export default function PracticeSessionContent({
 
   // Infinite: pre-fetch next batch when buffer runs low
   const fetchNextBatch = useCallback(async () => {
-    if (isFetchingBatch || !isInfinite) return
+    if (fetchingBatchRef.current || !isInfinite) return
+    fetchingBatchRef.current = true
     setIsFetchingBatch(true)
     try {
       const last5 = infiniteRecentResults.slice(-5)
@@ -553,9 +555,10 @@ export default function PracticeSessionContent({
     } catch {
       // Non-critical: will try again before next question
     } finally {
+      fetchingBatchRef.current = false
       setIsFetchingBatch(false)
     }
-  }, [isFetchingBatch, isInfinite, infiniteRecentResults, currentDifficulty, answeredCount, session.id])
+  }, [isInfinite, infiniteRecentResults, currentDifficulty, answeredCount, session.id])
 
   const handleDifficultyFeedback = useCallback(async (feedback: 'too_easy' | 'too_hard') => {
     try {
@@ -811,7 +814,7 @@ export default function PracticeSessionContent({
               longestStreak: infiniteLongestStreak,
               recentResults: infiniteRecentResults,
             } : undefined}
-            onKeepGoing={handleKeepGoing}
+            onKeepGoing={!isInfinite ? handleKeepGoing : undefined}
           />
         </div>
       </div>
@@ -827,7 +830,7 @@ export default function PracticeSessionContent({
             href="/practice"
             className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
           >
-            {'\u2190'} Back
+            {'\u2190'} {tp('back')}
           </Link>
           {!isInfinite && (
             <button
@@ -871,7 +874,7 @@ export default function PracticeSessionContent({
 
         {/* Loading state when infinite mode has no current question */}
         {isInfinite && !currentQuestion && view === 'question' && (
-          <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card p-8 border border-gray-200 dark:border-gray-700 text-center">
+          <div role="status" className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card p-8 border border-gray-200 dark:border-gray-700 text-center">
             <span className="animate-spin inline-block h-8 w-8 border-4 border-violet-600 border-t-transparent rounded-full mb-4" />
             <p className="text-gray-600 dark:text-gray-400">{tp('infinite.generatingNext')}</p>
           </div>

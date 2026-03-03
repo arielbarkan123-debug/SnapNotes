@@ -166,6 +166,7 @@
   "fuzzyMatch": "התאמה מקורבת",
   "exactMatch": "התאמה מדויקת",
   "numericMatch": "התאמה מספרית",
+  "back": "חזרה",
   "compareWithModelAnswer": "אנא השווה את תשובתך עם תשובת המודל למטה.",
   "infinite": {
     "title": "תרגול אינסופי",
