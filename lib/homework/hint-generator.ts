@@ -4,27 +4,16 @@
  * Based on cognitive load theory and Khan Academy's approach
  */
 
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
 import type { HintResponse, HintContext, HintLevel } from './types'
-import { AI_MODEL } from '@/lib/ai/claude'
+import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
 
 // ============================================================================
 // Configuration
 // ============================================================================
 const MAX_TOKENS = 1500
 
-let anthropicClient: Anthropic | null = null
-
-function getAnthropicClient(): Anthropic {
-  if (!anthropicClient) {
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY environment variable is not set')
-    }
-    anthropicClient = new Anthropic({ apiKey })
-  }
-  return anthropicClient
-}
+// Anthropic client singleton from @/lib/ai/claude (180s default timeout)
 
 // ============================================================================
 // Language Support

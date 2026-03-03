@@ -1,11 +1,12 @@
 /**
  * API Error Utilities
  *
- * This file re-exports the comprehensive error code system from @/lib/errors
- * for backward compatibility with existing code.
+ * @deprecated This module is a legacy compatibility shim. New code should
+ * import directly from '@/lib/errors' for the full error code system.
  *
- * New code should import directly from '@/lib/errors' for access to
- * the full error code system.
+ * This file re-exports the comprehensive error code system from @/lib/errors
+ * for backward compatibility with existing code (~55 routes still use this).
+ * Migration to '@/lib/errors' should happen incrementally in a separate PR.
  */
 
 import { NextResponse } from 'next/server'
@@ -62,6 +63,7 @@ export const ErrorCodes = {
   PROCESSING_TIMEOUT: NewErrorCodes.PROCESSING_TIMEOUT,
 
   // Server errors
+  // Note: canonical system uses DATABASE_UNKNOWN as its generic catch-all (see lib/errors/helpers.ts:329)
   INTERNAL_ERROR: NewErrorCodes.DATABASE_UNKNOWN,
   DATABASE_ERROR: NewErrorCodes.QUERY_FAILED,
   NETWORK_ERROR: NewErrorCodes.NETWORK_REQUEST_FAILED,
@@ -144,7 +146,8 @@ const defaultErrorMessages: Record<ErrorCode, string> = {
   // Network-specific
   [ErrorCodes.NETWORK_TIMEOUT]: getErrorMessage(NewErrorCodes.NETWORK_TIMEOUT),
   [ErrorCodes.SLOW_CONNECTION]: getErrorMessage(NewErrorCodes.NETWORK_SLOW),
-  // Note: SERVICE_UNAVAILABLE_LEGACY maps to same code as AI_SERVICE_UNAVAILABLE (NS-AI-001)
+  // Note: SERVICE_UNAVAILABLE_LEGACY resolves to same code as AI_SERVICE_UNAVAILABLE
+  // (both → NewErrorCodes.API_UNAVAILABLE / NS-AI-001), so it's covered by line 134 above.
   [ErrorCodes.IMAGE_FETCH_FAILED]: getErrorMessage(NewErrorCodes.IMAGE_FETCH_FAILED),
 }
 
@@ -180,6 +183,7 @@ export function createErrorResponse(
 
 /**
  * Creates a standardized success response
+ * @deprecated Use NextResponse.json() directly or import from '@/lib/errors' for new code
  */
 export function createSuccessResponse<T>(
   data: T,
@@ -194,6 +198,7 @@ export function createSuccessResponse<T>(
 
 /**
  * Safely extracts error message without exposing internals
+ * @deprecated Use getErrorMessage from '@/lib/errors' for new code
  */
 export function getSafeErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -206,6 +211,7 @@ export function getSafeErrorMessage(error: unknown): string {
 
 /**
  * Logs error to console (in production, would send to monitoring service)
+ * @deprecated Use logError from '@/lib/errors' for new code
  */
 export function logError(context: string, error: unknown): void {
   console.error(`[${context}]`, error)

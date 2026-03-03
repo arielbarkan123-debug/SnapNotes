@@ -4,26 +4,15 @@
  * Includes retry logic, JSON repair, and validation
  */
 
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
 import type { GeneratedGuide } from '@/types/prepare'
 import type { UserLearningContext } from '@/lib/ai/prompts'
-import { AI_MODEL } from '@/lib/ai/claude'
+import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
 const MAX_TOKENS = 8000
 const MAX_RETRIES = 0
 const RETRY_DELAY_MS = 2000
-
-let anthropicClient: Anthropic | null = null
-
-function getAnthropicClient(): Anthropic {
-  if (!anthropicClient) {
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY environment variable is not set')
-    }
-    anthropicClient = new Anthropic({ apiKey, timeout: 600000 })
-  }
-  return anthropicClient
-}
+// Guide generation can take longer than the default 180s client timeout
+const GUIDE_TIMEOUT_MS = 600000
 
 function buildLanguageInstruction(language?: 'en' | 'he'): string {
   if (language === 'he') {
@@ -419,7 +408,7 @@ export async function generateGuide(options: GuideGenerationOptions): Promise<Ge
         max_tokens: MAX_TOKENS,
         system: systemPrompt,
         messages: [{ role: 'user', content: userContent }],
-      })
+      }, { timeout: GUIDE_TIMEOUT_MS })
 
       let rawText = ''
       let lastLogTime = Date.now()

@@ -41,7 +41,7 @@ import {
   normalizeText,
   similarityRatio,
 } from '@/lib/evaluation/answer-checker'
-import { AI_MODEL } from '@/lib/ai/claude'
+import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
 
 // ============================================================================
 // Error Codes for Homework Checker Engine
@@ -61,7 +61,6 @@ const ENGINE_ERROR_CODES = {
   ENG_IMG_005: 'ENG_IMG_005', // HEIC/HEIF format not supported
 
   // Common errors
-  ENG_API_001: 'ENG_API_001', // API key not set
   ENG_API_002: 'ENG_API_002', // API overloaded
 } as const
 
@@ -78,7 +77,6 @@ function formatEngineError(code: string, message: string, details?: string): str
 // ============================================================================
 const MAX_TOKENS = 4096
 const IMAGE_FETCH_TIMEOUT_MS = 30000 // 30 second timeout for fetching images
-const API_TIMEOUT_MS = 180000 // 3 minutes - increased for Safari compatibility
 
 // Retry configuration
 const MAX_RETRIES = 3
@@ -362,21 +360,7 @@ function ensureGradeConsistency(output: CheckerOutput): CheckerOutput {
   }
 }
 
-let anthropicClient: Anthropic | null = null
-
-function getAnthropicClient(): Anthropic {
-  if (!anthropicClient) {
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_API_001, 'ANTHROPIC_API_KEY environment variable is not set', 'CheckerEngine/Config'))
-    }
-    anthropicClient = new Anthropic({
-      apiKey,
-      timeout: API_TIMEOUT_MS, // Prevent indefinite blocking on mobile
-    })
-  }
-  return anthropicClient
-}
+// Anthropic client singleton from @/lib/ai/claude (180s default timeout, same as API_TIMEOUT_MS)
 
 // ============================================================================
 // Main Analysis Function

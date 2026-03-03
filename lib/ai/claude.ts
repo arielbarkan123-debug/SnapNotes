@@ -58,7 +58,11 @@ export function getAIModelFast(): string {
 // Initialize Anthropic client (singleton)
 let anthropicClient: Anthropic | null = null
 
-function getAnthropicClient(): Anthropic {
+/**
+ * Get the shared Anthropic client singleton (180s default timeout).
+ * For longer operations, pass { timeout } in individual API call options.
+ */
+export function getAnthropicClient(): Anthropic {
   if (!anthropicClient) {
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {

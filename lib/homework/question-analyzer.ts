@@ -4,7 +4,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
-import { AI_MODEL } from '@/lib/ai/claude'
+import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
 import type { QuestionAnalysis, QuestionSubject } from './types'
 
 // ============================================================================
@@ -38,19 +38,7 @@ function formatAnalyzerError(code: string, message: string, details?: string): s
 // ============================================================================
 const MAX_TOKENS = 4096
 
-// Initialize Anthropic client (singleton)
-let anthropicClient: Anthropic | null = null
-
-function getAnthropicClient(): Anthropic {
-  if (!anthropicClient) {
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      throw new Error(formatAnalyzerError(ANALYZER_ERROR_CODES.QA_API_001, 'ANTHROPIC_API_KEY environment variable is not set', 'QuestionAnalyzer/Config'))
-    }
-    anthropicClient = new Anthropic({ apiKey })
-  }
-  return anthropicClient
-}
+// Anthropic client singleton from @/lib/ai/claude (180s default timeout)
 
 // ============================================================================
 // Prompts

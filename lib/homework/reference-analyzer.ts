@@ -6,27 +6,13 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import type { ReferenceAnalysis, QuestionAnalysis, RelevantSection } from './types'
-import { AI_MODEL } from '@/lib/ai/claude'
+import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
 
 // ============================================================================
 // Configuration
 // ============================================================================
 const MAX_TOKENS = 4096
 const MAX_IMAGES_PER_REQUEST = 10
-
-// Initialize Anthropic client (singleton)
-let anthropicClient: Anthropic | null = null
-
-function getAnthropicClient(): Anthropic {
-  if (!anthropicClient) {
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY environment variable is not set')
-    }
-    anthropicClient = new Anthropic({ apiKey })
-  }
-  return anthropicClient
-}
 
 // ============================================================================
 // Prompts

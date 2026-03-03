@@ -4,7 +4,7 @@
  * using research-backed pedagogical approaches
  */
 
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
 import type {
   TutorResponse,
   TutorContext,
@@ -24,25 +24,12 @@ import { adaptToDesmosProps } from '@/lib/diagram-engine/desmos-adapter'
 import { adaptToGeoGebraProps } from '@/lib/diagram-engine/geogebra-adapter'
 import { classifyTopicType, inferDifficultyFromTopic, resolveEffectiveLanguageLevel, type TopicType } from '@/lib/ai/content-classifier'
 
-import { AI_MODEL } from '@/lib/ai/claude'
+import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
 
 // ============================================================================
 // Configuration
 // ============================================================================
 const MAX_TOKENS = 2048
-
-let anthropicClient: Anthropic | null = null
-
-function getAnthropicClient(): Anthropic {
-  if (!anthropicClient) {
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY environment variable is not set')
-    }
-    anthropicClient = new Anthropic({ apiKey })
-  }
-  return anthropicClient
-}
 
 // ============================================================================
 // ASCII Diagram Detection & Cleanup
@@ -1279,17 +1266,32 @@ function parseDiagramResponse(diagram: unknown): TutorResponse['diagram'] {
   const d = diagram as Record<string, unknown>
 
   // Validate required fields - includes both physics and math diagram types
+  // Valid diagram types — kept in sync with lib/diagram-engine/router.ts type lists
+  // Includes both server-side (visual-learning) and client-side (hybrid) renderer types
   const validTypes = [
-    // Physics diagrams
+    // Physics diagrams (server-side visual-learning renderers)
     'fbd', 'inclined_plane', 'projectile', 'pulley', 'circuit', 'wave', 'optics', 'motion',
     'collision', 'circular_motion', 'energy', 'pendulum',
-    // Math diagrams
-    'long_division', 'equation', 'fraction', 'number_line', 'coordinate_plane', 'triangle', 'circle', 'bar_model', 'area_model',
+    // Math diagrams (server-side visual-learning renderers)
+    'long_division', 'equation', 'fraction', 'number_line', 'circle', 'bar_model', 'area_model',
     'quadratic', 'linear', 'systems_of_equations', 'inequality',
-    // Chemistry diagrams
+    // Chemistry diagrams (server-side visual-learning renderers)
     'atom', 'molecule', 'reaction', 'energy_diagram',
-    // Biology diagrams
+    // Biology diagrams (server-side visual-learning renderers)
     'cell', 'dna', 'system', 'process_flow',
+    // Desmos types (client-side hybrid renderers — see router.ts DESMOS_TYPES)
+    'coordinate_plane', 'function_graph', 'linear_equation', 'quadratic_graph',
+    'inequality_graph', 'system_of_equations', 'scatter_plot_regression',
+    'trigonometric_graph', 'piecewise_function', 'parametric_curve', 'polar_graph',
+    // GeoGebra types (client-side hybrid renderers — see router.ts GEOGEBRA_TYPES)
+    'triangle', 'circle_geometry', 'angle_measurement', 'parallel_lines',
+    'polygon', 'transformation', 'congruence', 'similarity',
+    'pythagorean_theorem', 'circle_theorems', 'construction',
+    // Recharts types (client-side hybrid renderers — see router.ts RECHARTS_TYPES)
+    'box_plot', 'histogram', 'dot_plot', 'bar_chart', 'pie_chart',
+    'line_chart', 'stem_leaf_plot', 'frequency_table',
+    // Mermaid types (client-side hybrid renderers — see router.ts MERMAID_TYPES)
+    'tree_diagram', 'flowchart', 'sequence_diagram', 'factor_tree', 'probability_tree',
   ]
   if (!d.type || !validTypes.includes(String(d.type))) {
     return undefined
