@@ -160,6 +160,18 @@ export interface PracticeSessionQuestion {
 // API Request/Response Types
 // -----------------------------------------------------------------------------
 
+export type PracticeSourceType = 'course' | 'homework_error'
+
+export interface HomeworkErrorContext {
+  checkId: string
+  problemIndex: number
+  problemText: string
+  topic: string
+  errorType?: string
+  studentAnswer: string
+  correctAnswer: string
+}
+
 export interface CreateSessionRequest {
   sessionType: SessionType
   courseId?: string
@@ -167,6 +179,8 @@ export interface CreateSessionRequest {
   targetDifficulty?: DifficultyLevel
   questionCount?: number
   timeLimitMinutes?: number
+  sourceType?: PracticeSourceType
+  errorContext?: HomeworkErrorContext
 }
 
 export interface CreateSessionResponse {

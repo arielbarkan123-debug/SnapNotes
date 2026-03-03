@@ -81,6 +81,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       targetDifficulty,
       questionCount,
       timeLimitMinutes,
+      sourceType,
+      errorContext,
     } = body as CreateSessionRequest
 
     // Validate session type
@@ -100,6 +102,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       targetDifficulty,
       questionCount,
       timeLimitMinutes,
+      sourceType,
+      errorContext,
     })
 
     return NextResponse.json(result)

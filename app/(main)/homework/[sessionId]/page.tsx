@@ -107,6 +107,8 @@ export default function HomeworkResultsPage() {
   const [isChatLoading, setIsChatLoading] = useState(false)
   // Related YouTube videos from the latest tutor response
   const [relatedVideos, setRelatedVideos] = useState<Array<{ videoId: string; title: string; channelTitle: string; thumbnailUrl: string }>>([])
+  // Track which improvement points are being practiced (loading state)
+  const [practicingIndex, setPracticingIndex] = useState<number | null>(null)
 
 
   useEffect(() => {
@@ -553,10 +555,73 @@ export default function HomeworkResultsPage() {
   const currentCheckMode = (check.mode || 'standard') as CheckMode
   const modeResult = check.mode_result as BatchResult | BeforeSubmitResult | RubricResult | null | undefined
 
-  // Handle practice from worksheet mistake
-  const handlePracticeFromMistake = (_item: BatchWorksheetItem, _idx: number) => {
-    // Navigate to practice with topic context
-    router.push('/practice')
+  // Handle practice from worksheet mistake or standard feedback improvement point
+  const handlePracticeFromMistake = async (item: BatchWorksheetItem, idx: number) => {
+    if (!check) return
+    setPracticingIndex(idx)
+    try {
+      // 1. Create a practice session with homework_error source
+      const sessionRes = await fetch('/api/practice/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionType: 'targeted',
+          questionCount: 5,
+          sourceType: 'homework_error',
+          errorContext: {
+            checkId: check.id,
+            problemIndex: idx,
+            problemText: item.problemText,
+            topic: item.topic,
+            errorType: item.errorType,
+            studentAnswer: item.studentAnswer,
+            correctAnswer: item.correctAnswer,
+          },
+        }),
+      })
+
+      if (!sessionRes.ok) {
+        const err = await sessionRes.json()
+        throw new Error(err?.error?.message || 'Failed to create practice session')
+      }
+
+      const { sessionId: practiceSessionId } = await sessionRes.json()
+
+      // 2. Record the practice link on the homework check
+      await fetch(`/api/homework/check/${check.id}/practice-complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          problemIndex: idx,
+          practiceSessionId,
+        }),
+      })
+
+      // 3. Update local state to reflect the practiced item
+      setCheck((prev) => {
+        if (!prev) return prev
+        const currentItems = prev.practiced_items || []
+        return {
+          ...prev,
+          practiced_items: [...currentItems, { problemIndex: idx, practiceSessionId }],
+        }
+      })
+
+      trackFeature('homework_practice_from_mistake', {
+        checkId: check.id,
+        problemIndex: idx,
+        topic: item.topic,
+        errorType: item.errorType,
+      })
+
+      // 4. Navigate to the practice session
+      router.push(`/practice/${practiceSessionId}`)
+    } catch (error) {
+      console.error('[PracticeFromMistake] Error:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to start practice')
+    } finally {
+      setPracticingIndex(null)
+    }
   }
 
   // Batch worksheet mode result view
@@ -920,6 +985,60 @@ export default function HomeworkResultsPage() {
                         <p className="text-sm text-amber-700 dark:text-amber-400">
                           {point.description}
                         </p>
+                        {/* Practice This button for improvement points */}
+                        {(() => {
+                          const isPracticed = (check.practiced_items || []).some(
+                            (p) => p.problemIndex === idx + 1000
+                          )
+                          const isLoading = practicingIndex === idx + 1000
+                          return (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (!isPracticed && !isLoading) {
+                                  handlePracticeFromMistake(
+                                    {
+                                      problemNumber: idx + 1,
+                                      problemText: point.title,
+                                      studentAnswer: '',
+                                      correctAnswer: '',
+                                      isCorrect: false,
+                                      explanation: point.description,
+                                      topic: check.topic || check.subject || 'General',
+                                      errorType: (point.severity === 'major' ? 'conceptual' : point.severity === 'moderate' ? 'calculation' : 'factual') as 'factual' | 'conceptual' | 'calculation' | 'formatting' | 'incomplete',
+                                    },
+                                    idx + 1000 // offset to avoid collision with worksheet indices
+                                  )
+                                }
+                              }}
+                              disabled={isPracticed || isLoading}
+                              className={`
+                                mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full
+                                transition-colors
+                                ${isPracticed
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 cursor-default'
+                                  : isLoading
+                                    ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 opacity-70 cursor-wait'
+                                    : 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 hover:bg-violet-200 dark:hover:bg-violet-900/50 cursor-pointer'
+                                }
+                              `}
+                            >
+                              {isPracticed ? (
+                                <>
+                                  <span>{'\u2713'}</span>
+                                  {t('results.practiced')}
+                                </>
+                              ) : isLoading ? (
+                                <>
+                                  <span className="w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
+                                  {t('results.practiceThis')}
+                                </>
+                              ) : (
+                                t('results.practiceThis')
+                              )}
+                            </button>
+                          )
+                        })()}
                       </div>
                     </div>
                   </div>

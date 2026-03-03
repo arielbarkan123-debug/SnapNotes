@@ -200,6 +200,8 @@ export async function createPracticeSession(
       time_limit_minutes: request.timeLimitMinutes || null,
       question_order: questionIds,
       status: 'active',
+      ...(request.sourceType ? { source_type: request.sourceType } : {}),
+      ...(request.errorContext ? { error_context: request.errorContext } : {}),
     })
     .select('id')
     .single()
