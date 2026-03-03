@@ -661,12 +661,12 @@ function diagramToVisualUpdate(
     // Map the diagram data to recharts format
     const data = diagram.data
     const chartType = (data.chartType as string) || diagramType
-    const chartTypeMap: Record<string, 'bar' | 'histogram' | 'pie' | 'line' | 'scatter' | 'box_plot'> = {
+    const chartTypeMap: Record<string, 'bar' | 'histogram' | 'pie' | 'line' | 'scatter' | 'box_plot' | 'dot_plot'> = {
       bar_chart: 'bar',
       histogram: 'histogram',
       pie_chart: 'pie',
       line_chart: 'line',
-      dot_plot: 'scatter',
+      dot_plot: 'dot_plot',
       box_plot: 'box_plot',
       frequency_table: 'bar',
       stem_leaf_plot: 'bar',
@@ -682,7 +682,18 @@ function diagramToVisualUpdate(
       rechartsData: {
         chartType: mappedType,
         data: data.data as VisualUpdate['rechartsData'] extends { data?: infer D } ? D : never,
-        boxPlotData: data.boxPlotData as VisualUpdate['rechartsData'] extends { boxPlotData?: infer B } ? B : never,
+        // Map AI-generated 'name' field to renderer's 'label' field
+        boxPlotData: Array.isArray(data.boxPlotData)
+          ? (data.boxPlotData as Array<Record<string, unknown>>).map((d) => ({
+              label: (d.label as string) || (d.name as string) || '',
+              min: d.min as number,
+              q1: d.q1 as number,
+              median: d.median as number,
+              q3: d.q3 as number,
+              max: d.max as number,
+              outliers: d.outliers as number[] | undefined,
+            }))
+          : undefined,
         xLabel: data.xLabel as string | undefined,
         yLabel: data.yLabel as string | undefined,
       },

@@ -533,7 +533,7 @@ export interface VisualUpdate {
     showLabel?: boolean
   }>
   rechartsData?: {
-    chartType: 'bar' | 'histogram' | 'pie' | 'line' | 'scatter' | 'box_plot'
+    chartType: 'bar' | 'histogram' | 'pie' | 'line' | 'scatter' | 'box_plot' | 'dot_plot'
     data?: Array<{
       name: string
       value: number
@@ -541,7 +541,7 @@ export interface VisualUpdate {
       color?: string
     }>
     boxPlotData?: Array<{
-      name: string
+      label: string
       min: number
       q1: number
       median: number

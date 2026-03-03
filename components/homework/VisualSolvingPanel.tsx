@@ -182,12 +182,7 @@ export default function VisualSolvingPanel({
           <RechartsRenderer
             chartType={currentUpdate.rechartsData.chartType}
             data={currentUpdate.rechartsData.data || []}
-            boxPlotData={
-              currentUpdate.rechartsData.boxPlotData?.map((d) => ({
-                ...d,
-                label: d.name,
-              }))
-            }
+            boxPlotData={currentUpdate.rechartsData.boxPlotData}
             xAxisLabel={currentUpdate.rechartsData.xLabel}
             yAxisLabel={currentUpdate.rechartsData.yLabel}
             title={currentUpdate.title}

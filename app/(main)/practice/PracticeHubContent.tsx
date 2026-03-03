@@ -8,6 +8,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import { usePracticeStats } from '@/hooks/usePracticeSession'
 import { ToastContainer, type Toast } from '@/components/ui/Toast'
@@ -109,6 +110,7 @@ interface RecentSessionCardProps {
 }
 
 function RecentSessionCard({ session, onClick }: RecentSessionCardProps) {
+  const tp = useTranslations('practice')
   const statusColors = {
     active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
     paused: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
@@ -116,13 +118,13 @@ function RecentSessionCard({ session, onClick }: RecentSessionCardProps) {
     abandoned: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
   }
 
-  const typeLabels: Record<SessionType, string> = {
-    targeted: 'Gap Practice',
-    mixed: 'Mixed Practice',
-    exam_prep: 'Exam Prep',
-    quick: 'Quick Practice',
-    custom: 'Custom',
-    infinite: 'Infinite',
+  const SESSION_TYPE_KEYS: Record<SessionType, string> = {
+    targeted: 'sessionTypeTargeted',
+    mixed: 'sessionTypeMixed',
+    exam_prep: 'sessionTypeExamPrep',
+    quick: 'sessionTypeQuick',
+    custom: 'sessionTypeCustom',
+    infinite: 'sessionTypeInfinite',
   }
 
   const accuracy = session.questions_answered > 0
@@ -140,7 +142,7 @@ function RecentSessionCard({ session, onClick }: RecentSessionCardProps) {
         </span>
         <div>
           <p className="font-medium text-gray-900 dark:text-white">
-            {typeLabels[session.session_type]}
+            {tp(SESSION_TYPE_KEYS[session.session_type])}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {session.questions_answered}/{session.question_count} questions

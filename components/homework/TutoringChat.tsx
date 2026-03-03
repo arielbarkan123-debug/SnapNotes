@@ -446,7 +446,7 @@ export default function TutoringChat({
                 <div className="mt-1 space-y-2">
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
                     <span>📺</span>
-                    <span>Related videos</span>
+                    <span>{t('relatedVideos')}</span>
                   </p>
                   <div className="grid grid-cols-1 gap-2 max-w-sm">
                     {relatedVideos.map((video) => (

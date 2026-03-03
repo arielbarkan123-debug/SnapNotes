@@ -191,6 +191,11 @@
     "practiceAgain": "תרגל שוב",
     "noMoreQuestions": "מייצר שאלות נוספות..."
   },
+  "sessionTypeTargeted": "תרגול ממוקד",
+  "sessionTypeMixed": "תרגול מעורב",
+  "sessionTypeExamPrep": "הכנה למבחן",
+  "sessionTypeQuick": "תרגול מהיר",
+  "sessionTypeCustom": "מותאם אישית",
   "sessionTypeInfinite": "אינסופי",
   "deepDiveTitle": "למה טעיתי?",
   "deepDiveWhatYouThought": "מה חשבת",

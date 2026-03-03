@@ -114,6 +114,7 @@ export default function EscalationButton({
 
       {/* Escalation Button */}
       <motion.button
+        type="button"
         onClick={handleClick}
         disabled={disabled}
         whileTap={{ scale: 0.97 }}
@@ -146,6 +147,7 @@ export default function EscalationButton({
                 })}
               </p>
               <button
+                type="button"
                 onClick={handleCopyTeacherMessage}
                 className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-100 dark:bg-blue-800/50 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/70 transition-colors"
               >

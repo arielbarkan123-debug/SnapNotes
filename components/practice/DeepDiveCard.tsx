@@ -118,6 +118,7 @@ export default function DeepDiveCard({ deepDive, onDismiss }: DeepDiveCardProps)
               className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
             />
             <button
+              type="button"
               onClick={handleQuickCheckSubmit}
               disabled={!quickCheckAnswer.trim()}
               className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -144,6 +145,7 @@ export default function DeepDiveCard({ deepDive, onDismiss }: DeepDiveCardProps)
         className="mt-4"
       >
         <button
+          type="button"
           onClick={onDismiss}
           className="w-full py-3 px-4 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg transition-colors"
         >

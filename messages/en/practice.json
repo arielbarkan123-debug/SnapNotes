@@ -191,6 +191,11 @@
     "practiceAgain": "Practice Again",
     "noMoreQuestions": "Generating more questions..."
   },
+  "sessionTypeTargeted": "Gap Practice",
+  "sessionTypeMixed": "Mixed Practice",
+  "sessionTypeExamPrep": "Exam Prep",
+  "sessionTypeQuick": "Quick Practice",
+  "sessionTypeCustom": "Custom",
   "sessionTypeInfinite": "Infinite",
   "deepDiveTitle": "Why Was I Wrong?",
   "deepDiveWhatYouThought": "What you thought",
