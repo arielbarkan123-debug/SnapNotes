@@ -166,5 +166,14 @@
   "fuzzyMatch": "התאמה מקורבת",
   "exactMatch": "התאמה מדויקת",
   "numericMatch": "התאמה מספרית",
-  "compareWithModelAnswer": "אנא השווה את תשובתך עם תשובת המודל למטה."
+  "compareWithModelAnswer": "אנא השווה את תשובתך עם תשובת המודל למטה.",
+  "deepDiveTitle": "למה טעיתי?",
+  "deepDiveWhatYouThought": "מה חשבת",
+  "deepDiveTheMistake": "הטעות",
+  "deepDiveHowToThink": "איך לחשוב על זה",
+  "deepDiveQuickCheck": "בדיקה מהירה",
+  "deepDiveQuickCheckPlaceholder": "הקלד את התשובה שלך...",
+  "deepDiveQuickCheckCorrect": "נכון! הבנת.",
+  "deepDiveQuickCheckWrong": "לא בדיוק. התשובה היא: {answer}",
+  "deepDiveGotIt": "הבנתי"
 }

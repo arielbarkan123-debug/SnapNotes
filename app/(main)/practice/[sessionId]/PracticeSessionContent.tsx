@@ -19,7 +19,9 @@ import type {
   PracticeQuestion,
   PracticeSessionQuestion,
   AnswerQuestionResponse,
+  DeepDiveAnalysis,
 } from '@/lib/practice/types'
+import DeepDiveCard from '@/components/practice/DeepDiveCard'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -238,13 +240,15 @@ interface ResultCardProps {
   evaluationFeedback?: string
   evaluationMethod?: string
   evaluationScore?: number
+  deepDive?: DeepDiveAnalysis
   onNext: () => void
   onDifficultyFeedback?: (feedback: 'too_easy' | 'too_hard') => void
   questionIndex?: number
 }
 
-function ResultCard({ question, isCorrect, userAnswer, evaluationFeedback, evaluationMethod, evaluationScore, onNext, onDifficultyFeedback, questionIndex = 0 }: ResultCardProps) {
+function ResultCard({ question, isCorrect, userAnswer, evaluationFeedback, evaluationMethod, evaluationScore, deepDive, onNext, onDifficultyFeedback, questionIndex = 0 }: ResultCardProps) {
   const tp = useTranslations('practice')
+  const [deepDiveDismissed, setDeepDiveDismissed] = useState(false)
   // Determine display state: correct, partial credit, or incorrect
   const isPartialCredit = !isCorrect && evaluationScore !== undefined && evaluationScore >= 30
   const badgeConfig = isCorrect
@@ -327,6 +331,11 @@ function ResultCard({ question, isCorrect, userAnswer, evaluationFeedback, evalu
           </h3>
           <p className="text-gray-600 dark:text-gray-400">{question.explanation}</p>
         </div>
+      )}
+
+      {/* Deep Dive Analysis (Feature #5: "Why Was I Wrong?") */}
+      {!isCorrect && deepDive && !deepDiveDismissed && (
+        <DeepDiveCard deepDive={deepDive} onDismiss={() => setDeepDiveDismissed(true)} />
       )}
 
       {/* Difficulty Feedback - only show after first 2 questions */}
@@ -677,6 +686,7 @@ export default function PracticeSessionContent({
             evaluationFeedback={lastResult.evaluationFeedback}
             evaluationMethod={lastResult.evaluationMethod}
             evaluationScore={lastResult.evaluationScore}
+            deepDive={lastResult.deepDive}
             onNext={handleNext}
             onDifficultyFeedback={handleDifficultyFeedback}
             questionIndex={currentIndex}

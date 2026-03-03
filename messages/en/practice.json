@@ -166,5 +166,14 @@
   "fuzzyMatch": "fuzzy match",
   "exactMatch": "exact match",
   "numericMatch": "numeric match",
-  "compareWithModelAnswer": "Please compare your answer with the model answer below."
+  "compareWithModelAnswer": "Please compare your answer with the model answer below.",
+  "deepDiveTitle": "Why Was I Wrong?",
+  "deepDiveWhatYouThought": "What you thought",
+  "deepDiveTheMistake": "The mistake",
+  "deepDiveHowToThink": "How to think about it",
+  "deepDiveQuickCheck": "Quick check",
+  "deepDiveQuickCheckPlaceholder": "Type your answer...",
+  "deepDiveQuickCheckCorrect": "Correct! You've got it.",
+  "deepDiveQuickCheckWrong": "Not quite. The answer is: {answer}",
+  "deepDiveGotIt": "Got it"
 }

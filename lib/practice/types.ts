@@ -194,12 +194,31 @@ export interface AnswerQuestionResponse {
   evaluationFeedback?: string
   /** Method used: 'numeric' | 'exact' | 'fuzzy' | 'ai' | 'fuzzy_fallback' */
   evaluationMethod?: string
+  /** Deep dive analysis for wrong answers (Feature #5: "Why Was I Wrong?") */
+  deepDive?: DeepDiveAnalysis
   sessionProgress: {
     questionsAnswered: number
     questionsCorrect: number
     totalQuestions: number
     accuracy: number
   }
+}
+
+// Deep Dive Analysis Types (Feature #5: "Why Was I Wrong?")
+export interface DeepDiveQuickCheck {
+  question: string
+  answer: string
+}
+
+export interface DeepDiveAnalysis {
+  /** What the student probably thought — specific to their wrong answer */
+  likelyReasoning: string
+  /** Why that reasoning fails — with counter-example */
+  whyWrong: string
+  /** The correct mental model — with analogy */
+  correctModel: string
+  /** Quick-check verification question */
+  quickCheck: DeepDiveQuickCheck
 }
 
 export interface SessionProgress {

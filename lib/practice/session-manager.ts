@@ -3,6 +3,8 @@
 // Handles creation, progress tracking, and completion of practice sessions
 // =============================================================================
 
+import Anthropic from '@anthropic-ai/sdk'
+import { AI_MODEL } from '@/lib/ai/claude'
 import { createClient } from '@/lib/supabase/server'
 import type {
   PracticeSession,
@@ -13,6 +15,7 @@ import type {
   SessionResult,
   CreateSessionRequest,
   AnswerQuestionResponse,
+  DeepDiveAnalysis,
 } from './types'
 import type { DifficultyLevel } from '@/lib/adaptive/types'
 import { selectExistingQuestions, generateAndStoreQuestions } from './question-generator'
@@ -21,6 +24,64 @@ import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum
 import type { StudySystem } from '@/lib/curriculum/types'
 import { getStudentContext, generateDirectives } from '@/lib/student-context'
 import { bridgePracticeGapsToSRS } from './practice-to-srs'
+
+// -----------------------------------------------------------------------------
+// Deep Dive Analysis (Feature #5: "Why Was I Wrong?")
+// -----------------------------------------------------------------------------
+
+let deepDiveClient: Anthropic | null = null
+
+function getDeepDiveClient(): Anthropic {
+  if (!deepDiveClient) {
+    const apiKey = process.env.ANTHROPIC_API_KEY
+    if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set')
+    deepDiveClient = new Anthropic({ apiKey })
+  }
+  return deepDiveClient
+}
+
+async function generateDeepDive(
+  questionText: string,
+  studentAnswer: string,
+  correctAnswer: string
+): Promise<DeepDiveAnalysis | null> {
+  try {
+    const client = getDeepDiveClient()
+    const response = await client.messages.create({
+      model: AI_MODEL,
+      max_tokens: 1024,
+      messages: [{
+        role: 'user',
+        content: `A student got this wrong:
+Question: ${questionText}
+Student's answer: "${studentAnswer}"
+Correct answer: "${correctAnswer}"
+
+Generate a 3-part analysis:
+1. likelyReasoning: What the student probably thought when they wrote "${studentAnswer}". Be SPECIFIC to their answer. Start with "You probably..."
+2. whyWrong: Why that reasoning fails. Use a concrete counter-example. 2-3 sentences max.
+3. correctModel: The right way to think about it. Include a memorable analogy. End with the solution restated.
+4. quickCheck: A similar but different problem for verification. Include question and answer.
+
+IMPORTANT: likelyReasoning MUST be specific to "${studentAnswer}", not generic.
+
+Return ONLY valid JSON:
+{ "likelyReasoning": "...", "whyWrong": "...", "correctModel": "...", "quickCheck": { "question": "...", "answer": "..." } }`,
+      }],
+    })
+    const text = response.content[0].type === 'text' ? response.content[0].text : ''
+    const cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim()
+    const parsed = JSON.parse(cleaned) as DeepDiveAnalysis
+    if (!parsed.likelyReasoning || !parsed.whyWrong || !parsed.correctModel || !parsed.quickCheck?.question || !parsed.quickCheck?.answer) {
+      console.warn('[DeepDive] Incomplete response from AI:', parsed)
+      return null
+    }
+    return parsed
+  } catch (error) {
+    console.error('[DeepDive] Generation failed:', error)
+    return null
+  }
+}
 
 // -----------------------------------------------------------------------------
 // Session Creation
@@ -458,6 +519,19 @@ export async function recordAnswer(
     question_count: 10,
   }
 
+  // Generate deep dive analysis for wrong answers (Feature #5)
+  let deepDive: DeepDiveAnalysis | null = null
+  if (!isCorrect) {
+    try {
+      deepDive = await Promise.race([
+        generateDeepDive(question.question_text, userAnswer, question.correct_answer),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
+      ])
+    } catch {
+      // Non-critical — continue without deep dive
+    }
+  }
+
   return {
     isCorrect,
     correctAnswer: question.correct_answer,
@@ -465,6 +539,7 @@ export async function recordAnswer(
     evaluationScore,
     evaluationFeedback,
     evaluationMethod,
+    deepDive: deepDive ?? undefined,
     sessionProgress: {
       questionsAnswered: session.questions_answered,
       questionsCorrect: session.questions_correct,
