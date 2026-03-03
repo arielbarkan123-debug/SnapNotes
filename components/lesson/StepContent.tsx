@@ -2,8 +2,9 @@
 
 import { type Step } from '@/types'
 import Image from 'next/image'
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import { AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import type { DiagramState } from '@/components/homework/diagram/types'
 import type { Annotation } from '@/hooks/useAnnotations'
@@ -15,6 +16,7 @@ const DiagramRenderer = dynamic(
 )
 
 const AnnotationButton = dynamic(() => import('@/components/course/AnnotationButton'))
+const DepthExpansion = dynamic(() => import('./DepthExpansion'), { ssr: false })
 
 interface StepContentProps {
   step: Step
@@ -31,6 +33,10 @@ interface StepContentProps {
   showAnnotationInput?: boolean
   /** Callback to toggle annotation input */
   onAnnotationInputToggle?: () => void
+  // Depth on Demand props
+  courseId?: string
+  lessonIndex?: number
+  stepIndex?: number
 }
 
 export default function StepContent({
@@ -42,6 +48,9 @@ export default function StepContent({
   onDeleteAnnotation,
   showAnnotationInput: _showAnnotationInput,
   onAnnotationInputToggle: _onAnnotationInputToggle,
+  courseId,
+  lessonIndex,
+  stepIndex,
 }: StepContentProps) {
   const t = useTranslations('lesson')
   const imageProps = {
@@ -74,6 +83,7 @@ export default function StepContent({
         <>
           <ExplanationStep content={step.content} t={t} {...imageProps} helpButton={helpButton} />
           {annotationButton}
+          <GoDeeper courseId={courseId} lessonIndex={lessonIndex} stepIndex={stepIndex} />
         </>
       )
     case 'key_point':
@@ -81,6 +91,7 @@ export default function StepContent({
         <>
           <KeyPointStep content={step.content} t={t} helpButton={helpButton} />
           {annotationButton}
+          <GoDeeper courseId={courseId} lessonIndex={lessonIndex} stepIndex={stepIndex} />
         </>
       )
     case 'formula':
@@ -88,6 +99,7 @@ export default function StepContent({
         <>
           <FormulaStep content={step.content} explanation={step.explanation} t={t} helpButton={helpButton} />
           {annotationButton}
+          <GoDeeper courseId={courseId} lessonIndex={lessonIndex} stepIndex={stepIndex} />
         </>
       )
     case 'diagram':
@@ -102,6 +114,7 @@ export default function StepContent({
         <>
           <ExampleStep content={step.content} t={t} {...imageProps} helpButton={helpButton} />
           {annotationButton}
+          <GoDeeper courseId={courseId} lessonIndex={lessonIndex} stepIndex={stepIndex} />
         </>
       )
     case 'summary':
@@ -109,6 +122,7 @@ export default function StepContent({
         <>
           <SummaryStep content={step.content} lessonTitle={lessonTitle} t={t} />
           {annotationButton}
+          <GoDeeper courseId={courseId} lessonIndex={lessonIndex} stepIndex={stepIndex} />
         </>
       )
     case 'question':
@@ -486,6 +500,140 @@ function SummaryStep({ content, lessonTitle, t }: SummaryStepProps) {
           </p>
         )}
       </div>
+    </div>
+  )
+}
+
+function GoDeeper({ courseId, lessonIndex, stepIndex }: {
+  courseId?: string
+  lessonIndex?: number
+  stepIndex?: number
+}) {
+  const t = useTranslations('lesson')
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [subSteps, setSubSteps] = useState<Array<{ title: string; content: string; hasExample: boolean; quickCheck?: { question: string; answer: string } | null }> | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  // Nested expansion state
+  const [isLoadingNested, setIsLoadingNested] = useState(false)
+  const [nestedSubSteps, setNestedSubSteps] = useState<Array<{ title: string; content: string; hasExample: boolean; quickCheck?: { question: string; answer: string } | null }> | null>(null)
+
+  const handleExpand = useCallback(async () => {
+    if (isExpanded) {
+      setIsExpanded(false)
+      return
+    }
+
+    // If already loaded, just show
+    if (subSteps) {
+      setIsExpanded(true)
+      return
+    }
+
+    if (!courseId || lessonIndex === undefined || stepIndex === undefined) return
+
+    setIsLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/courses/${courseId}/lessons/${lessonIndex}/expand`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stepIndex, currentDepth: 0 }),
+      })
+      if (!res.ok) throw new Error('Failed to expand')
+      const data = await res.json()
+      setSubSteps(data.subSteps)
+      setIsExpanded(true)
+    } catch {
+      setError(t('depthError'))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [isExpanded, subSteps, courseId, lessonIndex, stepIndex, t])
+
+  const handleNestedExpand = useCallback(async () => {
+    if (!courseId || lessonIndex === undefined || stepIndex === undefined) return
+
+    setIsLoadingNested(true)
+    try {
+      const res = await fetch(`/api/courses/${courseId}/lessons/${lessonIndex}/expand`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stepIndex, currentDepth: 1 }),
+      })
+      if (!res.ok) throw new Error('Failed to expand')
+      const data = await res.json()
+      setNestedSubSteps(data.subSteps)
+    } catch {
+      setError(t('depthError'))
+    } finally {
+      setIsLoadingNested(false)
+    }
+  }, [courseId, lessonIndex, stepIndex, t])
+
+  if (!courseId || lessonIndex === undefined || stepIndex === undefined) return null
+
+  return (
+    <div className="mt-4">
+      {/* Error message */}
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400 mb-2">{error}</p>
+      )}
+
+      {/* Toggle button */}
+      <button
+        onClick={handleExpand}
+        disabled={isLoading}
+        className={`
+          flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-200
+          ${isExpanded
+            ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700'
+            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800'
+          }
+          disabled:opacity-50 disabled:cursor-not-allowed
+        `}
+      >
+        {isLoading ? (
+          <>
+            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            {t('loadingDepth')}
+          </>
+        ) : isExpanded ? (
+          <>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+            </svg>
+            {t('collapse')}
+          </>
+        ) : (
+          <>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+            </svg>
+            {t('goDeeper')}
+          </>
+        )}
+      </button>
+
+      {/* Expanded content */}
+      <AnimatePresence>
+        {isExpanded && subSteps && (
+          <DepthExpansion
+            subSteps={subSteps}
+            depth={1}
+            courseId={courseId}
+            lessonIndex={lessonIndex}
+            stepIndex={stepIndex}
+            onRequestExpand={handleNestedExpand}
+            isLoadingNested={isLoadingNested}
+            nestedSubSteps={nestedSubSteps}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

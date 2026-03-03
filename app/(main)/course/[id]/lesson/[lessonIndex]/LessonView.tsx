@@ -673,6 +673,9 @@ export default function LessonView({
                 onDeleteAnnotation={deleteAnnotation}
                 showAnnotationInput={showAnnotationInput}
                 onAnnotationInputToggle={() => setShowAnnotationInput(prev => !prev)}
+                courseId={course.id}
+                lessonIndex={lessonIndex}
+                stepIndex={currentStep}
               />
             )}
           </div>
