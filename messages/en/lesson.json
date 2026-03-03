@@ -113,7 +113,8 @@
     "loading": "Preparing a worked example...",
     "error": "Could not generate a worked example.",
     "secondExample": "Let's try a different approach",
-    "maxExamplesReached": "Keep studying this topic — you'll get it!"
+    "maxExamplesReached": "Keep studying this topic — you'll get it!",
+    "dismiss": "Dismiss"
   },
   "help": {
     "needHelp": "Need Help?",

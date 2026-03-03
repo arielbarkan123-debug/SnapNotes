@@ -38,9 +38,13 @@ export default function WorkedExampleCard({
   const [tryCorrect, setTryCorrect] = useState(false)
 
   const handleCheckTry = useCallback(() => {
-    const normalized = tryAnswer.trim().toLowerCase()
-    const expected = tryAnother.correctAnswer.trim().toLowerCase()
-    const correct = normalized === expected
+    const normalized = tryAnswer.trim().toLowerCase().replace(/\s+/g, '')
+    const expected = tryAnother.correctAnswer.trim().toLowerCase().replace(/\s+/g, '')
+    // Try numeric comparison for math answers
+    const numNormalized = parseFloat(normalized)
+    const numExpected = parseFloat(expected)
+    const correct = normalized === expected ||
+      (!isNaN(numNormalized) && !isNaN(numExpected) && numNormalized === numExpected)
     setTryCorrect(correct)
     setTryChecked(true)
     onTryAnotherResult(correct)
@@ -73,7 +77,7 @@ export default function WorkedExampleCard({
             type="button"
             onClick={onDismiss}
             className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            aria-label="Dismiss"
+            aria-label={t('dismiss')}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
