@@ -372,12 +372,12 @@ export default function TutoringChat({
       setEscalationLevels((prev) => ({ ...prev, [messageIdx]: nextLevel }))
       setIsSubmitting(true)
       try {
-        await onSendMessage(`[ESCALATION:${action}] Please explain differently.`)
+        await onSendMessage(`[ESCALATION:${action}] Please explain differently.`, explanationStyle)
       } finally {
         setIsSubmitting(false)
       }
     },
-    [isLoading, isSubmitting, onSendMessage]
+    [isLoading, isSubmitting, onSendMessage, explanationStyle]
   )
 
   // Check if session has engine-generated diagrams (no step progress needed)
@@ -418,7 +418,7 @@ export default function TutoringChat({
                   onEscalate={(action, nextLevel) => handleEscalation(idx, action, nextLevel)}
                   disabled={isLoading || isSubmitting}
                   topic={session.detected_topic || undefined}
-                  concept={session.detected_topic || undefined}
+                  concept={session.detected_concepts?.[0] || undefined}
                 />
               )}
             </div>

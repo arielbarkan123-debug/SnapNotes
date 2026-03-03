@@ -39,5 +39,6 @@
   "escalation5": "Start easier",
   "escalation6": "Ask your teacher",
   "escalationTeacherMessage": "Sometimes it helps to talk to your teacher directly. You could say: \"I'm working on {topic} and I'm having trouble understanding {concept}. Could you explain it differently?\"",
-  "escalationTeacherShare": "Copy to share with your teacher"
+  "escalationTeacherShare": "Copy to share with your teacher",
+  "escalationCopied": "Copied!"
 }

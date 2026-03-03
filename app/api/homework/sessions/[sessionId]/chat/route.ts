@@ -189,7 +189,7 @@ export async function POST(
     let solutionCheck = { solved: false, feedback: '' }
     if (tutorResponse.estimatedProgress >= 75) {
       try {
-        solutionCheck = await checkForSolution(context, body.message)
+        solutionCheck = await checkForSolution(context, cleanMessage)
         if (solutionCheck.solved) {
           tutorResponse.celebrationMessage = solutionCheck.feedback
           tutorResponse.shouldEndSession = true
@@ -202,6 +202,7 @@ export async function POST(
     // Search for relevant YouTube videos for explanatory responses (non-blocking)
     let relatedVideos: Array<{ videoId: string; title: string; channelTitle: string; thumbnailUrl: string }> = []
     if (
+      escalationAction === 'VIDEO' ||
       tutorResponse.pedagogicalIntent === 'give_hint' ||
       tutorResponse.pedagogicalIntent === 'clarify'
     ) {

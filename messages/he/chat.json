@@ -39,5 +39,6 @@
   "escalation5": "התחל יותר קל",
   "escalation6": "שאל את המורה",
   "escalationTeacherMessage": "לפעמים עוזר לדבר עם המורה ישירות. תוכל לומר: \"אני עובד על {topic} ואני מתקשה להבין את {concept}. תוכל להסביר לי אחרת?\"",
-  "escalationTeacherShare": "העתק לשיתוף עם המורה"
+  "escalationTeacherShare": "העתק לשיתוף עם המורה",
+  "escalationCopied": "הועתק!"
 }
