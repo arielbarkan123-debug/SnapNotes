@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import type { DeepDiveAnalysis } from '@/lib/practice/types'
 
@@ -45,19 +45,30 @@ export default function DeepDiveCard({ deepDive, onDismiss }: DeepDiveCardProps)
 
   const handleQuickCheckSubmit = () => {
     if (!quickCheckAnswer.trim()) return
-    const isCorrect = quickCheckAnswer.trim().toLowerCase() === deepDive.quickCheck.answer.trim().toLowerCase()
+    const userAns = quickCheckAnswer.trim().toLowerCase()
+    const expected = deepDive.quickCheck.answer.trim().toLowerCase()
+    // Check exact match first
+    let isCorrect = userAns === expected
+    // Try numeric comparison if both are numbers
+    if (!isCorrect) {
+      const userNum = parseFloat(userAns)
+      const expectedNum = parseFloat(expected)
+      if (!isNaN(userNum) && !isNaN(expectedNum)) {
+        isCorrect = Math.abs(userNum - expectedNum) < 0.001
+      }
+    }
     setQuickCheckCorrect(isCorrect)
     setQuickCheckSubmitted(true)
   }
 
   return (
-    <div className="mt-4 rounded-[18px] bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-950 border border-slate-200 dark:border-slate-700 p-5 overflow-hidden">
+    <div role="region" aria-label={tp('deepDiveTitle')} className="mt-4 rounded-[18px] bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-950 border border-slate-200 dark:border-slate-700 p-5 overflow-hidden">
       <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
         <span className="text-lg">{'\u{1F50D}'}</span>
         {tp('deepDiveTitle')}
       </h3>
       <div className="space-y-3">
-        <AnimatePresence>
+        <>
           {panelConfig.map((panel, index) => (
             <motion.div
               key={panel.field}
@@ -81,7 +92,7 @@ export default function DeepDiveCard({ deepDive, onDismiss }: DeepDiveCardProps)
               </div>
             </motion.div>
           ))}
-        </AnimatePresence>
+        </>
       </div>
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -103,6 +114,7 @@ export default function DeepDiveCard({ deepDive, onDismiss }: DeepDiveCardProps)
               onChange={(e) => setQuickCheckAnswer(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCheckSubmit() }}
               placeholder={tp('deepDiveQuickCheckPlaceholder')}
+              aria-label={tp('deepDiveQuickCheck')}
               className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
             />
             <button
@@ -114,7 +126,7 @@ export default function DeepDiveCard({ deepDive, onDismiss }: DeepDiveCardProps)
             </button>
           </div>
         ) : (
-          <div className={`p-3 rounded-lg text-sm ${
+          <div aria-live="polite" className={`p-3 rounded-lg text-sm ${
             quickCheckCorrect
               ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
               : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
