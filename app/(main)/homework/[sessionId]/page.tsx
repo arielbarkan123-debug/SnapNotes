@@ -6,12 +6,12 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import Button from '@/components/ui/Button'
-import { AnnotatedImageViewer, TutoringChat, BatchWorksheetResult as BatchWorksheetResultView } from '@/components/homework'
+import { AnnotatedImageViewer, TutoringChat, BatchWorksheetResult as BatchWorksheetResultView, BeforeSubmitResult as BeforeSubmitResultView, RubricTable } from '@/components/homework'
 import { useToast } from '@/contexts/ToastContext'
 import { useXP } from '@/contexts/XPContext'
 import { useVisuals } from '@/contexts/VisualsContext'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
-import type { HomeworkCheck, HomeworkFeedback, GradeLevel, AnnotatedFeedbackPoint, HomeworkSession, BatchWorksheetResult as BatchResult, BatchWorksheetItem, CheckMode } from '@/lib/homework/types'
+import type { HomeworkCheck, HomeworkFeedback, GradeLevel, AnnotatedFeedbackPoint, HomeworkSession, BatchWorksheetResult as BatchResult, BatchWorksheetItem, CheckMode, BeforeSubmitResult, RubricResult } from '@/lib/homework/types'
 
 // ============================================================================
 // Helper Functions
@@ -551,7 +551,7 @@ export default function HomeworkResultsPage() {
   const feedback = check.feedback as HomeworkFeedback
   const gradeStyles = getGradeLevelStyles(feedback.gradeLevel, t)
   const currentCheckMode = (check.mode || 'standard') as CheckMode
-  const modeResult = check.mode_result as BatchResult | null | undefined
+  const modeResult = check.mode_result as BatchResult | BeforeSubmitResult | RubricResult | null | undefined
 
   // Handle practice from worksheet mistake
   const handlePracticeFromMistake = (_item: BatchWorksheetItem, _idx: number) => {
@@ -629,6 +629,121 @@ export default function HomeworkResultsPage() {
                 </Link>
               </div>
             </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  // Before-submit mode result view
+  if (currentCheckMode === 'before_submit' && modeResult && 'summary' in modeResult && 'items' in modeResult) {
+    return (
+      <div className="min-h-screen bg-transparent">
+        {/* Header */}
+        <header className="sticky top-14 md:top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="container mx-auto px-4 py-4 max-w-2xl">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/homework"
+                className="p-2 -ms-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </Link>
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {t('check.modeBeforeSubmit')}
+                </h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {check.subject} {'\u2022'} {check.topic}
+                </p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-6 max-w-2xl space-y-6">
+          <BeforeSubmitResultView
+            result={modeResult as BeforeSubmitResult}
+            onRunFullCheck={() => {
+              router.push('/homework/check')
+            }}
+          />
+
+          {/* Actions */}
+          <div className="space-y-3 pt-2">
+            <Button
+              onClick={() => router.push('/homework')}
+              variant="primary"
+              size="lg"
+              className="w-full"
+            >
+              {t('results.checkAnother')}
+            </Button>
+            <Button
+              onClick={() => router.push('/dashboard')}
+              variant="secondary"
+              size="lg"
+              className="w-full"
+            >
+              {t('backToDashboard')}
+            </Button>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  // Rubric mode result view
+  if (currentCheckMode === 'rubric' && modeResult && 'rubricBreakdown' in modeResult) {
+    return (
+      <div className="min-h-screen bg-transparent">
+        {/* Header */}
+        <header className="sticky top-14 md:top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="container mx-auto px-4 py-4 max-w-2xl">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/homework"
+                className="p-2 -ms-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </Link>
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {t('check.modeRubric')}
+                </h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {check.subject} {'\u2022'} {check.topic}
+                </p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-6 max-w-2xl space-y-6">
+          <RubricTable result={modeResult as RubricResult} />
+
+          {/* Actions */}
+          <div className="space-y-3 pt-2">
+            <Button
+              onClick={() => router.push('/homework')}
+              variant="primary"
+              size="lg"
+              className="w-full"
+            >
+              {t('results.checkAnother')}
+            </Button>
+            <Button
+              onClick={() => router.push('/dashboard')}
+              variant="secondary"
+              size="lg"
+              className="w-full"
+            >
+              {t('backToDashboard')}
+            </Button>
           </div>
         </main>
       </div>

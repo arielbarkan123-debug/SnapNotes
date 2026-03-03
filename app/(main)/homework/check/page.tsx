@@ -619,6 +619,8 @@ export default function HomeworkCheckPage() {
   const [checkMode, setCheckMode] = useState<'standard' | 'batch_worksheet' | 'before_submit' | 'rubric'>('standard')
   // Batch worksheet additional pages (up to 3)
   const [additionalPages, setAdditionalPages] = useState<UploadedImage[]>([])
+  // Rubric images (for rubric mode, up to 2)
+  const [rubricImages, setRubricImages] = useState<UploadedImage[]>([])
 
   // Status message during submission (for HEIC conversion + upload + analysis)
   const [submissionStatus, setSubmissionStatus] = useState<string | null>(null)
@@ -742,6 +744,23 @@ export default function HomeworkCheckPage() {
     const preview = createSafeObjectURL(file)
     setAdditionalPages(prev => [...prev, { file, preview, isHeic: false }])
   }, [createSafeObjectURL, additionalPages.length])
+
+  // Handle rubric image uploads for rubric mode
+  const handleRubricUpload = useCallback((file: File) => {
+    if (rubricImages.length >= 2) return // Max 2 rubric images
+    const docType = isDocumentFile(file)
+    if (docType) {
+      setRubricImages(prev => [...prev, { file, preview: null, isHeic: false, isDocument: true, docType }])
+      return
+    }
+    const heic = isHeicFile(file)
+    if (heic) {
+      setError('Please use JPEG or PNG for rubric images.')
+      return
+    }
+    const preview = createSafeObjectURL(file)
+    setRubricImages(prev => [...prev, { file, preview, isHeic: false }])
+  }, [createSafeObjectURL, rubricImages.length])
 
   // Handle HEIC conversion when user clicks "Try Anyway" in the warning modal
   const tryHeicConversion = useCallback(async () => {
@@ -955,6 +974,10 @@ export default function HomeworkCheckPage() {
       if (checkMode === 'batch_worksheet') {
         allFiles.push(...additionalPages.map(img => img.file))
       }
+      // Rubric images for rubric mode
+      if (checkMode === 'rubric') {
+        allFiles.push(...rubricImages.map(img => img.file))
+      }
 
       // Upload all files to storage
       setSubmissionStatus(t('check.uploadingFiles'))
@@ -1006,11 +1029,21 @@ export default function HomeworkCheckPage() {
         .map((img: { url: string }) => img.url)
       idx += teacherReviews.length
       // Additional page URLs for batch worksheet mode
-      const additionalImageUrls = checkMode === 'batch_worksheet'
-        ? uploadedFiles
-            .slice(idx, idx + additionalPages.length)
-            .map((img: { url: string }) => img.url)
-        : undefined
+      let additionalImageUrls: string[] | undefined
+      if (checkMode === 'batch_worksheet') {
+        additionalImageUrls = uploadedFiles
+          .slice(idx, idx + additionalPages.length)
+          .map((img: { url: string }) => img.url)
+        idx += additionalPages.length
+      }
+      // Rubric image URLs for rubric mode
+      let rubricImageUrls: string[] | undefined
+      if (checkMode === 'rubric') {
+        rubricImageUrls = uploadedFiles
+          .slice(idx, idx + rubricImages.length)
+          .map((img: { url: string }) => img.url)
+        idx += rubricImages.length
+      }
 
       if (!taskFileData && !answerFileData) {
         throw new Error(formatError(ERROR_CODES.HC_UPL_005, 'No files were uploaded successfully. Please try again.', 'HomeworkChecker/Upload/NoFiles'))
@@ -1120,6 +1153,7 @@ export default function HomeworkCheckPage() {
             // Mode fields
             mode: checkMode,
             additionalImageUrls: checkMode === 'batch_worksheet' ? additionalImageUrls : undefined,
+            rubricImageUrls: checkMode === 'rubric' ? rubricImageUrls : undefined,
           }),
         })
 
@@ -1377,25 +1411,43 @@ export default function HomeworkCheckPage() {
             {t('check.modeLabel')}
           </label>
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-            {(['standard', 'batch_worksheet'] as const).map((modeOption) => (
-              <button
-                key={modeOption}
-                onClick={() => setCheckMode(modeOption)}
-                className={`
-                  flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors
-                  ${checkMode === modeOption
-                    ? 'bg-violet-600 text-white shadow-sm'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }
-                `}
-              >
-                {t(`check.mode${modeOption === 'standard' ? 'Standard' : 'BatchWorksheet'}`)}
-              </button>
-            ))}
+            {(['standard', 'batch_worksheet', 'before_submit', 'rubric'] as const).map((modeOption) => {
+              const modeLabels: Record<string, string> = {
+                standard: 'Standard',
+                batch_worksheet: 'BatchWorksheet',
+                before_submit: 'BeforeSubmit',
+                rubric: 'Rubric',
+              }
+              return (
+                <button
+                  key={modeOption}
+                  onClick={() => setCheckMode(modeOption)}
+                  className={`
+                    flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors
+                    ${checkMode === modeOption
+                      ? 'bg-violet-600 text-white shadow-sm'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }
+                  `}
+                >
+                  {t(`check.mode${modeLabels[modeOption]}`)}
+                </button>
+              )
+            })}
           </div>
           {checkMode === 'batch_worksheet' && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
               {t('check.batchWorksheetDesc')}
+            </p>
+          )}
+          {checkMode === 'before_submit' && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              {t('check.beforeSubmitDesc')}
+            </p>
+          )}
+          {checkMode === 'rubric' && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              {t('check.rubricDesc')}
             </p>
           )}
         </div>
@@ -1449,6 +1501,24 @@ export default function HomeworkCheckPage() {
                     onUpload={handleAdditionalPageUpload}
                     onRemove={(index) => setAdditionalPages(prev => prev.filter((_, i) => i !== index))}
                     maxImages={3}
+                  />
+                </div>
+              )}
+
+              {/* Rubric Upload (Rubric Mode) */}
+              {checkMode === 'rubric' && (
+                <div className="bg-white dark:bg-gray-800 rounded-[22px] shadow-card border border-gray-200 dark:border-gray-700 p-6">
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{t('check.rubricUpload')}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                    {t('check.rubricUploadDesc')}
+                  </p>
+                  <MultiImageUploader
+                    label={t('check.rubricUpload')}
+                    images={rubricImages}
+                    onUpload={handleRubricUpload}
+                    onRemove={(index) => setRubricImages(prev => prev.filter((_, i) => i !== index))}
+                    maxImages={2}
+                    icon="\uD83D\uDCCB"
                   />
                 </div>
               )}

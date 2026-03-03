@@ -28,6 +28,11 @@ import type {
   ExtendedCheckerOutput,
   BatchWorksheetItem,
   BatchWorksheetResult,
+  BeforeSubmitStatus,
+  BeforeSubmitItem,
+  BeforeSubmitResult,
+  RubricCriterion,
+  RubricResult,
 } from './types'
 import { verifyAnswer, answersMatch } from './math-verifier'
 import { readStudentWork } from './student-work-reader'
@@ -536,6 +541,267 @@ Respond ONLY with valid JSON matching this exact schema:
   }
 }
 
+// ============================================================================
+// BEFORE-SUBMIT MODE
+// ============================================================================
+
+/**
+ * Analyze homework in "before-submit" mode: traffic light status with progressive hints.
+ * Does NOT reveal correct answers.
+ */
+async function analyzeBeforeSubmit(
+  client: Anthropic,
+  imageContents: Array<{ type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'; data: string } }>,
+  textContent: string | null,
+  referenceContent: string | null
+): Promise<{ beforeSubmitResult: BeforeSubmitResult; subject: string; topic: string; taskText: string }> {
+  const contentBlock = textContent
+    ? `\n\nSTUDENT TEXT:\n${textContent}`
+    : ''
+  const referenceBlock = referenceContent
+    ? `\n\nREFERENCE MATERIAL:\n${referenceContent}`
+    : ''
+
+  const systemPrompt = `You are a helpful homework reviewer doing a BEFORE-SUBMIT check.
+
+CRITICAL RULE: You must NOT reveal the correct answers. The student hasn't submitted yet.
+
+TASK: For each problem/answer on the page, assess:
+1. Is it likely correct? → status: "correct"
+2. Is it possibly wrong but close? → status: "check_again"
+3. Is it clearly wrong or missing? → status: "needs_rework"
+4. Is it unreadable? → status: "unclear"
+
+For problems that aren't "correct", provide THREE escalating hints:
+- Hint 1: A gentle nudge in the right direction (vague)
+- Hint 2: A more specific hint about what to check
+- Hint 3: A strong hint that nearly gives the approach (but NOT the answer)
+
+For "correct" problems, provide three confirmatory hints explaining WHY it looks right.
+
+Detect the language of the homework and respond in that language.${contentBlock}${referenceBlock}
+
+Respond ONLY with valid JSON:
+{
+  "subject": "string",
+  "topic": "string",
+  "taskText": "extracted question text",
+  "items": [
+    {
+      "problemIndex": 0,
+      "problemText": "the question",
+      "status": "correct | check_again | needs_rework | unclear",
+      "hints": ["hint1", "hint2", "hint3"]
+    }
+  ]
+}`
+
+  const messageContent: Array<Anthropic.ImageBlockParam | Anthropic.TextBlockParam> = [
+    ...imageContents,
+    { type: 'text' as const, text: 'Check this homework before submission. Do NOT reveal answers. Return JSON.' },
+  ]
+
+  const response = await client.messages.create({
+    model: AI_MODEL,
+    max_tokens: MAX_TOKENS,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: messageContent }],
+  })
+
+  const text = response.content
+    .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+    .map((block) => block.text)
+    .join('')
+
+  let jsonStr = text
+  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (jsonMatch) jsonStr = jsonMatch[1].trim()
+
+  const parsed = JSON.parse(jsonStr)
+  const items: BeforeSubmitItem[] = (parsed.items || []).map((item: Record<string, unknown>, idx: number) => ({
+    problemIndex: typeof item.problemIndex === 'number' ? item.problemIndex : idx,
+    problemText: String(item.problemText || ''),
+    status: (['correct', 'check_again', 'needs_rework', 'unclear'].includes(String(item.status))
+      ? item.status
+      : 'unclear') as BeforeSubmitStatus,
+    hints: Array.isArray(item.hints) && item.hints.length >= 3
+      ? [String(item.hints[0]), String(item.hints[1]), String(item.hints[2])] as [string, string, string]
+      : [String((item.hints as string[] | undefined)?.[0] || ''), '', ''] as [string, string, string],
+  }))
+
+  const correct = items.filter((i) => i.status === 'correct').length
+  const checkAgain = items.filter((i) => i.status === 'check_again').length
+  const needsRework = items.filter((i) => i.status === 'needs_rework').length
+  const unclear = items.filter((i) => i.status === 'unclear').length
+
+  const beforeSubmitResult: BeforeSubmitResult = {
+    mode: 'before_submit',
+    items,
+    summary: {
+      correct,
+      checkAgain,
+      needsRework,
+      unclear,
+      total: items.length,
+    },
+  }
+
+  return {
+    beforeSubmitResult,
+    subject: String(parsed.subject || 'unknown'),
+    topic: String(parsed.topic || 'unknown'),
+    taskText: String(parsed.taskText || ''),
+  }
+}
+
+// ============================================================================
+// RUBRIC MODE
+// ============================================================================
+
+/**
+ * Two-phase rubric grading:
+ * Phase A: Parse rubric from rubric image(s)
+ * Phase B: Grade the homework against the parsed rubric
+ */
+async function analyzeWithRubric(
+  client: Anthropic,
+  homeworkImages: Array<{ type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'; data: string } }>,
+  rubricImages: Array<{ type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'; data: string } }>,
+  textContent: string | null
+): Promise<{ rubricResult: RubricResult; subject: string; topic: string; taskText: string }> {
+  // ---- PHASE A: Parse rubric ----
+  const rubricParsePrompt = `You are analyzing a grading rubric. Extract ALL criteria with their point values.
+
+Respond ONLY with valid JSON:
+{
+  "criteria": [
+    { "criterion": "name of criterion", "maxPoints": number, "description": "what earns full points" }
+  ],
+  "totalPossible": number
+}`
+
+  const rubricResponse = await client.messages.create({
+    model: AI_MODEL,
+    max_tokens: 2048,
+    system: rubricParsePrompt,
+    messages: [{
+      role: 'user',
+      content: [
+        ...rubricImages,
+        { type: 'text' as const, text: 'Extract all rubric criteria and point values. Return JSON.' },
+      ],
+    }],
+  })
+
+  const rubricText = rubricResponse.content
+    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+    .map((b) => b.text).join('')
+
+  let rubricJson = rubricText
+  const rubricMatch = rubricText.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (rubricMatch) rubricJson = rubricMatch[1].trim()
+
+  const parsedRubric = JSON.parse(rubricJson)
+  const criteria: Array<{ criterion: string; maxPoints: number; description: string }> = parsedRubric.criteria || []
+  const totalPossible = parsedRubric.totalPossible || criteria.reduce((sum: number, c: { maxPoints: number }) => sum + c.maxPoints, 0)
+
+  // ---- PHASE B: Grade against rubric ----
+  const criteriaList = criteria.map((c, i) => `${i + 1}. ${c.criterion} (${c.maxPoints} pts): ${c.description}`).join('\n')
+  const textBlock = textContent ? `\n\nSTUDENT TEXT:\n${textContent}` : ''
+
+  const gradingPrompt = `You are grading homework against a specific rubric.
+
+RUBRIC CRITERIA:
+${criteriaList}
+
+TOTAL POSSIBLE POINTS: ${totalPossible}
+
+For each criterion, assign points (0 to maxPoints) and explain your reasoning.
+Also provide a specific improvement suggestion for each criterion.
+
+Detect the language of the homework and respond in that language.${textBlock}
+
+Respond ONLY with valid JSON:
+{
+  "subject": "string",
+  "topic": "string",
+  "taskText": "extracted task text",
+  "breakdown": [
+    {
+      "criterion": "criterion name",
+      "maxPoints": number,
+      "earnedPoints": number,
+      "reasoning": "why this score",
+      "suggestions": "how to improve"
+    }
+  ],
+  "estimatedGrade": "A/B/C/D/F or equivalent"
+}`
+
+  const gradingResponse = await client.messages.create({
+    model: AI_MODEL,
+    max_tokens: MAX_TOKENS,
+    system: gradingPrompt,
+    messages: [{
+      role: 'user',
+      content: [
+        ...homeworkImages,
+        { type: 'text' as const, text: 'Grade this homework against the rubric. Return JSON.' },
+      ],
+    }],
+  })
+
+  const gradingText = gradingResponse.content
+    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+    .map((b) => b.text).join('')
+
+  let gradingJson = gradingText
+  const gradingMatch = gradingText.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (gradingMatch) gradingJson = gradingMatch[1].trim()
+
+  const parsed = JSON.parse(gradingJson)
+  const breakdown: RubricCriterion[] = (parsed.breakdown || []).map((item: Record<string, unknown>) => ({
+    criterion: String(item.criterion || ''),
+    maxPoints: Number(item.maxPoints || 0),
+    earnedPoints: Math.min(Number(item.earnedPoints || 0), Number(item.maxPoints || 0)),
+    percentage: Number(item.maxPoints) > 0
+      ? Math.round((Number(item.earnedPoints || 0) / Number(item.maxPoints)) * 100)
+      : 0,
+    reasoning: String(item.reasoning || ''),
+    suggestions: String(item.suggestions || ''),
+  }))
+
+  const totalEarned = breakdown.reduce((sum, c) => sum + c.earnedPoints, 0)
+  const percentage = totalPossible > 0 ? Math.round((totalEarned / totalPossible) * 100) : 0
+
+  // Build tagged feedback items
+  const taggedFeedback: Array<FeedbackPoint & { rubricCriterion: string }> = breakdown
+    .filter((c) => c.earnedPoints < c.maxPoints)
+    .map((c) => ({
+      title: `${c.criterion}: ${c.earnedPoints}/${c.maxPoints}`,
+      description: c.suggestions,
+      severity: (c.percentage < 50 ? 'major' : c.percentage < 80 ? 'moderate' : 'minor') as 'minor' | 'moderate' | 'major',
+      rubricCriterion: c.criterion,
+    }))
+
+  const rubricResult: RubricResult = {
+    mode: 'rubric',
+    rubricBreakdown: breakdown,
+    totalEarned,
+    totalPossible,
+    percentage,
+    estimatedGrade: String(parsed.estimatedGrade || ''),
+    taggedFeedback,
+  }
+
+  return {
+    rubricResult,
+    subject: String(parsed.subject || 'unknown'),
+    topic: String(parsed.topic || 'unknown'),
+    taskText: String(parsed.taskText || ''),
+  }
+}
+
 export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutput> {
   try {
     const client = getAnthropicClient()
@@ -630,6 +896,166 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
         answerText: '',
         mode: 'batch_worksheet',
         modeResult: worksheetResult,
+      }
+    }
+
+    // ============================================================================
+    // MODE ROUTING: Before-Submit
+    // ============================================================================
+    if (mode === 'before_submit') {
+      console.log('[Checker] Before-submit mode — checking without revealing answers...')
+
+      const imageContents: Array<{ type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'; data: string } }> = []
+      if (input.taskImageUrl) {
+        const fetched = await fetchImageAsBase64(input.taskImageUrl)
+        imageContents.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: fetched.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+            data: fetched.base64,
+          },
+        })
+      }
+      if (input.answerImageUrl) {
+        const fetched = await fetchImageAsBase64(input.answerImageUrl)
+        imageContents.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: fetched.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+            data: fetched.base64,
+          },
+        })
+      }
+
+      const textContent = input.taskText || input.taskDocumentText || null
+
+      let referenceContent: string | null = null
+      if (input.referenceImageUrls?.length) {
+        referenceContent = `[${input.referenceImageUrls.length} reference image(s) provided]`
+      }
+
+      const { beforeSubmitResult, subject, topic, taskText } = await analyzeBeforeSubmit(
+        client,
+        imageContents,
+        textContent,
+        referenceContent
+      )
+
+      // Build minimal HomeworkFeedback for backward compatibility
+      const feedback: HomeworkFeedback = {
+        gradeLevel: 'good',
+        gradeEstimate: `${beforeSubmitResult.summary.correct}/${beforeSubmitResult.summary.total} likely correct`,
+        summary: `Before-submit check: ${beforeSubmitResult.summary.correct} look correct, ${beforeSubmitResult.summary.checkAgain + beforeSubmitResult.summary.needsRework} need review`,
+        correctPoints: [],
+        improvementPoints: [],
+        suggestions: [],
+        teacherStyleNotes: null,
+        expectationComparison: null,
+        encouragement: 'Review the flagged items before submitting!',
+      }
+
+      return {
+        feedback,
+        subject,
+        topic,
+        taskText,
+        answerText: '',
+        mode: 'before_submit',
+        modeResult: beforeSubmitResult,
+      }
+    }
+
+    // ============================================================================
+    // MODE ROUTING: Rubric
+    // ============================================================================
+    if (mode === 'rubric') {
+      console.log('[Checker] Rubric mode — two-phase rubric grading...')
+
+      if (!input.rubricImageUrls?.length) {
+        throw new Error('Rubric images are required for rubric mode')
+      }
+
+      // Fetch homework images
+      const homeworkImages: Array<{ type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'; data: string } }> = []
+      if (input.taskImageUrl) {
+        const fetched = await fetchImageAsBase64(input.taskImageUrl)
+        homeworkImages.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: fetched.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+            data: fetched.base64,
+          },
+        })
+      }
+      if (input.answerImageUrl) {
+        const fetched = await fetchImageAsBase64(input.answerImageUrl)
+        homeworkImages.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: fetched.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+            data: fetched.base64,
+          },
+        })
+      }
+
+      // Fetch rubric images
+      const rubricImagesFetched = await Promise.all(
+        input.rubricImageUrls.map((url) => fetchImageAsBase64(url))
+      )
+      const rubricImages = rubricImagesFetched.map((fetched) => ({
+        type: 'image' as const,
+        source: {
+          type: 'base64' as const,
+          media_type: fetched.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+          data: fetched.base64,
+        },
+      }))
+
+      const textContent = input.taskText || input.taskDocumentText || null
+
+      const { rubricResult, subject, topic, taskText } = await analyzeWithRubric(
+        client,
+        homeworkImages,
+        rubricImages,
+        textContent
+      )
+
+      // Build HomeworkFeedback for backward compatibility
+      const gradeLevel: GradeLevel = rubricResult.percentage >= 90 ? 'excellent'
+        : rubricResult.percentage >= 70 ? 'good'
+        : rubricResult.percentage >= 50 ? 'needs_improvement'
+        : 'incomplete'
+
+      const feedback: HomeworkFeedback = {
+        gradeLevel,
+        gradeEstimate: `${rubricResult.totalEarned}/${rubricResult.totalPossible} (${rubricResult.estimatedGrade})`,
+        summary: `Rubric grade: ${rubricResult.totalEarned}/${rubricResult.totalPossible} (${rubricResult.percentage}%)`,
+        correctPoints: rubricResult.rubricBreakdown
+          .filter((c) => c.percentage >= 80)
+          .map((c) => ({ title: c.criterion, description: `${c.earnedPoints}/${c.maxPoints} — ${c.reasoning}` })),
+        improvementPoints: rubricResult.taggedFeedback,
+        suggestions: rubricResult.rubricBreakdown
+          .filter((c) => c.earnedPoints < c.maxPoints)
+          .map((c) => c.suggestions),
+        teacherStyleNotes: null,
+        expectationComparison: null,
+        encouragement: rubricResult.percentage >= 80
+          ? 'Strong work against this rubric!'
+          : 'Use the rubric feedback to target your improvements!',
+      }
+
+      return {
+        feedback,
+        subject,
+        topic,
+        taskText,
+        answerText: '',
+        mode: 'rubric',
+        modeResult: rubricResult,
       }
     }
 

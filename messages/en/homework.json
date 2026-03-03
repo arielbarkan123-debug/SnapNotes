@@ -117,7 +117,11 @@
     "addPage": "Add Page",
     "pageOf": "Page {current} of {total}",
     "removePage": "Remove",
-    "maxPages": "Maximum 4 pages"
+    "maxPages": "Maximum 4 pages",
+    "beforeSubmitDesc": "Check your homework before submitting — get hints without seeing the answers",
+    "rubricDesc": "Upload your teacher's rubric to get graded against specific criteria",
+    "rubricUpload": "Rubric / Grading Criteria",
+    "rubricUploadDesc": "Upload 1-2 images of your teacher's rubric or grading criteria"
   },
   "help": {
     "backToHub": "Back to Homework Hub",
