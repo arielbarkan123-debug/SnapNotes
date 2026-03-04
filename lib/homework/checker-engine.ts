@@ -604,7 +604,7 @@ Respond ONLY with valid JSON:
   let parsed
   try {
     parsed = JSON.parse(jsonStr)
-  } catch (e) {
+  } catch {
     console.error('[Checker] Failed to parse before-submit AI response:', jsonStr.substring(0, 200))
     throw new Error('Failed to parse AI response for before-submit check. Please try again.')
   }
@@ -694,7 +694,7 @@ Respond ONLY with valid JSON:
   let parsedRubric
   try {
     parsedRubric = JSON.parse(rubricJson)
-  } catch (e) {
+  } catch {
     console.error('[Checker] Failed to parse rubric AI response:', rubricJson.substring(0, 200))
     throw new Error('Failed to parse AI response for rubric extraction. Please try again.')
   }
@@ -758,7 +758,7 @@ Respond ONLY with valid JSON:
   let parsed
   try {
     parsed = JSON.parse(gradingJson)
-  } catch (e) {
+  } catch {
     console.error('[Checker] Failed to parse rubric grading AI response:', gradingJson.substring(0, 200))
     throw new Error('Failed to parse AI response for rubric grading. Please try again.')
   }

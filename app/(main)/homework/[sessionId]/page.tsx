@@ -367,6 +367,86 @@ export default function HomeworkResultsPage() {
     }
   }, [sessionId, helpSession?.hints_used, helpSession?.used_show_answer, toast, trackFeature, router])
 
+  // Handle practice from worksheet mistake or standard feedback improvement point
+  // (must be declared before any early returns to satisfy rules-of-hooks)
+  const handlePracticeFromMistake = useCallback(async (item: BatchWorksheetItem | FeedbackPoint, idx: number) => {
+    if (!check) return
+
+    // Normalize FeedbackPoint to BatchWorksheetItem shape
+    const worksheetItem: BatchWorksheetItem = 'problemNumber' in item
+      ? item as BatchWorksheetItem
+      : feedbackPointToWorksheetItem(item as FeedbackPoint, check.topic || check.subject || 'General')
+
+    setPracticingIndex(idx)
+    try {
+      // 1. Create a practice session with homework_error source
+      const sessionRes = await fetch('/api/practice/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionType: 'targeted',
+          questionCount: 5,
+          sourceType: 'homework_error',
+          errorContext: {
+            checkId: check.id,
+            problemIndex: idx,
+            problemText: worksheetItem.problemText,
+            topic: worksheetItem.topic,
+            errorType: worksheetItem.errorType,
+            studentAnswer: worksheetItem.studentAnswer,
+            correctAnswer: worksheetItem.correctAnswer,
+          },
+        }),
+      })
+
+      if (!sessionRes.ok) {
+        const err = await sessionRes.json()
+        throw new Error(err?.error?.message || 'Failed to create practice session')
+      }
+
+      const { sessionId: practiceSessionId } = await sessionRes.json()
+
+      // 2. Record the practice link on the homework check
+      const practiceCompleteRes = await fetch(`/api/homework/check/${check.id}/practice-complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          problemIndex: idx,
+          practiceSessionId,
+        }),
+      })
+
+      if (practiceCompleteRes.ok) {
+        // 3. Optimistic local state update
+        setCheck((prev) => {
+          if (!prev) return prev
+          const currentItems = prev.practiced_items || []
+          return {
+            ...prev,
+            practiced_items: [...currentItems, { problemIndex: idx, practiceSessionId }],
+          }
+        })
+      } else {
+        console.warn('[PracticeFromMistake] Failed to record practice link:', await practiceCompleteRes.text())
+      }
+
+      trackFeature('homework_practice_from_mistake', {
+        checkId: check.id,
+        problemIndex: idx,
+        topic: worksheetItem.topic,
+        errorType: worksheetItem.errorType,
+      })
+
+      // 4. Navigate to the practice session
+      router.push(`/practice/${practiceSessionId}`)
+    } catch (error) {
+      console.error('[PracticeFromMistake] Error:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to start practice')
+    } finally {
+      setPracticingIndex(null)
+    }
+  }, [check, router, toast, trackFeature])
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center">
@@ -599,85 +679,6 @@ export default function HomeworkResultsPage() {
   const gradeStyles = getGradeLevelStyles(feedback.gradeLevel, t)
   const currentCheckMode = (check.mode || 'standard') as CheckMode
   const modeResult = check.mode_result as BatchResult | BeforeSubmitResult | RubricResult | null | undefined
-
-  // Handle practice from worksheet mistake or standard feedback improvement point
-  const handlePracticeFromMistake = useCallback(async (item: BatchWorksheetItem | FeedbackPoint, idx: number) => {
-    if (!check) return
-
-    // Normalize FeedbackPoint to BatchWorksheetItem shape
-    const worksheetItem: BatchWorksheetItem = 'problemNumber' in item
-      ? item as BatchWorksheetItem
-      : feedbackPointToWorksheetItem(item as FeedbackPoint, check.topic || check.subject || 'General')
-
-    setPracticingIndex(idx)
-    try {
-      // 1. Create a practice session with homework_error source
-      const sessionRes = await fetch('/api/practice/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionType: 'targeted',
-          questionCount: 5,
-          sourceType: 'homework_error',
-          errorContext: {
-            checkId: check.id,
-            problemIndex: idx,
-            problemText: worksheetItem.problemText,
-            topic: worksheetItem.topic,
-            errorType: worksheetItem.errorType,
-            studentAnswer: worksheetItem.studentAnswer,
-            correctAnswer: worksheetItem.correctAnswer,
-          },
-        }),
-      })
-
-      if (!sessionRes.ok) {
-        const err = await sessionRes.json()
-        throw new Error(err?.error?.message || 'Failed to create practice session')
-      }
-
-      const { sessionId: practiceSessionId } = await sessionRes.json()
-
-      // 2. Record the practice link on the homework check
-      const practiceCompleteRes = await fetch(`/api/homework/check/${check.id}/practice-complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          problemIndex: idx,
-          practiceSessionId,
-        }),
-      })
-
-      if (practiceCompleteRes.ok) {
-        // 3. Optimistic local state update
-        setCheck((prev) => {
-          if (!prev) return prev
-          const currentItems = prev.practiced_items || []
-          return {
-            ...prev,
-            practiced_items: [...currentItems, { problemIndex: idx, practiceSessionId }],
-          }
-        })
-      } else {
-        console.warn('[PracticeFromMistake] Failed to record practice link:', await practiceCompleteRes.text())
-      }
-
-      trackFeature('homework_practice_from_mistake', {
-        checkId: check.id,
-        problemIndex: idx,
-        topic: worksheetItem.topic,
-        errorType: worksheetItem.errorType,
-      })
-
-      // 4. Navigate to the practice session
-      router.push(`/practice/${practiceSessionId}`)
-    } catch (error) {
-      console.error('[PracticeFromMistake] Error:', error)
-      toast.error(error instanceof Error ? error.message : 'Failed to start practice')
-    } finally {
-      setPracticingIndex(null)
-    }
-  }, [check, router, toast, trackFeature])
 
   // Batch worksheet mode result view
   if (currentCheckMode === 'batch_worksheet' && modeResult && 'items' in modeResult) {
