@@ -8,6 +8,8 @@
  * The overlay prop is kept for backwards compatibility but Recraft no longer uses it.
  */
 
+import StepByStepButton from './StepByStepButton'
+
 interface OverlayLabel {
   text: string
   x: number
@@ -21,6 +23,12 @@ interface EngineDiagramImageProps {
   pipeline?: string
   overlay?: OverlayLabel[]
   qaVerdict?: string
+  /** If present, shows "Step by Step" button */
+  hasStepByStep?: boolean
+  /** Called when user clicks Step by Step */
+  onStepByStepClick?: () => void
+  /** Whether step-by-step is currently loading */
+  stepByStepLoading?: boolean
 }
 
 /** Get badge style based on pipeline type */
@@ -63,6 +71,9 @@ export default function EngineDiagramImage({
   imageUrl,
   pipeline,
   overlay,
+  hasStepByStep,
+  onStepByStepClick,
+  stepByStepLoading,
 }: EngineDiagramImageProps) {
   const badgeStyle = pipeline ? getPipelineBadgeStyle(pipeline) : null
 
@@ -140,6 +151,16 @@ export default function EngineDiagramImage({
           </svg>
         )}
       </div>
+
+      {/* Step by Step button */}
+      {hasStepByStep && onStepByStepClick && (
+        <div className="absolute bottom-2 right-2 z-10">
+          <StepByStepButton
+            onClick={onStepByStepClick}
+            loading={stepByStepLoading}
+          />
+        </div>
+      )}
     </div>
   )
 }
