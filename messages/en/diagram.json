@@ -81,5 +81,19 @@
     "diagramUnavailable": "Diagram could not be generated for this step",
     "partialWarning": "Some step diagrams could not be generated",
     "stepOf": "Step {current} of {total}"
+  },
+
+  "stepByStep": {
+    "button": "Step by Step",
+    "buttonLabel": "View step-by-step diagram build-up",
+    "loading": "Preparing steps...",
+    "title": "Step-by-Step Build-Up",
+    "walkthroughLabel": "Step-by-step diagram walkthrough",
+    "close": "Close walkthrough",
+    "complete": "Diagram complete! All elements are now shown.",
+    "renderFailed": "This step could not be rendered",
+    "partialWarning": "Some steps could not be rendered and are shown as placeholders.",
+    "fallbackTitle": "Step-by-Step Explanation",
+    "fallbackNote": "Visual build-up unavailable. Showing text explanations with the final diagram."
   }
 }
