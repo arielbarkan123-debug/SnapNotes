@@ -2,16 +2,13 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type {
   CreateSessionRequest,
-  ConversationMessage,
   HomeworkSession,
   QuestionAnalysis,
   ReferenceAnalysis,
 } from '@/lib/homework/types'
 import { analyzeQuestion, analyzeQuestionText } from '@/lib/homework/question-analyzer'
 import { analyzeReferences } from '@/lib/homework/reference-analyzer'
-// generateInitialGreeting removed — template greeting used for speed (avoids 504 timeout)
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
-import { loadUserProfile } from '@/lib/user-profile'
 
 // ============================================================================
 // Error Codes for Homework Sessions API
@@ -37,7 +34,8 @@ function formatApiError(code: string, message: string, details?: string): string
   return `[${code}] ${message}${detailSuffix}`
 }
 
-// Optimized: parallelize profile + analysis, use template greeting (no AI greeting call)
+// Session creation: analyze question, create record, return empty conversation
+// First AI message generated on-demand by session page via /chat endpoint
 export const maxDuration = 60
 
 // ============================================================================
@@ -81,9 +79,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Step 1: Analyze question + load user profile in PARALLEL (saves 3-5s)
-    const profilePromise = loadUserProfile(supabase, user.id).catch(() => null)
-
+    // Step 1: Analyze question
     let questionAnalysis: QuestionAnalysis
     try {
       if (inputMode === 'text') {
@@ -118,9 +114,6 @@ export async function POST(request: NextRequest) {
         console.error('Reference analysis error:', error)
       }
     }
-
-    // Await the profile that was loading in parallel
-    const profile = await profilePromise
 
     // Step 3: Create the session with analysis data
     const { data: session, error: insertError } = await supabase
@@ -164,41 +157,11 @@ export async function POST(request: NextRequest) {
 
     const createdSession = session as HomeworkSession
 
-    // Use profile that was loaded in parallel
-    const userLanguage = (profile?.language as 'en' | 'he') || undefined
-
-    // Step 4: Use fast template greeting (AI greeting was causing 504 timeouts)
-    // The first chat message from the tutor will be AI-powered via the /chat endpoint
-    const greetingMessage: ConversationMessage = {
-      role: 'tutor',
-      content: getDefaultGreeting(questionAnalysis, body.comfortLevel, userLanguage),
-      timestamp: new Date().toISOString(),
-      pedagogicalIntent: 'probe_understanding',
-    }
-
-    // Step 5: Add greeting to conversation
-    const { data: updatedSession, error: updateError } = await supabase
-      .from('homework_sessions')
-      .update({
-        conversation: [greetingMessage],
-      })
-      .eq('id', createdSession.id)
-      .eq('user_id', user.id)
-      .select()
-      .single()
-
-    if (updateError) {
-      console.error('Update error:', updateError)
-      // Return session without greeting in conversation
-      return NextResponse.json({
-        session: { ...createdSession, conversation: [greetingMessage] },
-        questionAnalysis,
-        referenceAnalysis,
-      })
-    }
-
+    // Step 4: Return session with empty conversation
+    // The first AI message will be generated on-demand by the session page
+    // via the existing /chat endpoint (avoids 504 timeout on session creation)
     return NextResponse.json({
-      session: updatedSession,
+      session: createdSession,
       questionAnalysis,
       referenceAnalysis,
     })
@@ -206,35 +169,6 @@ export async function POST(request: NextRequest) {
     console.error('Homework session error:', error)
     return createErrorResponse(ErrorCodes.HOMEWORK_UNKNOWN)
   }
-}
-
-/**
- * Generate a template-based greeting (fast, no AI call)
- */
-function getDefaultGreeting(
-  questionAnalysis: QuestionAnalysis,
-  comfortLevel?: string,
-  language?: 'en' | 'he'
-): string {
-  const subject = questionAnalysis.subject || 'this problem'
-  const topic = questionAnalysis.topic || 'the topic'
-
-  if (language === 'he') {
-    if (comfortLevel === 'new') {
-      return `שלום! אני רואה שאתה עובד על בעיה ב${subject} בנושא ${topic}. אל תדאג אם זה מרגיש חדש - זה לגמרי נורמלי! בוא נתחיל מהיסודות. מה הדבר הראשון שאתה שם לב אליו בבעיה הזו?`
-    } else if (comfortLevel === 'just_stuck') {
-      return `אני רואה שאתה עובד על בעיה ב${subject} בנושא ${topic}. נשמע שיש לך חשיבה טובה - פשוט נתקעת במשהו ספציפי. על איזה חלק אתה מתקשה?`
-    }
-    return `שאלה מעולה בנושא ${topic}! זו נראית בעיה מעניינת ב${subject}. בוא נעבוד על זה יחד. מה האינטואיציה הראשונה שלך לגבי איך לגשת לזה?`
-  }
-
-  if (comfortLevel === 'new') {
-    return `Welcome! I see you're working on a ${subject} problem about ${topic}. Don't worry if this feels new - that's totally normal! Let's start with the basics. What's the first thing you notice about this problem?`
-  } else if (comfortLevel === 'just_stuck') {
-    return `I see you're working on a ${subject} problem about ${topic}. It sounds like you've got some good thinking going - you're just stuck on something specific. What part is tripping you up?`
-  }
-
-  return `Great question you have here about ${topic}! This looks like an interesting ${subject} problem. Let me help you work through it. What's your first instinct about how to approach this?`
 }
 
 // ============================================================================
