@@ -943,9 +943,14 @@ export async function generateTutorResponse(
   const DIAGRAM_REQUEST_PATTERN = /\b(show me|draw|display|create|make|give me|generate|see|visualize)\b.*(diagram|fbd|free body|visual|picture|image|illustration|graph|chart|force diagram)/i
   const studentRequestsDiagram = !isAutoStart && DIAGRAM_REQUEST_PATTERN.test(effectiveStudentMessage)
 
+  if (studentRequestsDiagram) {
+    console.log(`[TutorEngine] Student explicitly requested diagram. enableDiagrams=${enableDiagrams}, previousDiagram=${!!previousDiagram}. Overriding toggle.`)
+  }
+
   // Fire engine diagram in parallel with AI call
-  // Trigger when: (1) no previous diagram exists, OR (2) student explicitly requests a new diagram
-  const enginePromise = enableDiagrams && (!previousDiagram || studentRequestsDiagram) && shouldUseEngine(diagramTopic)
+  // Trigger when: (1) diagrams enabled and no previous diagram, OR (2) student explicitly requests a diagram
+  // Note: studentRequestsDiagram overrides enableDiagrams toggle — if the student asks for a diagram, we generate it
+  const enginePromise = (enableDiagrams || studentRequestsDiagram) && (!previousDiagram || studentRequestsDiagram) && shouldUseEngine(diagramTopic)
     ? tryEngineDiagram(diagramTopic).catch((err) => {
         console.warn('[TutorEngine] Engine diagram failed for chat:', err)
         return undefined
