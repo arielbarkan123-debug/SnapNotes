@@ -148,6 +148,7 @@ export async function POST(request: NextRequest) {
         current_step: 0,
         used_show_answer: false,
         solution_reached: false,
+        enable_diagrams: body.enableDiagrams ?? true,
       })
       .select()
       .single()
