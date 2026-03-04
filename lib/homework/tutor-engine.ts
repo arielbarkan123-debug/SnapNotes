@@ -599,7 +599,7 @@ Keep it brief - 2-3 sentences max.`
  * (common in full-explanation mode). No additional API calls — instant.
  */
 function generateAutoStartDiagram(
-  questionAnalysis: QuestionAnalysis,
+  questionAnalysis: TutorContext['questionAnalysis'],
   questionText: string,
 ): TutorDiagramState | undefined {
   const subject = (questionAnalysis.subject || '').toLowerCase()
