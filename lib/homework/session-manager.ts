@@ -86,7 +86,8 @@ export async function getSession(
 
   if (!data) return null
 
-  // Reconstruct conversation from homework_turns (source of truth)
+  // Reconstruct conversation from homework_turns (source of truth for text fields)
+  // but merge diagram/visualUpdate from JSONB (homework_turns doesn't have those columns)
   const { data: turns } = await supabase
     .from('homework_turns')
     .select('role, content, hint_level, pedagogical_intent, referenced_concept, shows_understanding, misconception_detected')
@@ -94,15 +95,32 @@ export async function getSession(
     .order('turn_number', { ascending: true })
 
   if (turns && turns.length > 0) {
-    data.conversation = turns.map(turn => ({
-      role: turn.role,
-      content: turn.content,
-      hintLevel: turn.hint_level,
-      pedagogicalIntent: turn.pedagogical_intent,
-      referencedConcept: turn.referenced_concept,
-      showsUnderstanding: turn.shows_understanding,
-      misconceptionDetected: turn.misconception_detected,
-    }))
+    // Preserve JSONB conversation for diagram/visualUpdate data
+    const jsonbConversation: ConversationMessage[] = data.conversation || []
+
+    data.conversation = turns.map((turn, idx) => {
+      const msg: ConversationMessage = {
+        role: turn.role,
+        content: turn.content,
+        timestamp: jsonbConversation[idx]?.timestamp || new Date().toISOString(),
+        hintLevel: turn.hint_level,
+        pedagogicalIntent: turn.pedagogical_intent,
+        referencedConcept: turn.referenced_concept,
+        showsUnderstanding: turn.shows_understanding,
+        misconceptionDetected: turn.misconception_detected,
+      }
+
+      // Merge diagram and visualUpdate from JSONB (not stored in homework_turns)
+      const jsonbMsg = jsonbConversation[idx]
+      if (jsonbMsg?.diagram) {
+        msg.diagram = jsonbMsg.diagram
+      }
+      if (jsonbMsg?.visualUpdate) {
+        msg.visualUpdate = jsonbMsg.visualUpdate
+      }
+
+      return msg
+    })
   }
   // If no turns exist (legacy sessions), fall back to JSONB conversation field
 
@@ -231,7 +249,7 @@ export async function addMessage(
 
   const turnNumber = (count || 0) + 1
 
-  // Write to homework_turns (single source of truth)
+  // Write to homework_turns (for analytics — does NOT support diagram/visualUpdate columns)
   const { error: turnError } = await supabase.from('homework_turns').insert({
     session_id: sessionId,
     turn_number: turnNumber,
@@ -248,20 +266,32 @@ export async function addMessage(
     throw new Error(`Failed to save turn: ${turnError.message}`)
   }
 
-  // Also update JSONB for backward compatibility (will be removed later)
-  const session = await getSession(sessionId, userId)
-  if (session) {
-    await supabase
-      .from('homework_sessions')
-      .update({ conversation: session.conversation })
-      .eq('id', sessionId)
-      .eq('user_id', userId)
+  // Read current session directly (NOT via getSession which reconstructs from
+  // turns and loses diagram/visualUpdate data)
+  const { data: currentSession, error: sessionError } = await supabase
+    .from('homework_sessions')
+    .select('*')
+    .eq('id', sessionId)
+    .eq('user_id', userId)
+    .single()
+
+  if (sessionError || !currentSession) {
+    throw new Error(`Session not found after message add: ${sessionError?.message}`)
   }
 
-  // Return fresh session with reconstructed conversation
-  const freshSession = await getSession(sessionId, userId)
-  if (!freshSession) throw new Error('Session not found after message add')
-  return freshSession
+  // Append full message (INCLUDING diagram and visualUpdate) to JSONB conversation
+  // This is the authoritative storage for diagram data since homework_turns
+  // doesn't have diagram/visual_update columns
+  const updatedConversation = [...(currentSession.conversation || []), message]
+
+  await supabase
+    .from('homework_sessions')
+    .update({ conversation: updatedConversation })
+    .eq('id', sessionId)
+    .eq('user_id', userId)
+
+  // Return session with full conversation (diagram data preserved)
+  return { ...currentSession, conversation: updatedConversation } as HomeworkSession
 }
 
 /**
