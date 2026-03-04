@@ -938,8 +938,14 @@ export async function generateTutorResponse(
   // This ensures topics like "human eye labeled" are detected from the conversation
   const diagramTopic = `${context.questionAnalysis.questionText} ${effectiveStudentMessage}`
 
-  // Fire engine diagram in parallel with AI call (if topic needs it and no existing diagram)
-  const enginePromise = enableDiagrams && !previousDiagram && shouldUseEngine(diagramTopic)
+  // Detect if student explicitly requests a diagram in their follow-up message
+  // e.g., "show me the free body diagram", "draw the force diagram", "give me a visual"
+  const DIAGRAM_REQUEST_PATTERN = /\b(show me|draw|display|create|make|give me|generate|see|visualize)\b.*(diagram|fbd|free body|visual|picture|image|illustration|graph|chart|force diagram)/i
+  const studentRequestsDiagram = !isAutoStart && DIAGRAM_REQUEST_PATTERN.test(effectiveStudentMessage)
+
+  // Fire engine diagram in parallel with AI call
+  // Trigger when: (1) no previous diagram exists, OR (2) student explicitly requests a new diagram
+  const enginePromise = enableDiagrams && (!previousDiagram || studentRequestsDiagram) && shouldUseEngine(diagramTopic)
     ? tryEngineDiagram(diagramTopic).catch((err) => {
         console.warn('[TutorEngine] Engine diagram failed for chat:', err)
         return undefined
@@ -1070,7 +1076,10 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
       tutorResponse.diagram = aiDiagram
       console.log(`[TutorEngine] Using AI-generated diagram fallback (type: ${aiDiagram.type})`)
     } else {
-      console.log(`[TutorEngine] No engine result. AI diagram type '${aiDiagram?.type || 'none'}' not renderable. No diagram for this message.`)
+      // Engine didn't produce a result and AI diagram is not renderable.
+      // MUST delete to prevent non-renderable types (fbd, etc.) from reaching frontend.
+      delete tutorResponse.diagram
+      console.log(`[TutorEngine] No engine result. AI diagram type '${aiDiagram?.type || 'none'}' not renderable. Diagram removed.`)
     }
   }
 
