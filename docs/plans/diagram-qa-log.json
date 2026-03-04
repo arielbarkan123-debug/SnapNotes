@@ -1,0 +1,1065 @@
+{
+  "_meta": {
+    "created": "2026-02-07",
+    "description": "QA feedback log for all 102 diagram components. Each entry tracks visual correctness, educational accuracy, AI generation quality, step-by-step behavior, and dark mode rendering.",
+    "statusDefinitions": {
+      "pending": "Not yet reviewed",
+      "ok": "Reviewed and working correctly",
+      "needs_fix": "Reviewed and has issues that need fixing",
+      "broken": "Reviewed and fundamentally broken or non-functional"
+    },
+    "totalCount": 102,
+    "reviewedCount": 3
+  },
+  "diagrams": {
+    "number_line": {
+      "status": "needs_fix",
+      "reviewedAt": "2026-02-07",
+      "visual": ["Steps only showed 2 of 4 - totalSteps was wrong in schema (fixed)", "Step 1 shows only bare axis with no ticks/labels - too empty", "Step 2 shows ticks but no points or intervals visible"],
+      "educational": ["Need progressive reveal: axis → ticks → points (-2 filled, 5 hollow) → interval shading between them", "Final step was not showing the colored interval line"],
+      "ai": [],
+      "steps": {
+        "step1": "Only bare axis line - needs ticks",
+        "step2": "Shows ticks and labels but no points or interval",
+        "step3": "not visible before fix - should show points",
+        "step4": "not visible before fix - should show interval"
+      },
+      "darkMode": "pending",
+      "priority": "high"
+    },
+    "coordinate_plane": {
+      "status": "needs_fix",
+      "reviewedAt": "2026-02-07",
+      "visual": [
+        "Curve draws horizontal line at top when parabola exceeds yMax - needs SVG clipping",
+        "Axis of symmetry (dashed line at x=1) renders as thick solid gray bar instead of thin dashed line",
+        "Text labels overlap: equation label garbled with y-axis label, Vertex label overlaps -5 tick mark"
+      ],
+      "educational": [
+        "Step 5 labels are unreadable due to overlap - defeats the purpose of the label step"
+      ],
+      "ai": [],
+      "steps": {
+        "step1": "Grid renders ok",
+        "step2": "Axes render ok but thick",
+        "step3": "Curve draws correctly but has horizontal line artifact at top edge",
+        "step4": "Vertex point shows, but axis of symmetry line is thick solid gray bar",
+        "step5": "Labels unreadable - equation text garbled, overlaps with axis labels"
+      },
+      "darkMode": "pending",
+      "priority": "high"
+    },
+    "long_division": {
+      "status": "needs_fix",
+      "reviewedAt": "2026-02-07",
+      "visual": [
+        "Step 1 missing divisor 12 - only shows '5 6' under the bracket",
+        "Steps 2-4 all show identical state - component ignores external visibleStep",
+        "Component shows own step controls (1/3) which conflicts with QA page step cards"
+      ],
+      "educational": [
+        "Should progressively reveal: setup → first divide/multiply → subtract/bring down → complete",
+        "All cards showing same state defeats purpose of step-by-step review"
+      ],
+      "ai": [],
+      "steps": {
+        "step1": "Missing divisor, only shows partial dividend",
+        "step2": "Same as step 1 - shows 'Set up the problem' 1/3",
+        "step3": "Same as step 1",
+        "step4": "Same as step 1"
+      },
+      "darkMode": "pending",
+      "priority": "high"
+    },
+    "equation": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "fraction": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "factoring": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "completing_square": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "polynomial": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "radical": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "systems": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "inequality": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "triangle": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "circle": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "unit_circle": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "tree_diagram": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "interactive_coordinate_plane": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "equation_grapher": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "triangle_geometry": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "regular_polygon": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "fbd": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "counting_objects_array": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "ten_frame": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "part_part_whole": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "bar_model": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "place_value_chart": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "base_10_blocks": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "picture_graph": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "bar_graph": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "fraction_circle": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "fraction_bar": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "fraction_number_line": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "multiplication_array": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "area_model_multiplication": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "scaled_bar_graph": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "equivalent_fraction_model": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "mixed_number_model": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "decimal_grid": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "fraction_multiplication_area": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "fraction_division_model": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "volume_model": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "order_of_operations_tree": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "quadrant_one_coordinate_plane": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "double_number_line": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "ratio_table": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "tape_diagram_ratio": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "percent_bar_model": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "dot_plot": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "histogram": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "box_plot": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "stem_and_leaf_plot": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "measures_of_center": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "probability_tree": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "sample_space_diagram": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "venn_diagram": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "net_diagram_3d": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "cross_section_diagram": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "scale_drawing": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "slope_triangle": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "system_of_equations_graph": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "scatter_plot_trend_line": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "two_way_frequency_table": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "pythagorean_theorem_diagram": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "transformation_diagram": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "quadratic_graph": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "residual_plot": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "complex_number_plane": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "conic_sections": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "polynomial_graph": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "exponential_graph": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "logarithmic_graph": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "rational_function_graph": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "binomial_distribution": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "probability_distribution": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "parametric_curve": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "limit_visualization": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "derivative_tangent_line": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "sequence_diagram": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "sampling_distribution": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "angle_types": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "complementary_supplementary": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "vertical_angles": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "parallel_lines_transversal": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "triangle_angle_sum": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "exterior_angle_theorem": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "perpendicular_bisector_construction": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "rotation_coordinate_plane": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "dilation_coordinate_plane": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "tessellation_pattern": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "inscribed_angle_theorem": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "triangle_congruence": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "triangle_similarity": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "law_of_sines_cosines": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "transformations_composition": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "orthographic_views_3d": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "tangent_radius_perpendicularity": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "square": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "rectangle": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "parallelogram": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "rhombus": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "trapezoid": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "area_model": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    },
+    "math_table": {
+      "status": "pending",
+      "reviewedAt": null,
+      "visual": [],
+      "educational": [],
+      "ai": [],
+      "steps": {},
+      "darkMode": "pending",
+      "priority": null
+    }
+  }
+}

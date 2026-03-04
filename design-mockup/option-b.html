@@ -1,0 +1,2282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NoteSnap — Option B: Playful Candy</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ============================================
+   RESET & BASE
+   ============================================ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --coral: #FF6B35;
+  --purple: #7C3AED;
+  --yellow: #FBBF24;
+  --mint: #10B981;
+  --black: #000000;
+  --white: #FFFFFF;
+  --bg: #FFFFFF;
+  --card-bg: #FFFFFF;
+  --text: #1A1A2E;
+  --text-secondary: #555;
+  --sidebar-bg: #FFFFFF;
+  --sidebar-text: #1A1A2E;
+  --border-color: #000;
+  --shadow-color: #000;
+  --dot-color: rgba(0,0,0,0.04);
+  --input-bg: #f5f5f5;
+  --coral-light: #FFF0EB;
+  --purple-light: #F3EEFF;
+  --mint-light: #ECFDF5;
+  --yellow-light: #FFFBEB;
+}
+
+.dark-mode {
+  --bg: #1A1A2E;
+  --card-bg: #252542;
+  --text: #F0F0F0;
+  --text-secondary: #AAAACC;
+  --sidebar-bg: #16162B;
+  --sidebar-text: #E0E0F0;
+  --border-color: #444466;
+  --shadow-color: rgba(0,0,0,0.5);
+  --dot-color: rgba(255,255,255,0.03);
+  --input-bg: #2A2A4A;
+  --coral-light: #3A2520;
+  --purple-light: #2A2040;
+  --mint-light: #1A3028;
+  --yellow-light: #3A3520;
+}
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  display: flex;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image: radial-gradient(var(--dot-color) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* ============================================
+   SIDEBAR
+   ============================================ */
+.sidebar {
+  width: 240px;
+  min-height: 100vh;
+  background: var(--sidebar-bg);
+  border-right: 3px solid var(--border-color);
+  padding: 24px 16px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.sidebar-logo {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--coral);
+  margin-bottom: 8px;
+  padding: 0 8px;
+  letter-spacing: -0.5px;
+}
+
+.sidebar-logo span {
+  color: var(--purple);
+}
+
+.sidebar-tagline {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 0 8px;
+  margin-bottom: 32px;
+  font-weight: 600;
+}
+
+.nav-items {
+  list-style: none;
+  flex: 1;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--sidebar-text);
+  transition: all 0.2s ease;
+  margin-bottom: 4px;
+  border: 2px solid transparent;
+  user-select: none;
+}
+
+.nav-item:hover {
+  transform: translateX(4px);
+}
+
+.nav-item[data-screen="dashboard"]:hover,
+.nav-item[data-screen="dashboard"].active {
+  background: var(--coral-light);
+  border-color: var(--coral);
+  color: var(--coral);
+}
+
+.nav-item[data-screen="review"]:hover,
+.nav-item[data-screen="review"].active {
+  background: var(--purple-light);
+  border-color: var(--purple);
+  color: var(--purple);
+}
+
+.nav-item[data-screen="homework"]:hover,
+.nav-item[data-screen="homework"].active {
+  background: var(--mint-light);
+  border-color: var(--mint);
+  color: var(--mint);
+}
+
+.nav-item[data-screen="progress"]:hover,
+.nav-item[data-screen="progress"].active {
+  background: var(--yellow-light);
+  border-color: var(--yellow);
+  color: #B8860B;
+}
+
+.nav-item[data-screen="settings"]:hover,
+.nav-item[data-screen="settings"].active {
+  background: var(--purple-light);
+  border-color: var(--purple);
+  color: var(--purple);
+}
+
+.nav-item .nav-emoji {
+  font-size: 20px;
+  width: 28px;
+  text-align: center;
+}
+
+.sidebar-bottom {
+  padding-top: 16px;
+  border-top: 2px dashed var(--border-color);
+  margin-top: 16px;
+}
+
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--sidebar-text);
+  background: none;
+  border: 2px solid var(--border-color);
+  width: 100%;
+  font-family: 'Nunito', sans-serif;
+  transition: all 0.2s;
+}
+
+.theme-toggle-btn:hover {
+  background: var(--yellow-light);
+  border-color: var(--yellow);
+  transform: translateX(4px);
+}
+
+/* ============================================
+   MAIN CONTENT
+   ============================================ */
+.main-content {
+  margin-left: 240px;
+  flex: 1;
+  padding: 40px 48px;
+  display: flex;
+  justify-content: center;
+}
+
+.content-wrapper {
+  width: 100%;
+  max-width: 1100px;
+}
+
+.screen {
+  display: none;
+  animation: fadeInUp 0.4s ease;
+}
+
+.screen.active {
+  display: block;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================
+   CARDS — SIGNATURE STYLE
+   ============================================ */
+.candy-card {
+  background: var(--card-bg);
+  border: 3px solid var(--border-color);
+  border-radius: 20px;
+  box-shadow: 5px 5px 0 var(--shadow-color);
+  padding: 24px;
+  transition: transform 0.2s, box-shadow 0.2s, background 0.3s, border-color 0.3s;
+}
+
+.candy-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 var(--shadow-color);
+}
+
+.candy-card-sm {
+  background: var(--card-bg);
+  border: 2px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 4px 4px 0 var(--shadow-color);
+  padding: 20px;
+  transition: transform 0.2s, box-shadow 0.2s, background 0.3s, border-color 0.3s;
+}
+
+.candy-card-sm:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--shadow-color);
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+.candy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border: 3px solid var(--border-color);
+  border-radius: 14px;
+  box-shadow: 4px 4px 0 var(--shadow-color);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  text-decoration: none;
+  user-select: none;
+}
+
+.candy-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--shadow-color);
+}
+
+.candy-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--shadow-color);
+}
+
+.candy-btn-coral { background: var(--coral); color: white; }
+.candy-btn-purple { background: var(--purple); color: white; }
+.candy-btn-mint { background: var(--mint); color: white; }
+.candy-btn-yellow { background: var(--yellow); color: var(--black); }
+.candy-btn-white { background: var(--card-bg); color: var(--text); }
+
+/* ============================================
+   PILLS / BADGES
+   ============================================ */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 2px solid var(--border-color);
+}
+
+.pill-coral { background: var(--coral); color: white; }
+.pill-purple { background: var(--purple); color: white; }
+.pill-mint { background: var(--mint); color: white; }
+.pill-yellow { background: var(--yellow); color: var(--black); }
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+@keyframes bounceEmoji {
+  0%, 100% { transform: translateY(0) scale(1); }
+  25% { transform: translateY(-12px) scale(1.1); }
+  50% { transform: translateY(0) scale(1); }
+  75% { transform: translateY(-6px) scale(1.05); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes confettiDrop {
+  0% { transform: translateY(-20px) rotate(0deg); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(400px) rotate(720deg); opacity: 0; }
+}
+
+@keyframes staggerIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes flipIn {
+  from { transform: rotateY(90deg); opacity: 0; }
+  to { transform: rotateY(0); opacity: 1; }
+}
+
+@keyframes popIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  70% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.bounce { animation: bounce 0.6s ease infinite; }
+.bounce-emoji { animation: bounceEmoji 2s ease infinite; }
+.float-anim { animation: float 3s ease-in-out infinite; }
+
+.stagger-1 { animation: staggerIn 0.4s ease 0.05s both; }
+.stagger-2 { animation: staggerIn 0.4s ease 0.1s both; }
+.stagger-3 { animation: staggerIn 0.4s ease 0.15s both; }
+.stagger-4 { animation: staggerIn 0.4s ease 0.2s both; }
+.stagger-5 { animation: staggerIn 0.4s ease 0.25s both; }
+.stagger-6 { animation: staggerIn 0.4s ease 0.3s both; }
+
+/* ============================================
+   PROGRESS BAR
+   ============================================ */
+.progress-bar-track {
+  height: 12px;
+  background: var(--input-bg);
+  border-radius: 100px;
+  border: 2px solid var(--border-color);
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 100px;
+  transition: width 0.6s ease;
+}
+
+.progress-bar-thick {
+  height: 14px;
+}
+
+/* ============================================
+   SCREEN 1: DASHBOARD
+   ============================================ */
+.dashboard-greeting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.greeting-left h1 {
+  font-size: 32px;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.greeting-left p {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid var(--border-color);
+  box-shadow: 3px 3px 0 var(--shadow-color);
+  background: linear-gradient(135deg, var(--coral), var(--purple));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: white;
+  font-weight: 800;
+}
+
+/* Gamification Bar */
+.gamification-bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 32px;
+  padding: 16px 20px;
+  background: var(--card-bg);
+  border: 2px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 4px 4px 0 var(--shadow-color);
+}
+
+.level-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--purple);
+  color: white;
+  padding: 6px 16px;
+  border-radius: 100px;
+  font-weight: 800;
+  font-size: 14px;
+  border: 2px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.xp-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.xp-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.xp-bar-track {
+  height: 14px;
+  background: var(--input-bg);
+  border-radius: 100px;
+  border: 2px solid var(--border-color);
+  overflow: hidden;
+}
+
+.xp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--coral), #FF8F65);
+  border-radius: 100px;
+  width: 65%;
+  transition: width 0.8s ease;
+}
+
+.streak-counter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--yellow-light);
+  padding: 8px 16px;
+  border-radius: 100px;
+  border: 2px solid var(--border-color);
+  font-weight: 800;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.streak-fire {
+  font-size: 22px;
+  animation: bounceEmoji 2s ease infinite;
+}
+
+/* Bento Grid */
+.bento-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+.bento-card {
+  border: 3px solid var(--border-color);
+  border-radius: 20px;
+  box-shadow: 5px 5px 0 var(--shadow-color);
+  padding: 28px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.bento-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 var(--shadow-color);
+}
+
+.bento-card-large {
+  grid-row: span 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: var(--text);
+  color: white;
+  min-height: 260px;
+}
+
+.dark-mode .bento-card-large {
+  background: #0D0D1A;
+}
+
+.bento-card-large::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image:
+    radial-gradient(circle at 20% 30%, var(--coral) 2px, transparent 2px),
+    radial-gradient(circle at 60% 20%, var(--purple) 3px, transparent 3px),
+    radial-gradient(circle at 80% 60%, var(--mint) 2px, transparent 2px),
+    radial-gradient(circle at 40% 70%, var(--yellow) 3px, transparent 3px),
+    radial-gradient(circle at 10% 80%, var(--coral) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 90% 40%, var(--purple) 2px, transparent 2px),
+    radial-gradient(circle at 50% 90%, var(--mint) 2px, transparent 2px);
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.bento-card-large .bento-content {
+  position: relative;
+  z-index: 1;
+}
+
+.bento-card-large .bento-emoji {
+  font-size: 36px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.bento-card-large .bento-title {
+  font-size: 22px;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.bento-card-large .bento-sub {
+  font-size: 14px;
+  opacity: 0.8;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.bento-card-purple {
+  background: var(--purple);
+  color: white;
+}
+
+.bento-card-mint {
+  background: var(--mint);
+  color: white;
+  position: relative;
+}
+
+.bento-small-emoji {
+  font-size: 28px;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.bento-small-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.bento-small-sub {
+  font-size: 13px;
+  opacity: 0.85;
+  font-weight: 600;
+}
+
+.new-pill {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: var(--yellow);
+  color: var(--black);
+  padding: 2px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 800;
+  border: 2px solid var(--border-color);
+  animation: pulse 2s ease infinite;
+}
+
+/* Today's Plan */
+.todays-plan {
+  margin-bottom: 36px;
+}
+
+.section-title {
+  font-size: 22px;
+  font-weight: 900;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.plan-content {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.plan-ring-container {
+  flex-shrink: 0;
+  width: 120px;
+  height: 120px;
+  position: relative;
+}
+
+.plan-ring-container svg {
+  width: 120px;
+  height: 120px;
+  transform: rotate(-90deg);
+}
+
+.plan-ring-bg {
+  fill: none;
+  stroke: var(--input-bg);
+  stroke-width: 10;
+}
+
+.plan-ring-fill {
+  fill: none;
+  stroke: var(--coral);
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-dasharray: 283;
+  stroke-dashoffset: 100;
+  transition: stroke-dashoffset 1s ease;
+}
+
+.plan-ring-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.plan-ring-text .pct {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--coral);
+  line-height: 1;
+}
+
+.plan-ring-text .label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.plan-tasks {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plan-task {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 2px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--card-bg);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.plan-task:hover {
+  transform: translateX(4px);
+}
+
+.plan-task.done {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.plan-task-check {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.plan-task.done .plan-task-check {
+  background: var(--mint);
+  color: white;
+}
+
+.plan-task-text {
+  flex: 1;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* Course Grid */
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.course-card {
+  border: 3px solid var(--border-color);
+  border-radius: 20px;
+  box-shadow: 5px 5px 0 var(--shadow-color);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.course-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 var(--shadow-color);
+}
+
+.course-header {
+  padding: 20px;
+  color: white;
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.course-header-purple { background: var(--purple); }
+.course-header-coral { background: var(--coral); }
+.course-header-mint { background: var(--mint); }
+
+.course-body {
+  padding: 16px 20px 20px;
+  background: var(--card-bg);
+}
+
+.course-body p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.course-progress-track {
+  height: 10px;
+  background: var(--input-bg);
+  border-radius: 100px;
+  border: 2px solid var(--border-color);
+  overflow: hidden;
+}
+
+.course-progress-fill {
+  height: 100%;
+  border-radius: 100px;
+}
+
+.course-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+/* ============================================
+   SCREEN 2: REVIEW SESSION
+   ============================================ */
+.review-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.review-count {
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.review-progress {
+  margin-bottom: 32px;
+}
+
+.review-bar-track {
+  height: 10px;
+  background: var(--input-bg);
+  border-radius: 100px;
+  border: 2px solid var(--border-color);
+  overflow: hidden;
+}
+
+.review-bar-fill {
+  height: 100%;
+  background: var(--coral);
+  border-radius: 100px;
+  width: 42%;
+  transition: width 0.6s ease;
+}
+
+.flashcard-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 32px;
+  perspective: 1200px;
+}
+
+.flashcard {
+  width: 100%;
+  max-width: 560px;
+  min-height: 320px;
+  position: relative;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  transition: transform 0.6s ease;
+}
+
+.flashcard.flipped {
+  transform: rotateY(180deg);
+}
+
+.flashcard-face {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  backface-visibility: hidden;
+  border: 3px solid var(--border-color);
+  border-radius: 24px;
+  box-shadow: 6px 6px 0 var(--shadow-color);
+  background: var(--card-bg);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.flashcard-back {
+  transform: rotateY(180deg);
+}
+
+.flashcard-label {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+}
+
+.flashcard-label-q { color: var(--coral); }
+.flashcard-label-a { color: var(--mint); }
+
+.flashcard-text {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.flashcard-hint {
+  text-align: center;
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 14px;
+  animation: bounceEmoji 2.5s ease infinite;
+}
+
+.answer-text {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+/* Rating Buttons */
+.rating-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.4s ease;
+}
+
+.rating-buttons.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.rating-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 20px;
+  border: 3px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 4px 4px 0 var(--shadow-color);
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  transition: transform 0.15s, box-shadow 0.15s;
+  min-width: 90px;
+}
+
+.rating-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--shadow-color);
+}
+
+.rating-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--shadow-color);
+}
+
+.rating-btn .rating-emoji {
+  font-size: 24px;
+}
+
+.rating-again { background: #FEE2E2; color: #DC2626; }
+.rating-hard { background: #FEF3C7; color: #D97706; }
+.rating-good { background: #D1FAE5; color: #059669; }
+.rating-easy { background: #DDD6FE; color: #7C3AED; }
+
+/* ============================================
+   SCREEN 3: REVIEW COMPLETE
+   ============================================ */
+.complete-screen {
+  text-align: center;
+  padding: 40px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.confetti-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  animation: confettiDrop 3s ease-in-out infinite;
+}
+
+.complete-emoji {
+  font-size: 80px;
+  display: block;
+  margin-bottom: 16px;
+  animation: bounceEmoji 1.5s ease infinite;
+}
+
+.complete-title {
+  font-size: 42px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.complete-sub {
+  font-size: 18px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 40px;
+}
+
+.complete-stats {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.complete-stat {
+  border: 3px solid var(--border-color);
+  border-radius: 20px;
+  box-shadow: 5px 5px 0 var(--shadow-color);
+  padding: 24px 32px;
+  min-width: 150px;
+  color: white;
+}
+
+.complete-stat-value {
+  font-size: 40px;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.complete-stat-label {
+  font-size: 14px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.xp-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--yellow);
+  color: var(--black);
+  padding: 14px 28px;
+  border: 3px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 5px 5px 0 var(--shadow-color);
+  font-size: 20px;
+  font-weight: 900;
+  margin-bottom: 32px;
+  animation: popIn 0.5s ease 0.3s both;
+}
+
+.complete-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+/* ============================================
+   SCREEN 4: HOMEWORK HUB
+   ============================================ */
+.homework-header {
+  margin-bottom: 32px;
+}
+
+.homework-header h1 {
+  font-size: 32px;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.homework-header p {
+  font-size: 18px;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.homework-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.hw-action-card {
+  border: 3px solid var(--border-color);
+  border-radius: 24px;
+  box-shadow: 6px 6px 0 var(--shadow-color);
+  padding: 36px;
+  cursor: pointer;
+  color: white;
+  transition: transform 0.2s, box-shadow 0.2s;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.hw-action-card:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 10px 10px 0 var(--shadow-color);
+}
+
+.hw-action-emoji {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.hw-action-title {
+  font-size: 24px;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.hw-action-desc {
+  font-size: 15px;
+  opacity: 0.9;
+  font-weight: 600;
+}
+
+.hw-action-coral { background: var(--coral); }
+.hw-action-purple { background: var(--purple); }
+
+.recent-section h2 {
+  font-size: 20px;
+  font-weight: 900;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border: 2px solid var(--border-color);
+  border-radius: 16px;
+  background: var(--card-bg);
+  box-shadow: 3px 3px 0 var(--shadow-color);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border-left: 6px solid;
+}
+
+.recent-item:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--shadow-color);
+}
+
+.recent-item-coral { border-left-color: var(--coral); }
+.recent-item-purple { border-left-color: var(--purple); }
+.recent-item-mint { border-left-color: var(--mint); }
+
+.recent-item-content {
+  flex: 1;
+}
+
+.recent-item-title {
+  font-weight: 800;
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+
+.recent-item-meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.recent-item-score {
+  font-weight: 900;
+  font-size: 18px;
+}
+
+/* ============================================
+   SCREEN 5: PROGRESS
+   ============================================ */
+.progress-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+.progress-stat-card {
+  border: 3px solid var(--border-color);
+  border-radius: 20px;
+  box-shadow: 5px 5px 0 var(--shadow-color);
+  padding: 24px;
+  color: white;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.progress-stat-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 var(--shadow-color);
+}
+
+.progress-stat-emoji {
+  font-size: 28px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.progress-stat-value {
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.progress-stat-label {
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.progress-stat-purple { background: var(--purple); }
+.progress-stat-mint { background: var(--mint); }
+.progress-stat-coral { background: var(--coral); }
+.progress-stat-yellow { background: var(--yellow); color: var(--black); }
+
+/* Weekly Chart */
+.weekly-chart-card {
+  margin-bottom: 36px;
+}
+
+.chart-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  height: 200px;
+  padding: 20px 0;
+}
+
+.chart-bar-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.chart-bar {
+  width: 100%;
+  max-width: 56px;
+  border-radius: 12px 12px 0 0;
+  transition: height 0.8s ease;
+  position: relative;
+}
+
+.chart-bar-value {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.chart-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-secondary);
+}
+
+.chart-label-today {
+  color: var(--coral);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Course Mastery */
+.mastery-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.mastery-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.mastery-label {
+  width: 120px;
+  font-weight: 800;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.mastery-bar-track {
+  flex: 1;
+  height: 14px;
+  background: var(--input-bg);
+  border-radius: 100px;
+  border: 2px solid var(--border-color);
+  overflow: hidden;
+}
+
+.mastery-bar-fill {
+  height: 100%;
+  border-radius: 100px;
+  transition: width 1s ease;
+}
+
+.mastery-pct {
+  width: 48px;
+  font-weight: 900;
+  font-size: 16px;
+  text-align: right;
+}
+
+/* ============================================
+   SCREEN 6: SETTINGS
+   ============================================ */
+.settings-header h1 {
+  font-size: 32px;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.settings-header p {
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 32px;
+}
+
+.settings-section {
+  margin-bottom: 28px;
+}
+
+.settings-section-title {
+  font-size: 18px;
+  font-weight: 900;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-card {
+  border: 3px solid var(--border-color);
+  border-radius: 20px;
+  box-shadow: 5px 5px 0 var(--shadow-color);
+  background: var(--card-bg);
+  overflow: hidden;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 2px solid var(--border-color);
+  transition: border-color 0.3s;
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-row-label {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.settings-row-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* Toggle Switch */
+.toggle {
+  position: relative;
+  width: 52px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.toggle input {
+  display: none;
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--input-bg);
+  border: 2px solid var(--border-color);
+  border-radius: 100px;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.toggle-slider::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border: 2px solid var(--border-color);
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s;
+}
+
+.toggle input:checked + .toggle-slider {
+  background: var(--coral);
+}
+
+.toggle input:checked + .toggle-slider::after {
+  transform: translateX(24px);
+}
+
+/* Account */
+.account-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+}
+
+.account-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3px solid var(--border-color);
+  background: linear-gradient(135deg, var(--coral), var(--purple));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: white;
+  font-weight: 800;
+  box-shadow: 3px 3px 0 var(--shadow-color);
+}
+
+.account-info {
+  flex: 1;
+}
+
+.account-name {
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.account-email {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* Select Dropdown */
+.candy-select {
+  padding: 8px 16px;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  background: var(--card-bg);
+  color: var(--text);
+  cursor: pointer;
+  appearance: none;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+/* ============================================
+   SCROLLBAR
+   ============================================ */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 10px;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1100px) {
+  .course-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .progress-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+  .main-content {
+    margin-left: 0;
+    padding: 24px 20px;
+  }
+  .bento-grid {
+    grid-template-columns: 1fr;
+  }
+  .bento-card-large {
+    grid-row: span 1;
+  }
+  .course-grid {
+    grid-template-columns: 1fr;
+  }
+  .homework-actions {
+    grid-template-columns: 1fr;
+  }
+  .progress-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .complete-stats {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================
+     SIDEBAR
+     ============================================ -->
+<nav class="sidebar">
+  <div class="sidebar-logo">Note<span>Snap</span></div>
+  <div class="sidebar-tagline">Learn smarter, not harder</div>
+
+  <ul class="nav-items">
+    <li class="nav-item active" data-screen="dashboard">
+      <span class="nav-emoji">🏠</span> Dashboard
+    </li>
+    <li class="nav-item" data-screen="review">
+      <span class="nav-emoji">🧠</span> Review
+    </li>
+    <li class="nav-item" data-screen="homework">
+      <span class="nav-emoji">📚</span> Homework
+    </li>
+    <li class="nav-item" data-screen="progress">
+      <span class="nav-emoji">📊</span> Progress
+    </li>
+    <li class="nav-item" data-screen="settings">
+      <span class="nav-emoji">⚙️</span> Settings
+    </li>
+  </ul>
+
+  <div class="sidebar-bottom">
+    <button class="theme-toggle-btn" id="themeToggle">
+      <span class="nav-emoji" id="themeIcon">🌙</span> Dark Mode
+    </button>
+  </div>
+</nav>
+
+<!-- ============================================
+     MAIN CONTENT
+     ============================================ -->
+<main class="main-content">
+  <div class="content-wrapper">
+
+    <!-- ========== DASHBOARD ========== -->
+    <section class="screen active" id="screen-dashboard">
+      <!-- Greeting -->
+      <div class="dashboard-greeting stagger-1">
+        <div class="greeting-left">
+          <h1>Hey there! 🎉</h1>
+          <p>Ready to crush some studying today?</p>
+        </div>
+        <div class="avatar">S</div>
+      </div>
+
+      <!-- Gamification Bar -->
+      <div class="gamification-bar stagger-2">
+        <div class="level-badge">⭐ Level 7</div>
+        <div class="xp-section">
+          <div class="xp-label">1,250 / 2,000 XP</div>
+          <div class="xp-bar-track">
+            <div class="xp-bar-fill"></div>
+          </div>
+        </div>
+        <div class="streak-counter">
+          <span class="streak-fire">🔥</span> 12 day streak
+        </div>
+      </div>
+
+      <!-- Bento Grid -->
+      <div class="bento-grid stagger-3">
+        <div class="bento-card bento-card-large" onclick="switchScreen('review')">
+          <div class="bento-content">
+            <span class="bento-emoji float-anim">🧠</span>
+            <div class="bento-title">Daily Review</div>
+            <div class="bento-sub">12 cards due today</div>
+          </div>
+          <button class="candy-btn candy-btn-coral" style="position: relative; z-index:1;">
+            Start Review →
+          </button>
+        </div>
+        <div class="bento-card bento-card-purple">
+          <span class="bento-small-emoji">🎯</span>
+          <div class="bento-small-title">Practice</div>
+          <div class="bento-small-sub">Build your skills</div>
+        </div>
+        <div class="bento-card bento-card-mint" onclick="switchScreen('homework')">
+          <span class="new-pill">NEW</span>
+          <span class="bento-small-emoji">📸</span>
+          <div class="bento-small-title">Check HW</div>
+          <div class="bento-small-sub">Snap & check</div>
+        </div>
+      </div>
+
+      <!-- Today's Plan -->
+      <div class="todays-plan stagger-4">
+        <div class="section-title">📋 Today's Plan</div>
+        <div class="plan-content">
+          <div class="plan-ring-container">
+            <svg viewBox="0 0 100 100">
+              <circle class="plan-ring-bg" cx="50" cy="50" r="45" />
+              <circle class="plan-ring-fill" cx="50" cy="50" r="45" />
+            </svg>
+            <div class="plan-ring-text">
+              <div class="pct">65%</div>
+              <div class="label">done</div>
+            </div>
+          </div>
+          <div class="plan-tasks">
+            <div class="plan-task done" onclick="this.classList.toggle('done')">
+              <div class="plan-task-check">✓</div>
+              <div class="plan-task-text">Review flashcards</div>
+              <span class="pill pill-purple">Review</span>
+            </div>
+            <div class="plan-task done" onclick="this.classList.toggle('done')">
+              <div class="plan-task-check">✓</div>
+              <div class="plan-task-text">Algebra II — Lesson 5</div>
+              <span class="pill pill-mint">Lesson</span>
+            </div>
+            <div class="plan-task" onclick="this.classList.toggle('done')">
+              <div class="plan-task-check"></div>
+              <div class="plan-task-text">Physics practice problems</div>
+              <span class="pill pill-coral">Practice</span>
+            </div>
+            <div class="plan-task" onclick="this.classList.toggle('done')">
+              <div class="plan-task-check"></div>
+              <div class="plan-task-text">Chemistry worksheet check</div>
+              <span class="pill pill-mint">Lesson</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Courses -->
+      <div class="stagger-5">
+        <div class="section-title">📚 My Courses</div>
+        <div class="course-grid">
+          <div class="course-card">
+            <div class="course-header course-header-purple">🔢 Algebra II</div>
+            <div class="course-body">
+              <p>12 lessons · 48 flashcards</p>
+              <div class="course-progress-track">
+                <div class="course-progress-fill" style="width: 72%; background: var(--purple);"></div>
+              </div>
+              <div class="course-meta">
+                <span>72% complete</span>
+                <span>Next: Quadratics</span>
+              </div>
+            </div>
+          </div>
+          <div class="course-card">
+            <div class="course-header course-header-coral">⚡ Physics</div>
+            <div class="course-body">
+              <p>10 lessons · 35 flashcards</p>
+              <div class="course-progress-track">
+                <div class="course-progress-fill" style="width: 45%; background: var(--coral);"></div>
+              </div>
+              <div class="course-meta">
+                <span>45% complete</span>
+                <span>Next: Forces</span>
+              </div>
+            </div>
+          </div>
+          <div class="course-card">
+            <div class="course-header course-header-mint">🧪 Chemistry</div>
+            <div class="course-body">
+              <p>8 lessons · 30 flashcards</p>
+              <div class="course-progress-track">
+                <div class="course-progress-fill" style="width: 30%; background: var(--mint);"></div>
+              </div>
+              <div class="course-meta">
+                <span>30% complete</span>
+                <span>Next: Bonding</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== REVIEW SESSION ========== -->
+    <section class="screen" id="screen-review">
+      <div class="review-header">
+        <div class="review-count">🧠 Card 5 of 12</div>
+        <div>
+          <button class="candy-btn candy-btn-white" onclick="switchScreen('complete')" style="font-size: 13px; padding: 8px 16px;">
+            Finish Early
+          </button>
+        </div>
+      </div>
+      <div class="review-progress" style="margin-bottom: 40px;">
+        <div class="review-bar-track">
+          <div class="review-bar-fill"></div>
+        </div>
+      </div>
+
+      <div class="flashcard-container">
+        <div class="flashcard" id="flashcard" onclick="flipCard()">
+          <!-- Front -->
+          <div class="flashcard-face flashcard-front">
+            <div class="flashcard-label flashcard-label-q">QUESTION ❓</div>
+            <div class="flashcard-text">
+              What is the quadratic formula used to solve for?
+            </div>
+            <div class="flashcard-hint">👆 Tap to flip!</div>
+          </div>
+          <!-- Back -->
+          <div class="flashcard-face flashcard-back">
+            <div class="flashcard-label flashcard-label-a">ANSWER ✅</div>
+            <div class="flashcard-text">
+              <div class="answer-text">
+                The quadratic formula x = (-b ± √(b²-4ac)) / 2a is used to find the <strong>roots (solutions)</strong> of a quadratic equation in the form ax² + bx + c = 0.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rating-buttons" id="ratingButtons">
+        <button class="rating-btn rating-again" onclick="rateCard('again')">
+          <span class="rating-emoji">😅</span>
+          Again
+        </button>
+        <button class="rating-btn rating-hard" onclick="rateCard('hard')">
+          <span class="rating-emoji">😤</span>
+          Hard
+        </button>
+        <button class="rating-btn rating-good" onclick="rateCard('good')">
+          <span class="rating-emoji">😊</span>
+          Good
+        </button>
+        <button class="rating-btn rating-easy" onclick="rateCard('easy')">
+          <span class="rating-emoji">🤩</span>
+          Easy
+        </button>
+      </div>
+    </section>
+
+    <!-- ========== REVIEW COMPLETE ========== -->
+    <section class="screen" id="screen-complete">
+      <div class="complete-screen">
+        <!-- Confetti dots -->
+        <div class="confetti-dot" style="background: var(--coral); left: 10%; top: 5%; animation-delay: 0s;"></div>
+        <div class="confetti-dot" style="background: var(--purple); left: 25%; top: 2%; animation-delay: 0.3s;"></div>
+        <div class="confetti-dot" style="background: var(--mint); left: 40%; top: 8%; animation-delay: 0.6s;"></div>
+        <div class="confetti-dot" style="background: var(--yellow); left: 55%; top: 3%; animation-delay: 0.9s;"></div>
+        <div class="confetti-dot" style="background: var(--coral); left: 70%; top: 6%; animation-delay: 1.2s;"></div>
+        <div class="confetti-dot" style="background: var(--purple); left: 85%; top: 1%; animation-delay: 1.5s;"></div>
+        <div class="confetti-dot" style="background: var(--mint); left: 15%; top: 10%; animation-delay: 0.4s; width: 8px; height: 8px;"></div>
+        <div class="confetti-dot" style="background: var(--yellow); left: 60%; top: 12%; animation-delay: 0.7s; width: 6px; height: 6px;"></div>
+        <div class="confetti-dot" style="background: var(--coral); left: 80%; top: 9%; animation-delay: 1.0s; width: 12px; height: 12px;"></div>
+        <div class="confetti-dot" style="background: var(--purple); left: 35%; top: 4%; animation-delay: 1.3s; width: 7px; height: 7px;"></div>
+        <div class="confetti-dot" style="background: var(--mint); left: 90%; top: 7%; animation-delay: 0.2s; width: 9px; height: 9px;"></div>
+        <div class="confetti-dot" style="background: var(--yellow); left: 5%; top: 11%; animation-delay: 0.8s; width: 11px; height: 11px;"></div>
+
+        <span class="complete-emoji">🎉</span>
+        <div class="complete-title">You did it!</div>
+        <div class="complete-sub">Amazing work finishing your review session!</div>
+
+        <div class="complete-stats">
+          <div class="complete-stat" style="background: var(--purple);">
+            <div class="complete-stat-value">12</div>
+            <div class="complete-stat-label">Cards Reviewed</div>
+          </div>
+          <div class="complete-stat" style="background: var(--mint);">
+            <div class="complete-stat-value">87%</div>
+            <div class="complete-stat-label">Accuracy</div>
+          </div>
+          <div class="complete-stat" style="background: var(--coral);">
+            <div class="complete-stat-value">8 min</div>
+            <div class="complete-stat-label">Time Spent</div>
+          </div>
+        </div>
+
+        <div class="xp-banner">⭐ +35 XP earned!</div>
+
+        <div class="complete-actions">
+          <button class="candy-btn candy-btn-coral" onclick="switchScreen('dashboard')">
+            Back to Dashboard
+          </button>
+          <button class="candy-btn candy-btn-white" onclick="switchScreen('review')">
+            Review Again
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== HOMEWORK HUB ========== -->
+    <section class="screen" id="screen-homework">
+      <div class="homework-header stagger-1">
+        <h1>Homework 📚</h1>
+        <p>How can we help?</p>
+      </div>
+
+      <div class="homework-actions stagger-2">
+        <div class="hw-action-card hw-action-coral">
+          <div>
+            <div class="hw-action-emoji">📸</div>
+            <div class="hw-action-title">Check My Work</div>
+            <div class="hw-action-desc">Take a photo of your homework and get instant feedback</div>
+          </div>
+          <button class="candy-btn" style="background: white; color: var(--coral); border-color: white; box-shadow: 4px 4px 0 rgba(0,0,0,0.2); margin-top: 16px; align-self: flex-start;">
+            Upload Photo →
+          </button>
+        </div>
+        <div class="hw-action-card hw-action-purple">
+          <div>
+            <div class="hw-action-emoji">💡</div>
+            <div class="hw-action-title">Help Me Solve</div>
+            <div class="hw-action-desc">Get step-by-step guidance on tricky problems</div>
+          </div>
+          <button class="candy-btn" style="background: white; color: var(--purple); border-color: white; box-shadow: 4px 4px 0 rgba(0,0,0,0.2); margin-top: 16px; align-self: flex-start;">
+            Get Help →
+          </button>
+        </div>
+      </div>
+
+      <div class="recent-section stagger-3">
+        <h2>📁 Recent Homework</h2>
+        <div class="recent-list">
+          <div class="recent-item recent-item-coral">
+            <div class="recent-item-content">
+              <div class="recent-item-title">Algebra II — Worksheet 5</div>
+              <div class="recent-item-meta">Checked 2 hours ago · 15 problems</div>
+            </div>
+            <div class="recent-item-score" style="color: var(--mint);">93%</div>
+          </div>
+          <div class="recent-item recent-item-purple">
+            <div class="recent-item-content">
+              <div class="recent-item-title">Physics — Forces Problems</div>
+              <div class="recent-item-meta">Checked yesterday · 8 problems</div>
+            </div>
+            <div class="recent-item-score" style="color: var(--coral);">78%</div>
+          </div>
+          <div class="recent-item recent-item-mint">
+            <div class="recent-item-content">
+              <div class="recent-item-title">Chemistry — Balancing Equations</div>
+              <div class="recent-item-meta">Checked 3 days ago · 10 problems</div>
+            </div>
+            <div class="recent-item-score" style="color: var(--mint);">100%</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== PROGRESS ========== -->
+    <section class="screen" id="screen-progress">
+      <div class="section-title stagger-1" style="font-size: 32px; margin-bottom: 28px;">Progress 📊</div>
+
+      <div class="progress-stats stagger-2">
+        <div class="progress-stat-card progress-stat-purple">
+          <span class="progress-stat-emoji">📚</span>
+          <div class="progress-stat-value">156</div>
+          <div class="progress-stat-label">Cards Reviewed</div>
+        </div>
+        <div class="progress-stat-card progress-stat-mint">
+          <span class="progress-stat-emoji">🎯</span>
+          <div class="progress-stat-value">84%</div>
+          <div class="progress-stat-label">Avg Accuracy</div>
+        </div>
+        <div class="progress-stat-card progress-stat-coral">
+          <span class="progress-stat-emoji">🔥</span>
+          <div class="progress-stat-value">12</div>
+          <div class="progress-stat-label">Day Streak</div>
+        </div>
+        <div class="progress-stat-card progress-stat-yellow">
+          <span class="progress-stat-emoji">⏱️</span>
+          <div class="progress-stat-value">4.2h</div>
+          <div class="progress-stat-label">Study Time</div>
+        </div>
+      </div>
+
+      <div class="candy-card stagger-3" style="margin-bottom: 36px;">
+        <div class="section-title" style="margin-bottom: 8px;">📈 This Week</div>
+        <div class="chart-container">
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: 60%; background: var(--purple);"><span class="chart-bar-value">24</span></div>
+            <div class="chart-label">Mon</div>
+          </div>
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: 80%; background: #8B5CF6;"><span class="chart-bar-value">32</span></div>
+            <div class="chart-label">Tue</div>
+          </div>
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: 45%; background: var(--coral);"><span class="chart-bar-value">18</span></div>
+            <div class="chart-label">Wed</div>
+          </div>
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: 90%; background: #F97316;"><span class="chart-bar-value">36</span></div>
+            <div class="chart-label">Thu</div>
+          </div>
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: 70%; background: var(--mint);"><span class="chart-bar-value">28</span></div>
+            <div class="chart-label">Fri</div>
+          </div>
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: 40%; background: #34D399;"><span class="chart-bar-value">16</span></div>
+            <div class="chart-label">Sat</div>
+          </div>
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: 55%; background: var(--yellow);"><span class="chart-bar-value">22</span></div>
+            <div class="chart-label chart-label-today">Sun ⭐</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="candy-card stagger-4">
+        <div class="section-title">🏆 Course Mastery</div>
+        <div class="mastery-list">
+          <div class="mastery-item">
+            <div class="mastery-label" style="color: var(--purple);">🔢 Algebra II</div>
+            <div class="mastery-bar-track">
+              <div class="mastery-bar-fill" style="width: 72%; background: var(--purple);"></div>
+            </div>
+            <div class="mastery-pct" style="color: var(--purple);">72%</div>
+          </div>
+          <div class="mastery-item">
+            <div class="mastery-label" style="color: var(--coral);">⚡ Physics</div>
+            <div class="mastery-bar-track">
+              <div class="mastery-bar-fill" style="width: 45%; background: var(--coral);"></div>
+            </div>
+            <div class="mastery-pct" style="color: var(--coral);">45%</div>
+          </div>
+          <div class="mastery-item">
+            <div class="mastery-label" style="color: var(--mint);">🧪 Chemistry</div>
+            <div class="mastery-bar-track">
+              <div class="mastery-bar-fill" style="width: 30%; background: var(--mint);"></div>
+            </div>
+            <div class="mastery-pct" style="color: var(--mint);">30%</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== SETTINGS ========== -->
+    <section class="screen" id="screen-settings">
+      <div class="settings-header stagger-1">
+        <h1>Settings ⚙️</h1>
+        <p>Customize your NoteSnap experience</p>
+      </div>
+
+      <!-- Account -->
+      <div class="settings-section stagger-2">
+        <div class="settings-section-title">👤 Account</div>
+        <div class="settings-card">
+          <div class="account-row" style="border-bottom: 2px solid var(--border-color);">
+            <div class="account-avatar">S</div>
+            <div class="account-info">
+              <div class="account-name">Sarah Johnson</div>
+              <div class="account-email">sarah.j@school.edu</div>
+            </div>
+            <button class="candy-btn candy-btn-white" style="font-size: 13px; padding: 8px 16px;">Edit</button>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Language</div>
+              <div class="settings-row-desc">Change your display language</div>
+            </div>
+            <select class="candy-select">
+              <option>English</option>
+              <option>Hebrew (עברית)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Study Preferences -->
+      <div class="settings-section stagger-3">
+        <div class="settings-section-title">📖 Study Preferences</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Daily Study Goal</div>
+              <div class="settings-row-desc">How many minutes per day</div>
+            </div>
+            <select class="candy-select">
+              <option>15 minutes</option>
+              <option selected>30 minutes</option>
+              <option>45 minutes</option>
+              <option>60 minutes</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Daily Reminders</div>
+              <div class="settings-row-desc">Get notified to study</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Sound Effects</div>
+              <div class="settings-row-desc">Celebration sounds when you earn XP</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Auto-flip Cards</div>
+              <div class="settings-row-desc">Automatically reveal answers after 10s</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Appearance -->
+      <div class="settings-section stagger-4">
+        <div class="settings-section-title">🎨 Appearance</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Dark Mode</div>
+              <div class="settings-row-desc">Easier on the eyes at night</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="darkModeToggle">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Reduce Animations</div>
+              <div class="settings-row-desc">Tone down the bouncy effects</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data -->
+      <div class="settings-section stagger-5">
+        <div class="settings-section-title">💾 Data</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Export My Data</div>
+              <div class="settings-row-desc">Download all your study data</div>
+            </div>
+            <button class="candy-btn candy-btn-purple" style="font-size: 13px; padding: 8px 16px;">Export</button>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Reset Progress</div>
+              <div class="settings-row-desc">Start fresh (this can't be undone!)</div>
+            </div>
+            <button class="candy-btn" style="background: #FEE2E2; color: #DC2626; font-size: 13px; padding: 8px 16px;">Reset</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<script>
+/* ============================================
+   NAVIGATION
+   ============================================ */
+function switchScreen(screenId) {
+  // Handle review -> complete as a sub-screen
+  const allScreens = document.querySelectorAll('.screen');
+  allScreens.forEach(s => s.classList.remove('active'));
+
+  const target = document.getElementById('screen-' + screenId);
+  if (target) {
+    target.classList.add('active');
+  }
+
+  // Update nav
+  const navItems = document.querySelectorAll('.nav-item');
+  navItems.forEach(item => {
+    item.classList.remove('active');
+    // Map complete back to review in nav
+    const navScreen = item.getAttribute('data-screen');
+    if (navScreen === screenId || (screenId === 'complete' && navScreen === 'review')) {
+      item.classList.add('active');
+    }
+  });
+
+  // Reset flashcard when entering review
+  if (screenId === 'review') {
+    resetCard();
+  }
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Nav click handlers
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const screen = item.getAttribute('data-screen');
+    switchScreen(screen);
+  });
+});
+
+/* ============================================
+   FLASHCARD
+   ============================================ */
+let cardFlipped = false;
+
+function flipCard() {
+  const card = document.getElementById('flashcard');
+  const ratings = document.getElementById('ratingButtons');
+
+  if (!cardFlipped) {
+    card.classList.add('flipped');
+    cardFlipped = true;
+    // Show rating buttons
+    setTimeout(() => {
+      ratings.classList.add('visible');
+    }, 300);
+  }
+}
+
+function resetCard() {
+  const card = document.getElementById('flashcard');
+  const ratings = document.getElementById('ratingButtons');
+  card.classList.remove('flipped');
+  ratings.classList.remove('visible');
+  cardFlipped = false;
+}
+
+function rateCard(rating) {
+  // Brief bounce animation on the clicked button
+  const btn = event.currentTarget;
+  btn.style.transform = 'scale(1.15)';
+  setTimeout(() => {
+    btn.style.transform = '';
+  }, 200);
+
+  // Simulate next card (just reset for demo)
+  setTimeout(() => {
+    resetCard();
+  }, 400);
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+const themeToggleBtn = document.getElementById('themeToggle');
+const themeIcon = document.getElementById('themeIcon');
+const darkModeCheckbox = document.getElementById('darkModeToggle');
+
+function toggleDarkMode() {
+  document.body.classList.toggle('dark-mode');
+  const isDark = document.body.classList.contains('dark-mode');
+  themeIcon.textContent = isDark ? '☀️' : '🌙';
+  themeToggleBtn.lastChild.textContent = isDark ? ' Light Mode' : ' Dark Mode';
+  if (darkModeCheckbox) {
+    darkModeCheckbox.checked = isDark;
+  }
+}
+
+themeToggleBtn.addEventListener('click', toggleDarkMode);
+
+if (darkModeCheckbox) {
+  darkModeCheckbox.addEventListener('change', () => {
+    toggleDarkMode();
+  });
+}
+
+/* ============================================
+   PLAN TASK TOGGLE
+   ============================================ */
+document.querySelectorAll('.plan-task').forEach(task => {
+  task.addEventListener('click', function() {
+    // Toggle is handled inline, just update check mark
+    const check = this.querySelector('.plan-task-check');
+    if (this.classList.contains('done')) {
+      check.textContent = '✓';
+    } else {
+      check.textContent = '';
+    }
+  });
+});
+
+/* ============================================
+   ENTRANCE ANIMATIONS — re-trigger on screen switch
+   ============================================ */
+const observer = new MutationObserver((mutations) => {
+  mutations.forEach((mutation) => {
+    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+      const target = mutation.target;
+      if (target.classList.contains('screen') && target.classList.contains('active')) {
+        // Re-trigger stagger animations
+        const staggerEls = target.querySelectorAll('[class*="stagger-"]');
+        staggerEls.forEach(el => {
+          el.style.animation = 'none';
+          el.offsetHeight; // Force reflow
+          el.style.animation = '';
+        });
+      }
+    }
+  });
+});
+
+document.querySelectorAll('.screen').forEach(screen => {
+  observer.observe(screen, { attributes: true });
+});
+
+/* ============================================
+   INITIAL SETUP
+   ============================================ */
+// Initialize check marks for pre-done tasks
+document.querySelectorAll('.plan-task.done .plan-task-check').forEach(check => {
+  check.textContent = '✓';
+});
+</script>
+
+</body>
+</html>
