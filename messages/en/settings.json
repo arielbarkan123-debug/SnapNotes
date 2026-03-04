@@ -136,7 +136,9 @@
     "complexity": "Visual Complexity",
     "complexityElementary": "Elementary",
     "complexityMiddle": "Middle School",
+    "complexityMiddleSchool": "Middle School",
     "complexityHigh": "High School",
+    "complexityHighSchool": "High School",
     "complexityAdvanced": "Advanced",
     "complexityDesc": "Adjusts diagram detail level based on your grade"
   },

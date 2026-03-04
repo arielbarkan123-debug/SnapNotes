@@ -136,7 +136,9 @@
     "complexity": "מורכבות חזותית",
     "complexityElementary": "יסודי",
     "complexityMiddle": "חטיבת ביניים",
+    "complexityMiddleSchool": "חטיבת ביניים",
     "complexityHigh": "תיכון",
+    "complexityHighSchool": "תיכון",
     "complexityAdvanced": "מתקדם",
     "complexityDesc": "מתאים את רמת הפירוט בדיאגרמות לפי הכיתה שלך"
   },
