@@ -556,6 +556,22 @@ ${languageLevel.sentenceComplexity}`
   return SOCRATIC_TUTOR_SYSTEM_BASE + gradeInstruction + languageLevelInstruction + pedagogicalApproach + languageInstruction
 }
 
+const FULL_EXPLANATION_SYSTEM_ADDITION = `
+
+IMPORTANT MODE OVERRIDE — FULL EXPLANATION:
+The student has just submitted their question. Instead of asking Socratic questions, provide a COMPLETE, CLEAR solution walkthrough:
+
+1. Start with a brief "Let's solve this!" introduction (1 sentence)
+2. Break the solution into numbered steps
+3. For each step: show the math/reasoning clearly, explain WHY this step works
+4. End with the final answer clearly stated
+5. Invite follow-up questions: "Ask me if anything isn't clear!"
+
+Do NOT ask the student questions first. Do NOT withhold the answer. Give them the full picture so they can learn from seeing the complete solution path.
+
+Keep it concise but thorough. Use clear formatting with numbered steps.
+`
+
 const INITIAL_GREETING_PROMPT = `The student has just uploaded their homework question. Generate a warm, encouraging opening message.
 
 QUESTION: {questionText}
@@ -865,6 +881,12 @@ export async function generateTutorResponse(
 ): Promise<TutorResponse> {
   const client = getAnthropicClient()
 
+  // Detect auto-start sentinel — switch to full-explanation mode
+  const isAutoStart = studentMessage === '__auto_start__'
+  const effectiveStudentMessage = isAutoStart
+    ? 'Please explain how to solve this problem step by step.'
+    : studentMessage
+
   // Extract previous diagram from conversation history
   const previousDiagram = getPreviousDiagram(context.recentMessages)
   const conversationTurn = context.recentMessages.length + 1
@@ -903,12 +925,12 @@ export async function generateTutorResponse(
   // Add the new student message
   messages.push({
     role: 'user',
-    content: `STUDENT: ${studentMessage}`,
+    content: `STUDENT: ${effectiveStudentMessage}`,
   })
 
   // Combine question + student message for diagram routing
   // This ensures topics like "human eye labeled" are detected from the conversation
-  const diagramTopic = `${context.questionAnalysis.questionText} ${studentMessage}`
+  const diagramTopic = `${context.questionAnalysis.questionText} ${effectiveStudentMessage}`
 
   // Fire engine diagram in parallel with AI call (if topic needs it and no existing diagram)
   const enginePromise = enableDiagrams && !previousDiagram && shouldUseEngine(diagramTopic)
@@ -929,6 +951,12 @@ export async function generateTutorResponse(
   // Apply explanation style to system prompt
   const style = getExplanationStyle(explanationStyle)
   let chatSystemPrompt = buildSocraticTutorSystem(context.language, context.grade, context.studySystem, contentDifficulty, topicType)
+
+  // Override with full explanation mode for auto-start
+  if (isAutoStart) {
+    chatSystemPrompt += FULL_EXPLANATION_SYSTEM_ADDITION
+  }
+
   if (style.systemPromptModifier) {
     chatSystemPrompt += '\n\n' + style.systemPromptModifier
   }

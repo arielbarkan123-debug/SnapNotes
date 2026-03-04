@@ -74,7 +74,7 @@ export async function POST(
       return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Message is required')
     }
 
-    const enableDiagrams = body.enableDiagrams !== false
+    const isAutoStart = body.message === '__auto_start__'
     const explanationStyle = body.explanationStyle
 
     // Detect escalation prefix (e.g. "[ESCALATION:REPHRASE] Please explain differently.")
@@ -99,6 +99,11 @@ export async function POST(
     }
 
     const homeworkSession = session as HomeworkSession
+
+    // Use session's enable_diagrams preference for auto-start, client preference for subsequent messages
+    const enableDiagrams = isAutoStart
+      ? (homeworkSession.enable_diagrams !== false)
+      : (body.enableDiagrams !== false)
 
     // Step 1: Add student message to conversation (store clean message, without escalation prefix)
     const studentMessage: ConversationMessage = {
