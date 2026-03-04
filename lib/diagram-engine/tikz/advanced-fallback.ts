@@ -205,8 +205,8 @@ export function getAdvancedGuidance(prompt: string): string {
   const lower = prompt.toLowerCase()
   const sections: string[] = []
 
-  // Physics - FBD
-  if (/free body|fbd|force diagram|inclined plane|normal force|friction force|weight force/.test(lower)) {
+  // Physics - FBD / Forces / Newton's Law
+  if (/free body|fbd|force diagram|inclined plane|normal force|friction force|weight force|newton|accelerat|force.*producing|how much force|net force|F\s*=\s*m|force.*leg|kg.*accelerat/.test(lower)) {
     sections.push(PHYSICS_FBD_GUIDANCE)
   }
 

@@ -84,12 +84,14 @@ const TOPIC_RULES: TopicRule[] = [
   // Electrical circuits (schematic)
   { pattern: /\b(circuit|resistor|capacitor|series circuit|parallel circuit)\b/i, pipeline: 'tikz' },
 
-  // ── E2B MATPLOTLIB: graphs, plots, data, physics ──
+  // ── TIKZ: Physics force/motion diagrams (for step-by-step layers) ──
+  { pattern: /\b(free body|fbd|force diagram)\b/i, pipeline: 'tikz' },
+  { pattern: /\b(newton|accelerat|F\s*=\s*m|inclined plane|pulley|tension|torque|equilibrium)\b/i, pipeline: 'tikz' },
+
+  // ── E2B MATPLOTLIB: graphs, plots, data ──
   // Explicit graphing
   { pattern: /\b(graph|plot|sketch)\b.*[=]/i, pipeline: 'e2b-matplotlib' },
   { pattern: /\b(graph|plot)\s+(the|a|this|my)?\s*(function|equation|line|curve|parabola|sine|cosine)/i, pipeline: 'e2b-matplotlib' },
-  // Physics force diagrams
-  { pattern: /\b(free body|fbd|force diagram)\b/i, pipeline: 'e2b-matplotlib' },
   // Statistical charts
   { pattern: /\b(bar chart|histogram|scatter plot|box plot|pie chart|stem.?and.?leaf|dot plot)\b/i, pipeline: 'e2b-matplotlib' },
   // Functions and graphs

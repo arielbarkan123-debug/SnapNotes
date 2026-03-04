@@ -38,6 +38,10 @@ const LATEX_ARITHMETIC = /\b(long division|long multiplication|short division|di
 // Arithmetic expressions: "765/5", "234×56", "7248 ÷ 8" etc — these benefit from E2B LaTeX
 const ARITHMETIC_EXPRESSION = /\d+\s*[/÷]\s*\d+|\d+\s*[*×]\s*\d+|\d+\s*(divided by|times)\s*\d+/i;
 
+// Physics force/motion problems: route to TikZ for visual FBD with step-by-step layers
+// Must be checked BEFORE LATEX_ARITHMETIC so "80 kg × 3 m/s²" doesn't misroute to e2b-latex
+const PHYSICS_FORCE = /\b(force|newton|accelerat|F\s*=\s*m|free body|fbd|inclined plane|friction|gravity|weight|pulley|tension|momentum|torque|equilibrium|projectile|trajectory|pendulum|velocity|kinematics)\b/i;
+
 // E2B Matplotlib: statistics and data visualization topics
 const MATPLOTLIB_STATS = /\b(histogram|scatter\s*plot|box\s*and\s*whisker|standard deviation|normal distribution|bell curve|regression|correlation|probability distribution|statistical|frequency distribution|ogive|cumulative frequency)\b/i;
 
@@ -65,6 +69,15 @@ export function tieredRoute(question: string): TieredRoute {
       tier: 'diagram-engine',
       pipeline: 'tikz',
       reason: 'Complex science schematic — better with TikZ templates',
+    };
+  }
+
+  // Physics force/motion problems — TikZ for visual FBD with step-by-step layers
+  if (PHYSICS_FORCE.test(lower)) {
+    return {
+      tier: 'diagram-engine',
+      pipeline: 'tikz',
+      reason: 'Physics force/motion problem — TikZ for visual FBD with step-by-step',
     };
   }
 
