@@ -570,10 +570,6 @@ The student has just submitted their question. Instead of asking Socratic questi
 Do NOT ask the student questions first. Do NOT withhold the answer. Give them the full picture so they can learn from seeing the complete solution path.
 
 Keep it concise but thorough. Use clear formatting with numbered steps.
-
-**CRITICAL: You MUST still respond in the JSON format described above**, including the "diagram" field. Generate an appropriate diagram that shows the problem visually (e.g., a free body diagram for physics forces, a coordinate plane for graphing, an equation diagram for algebra). The diagram should show the COMPLETE solution with all steps revealed (set visibleStep to the last step).
-Set "estimatedProgress" to 50 (the explanation is given, student hasn't confirmed understanding yet).
-Set "pedagogicalIntent" to "show_answer".
 `
 
 const INITIAL_GREETING_PROMPT = `The student has just uploaded their homework question. Generate a warm, encouraging opening message.
@@ -592,6 +588,142 @@ Your opening should:
 5. Set a supportive, non-judgmental tone
 
 Keep it brief - 2-3 sentences max.`
+
+// ============================================================================
+// Auto-Start Fallback Diagram Generator
+// ============================================================================
+
+/**
+ * Generate a basic diagram programmatically from question analysis data.
+ * Used as a last-resort fallback when the AI doesn't produce JSON diagram data
+ * (common in full-explanation mode). No additional API calls — instant.
+ */
+function generateAutoStartDiagram(
+  questionAnalysis: QuestionAnalysis,
+  questionText: string,
+): TutorDiagramState | undefined {
+  const subject = (questionAnalysis.subject || '').toLowerCase()
+  const topic = (questionAnalysis.topic || '').toLowerCase()
+  const text = questionText.toLowerCase()
+
+  // ── Physics: Forces / Newton's Laws → Free Body Diagram ──
+  if (
+    (subject === 'science' || subject === 'physics') &&
+    (topic.includes('force') || topic.includes('newton') || topic.includes('f = ma') ||
+     text.includes('force') || text.includes('newton'))
+  ) {
+    // Extract mass from question text (e.g., "80 kg", "500 kg")
+    const massMatch = questionText.match(/(\d+(?:\.\d+)?)\s*kg/i)
+    const mass = massMatch ? parseFloat(massMatch[1]) : 10
+    const weight = Math.round(mass * 9.8 * 10) / 10
+
+    return {
+      type: 'fbd' as never,
+      visibleStep: 3,
+      totalSteps: 3,
+      data: {
+        object: {
+          id: 'obj1',
+          type: 'block',
+          position: { x: 175, y: 150 },
+          mass,
+          label: `m = ${mass} kg`,
+          color: '#e0e7ff',
+          size: { width: 60, height: 40 },
+        },
+        forces: [
+          { id: 'W', name: 'Weight', type: 'weight', magnitude: weight, angle: -90, symbol: 'W', color: '#22c55e' },
+          { id: 'N', name: 'Normal', type: 'normal', magnitude: weight, angle: 90, symbol: 'N', color: '#3b82f6' },
+          { id: 'F', name: 'Applied Force', type: 'applied', magnitude: 0, angle: 0, symbol: 'F', color: '#f97316' },
+        ],
+        title: `Free Body Diagram — F = ma`,
+        showForceMagnitudes: true,
+        surface: { type: 'horizontal' },
+      },
+      stepConfig: [
+        { step: 0, visibleForces: [], stepLabel: `Object (m = ${mass} kg)` },
+        { step: 1, visibleForces: ['W'], highlightForces: ['W'], stepLabel: `Weight: W = mg = ${weight} N` },
+        { step: 2, visibleForces: ['W', 'N'], highlightForces: ['N'], stepLabel: `Normal force: N = ${weight} N` },
+        { step: 3, visibleForces: ['W', 'N', 'F'], highlightForces: ['F'], stepLabel: 'Applied force: F = ma' },
+      ],
+    }
+  }
+
+  // ── Physics: Inclined plane → Inclined Plane diagram ──
+  if (
+    (subject === 'science' || subject === 'physics') &&
+    (topic.includes('incline') || text.includes('incline') || text.includes('ramp') || text.includes('slope'))
+  ) {
+    const massMatch = questionText.match(/(\d+(?:\.\d+)?)\s*kg/i)
+    const mass = massMatch ? parseFloat(massMatch[1]) : 10
+    const angleMatch = questionText.match(/(\d+(?:\.\d+)?)\s*°|(\d+(?:\.\d+)?)\s*degree/i)
+    const angle = angleMatch ? parseFloat(angleMatch[1] || angleMatch[2]) : 30
+
+    return {
+      type: 'inclined_plane' as never,
+      visibleStep: 2,
+      totalSteps: 2,
+      data: {
+        angle,
+        object: {
+          id: 'obj1',
+          type: 'block',
+          mass,
+          label: `m = ${mass} kg`,
+          position: { x: 175, y: 150 },
+          size: { width: 50, height: 35 },
+        },
+        forces: [
+          { id: 'W', name: 'Weight', type: 'weight', magnitude: Math.round(mass * 9.8), angle: -90, symbol: 'W', color: '#22c55e' },
+          { id: 'N', name: 'Normal', type: 'normal', magnitude: 0, angle: 90 + angle, symbol: 'N', color: '#3b82f6' },
+        ],
+        title: `Inclined Plane — ${angle}°`,
+        showComponents: true,
+      },
+    }
+  }
+
+  // ── Math: Linear equations / graphing → Coordinate Plane ──
+  if (
+    (subject === 'math' || subject === 'mathematics') &&
+    (topic.includes('linear') || topic.includes('graph') || topic.includes('coordinate') ||
+     topic.includes('slope') || topic.includes('y = mx'))
+  ) {
+    return {
+      type: 'coordinate_plane' as never,
+      visibleStep: 1,
+      totalSteps: 1,
+      data: {
+        xRange: [-5, 5],
+        yRange: [-5, 5],
+        gridLines: true,
+        title: 'Coordinate Plane',
+        lines: [],
+        points: [],
+      },
+    }
+  }
+
+  // ── Math: Equation solving → Equation diagram ──
+  if (
+    (subject === 'math' || subject === 'mathematics') &&
+    (topic.includes('equation') || topic.includes('algebra') || topic.includes('solve'))
+  ) {
+    return {
+      type: 'equation' as never,
+      visibleStep: 0,
+      totalSteps: 1,
+      data: {
+        equation: questionAnalysis.questionText.slice(0, 100),
+        steps: [],
+        title: 'Equation',
+      },
+    }
+  }
+
+  // No diagram for this question type
+  return undefined
+}
 
 // ============================================================================
 // Visual Update Conversion
@@ -1070,6 +1202,16 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
       // (React SVG components render these client-side)
       tutorResponse.diagram = aiDiagram
       console.log(`[TutorEngine] Using AI-generated diagram fallback (type: ${aiDiagram.type})`)
+    }
+  }
+
+  // Last resort for auto-start: generate diagram programmatically from question analysis
+  // This handles the common case where AI responds in markdown (no JSON diagram data)
+  if (isAutoStart && enableDiagrams && !tutorResponse.diagram) {
+    const fallbackDiagram = generateAutoStartDiagram(context.questionAnalysis, context.questionAnalysis.questionText)
+    if (fallbackDiagram) {
+      tutorResponse.diagram = fallbackDiagram
+      console.log(`[TutorEngine] Auto-start: using programmatic fallback diagram (type: ${fallbackDiagram.type})`)
     }
   }
 
