@@ -421,7 +421,7 @@ export default function TutoringChat({
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-          {session.conversation.map((msg, idx) => (
+          {session.conversation.filter(msg => msg.content !== '__auto_start__').map((msg, idx) => (
             <div key={idx}>
               <MessageBubble
                 message={msg}
