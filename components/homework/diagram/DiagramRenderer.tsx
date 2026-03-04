@@ -1,10 +1,13 @@
 'use client'
 
-import { Component, type ReactNode, lazy, Suspense } from 'react'
+import { Component, type ReactNode, lazy, Suspense, useState, useCallback } from 'react'
 import { type DiagramState, getDiagramTypeName } from './types'
+import type { StepByStepSource, StepLayerMeta } from './types'
 import EngineDiagramImage from './EngineDiagramImage'
 
 const StepSequencePlayer = lazy(() => import('./StepSequencePlayer'))
+const StepByStepWalkthrough = lazy(() => import('./StepByStepWalkthrough'))
+const StepByStepFallback = lazy(() => import('./StepByStepFallback'))
 
 // ============================================================================
 // Error Boundary for Diagram Rendering
@@ -105,12 +108,24 @@ interface DiagramRendererProps {
  * Diagram renderer — handles engine-generated image diagrams.
  * The diagram engine (lib/diagram-engine/) generates all diagrams as PNG images
  * via E2B LaTeX, Matplotlib, TikZ, or Recraft pipelines.
+ *
+ * Step-by-step flow:
+ * 1. Diagram renders normally with "Step by Step" button (if stepByStepSource available)
+ * 2. User clicks button → calls /api/diagrams/render-steps
+ * 3. Walkthrough component replaces static image
+ * 4. User can close to return to static image
  */
 export default function DiagramRenderer({
   diagram,
   language,
   onRenderError,
 }: DiagramRendererProps) {
+  // Step-by-step state
+  const [walkthroughMode, setWalkthroughMode] = useState<'idle' | 'loading' | 'active' | 'fallback'>('idle')
+  const [stepImageUrls, setStepImageUrls] = useState<string[]>([])
+  const [stepsMeta, setStepsMeta] = useState<StepLayerMeta[]>([])
+  const [isPartial, setIsPartial] = useState(false)
+
   // Validate diagram prop
   if (!diagram) {
     console.warn('[DiagramRenderer] Failed to render diagram:', {
@@ -193,7 +208,107 @@ export default function DiagramRenderer({
       overlay?: Array<{ text: string; x: number; y: number; targetX: number; targetY: number }>
       qaVerdict?: string
     } | undefined
+
+    // Check for step-by-step source availability
+    const stepByStepSource = diagram.stepByStepSource
+    const hasStepByStep = !!stepByStepSource && stepByStepSource.steps.length > 0
+
+    // Handle "Step by Step" button click
+    const handleStepByStepClick = useCallback(async () => {
+      if (!stepByStepSource) return
+
+      setWalkthroughMode('loading')
+
+      try {
+        const response = await fetch('/api/diagrams/render-steps', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stepByStepSource }),
+        })
+
+        if (!response.ok) {
+          console.error('[DiagramRenderer] Step render API failed:', response.status)
+          // Fallback to text-only steps
+          setStepsMeta(stepByStepSource.steps)
+          setWalkthroughMode('fallback')
+          return
+        }
+
+        const data = await response.json()
+        const urls = data.stepImageUrls as string[]
+        const successCount = urls.filter(Boolean).length
+
+        if (successCount === 0) {
+          // All renders failed — use text-only fallback
+          setStepsMeta(stepByStepSource.steps)
+          setWalkthroughMode('fallback')
+          return
+        }
+
+        setStepImageUrls(urls)
+        setStepsMeta(data.steps || stepByStepSource.steps)
+        setIsPartial(data.partial || false)
+        setWalkthroughMode('active')
+      } catch (err) {
+        console.error('[DiagramRenderer] Step render error:', err)
+        // Fallback to text-only steps
+        setStepsMeta(stepByStepSource.steps)
+        setWalkthroughMode('fallback')
+      }
+    }, [stepByStepSource])
+
+    const handleCloseWalkthrough = useCallback(() => {
+      setWalkthroughMode('idle')
+      setStepImageUrls([])
+      setStepsMeta([])
+      setIsPartial(false)
+    }, [])
+
     if (engineData?.imageUrl) {
+      // Show walkthrough when active
+      if (walkthroughMode === 'active' && stepImageUrls.length > 0) {
+        return (
+          <DiagramErrorBoundary diagramType={diagramType} diagramData={engineData} onError={onRenderError}>
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-48">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600" />
+              </div>
+            }>
+              <StepByStepWalkthrough
+                stepImageUrls={stepImageUrls}
+                steps={stepsMeta}
+                finalImageUrl={engineData.imageUrl}
+                language={language}
+                partial={isPartial}
+                onClose={handleCloseWalkthrough}
+              />
+            </Suspense>
+          </DiagramErrorBoundary>
+        )
+      }
+
+      // Show text-only fallback when renders failed
+      if (walkthroughMode === 'fallback' && stepsMeta.length > 0) {
+        return (
+          <DiagramErrorBoundary diagramType={diagramType} diagramData={engineData} onError={onRenderError}>
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-48">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600" />
+              </div>
+            }>
+              <StepByStepFallback
+                steps={stepsMeta}
+                finalImageUrl={engineData.imageUrl}
+                pipeline={engineData.pipeline}
+                language={language}
+                onClose={handleCloseWalkthrough}
+              />
+            </Suspense>
+          </DiagramErrorBoundary>
+        )
+      }
+
+      // Default: show static diagram with optional Step by Step button
       return (
         <DiagramErrorBoundary diagramType={diagramType} diagramData={engineData} onError={onRenderError}>
           <EngineDiagramImage
@@ -201,6 +316,9 @@ export default function DiagramRenderer({
             pipeline={engineData.pipeline}
             overlay={engineData.overlay}
             qaVerdict={engineData.qaVerdict}
+            hasStepByStep={hasStepByStep}
+            onStepByStepClick={hasStepByStep ? handleStepByStepClick : undefined}
+            stepByStepLoading={walkthroughMode === 'loading'}
           />
         </DiagramErrorBoundary>
       )
