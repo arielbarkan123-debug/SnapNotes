@@ -41,6 +41,7 @@ export default function StepByStepFallback({
           {t('stepByStep.fallbackTitle')}
         </span>
         <button
+          type="button"
           onClick={onClose}
           className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           aria-label={t('stepByStep.close')}

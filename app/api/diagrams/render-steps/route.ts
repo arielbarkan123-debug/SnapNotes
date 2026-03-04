@@ -33,6 +33,22 @@ export async function POST(request: Request) {
       )
     }
 
+    // Guard against oversized payloads (TikZ code + metadata)
+    if (stepByStepSource.tikzCode.length > 50_000) {
+      return NextResponse.json(
+        { error: 'TikZ code exceeds maximum allowed size' },
+        { status: 413 },
+      )
+    }
+
+    // Guard against too many steps (plan specifies 3-6 layers; allow up to 10)
+    if (stepByStepSource.steps.length > 10) {
+      return NextResponse.json(
+        { error: 'Too many steps (maximum 10)' },
+        { status: 400 },
+      )
+    }
+
     console.log(`[RenderSteps] Rendering ${stepByStepSource.steps.length} steps for user ${user.id}`)
 
     // Render all steps

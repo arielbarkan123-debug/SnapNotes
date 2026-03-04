@@ -148,6 +148,7 @@ export default function StepByStepWalkthrough({
           </span>
         </div>
         <button
+          type="button"
           onClick={onClose}
           className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           aria-label={t('stepByStep.close')}
@@ -255,6 +256,7 @@ export default function StepByStepWalkthrough({
       {/* Controls */}
       <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
         <button
+          type="button"
           onClick={isHe ? goNext : goPrev}
           disabled={isHe ? isLast : isFirst}
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
@@ -265,6 +267,7 @@ export default function StepByStepWalkthrough({
 
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => setIsAutoPlaying(prev => !prev)}
             className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           >
@@ -277,6 +280,7 @@ export default function StepByStepWalkthrough({
 
           {isLast && (
             <button
+              type="button"
               onClick={restart}
               className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
             >
@@ -286,6 +290,7 @@ export default function StepByStepWalkthrough({
         </div>
 
         <button
+          type="button"
           onClick={isHe ? goPrev : goNext}
           disabled={isHe ? isFirst : isLast}
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
