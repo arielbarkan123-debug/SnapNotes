@@ -86,7 +86,10 @@ const TOPIC_RULES: TopicRule[] = [
 
   // ── TIKZ: Physics force/motion diagrams (for step-by-step layers) ──
   { pattern: /\b(free body|fbd|force diagram)\b/i, pipeline: 'tikz' },
-  { pattern: /\b(newton|accelerat|F\s*=\s*m|inclined plane|pulley|tension|torque|equilibrium)\b/i, pipeline: 'tikz' },
+  { pattern: /\b(newton|acceleration|accelerates?|accelerating|inclined plane|pulley|tension|torque|equilibrium)\b/i, pipeline: 'tikz' },
+  { pattern: /\bF\s*=\s*m\s*[·*×]?\s*a\b/i, pipeline: 'tikz' },
+  { pattern: /\bforce\b.*\b(kg|mass|accelerat|m\/s|newton)/i, pipeline: 'tikz' },
+  { pattern: /\b(kg|mass)\b.*\bforce\b/i, pipeline: 'tikz' },
 
   // ── E2B MATPLOTLIB: graphs, plots, data ──
   // Explicit graphing
