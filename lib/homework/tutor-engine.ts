@@ -1003,8 +1003,10 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
   }
 
   // For step_sequence mode (Visual Builder) or multi-step problems with guide/show_answer intent
+  // SKIP step sequence on auto-start: it generates 3-5 diagrams sequentially (30-150s)
+  // which causes Vercel function timeouts. The single engine diagram (parallel) is enough.
   const intent = tutorResponse.pedagogicalIntent
-  if (enableDiagrams && !previousDiagram &&
+  if (enableDiagrams && !previousDiagram && !isAutoStart &&
       (chatDiagramMode === 'step_sequence' ||
        (isMultiStepProblem(diagramTopic) && (intent === 'show_answer' || intent === 'guide_next_step')))) {
     try {
