@@ -53,15 +53,15 @@ function sanitizeUnicode(code: string): string {
     .replace(/″/g, "''");
 }
 
-interface CompileSuccess { url: string }
-interface CompileFailure { error: string }
+export interface CompileSuccess { url: string }
+export interface CompileFailure { error: string }
 
 /**
  * Compile TikZ code to PNG via QuickLaTeX API.
  * Returns the image URL on success, or the actual error text on failure
  * (so it can be fed back to Claude for targeted fixes).
  */
-async function compileTikZ(tikzCode: string): Promise<CompileSuccess | CompileFailure> {
+export async function compileTikZ(tikzCode: string): Promise<CompileSuccess | CompileFailure> {
   try {
     const libraryMatches = tikzCode.match(/\\usetikzlibrary\{[^}]+\}/g);
     const libraries = libraryMatches ? libraryMatches.join('\n') : '';
