@@ -105,31 +105,37 @@ export async function POST(
       ? (homeworkSession.enable_diagrams !== false)
       : (body.enableDiagrams !== false)
 
-    // Step 1: Add student message to conversation (store clean message, without escalation prefix)
-    const studentMessage: ConversationMessage = {
-      role: 'student',
-      content: cleanMessage || body.message,
-      timestamp: new Date().toISOString(),
-    }
-
+    // Step 1: Add student message to conversation (skip for auto-start sentinel)
     let sessionAfterStudentMsg: HomeworkSession
-    try {
-      sessionAfterStudentMsg = await addMessage(sessionId, user.id, studentMessage)
-    } catch {
-      // Fallback: manually update if addMessage fails
-      const updatedConversation = [...(homeworkSession.conversation || []), studentMessage]
-      const { data: updated, error: updateError } = await supabase
-        .from('homework_sessions')
-        .update({ conversation: updatedConversation })
-        .eq('id', sessionId)
-        .eq('user_id', user.id)
-        .select()
-        .single()
 
-      if (updateError) {
-        return createErrorResponse(ErrorCodes.CHAT_FAILED, 'Failed to save message')
+    if (isAutoStart) {
+      // Don't store __auto_start__ in conversation — it's an internal sentinel
+      sessionAfterStudentMsg = homeworkSession
+    } else {
+      const studentMessage: ConversationMessage = {
+        role: 'student',
+        content: cleanMessage || body.message,
+        timestamp: new Date().toISOString(),
       }
-      sessionAfterStudentMsg = updated as HomeworkSession
+
+      try {
+        sessionAfterStudentMsg = await addMessage(sessionId, user.id, studentMessage)
+      } catch {
+        // Fallback: manually update if addMessage fails
+        const updatedConversation = [...(homeworkSession.conversation || []), studentMessage]
+        const { data: updated, error: updateError } = await supabase
+          .from('homework_sessions')
+          .update({ conversation: updatedConversation })
+          .eq('id', sessionId)
+          .eq('user_id', user.id)
+          .select()
+          .single()
+
+        if (updateError) {
+          return createErrorResponse(ErrorCodes.CHAT_FAILED, 'Failed to save message')
+        }
+        sessionAfterStudentMsg = updated as HomeworkSession
+      }
     }
 
     // Step 2: Build tutor context
