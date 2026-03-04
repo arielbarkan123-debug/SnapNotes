@@ -20,7 +20,8 @@ const SIZE_MAP = {
 
 /**
  * Inline diagram for rendering engine-generated images within message bubbles.
- * All diagrams are now engine_image (static PNG) — no step controls needed.
+ * All diagrams are now engine_image (static PNG) — step-by-step walkthrough
+ * is available via the "Step by Step" button on TikZ-pipeline diagrams.
  */
 export default function InlineDiagram({
   diagram,
@@ -40,7 +41,7 @@ export default function InlineDiagram({
         </span>
       </div>
 
-      {/* Diagram container */}
+      {/* Diagram container — overflow visible for step-by-step walkthrough expansion */}
       <div className="rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700">
         <DiagramRenderer
           diagram={diagram}

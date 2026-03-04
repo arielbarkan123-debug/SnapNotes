@@ -841,6 +841,8 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
         overlay: engineResult.overlay,
         qaVerdict: engineResult.qaVerdict,
       },
+      // Pass step-by-step source if available (TikZ pipeline only)
+      stepByStepSource: engineResult.stepByStepSource,
     }
   } else {
     console.log(`[TutorEngine] No engine result - diagram will be undefined`)
@@ -1013,6 +1015,8 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
         overlay: engineResult.overlay,
         qaVerdict: engineResult.qaVerdict,
       },
+      // Pass step-by-step source if available (TikZ pipeline only)
+      stepByStepSource: engineResult.stepByStepSource,
     }
   }
   // If engine failed or previous diagram exists, no new diagram is shown

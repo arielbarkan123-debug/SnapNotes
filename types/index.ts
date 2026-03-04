@@ -338,6 +338,17 @@ export interface Step {
       stepLabel?: string
       showCalculation?: string
     }>
+    /** Layered TikZ source for step-by-step diagram build-up (TikZ pipeline only) */
+    stepByStepSource?: {
+      tikzCode: string
+      steps: Array<{
+        layer: number
+        label: string
+        labelHe: string
+        explanation: string
+        explanationHe: string
+      }>
+    }
   }
 }
 

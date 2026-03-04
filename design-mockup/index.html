@@ -1,0 +1,2818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NoteSnap — Design Redesign Concept</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;0,9..144,800;1,9..144,400&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================
+   DESIGN TOKENS
+   ============================================ */
+:root {
+  /* Color System — Warm neutral base with electric accents */
+  --stone-50: #FAFAF9;
+  --stone-100: #F5F5F4;
+  --stone-200: #E7E5E4;
+  --stone-300: #D6D3D1;
+  --stone-400: #A8A29E;
+  --stone-500: #78716C;
+  --stone-600: #57534E;
+  --stone-700: #44403C;
+  --stone-800: #292524;
+  --stone-900: #1C1917;
+  --stone-950: #0C0A09;
+
+  /* Accent: Electric Teal */
+  --accent: #14B8A6;
+  --accent-light: #5EEAD4;
+  --accent-dark: #0D9488;
+  --accent-glow: rgba(20, 184, 166, 0.25);
+
+  /* Semantic */
+  --coral: #F97066;
+  --coral-soft: #FEF2F2;
+  --amber: #F59E0B;
+  --amber-soft: #FFFBEB;
+  --emerald: #10B981;
+  --emerald-soft: #ECFDF5;
+  --sky: #0EA5E9;
+  --sky-soft: #F0F9FF;
+  --violet: #8B5CF6;
+  --violet-soft: #F5F3FF;
+
+  /* Surface */
+  --bg: #FAFAF9;
+  --surface: #FFFFFF;
+  --surface-raised: #FFFFFF;
+  --surface-overlay: rgba(12, 10, 9, 0.6);
+  --border: #E7E5E4;
+  --border-subtle: #F5F5F4;
+
+  /* Text */
+  --text-primary: #1C1917;
+  --text-secondary: #57534E;
+  --text-tertiary: #A8A29E;
+  --text-inverse: #FAFAF9;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* Shadows — Layered for depth */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.04);
+  --shadow-xl: 0 16px 48px rgba(0,0,0,0.12), 0 8px 16px rgba(0,0,0,0.06);
+  --shadow-glow: 0 0 0 1px rgba(20,184,166,0.1), 0 4px 16px rgba(20,184,166,0.12);
+
+  /* Transitions */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+[data-theme="dark"] {
+  --bg: #0C0A09;
+  --surface: #1C1917;
+  --surface-raised: #292524;
+  --surface-overlay: rgba(12, 10, 9, 0.85);
+  --border: #292524;
+  --border-subtle: #1C1917;
+  --text-primary: #FAFAF9;
+  --text-secondary: #A8A29E;
+  --text-tertiary: #78716C;
+  --text-inverse: #1C1917;
+
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.2);
+  --shadow-xl: 0 16px 48px rgba(0,0,0,0.5), 0 8px 16px rgba(0,0,0,0.3);
+  --shadow-glow: 0 0 0 1px rgba(20,184,166,0.2), 0 4px 24px rgba(20,184,166,0.15);
+
+  --coral-soft: rgba(249,112,102,0.1);
+  --amber-soft: rgba(245,158,11,0.1);
+  --emerald-soft: rgba(16,185,129,0.1);
+  --sky-soft: rgba(14,165,233,0.1);
+  --violet-soft: rgba(139,92,246,0.1);
+}
+
+/* ============================================
+   RESET & BASE
+   ============================================ */
+*, *::before, *::after {
+  margin: 0; padding: 0; box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* ============================================
+   SCREEN NAVIGATION
+   ============================================ */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.screen-nav {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 240px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: var(--space-6);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  overflow-y: auto;
+}
+
+.screen-nav h2 {
+  font-family: 'Fraunces', serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-2);
+  padding: 0 var(--space-3);
+}
+
+.screen-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all var(--duration-fast) var(--ease-out);
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+
+.screen-nav-item:hover {
+  background: var(--stone-100);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .screen-nav-item:hover {
+  background: var(--stone-800);
+}
+
+.screen-nav-item.active {
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+}
+
+.screen-nav-item .nav-icon {
+  font-size: 1.1rem;
+  width: 24px;
+  text-align: center;
+}
+
+.theme-toggle {
+  margin-top: auto;
+  padding: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  transition: all var(--duration-fast);
+}
+.theme-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.screen-content {
+  margin-left: 240px;
+  flex: 1;
+  min-height: 100vh;
+}
+
+/* Main content frame */
+.phone-frame {
+  width: 100%;
+  max-width: 1200px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 0 var(--space-8);
+  background: var(--bg);
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ============================================
+   SCREEN SECTIONS (SHOW/HIDE)
+   ============================================ */
+.screen-section {
+  display: none;
+  animation: screenFadeIn 0.4s var(--ease-out);
+}
+.screen-section.active {
+  display: block;
+}
+
+@keyframes screenFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================
+   HEADER / TOP BAR
+   ============================================ */
+.top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: var(--space-4) var(--space-5);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(250,250,249,0.85);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+[data-theme="dark"] .top-bar {
+  background: rgba(12,10,9,0.85);
+}
+
+.top-bar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.greeting {
+  font-family: 'Fraunces', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.greeting-sub {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--accent), var(--violet));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 0.875rem;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ============================================
+   GAMIFICATION BAR — Redesigned
+   ============================================ */
+.xp-bar {
+  margin: var(--space-4) var(--space-5) 0;
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.xp-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #5EEAD4 0%, #14B8A6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.25);
+}
+
+.xp-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.xp-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.xp-level {
+  color: var(--accent);
+}
+
+.xp-track {
+  height: 6px;
+  background: var(--stone-200);
+  border-radius: var(--radius-full);
+  margin-top: var(--space-2);
+  overflow: hidden;
+  position: relative;
+}
+
+[data-theme="dark"] .xp-track {
+  background: var(--stone-700);
+}
+
+.xp-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--accent), var(--accent-light));
+  transition: width 1s var(--ease-out);
+  position: relative;
+}
+
+.xp-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.streak-pill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #92400E;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .streak-pill {
+  background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(253,230,138,0.15));
+  color: #FBBF24;
+}
+
+/* ============================================
+   QUICK ACTIONS — "Bento Grid"
+   ============================================ */
+.bento-grid {
+  padding: var(--space-5);
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: auto;
+  gap: var(--space-4);
+}
+
+.bento-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-out);
+  position: relative;
+  overflow: hidden;
+}
+
+.bento-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent);
+}
+
+.bento-card.span-2 {
+  grid-column: span 3;
+}
+
+.bento-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  margin-bottom: var(--space-3);
+}
+
+.bento-card h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.bento-card p {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+}
+
+.bento-badge {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  background: var(--coral);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+/* Bento color variants */
+.bento-teal .bento-icon { background: rgba(20,184,166,0.1); }
+.bento-violet .bento-icon { background: rgba(139,92,246,0.1); }
+.bento-sky .bento-icon { background: rgba(14,165,233,0.1); }
+.bento-coral .bento-icon { background: rgba(249,112,102,0.1); }
+.bento-amber .bento-icon { background: rgba(245,158,11,0.1); }
+
+/* ============================================
+   SECTION HEADERS
+   ============================================ */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-5);
+  margin-bottom: var(--space-3);
+}
+
+.section-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.section-link {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity var(--duration-fast);
+}
+.section-link:hover { opacity: 0.7; }
+
+/* ============================================
+   COURSE CARDS — Horizontal Scroll
+   ============================================ */
+.course-scroll {
+  padding: 0 var(--space-5);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  padding-bottom: var(--space-3);
+}
+
+.course-card {
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transition: all var(--duration-normal) var(--ease-out);
+  cursor: pointer;
+}
+
+.course-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+.course-cover {
+  height: 140px;
+  position: relative;
+  overflow: hidden;
+}
+
+.course-cover-gradient {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: var(--space-4);
+}
+
+.course-cover-gradient::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 60%);
+}
+
+.course-emoji {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  font-size: 2rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.course-cover-title {
+  position: relative;
+  z-index: 1;
+  color: white;
+  font-weight: 700;
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.course-meta {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.course-meta-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.course-progress-ring {
+  width: 28px;
+  height: 28px;
+  position: relative;
+}
+
+.course-progress-ring svg {
+  transform: rotate(-90deg);
+}
+
+.course-progress-ring circle {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.course-progress-bg {
+  stroke: var(--stone-200);
+}
+
+[data-theme="dark"] .course-progress-bg {
+  stroke: var(--stone-700);
+}
+
+.course-progress-fill {
+  stroke: var(--accent);
+  transition: stroke-dashoffset 1s var(--ease-out);
+}
+
+.course-progress-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+/* ============================================
+   SRS REVIEW WIDGET
+   ============================================ */
+.review-widget {
+  margin: var(--space-5);
+  padding: var(--space-5);
+  background: linear-gradient(135deg, var(--stone-900) 0%, #2D2926 100%);
+  border-radius: var(--radius-xl);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="dark"] .review-widget {
+  background: linear-gradient(135deg, var(--stone-800) 0%, #2D2926 100%);
+  border: 1px solid var(--stone-700);
+}
+
+.review-widget::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -20%;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(20,184,166,0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.review-widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.review-widget h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.review-stat-row {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.review-stat {
+  flex: 1;
+  text-align: center;
+  padding: var(--space-3);
+  background: rgba(255,255,255,0.06);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.review-stat-num {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: 'Fraunces', serif;
+}
+
+.review-stat-label {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+.btn-review {
+  width: 100%;
+  padding: var(--space-3) var(--space-5);
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.btn-review:hover {
+  background: var(--accent-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(20,184,166,0.3);
+}
+
+/* ============================================
+   STUDY PLAN WIDGET
+   ============================================ */
+.study-plan {
+  margin: 0 var(--space-5);
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  margin-bottom: var(--space-5);
+}
+
+.study-plan-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.study-plan-ring {
+  width: 56px;
+  height: 56px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.study-plan-ring svg {
+  transform: rotate(-90deg);
+}
+
+.study-plan-ring circle {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.study-plan-ring .bg { stroke: var(--stone-200); }
+[data-theme="dark"] .study-plan-ring .bg { stroke: var(--stone-700); }
+.study-plan-ring .fill { stroke: var(--accent); transition: stroke-dashoffset 1.5s var(--ease-out); }
+
+.study-plan-ring-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.study-plan-info h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.study-plan-info p {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  transition: background var(--duration-fast);
+  cursor: pointer;
+}
+
+.task-item:hover {
+  background: var(--stone-100);
+}
+
+[data-theme="dark"] .task-item:hover {
+  background: var(--stone-800);
+}
+
+.task-check {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--stone-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--duration-fast);
+}
+
+[data-theme="dark"] .task-check {
+  border-color: var(--stone-600);
+}
+
+.task-item.done .task-check {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.task-item.done .task-check::after {
+  content: '✓';
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.task-item.done .task-text {
+  text-decoration: line-through;
+  color: var(--text-tertiary);
+}
+
+.task-text {
+  font-size: 0.8rem;
+  font-weight: 500;
+  flex: 1;
+}
+
+.task-tag {
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.task-tag.lesson { background: var(--sky-soft); color: var(--sky); }
+.task-tag.review { background: var(--emerald-soft); color: var(--emerald); }
+.task-tag.practice { background: var(--violet-soft); color: var(--violet); }
+
+/* ============================================
+   REVIEW SESSION SCREEN
+   ============================================ */
+.review-session {
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.review-progress-bar {
+  height: 4px;
+  background: var(--stone-200);
+  border-radius: var(--radius-full);
+  margin-bottom: var(--space-4);
+  overflow: hidden;
+}
+
+[data-theme="dark"] .review-progress-bar {
+  background: var(--stone-700);
+}
+
+.review-progress-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-full);
+  transition: width 0.5s var(--ease-out);
+}
+
+.review-card-counter {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+.flashcard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  perspective: 1000px;
+  margin-bottom: var(--space-6);
+}
+
+.flashcard-inner {
+  width: 100%;
+  max-width: 560px;
+  min-height: 360px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  transition: all var(--duration-slow) var(--ease-out);
+  cursor: pointer;
+  position: relative;
+}
+
+.flashcard-inner:hover {
+  box-shadow: var(--shadow-xl);
+  transform: translateY(-2px);
+}
+
+.flashcard-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  margin-bottom: var(--space-4);
+}
+
+.flashcard-question {
+  font-family: 'Fraunces', serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+.flashcard-tap {
+  position: absolute;
+  bottom: var(--space-4);
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+}
+
+.flashcard-answer {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px dashed var(--border);
+  width: 100%;
+}
+
+.flashcard-answer-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--emerald);
+  margin-bottom: var(--space-3);
+}
+
+.flashcard-answer-text {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* Rating buttons */
+.rating-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+}
+
+.rating-btn {
+  padding: var(--space-3) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.rating-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.rating-btn-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.rating-btn-time {
+  display: block;
+  font-size: 0.6rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.rating-btn.again { border-color: var(--coral); }
+.rating-btn.again .rating-btn-label { color: var(--coral); }
+.rating-btn.again:hover { background: var(--coral-soft); }
+
+.rating-btn.hard { border-color: var(--amber); }
+.rating-btn.hard .rating-btn-label { color: var(--amber); }
+.rating-btn.hard:hover { background: var(--amber-soft); }
+
+.rating-btn.good { border-color: var(--emerald); }
+.rating-btn.good .rating-btn-label { color: var(--emerald); }
+.rating-btn.good:hover { background: var(--emerald-soft); }
+
+.rating-btn.easy { border-color: var(--sky); }
+.rating-btn.easy .rating-btn-label { color: var(--sky); }
+.rating-btn.easy:hover { background: var(--sky-soft); }
+
+/* ============================================
+   PRACTICE SCREEN
+   ============================================ */
+.practice-setup {
+  padding: var(--space-8);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.practice-header {
+  text-align: center;
+  margin-bottom: var(--space-8);
+}
+
+.practice-header h1 {
+  font-family: 'Fraunces', serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+}
+
+.practice-header p {
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+}
+
+.course-select-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.course-select-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.course-select-item:hover {
+  border-color: var(--accent);
+}
+
+.course-select-item.selected {
+  border-color: var(--accent);
+  background: rgba(20,184,166,0.04);
+}
+
+.course-select-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 2px solid var(--stone-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration-fast);
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .course-select-check {
+  border-color: var(--stone-600);
+}
+
+.course-select-item.selected .course-select-check {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.course-select-item.selected .course-select-check::after {
+  content: '✓';
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.course-select-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  flex: 1;
+}
+
+.course-select-count {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+}
+
+.question-count-control {
+  margin-bottom: var(--space-8);
+}
+
+.question-count-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.question-count-label span {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.question-count-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent);
+  font-family: 'Fraunces', serif;
+}
+
+.slider-track {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: var(--radius-full);
+  background: var(--stone-200);
+  outline: none;
+}
+
+[data-theme="dark"] .slider-track {
+  background: var(--stone-700);
+}
+
+.slider-track::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 2px 8px rgba(20,184,166,0.4);
+  cursor: pointer;
+  transition: transform var(--duration-fast);
+}
+
+.slider-track::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.btn-start-practice {
+  width: 100%;
+  padding: var(--space-4);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  box-shadow: 0 4px 16px rgba(20,184,166,0.3);
+}
+
+.btn-start-practice:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(20,184,166,0.4);
+}
+
+/* ============================================
+   HOMEWORK SCREEN
+   ============================================ */
+.homework-hub {
+  padding: var(--space-8);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.homework-hero {
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+.homework-hero h1 {
+  font-family: 'Fraunces', serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+}
+
+.homework-hero p {
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+}
+
+.homework-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-8);
+}
+
+.homework-action-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.homework-action-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent);
+}
+
+.homework-action-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.homework-action-info h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.homework-action-info p {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+}
+
+.homework-action-arrow {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+/* ============================================
+   REVIEW COMPLETE SCREEN
+   ============================================ */
+.review-complete {
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  justify-content: center;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.complete-icon {
+  width: 88px;
+  height: 88px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--emerald) 0%, #059669 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  margin-bottom: var(--space-5);
+  box-shadow: 0 8px 32px rgba(16,185,129,0.3);
+  animation: completeIconPulse 2s var(--ease-out);
+}
+
+@keyframes completeIconPulse {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.complete-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: var(--space-2);
+}
+
+.complete-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+  text-align: center;
+  margin-bottom: var(--space-8);
+}
+
+.complete-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  width: 100%;
+  margin-bottom: var(--space-6);
+}
+
+.complete-stat {
+  text-align: center;
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.complete-stat-value {
+  font-family: 'Fraunces', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.complete-stat-label {
+  font-size: 0.65rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+.xp-earned-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: linear-gradient(135deg, rgba(20,184,166,0.08) 0%, rgba(139,92,246,0.08) 100%);
+  border: 1px solid rgba(20,184,166,0.2);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  margin-bottom: var(--space-6);
+}
+
+[data-theme="dark"] .xp-earned-banner {
+  background: linear-gradient(135deg, rgba(20,184,166,0.12) 0%, rgba(139,92,246,0.12) 100%);
+}
+
+.xp-earned-amount {
+  font-family: 'Fraunces', serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.xp-earned-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.complete-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: var(--space-4);
+  background: var(--stone-900);
+  color: var(--stone-50);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+[data-theme="dark"] .btn-primary {
+  background: var(--stone-100);
+  color: var(--stone-900);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+  width: 100%;
+  padding: var(--space-4);
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ============================================
+   PROGRESS SCREEN
+   ============================================ */
+.progress-screen {
+  padding: var(--space-8);
+}
+
+.progress-screen h1 {
+  font-family: 'Fraunces', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: var(--space-5);
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.stat-card {
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.stat-card-icon {
+  font-size: 1.25rem;
+  margin-bottom: var(--space-2);
+}
+
+.stat-card-value {
+  font-family: 'Fraunces', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.stat-card-label {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+}
+
+.stat-card-change {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--emerald);
+  margin-top: var(--space-1);
+}
+
+.weekly-chart {
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  margin-bottom: var(--space-5);
+}
+
+.weekly-chart h3 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+  color: var(--text-secondary);
+}
+
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 120px;
+  gap: var(--space-2);
+  padding-bottom: var(--space-6);
+  position: relative;
+}
+
+.chart-bar-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.chart-bar {
+  width: 100%;
+  max-width: 32px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  transition: height 0.8s var(--ease-out);
+}
+
+.chart-bar.teal { background: linear-gradient(180deg, var(--accent-light), var(--accent)); }
+.chart-bar.faded { background: var(--stone-200); }
+[data-theme="dark"] .chart-bar.faded { background: var(--stone-700); }
+
+.chart-day {
+  margin-top: var(--space-2);
+  font-size: 0.65rem;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.chart-bar.today {
+  box-shadow: 0 4px 12px rgba(20,184,166,0.3);
+}
+
+/* Mastery grid */
+.mastery-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.mastery-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.mastery-emoji {
+  font-size: 1.25rem;
+  width: 28px;
+  text-align: center;
+}
+
+.mastery-info {
+  flex: 1;
+}
+
+.mastery-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: var(--space-1);
+}
+
+.mastery-bar-bg {
+  height: 4px;
+  background: var(--stone-200);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+[data-theme="dark"] .mastery-bar-bg {
+  background: var(--stone-700);
+}
+
+.mastery-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 1s var(--ease-out);
+}
+
+.mastery-percent {
+  font-size: 0.75rem;
+  font-weight: 700;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* ============================================
+   BOTTOM NAV
+   ============================================ */
+.bottom-nav {
+  display: none; /* Hidden on desktop — sidebar handles navigation */
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-2) 0;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  transition: color var(--duration-fast);
+  position: relative;
+}
+
+.bottom-nav-item.active {
+  color: var(--accent);
+}
+
+.bottom-nav-item.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: var(--radius-full);
+}
+
+.bottom-nav-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.bottom-nav-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.bottom-nav-badge {
+  position: absolute;
+  top: 2px;
+  right: calc(50% - 16px);
+  width: 16px;
+  height: 16px;
+  background: var(--coral);
+  color: white;
+  border-radius: 50%;
+  font-size: 0.55rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================
+   FLOATING ACTION BUTTON
+   ============================================ */
+.fab {
+  position: fixed;
+  bottom: 80px;
+  right: calc(50% - 393px/2 + 20px);
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 0 8px 24px rgba(20,184,166,0.35);
+  transition: all var(--duration-fast) var(--ease-spring);
+  z-index: 40;
+}
+
+.fab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 12px 32px rgba(20,184,166,0.45);
+}
+
+/* ============================================
+   SETTINGS SCREEN
+   ============================================ */
+.settings-screen {
+  padding: var(--space-8);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.settings-screen h1 {
+  font-family: 'Fraunces', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: var(--space-6);
+}
+
+.settings-group {
+  margin-bottom: var(--space-6);
+}
+
+.settings-group-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-2);
+  padding: 0 var(--space-2);
+}
+
+.settings-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  cursor: pointer;
+  transition: background var(--duration-fast);
+}
+
+.settings-item:hover {
+  background: var(--stone-100);
+}
+
+[data-theme="dark"] .settings-item:hover {
+  background: var(--stone-800);
+}
+
+.settings-item + .settings-item {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.settings-item-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.settings-item-info {
+  flex: 1;
+}
+
+.settings-item-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.settings-item-desc {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+}
+
+.settings-item-arrow {
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+}
+
+/* Toggle switch */
+.toggle {
+  width: 44px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--stone-300);
+  position: relative;
+  cursor: pointer;
+  transition: background var(--duration-fast);
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .toggle {
+  background: var(--stone-600);
+}
+
+.toggle.on {
+  background: var(--accent);
+}
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: var(--shadow-xs);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.toggle.on::after {
+  transform: translateX(20px);
+}
+
+/* ============================================
+   KNOWLEDGE MAP SCREEN
+   ============================================ */
+.kmap-screen {
+  padding: var(--space-8);
+}
+
+.kmap-screen h1 {
+  font-family: 'Fraunces', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+}
+
+.kmap-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-6);
+}
+
+.kmap-legend {
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.kmap-legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.kmap-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.kmap-nodes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+.kmap-node {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: all var(--duration-fast);
+  cursor: pointer;
+}
+
+.kmap-node:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.kmap-node-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.kmap-node-info {
+  flex: 1;
+}
+
+.kmap-node-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.kmap-node-bar {
+  height: 4px;
+  background: var(--stone-200);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+[data-theme="dark"] .kmap-node-bar {
+  background: var(--stone-700);
+}
+
+.kmap-node-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.8s var(--ease-out);
+}
+
+.kmap-node-percent {
+  font-size: 0.75rem;
+  font-weight: 700;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in {
+  animation: fadeInUp 0.5s var(--ease-out) both;
+}
+
+.delay-1 { animation-delay: 0.05s; }
+.delay-2 { animation-delay: 0.1s; }
+.delay-3 { animation-delay: 0.15s; }
+.delay-4 { animation-delay: 0.2s; }
+.delay-5 { animation-delay: 0.25s; }
+.delay-6 { animation-delay: 0.3s; }
+.delay-7 { animation-delay: 0.35s; }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ============================================
+   RESPONSIVE — Adjustments for embedding
+   ============================================ */
+@media (max-width: 700px) {
+  .screen-nav { display: none; }
+  .screen-content { margin-left: 0; }
+  .fab { right: 20px; }
+  .bento-grid { grid-template-columns: 1fr 1fr; }
+  .bento-card.span-2 { grid-column: span 2; }
+  .course-scroll { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .kmap-nodes { grid-template-columns: 1fr; }
+  .bottom-nav { display: grid; grid-template-columns: repeat(5, 1fr); position: sticky; bottom: 0; z-index: 50; background: var(--surface); border-top: 1px solid var(--border); padding: var(--space-2) var(--space-3) calc(var(--space-2) + 4px); gap: 0; }
+}
+
+/* ============================================
+   SCROLLBAR STYLING
+   ============================================ */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--stone-300);
+  border-radius: var(--radius-full);
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--stone-600);
+}
+</style>
+</head>
+
+<body>
+<div class="app-container">
+
+  <!-- ============================================
+       SCREEN NAVIGATION (Sidebar)
+       ============================================ -->
+  <nav class="screen-nav">
+    <h2>NoteSnap Redesign</h2>
+    <button class="screen-nav-item active" data-screen="dashboard">
+      <span class="nav-icon">📱</span> Dashboard
+    </button>
+    <button class="screen-nav-item" data-screen="review-session">
+      <span class="nav-icon">🧠</span> Review Session
+    </button>
+    <button class="screen-nav-item" data-screen="review-complete">
+      <span class="nav-icon">🎉</span> Review Complete
+    </button>
+    <button class="screen-nav-item" data-screen="practice">
+      <span class="nav-icon">🎯</span> Practice Setup
+    </button>
+    <button class="screen-nav-item" data-screen="homework">
+      <span class="nav-icon">📸</span> Homework Hub
+    </button>
+    <button class="screen-nav-item" data-screen="progress">
+      <span class="nav-icon">📊</span> Progress
+    </button>
+    <button class="screen-nav-item" data-screen="knowledge-map">
+      <span class="nav-icon">🗺️</span> Knowledge Map
+    </button>
+    <button class="screen-nav-item" data-screen="settings">
+      <span class="nav-icon">⚙️</span> Settings
+    </button>
+
+    <button class="theme-toggle" onclick="toggleTheme()">
+      <span id="theme-icon">🌙</span>
+      <span id="theme-label">Dark Mode</span>
+    </button>
+  </nav>
+
+  <!-- ============================================
+       SCREEN CONTENT AREA
+       ============================================ -->
+  <div class="screen-content">
+    <div class="phone-frame">
+
+      <!-- ==========================================
+           SCREEN: DASHBOARD
+           ========================================== -->
+      <div class="screen-section active" id="screen-dashboard">
+        <!-- Top Bar -->
+        <div class="top-bar">
+          <div class="top-bar-inner">
+            <div>
+              <div class="greeting">Good morning 👋</div>
+              <div class="greeting-sub">3 tasks for today</div>
+            </div>
+            <div class="avatar">YS</div>
+          </div>
+        </div>
+
+        <!-- Gamification Bar -->
+        <div class="xp-bar animate-in delay-1">
+          <div class="xp-badge">⭐</div>
+          <div class="xp-info">
+            <div class="xp-label">
+              <span>Level 5 · <span class="xp-level">Scholar</span></span>
+              <span>1,250 XP</span>
+            </div>
+            <div class="xp-track">
+              <div class="xp-fill" style="width: 65%"></div>
+            </div>
+          </div>
+          <div class="streak-pill">🔥 12</div>
+        </div>
+
+        <!-- Quick Actions Bento -->
+        <div class="bento-grid">
+          <div class="bento-card bento-teal span-2 animate-in delay-2" style="background: linear-gradient(135deg, var(--stone-900) 0%, #2D2926 100%); color: white; border-color: transparent;">
+            <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3)">
+              <div class="bento-icon" style="background:rgba(20,184,166,0.2)">🧠</div>
+              <div>
+                <h3 style="color:white">Daily Review</h3>
+                <p style="color:rgba(255,255,255,0.5)">12 cards due · ~8 min</p>
+              </div>
+            </div>
+            <button class="btn-review" style="width: auto; padding: 10px 24px;">
+              Start Review →
+            </button>
+          </div>
+
+          <div class="bento-card bento-violet animate-in delay-3">
+            <div class="bento-icon">🎯</div>
+            <h3>Practice</h3>
+            <p>Quick 10 questions</p>
+          </div>
+
+          <div class="bento-card bento-coral animate-in delay-4">
+            <div class="bento-icon">📸</div>
+            <h3>Check HW</h3>
+            <p>Snap & grade</p>
+            <div class="bento-badge">NEW</div>
+          </div>
+        </div>
+
+        <!-- Study Plan -->
+        <div class="section-header animate-in delay-4">
+          <div class="section-title">Today's Plan</div>
+          <span class="section-link">See full plan →</span>
+        </div>
+
+        <div class="study-plan animate-in delay-5">
+          <div class="study-plan-progress">
+            <div class="study-plan-ring">
+              <svg width="56" height="56">
+                <circle class="bg" cx="28" cy="28" r="24"></circle>
+                <circle class="fill" cx="28" cy="28" r="24"
+                  stroke-dasharray="150.8"
+                  stroke-dashoffset="50.3"></circle>
+              </svg>
+              <div class="study-plan-ring-text">2/3</div>
+            </div>
+            <div class="study-plan-info">
+              <h4>Math Exam Prep</h4>
+              <p>2 of 3 tasks complete · 15 min left</p>
+            </div>
+          </div>
+
+          <div class="task-list">
+            <div class="task-item done">
+              <div class="task-check"></div>
+              <span class="task-text">Review: Quadratic Equations</span>
+              <span class="task-tag review">Review</span>
+            </div>
+            <div class="task-item done">
+              <div class="task-check"></div>
+              <span class="task-text">Lesson 4: Factoring</span>
+              <span class="task-tag lesson">Lesson</span>
+            </div>
+            <div class="task-item">
+              <div class="task-check"></div>
+              <span class="task-text">Practice: 10 mixed problems</span>
+              <span class="task-tag practice">Practice</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Courses -->
+        <div class="section-header animate-in delay-5" style="margin-top: var(--space-5);">
+          <div class="section-title">Your Courses</div>
+          <span class="section-link">View all →</span>
+        </div>
+
+        <div class="course-scroll animate-in delay-6">
+          <div class="course-card">
+            <div class="course-cover" style="background: linear-gradient(135deg, #3B82F6, #6366F1);">
+              <div class="course-cover-gradient">
+                <span class="course-emoji">📐</span>
+                <span class="course-cover-title">Algebra II</span>
+              </div>
+            </div>
+            <div class="course-meta">
+              <div class="course-meta-left">
+                <span>8 lessons</span>
+              </div>
+              <div class="course-progress-ring">
+                <svg width="28" height="28">
+                  <circle class="course-progress-bg" cx="14" cy="14" r="11" stroke-width="3" fill="none"></circle>
+                  <circle class="course-progress-fill" cx="14" cy="14" r="11" stroke-width="3" fill="none"
+                    stroke-dasharray="69.1"
+                    stroke-dashoffset="17.3"></circle>
+                </svg>
+                <div class="course-progress-text">75%</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="course-card">
+            <div class="course-cover" style="background: linear-gradient(135deg, #8B5CF6, #EC4899);">
+              <div class="course-cover-gradient">
+                <span class="course-emoji">⚡</span>
+                <span class="course-cover-title">Physics: Mechanics</span>
+              </div>
+            </div>
+            <div class="course-meta">
+              <div class="course-meta-left">
+                <span>12 lessons</span>
+              </div>
+              <div class="course-progress-ring">
+                <svg width="28" height="28">
+                  <circle class="course-progress-bg" cx="14" cy="14" r="11" stroke-width="3" fill="none"></circle>
+                  <circle class="course-progress-fill" cx="14" cy="14" r="11" stroke-width="3" fill="none"
+                    stroke-dasharray="69.1"
+                    stroke-dashoffset="41.5"></circle>
+                </svg>
+                <div class="course-progress-text">40%</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="course-card">
+            <div class="course-cover" style="background: linear-gradient(135deg, #10B981, #14B8A6);">
+              <div class="course-cover-gradient">
+                <span class="course-emoji">🧪</span>
+                <span class="course-cover-title">Chemistry 101</span>
+              </div>
+            </div>
+            <div class="course-meta">
+              <div class="course-meta-left">
+                <span>6 lessons</span>
+              </div>
+              <div class="course-progress-ring">
+                <svg width="28" height="28">
+                  <circle class="course-progress-bg" cx="14" cy="14" r="11" stroke-width="3" fill="none"></circle>
+                  <circle class="course-progress-fill" cx="14" cy="14" r="11" stroke-width="3" fill="none"
+                    stroke-dasharray="69.1"
+                    stroke-dashoffset="55.3"></circle>
+                </svg>
+                <div class="course-progress-text">20%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="height: var(--space-16)"></div>
+
+        <!-- Bottom Nav -->
+        <div class="bottom-nav">
+          <button class="bottom-nav-item active">
+            <span class="bottom-nav-icon">📚</span>
+            <span class="bottom-nav-label">Courses</span>
+          </button>
+          <button class="bottom-nav-item">
+            <span class="bottom-nav-icon">🧠</span>
+            <span class="bottom-nav-label">Review</span>
+            <span class="bottom-nav-badge">12</span>
+          </button>
+          <button class="bottom-nav-item">
+            <span class="bottom-nav-icon">🎯</span>
+            <span class="bottom-nav-label">Practice</span>
+          </button>
+          <button class="bottom-nav-item">
+            <span class="bottom-nav-icon">📋</span>
+            <span class="bottom-nav-label">Exams</span>
+          </button>
+          <button class="bottom-nav-item">
+            <span class="bottom-nav-icon">📊</span>
+            <span class="bottom-nav-label">Progress</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           SCREEN: REVIEW SESSION
+           ========================================== -->
+      <div class="screen-section" id="screen-review-session">
+        <div class="review-session">
+          <div class="review-progress-bar">
+            <div class="review-progress-bar-fill" style="width: 42%"></div>
+          </div>
+
+          <div class="review-card-counter">Card 5 of 12</div>
+
+          <div class="flashcard">
+            <div class="flashcard-inner" id="flashcard-demo">
+              <div class="flashcard-label">Question</div>
+              <div class="flashcard-question">What is the quadratic formula used to solve for?</div>
+
+              <div class="flashcard-answer" id="flashcard-answer" style="display:none">
+                <div class="flashcard-answer-label">Answer</div>
+                <div class="flashcard-answer-text">
+                  The roots (solutions) of any quadratic equation ax² + bx + c = 0, using the formula x = (-b ± √(b²-4ac)) / 2a
+                </div>
+              </div>
+
+              <div class="flashcard-tap" id="flashcard-tap">Tap to reveal answer</div>
+            </div>
+          </div>
+
+          <div class="rating-buttons" id="rating-buttons" style="display:none">
+            <button class="rating-btn again">
+              <span class="rating-btn-label">Again</span>
+              <span class="rating-btn-time">&lt;1m</span>
+            </button>
+            <button class="rating-btn hard">
+              <span class="rating-btn-label">Hard</span>
+              <span class="rating-btn-time">6m</span>
+            </button>
+            <button class="rating-btn good">
+              <span class="rating-btn-label">Good</span>
+              <span class="rating-btn-time">10m</span>
+            </button>
+            <button class="rating-btn easy">
+              <span class="rating-btn-label">Easy</span>
+              <span class="rating-btn-time">4d</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           SCREEN: REVIEW COMPLETE
+           ========================================== -->
+      <div class="screen-section" id="screen-review-complete">
+        <div class="review-complete">
+          <div class="complete-icon animate-in">✓</div>
+          <div class="complete-title animate-in delay-1">Session Complete!</div>
+          <div class="complete-subtitle animate-in delay-2">Great focus today. Keep the momentum going.</div>
+
+          <div class="complete-stats animate-in delay-3">
+            <div class="complete-stat">
+              <div class="complete-stat-value">12</div>
+              <div class="complete-stat-label">Cards</div>
+            </div>
+            <div class="complete-stat">
+              <div class="complete-stat-value" style="color: var(--emerald)">92%</div>
+              <div class="complete-stat-label">Accuracy</div>
+            </div>
+            <div class="complete-stat">
+              <div class="complete-stat-value">8m</div>
+              <div class="complete-stat-label">Time</div>
+            </div>
+          </div>
+
+          <div class="xp-earned-banner animate-in delay-4">
+            <span style="font-size:1.5rem">⭐</span>
+            <div>
+              <div class="xp-earned-amount">+65 XP</div>
+              <div class="xp-earned-label">Includes streak bonus!</div>
+            </div>
+          </div>
+
+          <div class="complete-actions animate-in delay-5">
+            <button class="btn-primary">Done</button>
+            <button class="btn-secondary">Review More Cards</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           SCREEN: PRACTICE SETUP
+           ========================================== -->
+      <div class="screen-section" id="screen-practice">
+        <div class="top-bar">
+          <div class="top-bar-inner">
+            <span style="font-size:0.875rem;color:var(--text-tertiary);cursor:pointer">← Back</span>
+            <span></span>
+          </div>
+        </div>
+
+        <div class="practice-setup">
+          <div class="practice-header animate-in">
+            <h1>Practice Mode</h1>
+            <p>Choose courses and start practicing</p>
+          </div>
+
+          <div class="section-header" style="padding:0;margin-bottom:var(--space-3)">
+            <div class="section-title" style="font-size:0.875rem">Select Courses</div>
+          </div>
+
+          <div class="course-select-grid animate-in delay-1">
+            <div class="course-select-item selected">
+              <div class="course-select-check"></div>
+              <span style="font-size:1.1rem">📐</span>
+              <span class="course-select-name">Algebra II</span>
+              <span class="course-select-count">24 Qs</span>
+            </div>
+            <div class="course-select-item selected">
+              <div class="course-select-check"></div>
+              <span style="font-size:1.1rem">⚡</span>
+              <span class="course-select-name">Physics: Mechanics</span>
+              <span class="course-select-count">18 Qs</span>
+            </div>
+            <div class="course-select-item">
+              <div class="course-select-check"></div>
+              <span style="font-size:1.1rem">🧪</span>
+              <span class="course-select-name">Chemistry 101</span>
+              <span class="course-select-count">12 Qs</span>
+            </div>
+          </div>
+
+          <div class="question-count-control animate-in delay-2">
+            <div class="question-count-label">
+              <span>Questions</span>
+              <span class="question-count-value" id="q-count-val">15</span>
+            </div>
+            <input type="range" class="slider-track" min="5" max="50" value="15" step="5"
+              oninput="document.getElementById('q-count-val').textContent=this.value">
+          </div>
+
+          <button class="btn-start-practice animate-in delay-3">
+            Start Practice →
+          </button>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           SCREEN: HOMEWORK HUB
+           ========================================== -->
+      <div class="screen-section" id="screen-homework">
+        <div class="top-bar">
+          <div class="top-bar-inner">
+            <div>
+              <div class="greeting" style="font-size:1.25rem">Homework</div>
+            </div>
+            <span></span>
+          </div>
+        </div>
+
+        <div class="homework-hub">
+          <div class="homework-hero animate-in">
+            <h1>How can we help?</h1>
+            <p>Check your work or get step-by-step guidance</p>
+          </div>
+
+          <div class="homework-actions">
+            <div class="homework-action-card animate-in delay-1">
+              <div class="homework-action-icon" style="background: var(--emerald-soft);">📸</div>
+              <div class="homework-action-info">
+                <h3>Check My Work</h3>
+                <p>Upload a photo — AI grades instantly</p>
+              </div>
+              <span class="homework-action-arrow">→</span>
+            </div>
+
+            <div class="homework-action-card animate-in delay-2">
+              <div class="homework-action-icon" style="background: var(--violet-soft);">💡</div>
+              <div class="homework-action-info">
+                <h3>Help Me Solve</h3>
+                <p>Get hints and explanations step by step</p>
+              </div>
+              <span class="homework-action-arrow">→</span>
+            </div>
+          </div>
+
+          <div class="section-header animate-in delay-3" style="padding:0">
+            <div class="section-title" style="font-size: 0.9rem">Recent</div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:var(--space-2);margin-top:var(--space-3)">
+            <div class="homework-action-card animate-in delay-4" style="padding:var(--space-4)">
+              <div class="homework-action-icon" style="background:var(--sky-soft);width:40px;height:40px;font-size:1rem;border-radius:10px">📄</div>
+              <div class="homework-action-info">
+                <h3 style="font-size:0.85rem">Math Worksheet p.42</h3>
+                <p>Checked · 92% correct · 2 hours ago</p>
+              </div>
+            </div>
+            <div class="homework-action-card animate-in delay-5" style="padding:var(--space-4)">
+              <div class="homework-action-icon" style="background:var(--amber-soft);width:40px;height:40px;font-size:1rem;border-radius:10px">📝</div>
+              <div class="homework-action-info">
+                <h3 style="font-size:0.85rem">Physics Problems Ch.3</h3>
+                <p>Helped · 5 steps solved · Yesterday</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           SCREEN: PROGRESS
+           ========================================== -->
+      <div class="screen-section" id="screen-progress">
+        <div class="top-bar">
+          <div class="top-bar-inner">
+            <div class="greeting" style="font-size:1.25rem">Progress</div>
+            <span></span>
+          </div>
+        </div>
+
+        <div class="progress-screen">
+          <div class="stats-row animate-in">
+            <div class="stat-card">
+              <div class="stat-card-icon">📚</div>
+              <div class="stat-card-value">347</div>
+              <div class="stat-card-label">Cards Reviewed</div>
+              <div class="stat-card-change">↑ 23% this week</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-icon">🎯</div>
+              <div class="stat-card-value" style="color:var(--emerald)">87%</div>
+              <div class="stat-card-label">Avg. Accuracy</div>
+              <div class="stat-card-change">↑ 5% this week</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-icon">🔥</div>
+              <div class="stat-card-value" style="color:var(--amber)">12</div>
+              <div class="stat-card-label">Day Streak</div>
+              <div class="stat-card-change">Best: 18 days</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-icon">⏱️</div>
+              <div class="stat-card-value">4.2h</div>
+              <div class="stat-card-label">Study Time</div>
+              <div class="stat-card-change">This week</div>
+            </div>
+          </div>
+
+          <div class="weekly-chart animate-in delay-2">
+            <h3>This Week</h3>
+            <div class="chart-bars">
+              <div class="chart-bar-group">
+                <div class="chart-bar teal" style="height: 40%"></div>
+                <div class="chart-day">Mon</div>
+              </div>
+              <div class="chart-bar-group">
+                <div class="chart-bar teal" style="height: 65%"></div>
+                <div class="chart-day">Tue</div>
+              </div>
+              <div class="chart-bar-group">
+                <div class="chart-bar teal" style="height: 30%"></div>
+                <div class="chart-day">Wed</div>
+              </div>
+              <div class="chart-bar-group">
+                <div class="chart-bar teal" style="height: 85%"></div>
+                <div class="chart-day">Thu</div>
+              </div>
+              <div class="chart-bar-group">
+                <div class="chart-bar teal" style="height: 55%"></div>
+                <div class="chart-day">Fri</div>
+              </div>
+              <div class="chart-bar-group">
+                <div class="chart-bar teal today" style="height: 70%"></div>
+                <div class="chart-day" style="color:var(--accent);font-weight:700">Today</div>
+              </div>
+              <div class="chart-bar-group">
+                <div class="chart-bar faded" style="height: 0%"></div>
+                <div class="chart-day">Sun</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-header animate-in delay-3" style="padding: 0; margin-bottom: var(--space-3)">
+            <div class="section-title" style="font-size: 0.9rem">Course Mastery</div>
+          </div>
+
+          <div class="mastery-grid animate-in delay-4">
+            <div class="mastery-item">
+              <span class="mastery-emoji">📐</span>
+              <div class="mastery-info">
+                <div class="mastery-name">Algebra II</div>
+                <div class="mastery-bar-bg">
+                  <div class="mastery-bar-fill" style="width:78%;background:linear-gradient(90deg,var(--accent),var(--accent-light))"></div>
+                </div>
+              </div>
+              <span class="mastery-percent" style="color:var(--accent)">78%</span>
+            </div>
+            <div class="mastery-item">
+              <span class="mastery-emoji">⚡</span>
+              <div class="mastery-info">
+                <div class="mastery-name">Physics: Mechanics</div>
+                <div class="mastery-bar-bg">
+                  <div class="mastery-bar-fill" style="width:45%;background:linear-gradient(90deg,var(--amber),#FBBF24)"></div>
+                </div>
+              </div>
+              <span class="mastery-percent" style="color:var(--amber)">45%</span>
+            </div>
+            <div class="mastery-item">
+              <span class="mastery-emoji">🧪</span>
+              <div class="mastery-info">
+                <div class="mastery-name">Chemistry 101</div>
+                <div class="mastery-bar-bg">
+                  <div class="mastery-bar-fill" style="width:22%;background:linear-gradient(90deg,var(--coral),#FB923C)"></div>
+                </div>
+              </div>
+              <span class="mastery-percent" style="color:var(--coral)">22%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           SCREEN: KNOWLEDGE MAP
+           ========================================== -->
+      <div class="screen-section" id="screen-knowledge-map">
+        <div class="top-bar">
+          <div class="top-bar-inner">
+            <div class="greeting" style="font-size:1.25rem">Knowledge Map</div>
+            <span></span>
+          </div>
+        </div>
+
+        <div class="kmap-screen">
+          <p class="kmap-subtitle animate-in">See where you're strong and where to focus</p>
+
+          <div class="kmap-legend animate-in delay-1">
+            <div class="kmap-legend-item">
+              <div class="kmap-legend-dot" style="background:var(--emerald)"></div>
+              Strong
+            </div>
+            <div class="kmap-legend-item">
+              <div class="kmap-legend-dot" style="background:var(--amber)"></div>
+              Learning
+            </div>
+            <div class="kmap-legend-item">
+              <div class="kmap-legend-dot" style="background:var(--coral)"></div>
+              Weak
+            </div>
+          </div>
+
+          <div class="section-header" style="padding:0;margin-bottom:var(--space-3)">
+            <div class="section-title" style="font-size:0.9rem">📐 Algebra II</div>
+          </div>
+
+          <div class="kmap-nodes animate-in delay-2">
+            <div class="kmap-node">
+              <div class="kmap-node-dot" style="background:var(--emerald)"></div>
+              <div class="kmap-node-info">
+                <div class="kmap-node-name">Linear Equations</div>
+                <div class="kmap-node-bar">
+                  <div class="kmap-node-fill" style="width:92%;background:var(--emerald)"></div>
+                </div>
+              </div>
+              <span class="kmap-node-percent" style="color:var(--emerald)">92%</span>
+            </div>
+
+            <div class="kmap-node">
+              <div class="kmap-node-dot" style="background:var(--emerald)"></div>
+              <div class="kmap-node-info">
+                <div class="kmap-node-name">Quadratic Equations</div>
+                <div class="kmap-node-bar">
+                  <div class="kmap-node-fill" style="width:85%;background:var(--emerald)"></div>
+                </div>
+              </div>
+              <span class="kmap-node-percent" style="color:var(--emerald)">85%</span>
+            </div>
+
+            <div class="kmap-node">
+              <div class="kmap-node-dot" style="background:var(--amber)"></div>
+              <div class="kmap-node-info">
+                <div class="kmap-node-name">Polynomials</div>
+                <div class="kmap-node-bar">
+                  <div class="kmap-node-fill" style="width:58%;background:var(--amber)"></div>
+                </div>
+              </div>
+              <span class="kmap-node-percent" style="color:var(--amber)">58%</span>
+            </div>
+
+            <div class="kmap-node">
+              <div class="kmap-node-dot" style="background:var(--coral)"></div>
+              <div class="kmap-node-info">
+                <div class="kmap-node-name">Exponential Functions</div>
+                <div class="kmap-node-bar">
+                  <div class="kmap-node-fill" style="width:25%;background:var(--coral)"></div>
+                </div>
+              </div>
+              <span class="kmap-node-percent" style="color:var(--coral)">25%</span>
+            </div>
+
+            <div class="kmap-node">
+              <div class="kmap-node-dot" style="background:var(--coral)"></div>
+              <div class="kmap-node-info">
+                <div class="kmap-node-name">Logarithms</div>
+                <div class="kmap-node-bar">
+                  <div class="kmap-node-fill" style="width:12%;background:var(--coral)"></div>
+                </div>
+              </div>
+              <span class="kmap-node-percent" style="color:var(--coral)">12%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           SCREEN: SETTINGS
+           ========================================== -->
+      <div class="screen-section" id="screen-settings">
+        <div class="top-bar">
+          <div class="top-bar-inner">
+            <div class="greeting" style="font-size:1.25rem">Settings</div>
+            <span></span>
+          </div>
+        </div>
+
+        <div class="settings-screen">
+          <div class="settings-group animate-in">
+            <div class="settings-group-label">Account</div>
+            <div class="settings-card">
+              <div class="settings-item">
+                <div class="settings-item-icon" style="background:var(--sky-soft)">👤</div>
+                <div class="settings-item-info">
+                  <div class="settings-item-name">Profile</div>
+                  <div class="settings-item-desc">Name, email, avatar</div>
+                </div>
+                <span class="settings-item-arrow">›</span>
+              </div>
+              <div class="settings-item">
+                <div class="settings-item-icon" style="background:var(--violet-soft)">🎓</div>
+                <div class="settings-item-info">
+                  <div class="settings-item-name">Learning Profile</div>
+                  <div class="settings-item-desc">Grade, subjects, curriculum</div>
+                </div>
+                <span class="settings-item-arrow">›</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-group animate-in delay-1">
+            <div class="settings-group-label">Preferences</div>
+            <div class="settings-card">
+              <div class="settings-item">
+                <div class="settings-item-icon" style="background:var(--amber-soft)">🌐</div>
+                <div class="settings-item-info">
+                  <div class="settings-item-name">Language</div>
+                  <div class="settings-item-desc">English</div>
+                </div>
+                <span class="settings-item-arrow">›</span>
+              </div>
+              <div class="settings-item">
+                <div class="settings-item-icon" style="background:var(--stone-100)">🌙</div>
+                <div class="settings-item-info">
+                  <div class="settings-item-name">Dark Mode</div>
+                </div>
+                <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+              </div>
+              <div class="settings-item">
+                <div class="settings-item-icon" style="background:var(--emerald-soft)">🔔</div>
+                <div class="settings-item-info">
+                  <div class="settings-item-name">Notifications</div>
+                  <div class="settings-item-desc">Reminders, streaks</div>
+                </div>
+                <div class="toggle" onclick="this.classList.toggle('on')"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-group animate-in delay-2">
+            <div class="settings-group-label">Study</div>
+            <div class="settings-card">
+              <div class="settings-item">
+                <div class="settings-item-icon" style="background:var(--coral-soft)">📝</div>
+                <div class="settings-item-info">
+                  <div class="settings-item-name">Past Exams</div>
+                  <div class="settings-item-desc">Upload exam papers for practice</div>
+                </div>
+                <span class="settings-item-arrow">›</span>
+              </div>
+              <div class="settings-item">
+                <div class="settings-item-icon" style="background:var(--sky-soft)">📥</div>
+                <div class="settings-item-info">
+                  <div class="settings-item-name">Export Data</div>
+                  <div class="settings-item-desc">Download your study data</div>
+                </div>
+                <span class="settings-item-arrow">›</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /phone-frame -->
+  </div><!-- /screen-content -->
+</div><!-- /app-container -->
+
+<!-- FAB for upload (dashboard only) -->
+<button class="fab" id="fab-btn" title="Upload notebook page">＋</button>
+
+<script>
+// Screen navigation
+const navItems = document.querySelectorAll('.screen-nav-item');
+const screens = document.querySelectorAll('.screen-section');
+const fab = document.getElementById('fab-btn');
+
+navItems.forEach(item => {
+  item.addEventListener('click', () => {
+    const target = item.dataset.screen;
+
+    // Update nav
+    navItems.forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+
+    // Show screen
+    screens.forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + target).classList.add('active');
+
+    // FAB visibility
+    fab.style.display = target === 'dashboard' ? 'flex' : 'none';
+
+    // Reset flashcard on review screen
+    if (target === 'review-session') {
+      document.getElementById('flashcard-answer').style.display = 'none';
+      document.getElementById('flashcard-tap').style.display = 'block';
+      document.getElementById('rating-buttons').style.display = 'none';
+    }
+
+    // Scroll to top
+    document.querySelector('.phone-frame').scrollTo(0, 0);
+  });
+});
+
+// Flashcard tap to reveal
+document.getElementById('flashcard-demo').addEventListener('click', () => {
+  const answer = document.getElementById('flashcard-answer');
+  const tap = document.getElementById('flashcard-tap');
+  const ratings = document.getElementById('rating-buttons');
+
+  if (answer.style.display === 'none') {
+    answer.style.display = 'block';
+    answer.style.animation = 'fadeInUp 0.3s var(--ease-out)';
+    tap.style.display = 'none';
+    ratings.style.display = 'grid';
+    ratings.style.animation = 'fadeInUp 0.3s var(--ease-out) 0.1s both';
+  }
+});
+
+// Theme toggle
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  document.getElementById('theme-icon').textContent = isDark ? '🌙' : '☀️';
+  document.getElementById('theme-label').textContent = isDark ? 'Dark Mode' : 'Light Mode';
+}
+
+// Animate elements on screen change
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.style.animationPlayState = 'running';
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.animate-in').forEach(el => {
+  observer.observe(el);
+});
+</script>
+
+</body>
+</html>

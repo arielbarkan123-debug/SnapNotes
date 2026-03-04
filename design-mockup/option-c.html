@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NoteSnap — Option C: Editorial</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAF9F7;
+    --text: #1A1A1A;
+    --text-secondary: #6B6B6B;
+    --text-tertiary: #999999;
+    --accent: #1E3A5F;
+    --border: rgba(0,0,0,0.08);
+    --border-strong: rgba(0,0,0,0.15);
+    --sidebar-bg: #FAF9F7;
+    --card-bg: transparent;
+    --toggle-bg: #D1D1D1;
+    --toggle-active: #1E3A5F;
+    --xp-bg: rgba(0,0,0,0.04);
+    --progress-bg: rgba(0,0,0,0.06);
+    --check: #1E3A5F;
+    --serif: 'Playfair Display', Georgia, serif;
+    --sans: 'Source Sans 3', 'Segoe UI', sans-serif;
+  }
+
+  [data-theme="dark"] {
+    --bg: #1A1A1A;
+    --text: #E5E5E5;
+    --text-secondary: #A0A0A0;
+    --text-tertiary: #707070;
+    --accent: #4A7FB5;
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.15);
+    --sidebar-bg: #1A1A1A;
+    --toggle-bg: #444;
+    --toggle-active: #4A7FB5;
+    --xp-bg: rgba(255,255,255,0.06);
+    --progress-bg: rgba(255,255,255,0.08);
+    --check: #4A7FB5;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 16px;
+    font-weight: 400;
+    transition: background 0.3s ease, color 0.3s ease;
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  .app {
+    display: flex;
+    height: 100vh;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 220px;
+    min-width: 220px;
+    border-right: 1px solid var(--border);
+    padding: 40px 28px;
+    display: flex;
+    flex-direction: column;
+    background: var(--sidebar-bg);
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+
+  .sidebar-brand {
+    font-family: var(--serif);
+    font-size: 1.4rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    margin-bottom: 48px;
+    cursor: default;
+  }
+
+  .sidebar-nav {
+    list-style: none;
+    flex: 1;
+  }
+
+  .sidebar-nav li {
+    margin-bottom: 4px;
+  }
+
+  .sidebar-nav a {
+    display: block;
+    padding: 8px 12px;
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+  }
+
+  .sidebar-nav a:hover {
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .sidebar-nav a.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    font-weight: 500;
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+
+  .theme-toggle {
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.2s ease;
+    background: none;
+    border: none;
+    font-family: var(--sans);
+    letter-spacing: 0.03em;
+  }
+
+  .theme-toggle:hover {
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* Main Content */
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 48px;
+  }
+
+  .main-inner {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  .screen {
+    display: none;
+    animation: fadeIn 0.35s ease;
+  }
+
+  .screen.active {
+    display: block;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* Typography */
+  h1 {
+    font-family: var(--serif);
+    font-size: 2.75rem;
+    font-weight: 500;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  h2 {
+    font-family: var(--serif);
+    font-size: 1.75rem;
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    margin-bottom: 20px;
+  }
+
+  h3 {
+    font-family: var(--serif);
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+
+  .label {
+    font-variant: small-caps;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    text-transform: lowercase;
+    font-weight: 500;
+  }
+
+  .subtitle {
+    color: var(--text-secondary);
+    font-size: 1.05rem;
+    font-weight: 300;
+    margin-top: 6px;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 24px 0;
+  }
+
+  /* Dashboard */
+  .greeting-date {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    font-weight: 300;
+    margin-top: 6px;
+    letter-spacing: 0.02em;
+  }
+
+  .gamification-bar {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-top: 24px;
+  }
+
+  .gam-level {
+    font-variant: small-caps;
+    letter-spacing: 0.06em;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .gam-xp-track {
+    flex: 1;
+    max-width: 200px;
+    height: 2px;
+    background: var(--progress-bg);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+
+  .gam-xp-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 1px;
+    transition: width 0.6s ease;
+  }
+
+  .gam-streak {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .gam-streak .fire {
+    display: inline-block;
+    width: 10px;
+    height: 14px;
+    margin-right: 4px;
+    position: relative;
+    top: 2px;
+  }
+
+  .gam-streak .fire::before {
+    content: '';
+    display: block;
+    width: 10px;
+    height: 14px;
+    background: radial-gradient(ellipse at 50% 90%, #E8652A 0%, #F4A623 50%, transparent 70%);
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  }
+
+  /* Quick Actions */
+  .quick-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+  }
+
+  .quick-action {
+    padding: 24px 20px 24px 0;
+    border-top: 1px solid var(--border);
+    cursor: pointer;
+    transition: padding-left 0.2s ease;
+  }
+
+  .quick-action:hover {
+    padding-left: 8px;
+  }
+
+  .quick-action:not(:nth-child(3n+1)) {
+    padding-left: 20px;
+    border-left: 1px solid var(--border);
+  }
+
+  .quick-action:hover:not(:nth-child(3n+1)) {
+    padding-left: 28px;
+  }
+
+  .qa-title {
+    font-family: var(--serif);
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .qa-tag {
+    font-family: var(--sans);
+    font-variant: small-caps;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-weight: 600;
+  }
+
+  .qa-desc {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    font-weight: 300;
+    margin-bottom: 8px;
+  }
+
+  .qa-arrow {
+    font-size: 0.9rem;
+    color: var(--accent);
+    transition: transform 0.2s ease;
+    display: inline-block;
+  }
+
+  .quick-action:hover .qa-arrow {
+    transform: translateX(4px);
+  }
+
+  /* Study Plan */
+  .plan-list {
+    list-style: none;
+  }
+
+  .plan-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+  }
+
+  .plan-item:hover {
+    opacity: 0.8;
+  }
+
+  .plan-check {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    color: transparent;
+    transition: all 0.2s ease;
+  }
+
+  .plan-check.done {
+    border-color: var(--check);
+    color: var(--check);
+  }
+
+  .plan-item.done .plan-text {
+    color: var(--text-tertiary);
+    text-decoration: line-through;
+    text-decoration-color: var(--border-strong);
+  }
+
+  /* Courses Grid */
+  .courses-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+  }
+
+  .course-card {
+    padding: 24px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .course-name {
+    font-family: var(--serif);
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .course-meta {
+    font-size: 0.82rem;
+    color: var(--text-tertiary);
+    margin-bottom: 14px;
+    letter-spacing: 0.02em;
+  }
+
+  .course-progress-track {
+    height: 2px;
+    background: var(--progress-bg);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+
+  .course-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 1px;
+    transition: width 0.8s ease;
+  }
+
+  .course-pct {
+    font-size: 0.78rem;
+    color: var(--text-tertiary);
+    margin-top: 6px;
+  }
+
+  /* Review Session */
+  .review-progress-bar {
+    height: 2px;
+    background: var(--progress-bg);
+    border-radius: 1px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+
+  .review-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 1px;
+    transition: width 0.4s ease;
+  }
+
+  .review-count {
+    font-family: 'Courier New', monospace;
+    font-size: 0.82rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.05em;
+  }
+
+  .flashcard-container {
+    max-width: 600px;
+    margin: 80px auto 60px;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .flashcard-label {
+    font-variant: small-caps;
+    letter-spacing: 0.1em;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    margin-bottom: 24px;
+    font-weight: 500;
+  }
+
+  .flashcard-text {
+    font-family: var(--serif);
+    font-size: 1.85rem;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--text);
+    margin-bottom: 28px;
+  }
+
+  .flashcard-text.answer-text {
+    font-family: var(--sans);
+    font-size: 1.15rem;
+    font-weight: 300;
+    line-height: 1.7;
+    color: var(--text-secondary);
+  }
+
+  .flashcard-hint {
+    font-style: italic;
+    font-size: 0.88rem;
+    color: var(--text-tertiary);
+    font-weight: 300;
+  }
+
+  .rating-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-top: 0;
+  }
+
+  .rating-btn {
+    background: none;
+    border: none;
+    font-family: var(--sans);
+    font-size: 0.92rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 8px 4px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    position: relative;
+  }
+
+  .rating-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transition: transform 0.2s ease;
+  }
+
+  .rating-btn:hover {
+    color: var(--accent);
+  }
+
+  .rating-btn:hover::after {
+    transform: scaleX(1);
+  }
+
+  .rating-sep {
+    color: var(--text-tertiary);
+    font-size: 0.8rem;
+    align-self: center;
+    opacity: 0.5;
+  }
+
+  /* Review Complete */
+  .complete-container {
+    text-align: center;
+    padding-top: 120px;
+    animation: fadeIn 0.5s ease;
+  }
+
+  .complete-check {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 32px;
+    font-size: 1.5rem;
+    color: var(--check);
+  }
+
+  .complete-title {
+    font-family: var(--serif);
+    font-size: 2.25rem;
+    font-weight: 500;
+    margin-bottom: 20px;
+  }
+
+  .complete-stats {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    font-weight: 300;
+    margin-bottom: 12px;
+    letter-spacing: 0.02em;
+  }
+
+  .complete-xp {
+    font-variant: small-caps;
+    letter-spacing: 0.06em;
+    font-size: 0.88rem;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 40px;
+  }
+
+  .complete-links {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+  }
+
+  .complete-link {
+    font-size: 0.92rem;
+    color: var(--accent);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .complete-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* Homework Hub */
+  .homework-options {
+    margin-top: 8px;
+  }
+
+  .homework-option {
+    padding: 24px 0;
+    border-top: 1px solid var(--border);
+    cursor: pointer;
+    transition: padding-left 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .homework-option:hover {
+    padding-left: 8px;
+  }
+
+  .ho-title {
+    font-family: var(--serif);
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .ho-desc {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 300;
+  }
+
+  .ho-arrow {
+    font-size: 1.1rem;
+    color: var(--accent);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+    margin-left: 16px;
+  }
+
+  .homework-option:hover .ho-arrow {
+    transform: translateX(4px);
+  }
+
+  .recent-list {
+    list-style: none;
+  }
+
+  .recent-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.92rem;
+  }
+
+  .ri-name {
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .ri-details {
+    display: flex;
+    gap: 16px;
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
+    font-weight: 300;
+  }
+
+  /* Progress */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 0;
+    margin-bottom: 16px;
+  }
+
+  .stat-item {
+    padding: 24px 16px 24px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .stat-item:not(:first-child) {
+    padding-left: 24px;
+    border-left: 1px solid var(--border);
+  }
+
+  .stat-number {
+    font-family: var(--serif);
+    font-size: 2.5rem;
+    font-weight: 500;
+    line-height: 1.1;
+    color: var(--text);
+  }
+
+  .stat-label {
+    font-size: 0.82rem;
+    color: var(--text-tertiary);
+    margin-top: 4px;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+  }
+
+  .stat-change {
+    font-size: 0.78rem;
+    color: var(--accent);
+    margin-top: 2px;
+    font-weight: 500;
+  }
+
+  /* Bar Chart */
+  .chart-container {
+    padding: 32px 0;
+  }
+
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    height: 140px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  .bar-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+  }
+
+  .bar {
+    width: 24px;
+    background: var(--accent);
+    border-radius: 2px 2px 0 0;
+    transition: height 0.6s ease;
+    min-height: 2px;
+  }
+
+  .bar-label {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    margin-top: 10px;
+    letter-spacing: 0.03em;
+    position: absolute;
+    bottom: 6px;
+  }
+
+  /* Course Mastery */
+  .mastery-list {
+    list-style: none;
+  }
+
+  .mastery-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mastery-name {
+    font-weight: 500;
+    font-size: 0.95rem;
+    width: 160px;
+    flex-shrink: 0;
+  }
+
+  .mastery-track {
+    flex: 1;
+    height: 2px;
+    background: var(--progress-bg);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+
+  .mastery-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 1px;
+    transition: width 0.8s ease;
+  }
+
+  .mastery-pct {
+    font-size: 0.82rem;
+    color: var(--text-tertiary);
+    width: 40px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* Settings */
+  .settings-section {
+    padding: 28px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .settings-section-title {
+    font-variant: small-caps;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    margin-bottom: 20px;
+    font-weight: 500;
+  }
+
+  .settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+  }
+
+  .settings-row:not(:last-child) {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sr-label {
+    font-size: 0.95rem;
+    color: var(--text);
+    font-weight: 400;
+  }
+
+  .sr-sublabel {
+    font-size: 0.82rem;
+    color: var(--text-tertiary);
+    font-weight: 300;
+    margin-top: 2px;
+  }
+
+  /* Toggle Switch */
+  .toggle {
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--toggle-bg);
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .toggle.active {
+    background: var(--toggle-active);
+  }
+
+  .toggle::after {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s ease;
+  }
+
+  .toggle.active::after {
+    transform: translateX(16px);
+  }
+
+  /* Account */
+  .account-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 0;
+  }
+
+  .account-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--serif);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text);
+    flex-shrink: 0;
+  }
+
+  .account-info {
+    flex: 1;
+  }
+
+  .account-name {
+    font-weight: 500;
+    font-size: 0.95rem;
+  }
+
+  .account-email {
+    font-size: 0.82rem;
+    color: var(--text-tertiary);
+    font-weight: 300;
+  }
+
+  .account-edit {
+    font-size: 0.85rem;
+    color: var(--accent);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .account-edit:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* Select / Dropdown */
+  .settings-select {
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    padding: 6px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+    outline: none;
+    -webkit-appearance: none;
+  }
+
+  .settings-select:hover,
+  .settings-select:focus {
+    border-color: var(--accent);
+  }
+
+  /* Section spacing */
+  .section {
+    margin-bottom: 48px;
+  }
+
+  .section:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Scrollbar */
+  .main::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .main::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .main::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 3px;
+  }
+
+  .main::-webkit-scrollbar-thumb:hover {
+    background: var(--text-tertiary);
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">NoteSnap</div>
+    <ul class="sidebar-nav">
+      <li><a class="active" data-screen="dashboard">Dashboard</a></li>
+      <li><a data-screen="review">Review</a></li>
+      <li><a data-screen="review-complete">Review Complete</a></li>
+      <li><a data-screen="homework">Homework</a></li>
+      <li><a data-screen="progress">Progress</a></li>
+      <li><a data-screen="settings">Settings</a></li>
+    </ul>
+    <div class="sidebar-footer">
+      <button class="theme-toggle" id="themeToggle">Dark</button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+    <div class="main-inner">
+
+      <!-- Dashboard -->
+      <div class="screen active" id="screen-dashboard">
+        <div class="section">
+          <h1>Good morning, Yoav</h1>
+          <p class="greeting-date">Monday, February 2</p>
+          <hr>
+          <div class="gamification-bar">
+            <span class="gam-level">Level 5 &middot; Scholar &middot; 1,250 XP</span>
+            <div class="gam-xp-track">
+              <div class="gam-xp-fill" style="width: 62%"></div>
+            </div>
+            <span class="gam-streak"><span class="fire"></span> 12-day streak</span>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="quick-actions">
+            <div class="quick-action">
+              <div class="qa-title">Daily Review</div>
+              <div class="qa-desc">12 cards waiting &middot; ~8 minutes</div>
+              <span class="qa-arrow">Start &rarr;</span>
+            </div>
+            <div class="quick-action">
+              <div class="qa-title">Practice</div>
+              <div class="qa-desc">Quick 10-question session</div>
+              <span class="qa-arrow">Begin &rarr;</span>
+            </div>
+            <div class="quick-action">
+              <div class="qa-title">Check Homework <span class="qa-tag">new</span></div>
+              <div class="qa-desc">Upload and grade instantly</div>
+              <span class="qa-arrow">Upload &rarr;</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Today's Plan</h3>
+          <ul class="plan-list">
+            <li class="plan-item done" onclick="togglePlan(this)">
+              <span class="plan-check done">&#10003;</span>
+              <span class="plan-text">Review: Quadratic Equations</span>
+            </li>
+            <li class="plan-item done" onclick="togglePlan(this)">
+              <span class="plan-check done">&#10003;</span>
+              <span class="plan-text">Lesson 4: Factoring</span>
+            </li>
+            <li class="plan-item" onclick="togglePlan(this)">
+              <span class="plan-check"></span>
+              <span class="plan-text">Practice: 10 mixed problems</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="section">
+          <h3>Your Courses</h3>
+          <div class="courses-grid">
+            <div class="course-card">
+              <div class="course-name">Algebra II</div>
+              <div class="course-meta">8 lessons</div>
+              <div class="course-progress-track">
+                <div class="course-progress-fill" style="width: 75%"></div>
+              </div>
+              <div class="course-pct">75%</div>
+            </div>
+            <div class="course-card">
+              <div class="course-name">Physics: Mechanics</div>
+              <div class="course-meta">12 lessons</div>
+              <div class="course-progress-track">
+                <div class="course-progress-fill" style="width: 40%"></div>
+              </div>
+              <div class="course-pct">40%</div>
+            </div>
+            <div class="course-card">
+              <div class="course-name">Chemistry 101</div>
+              <div class="course-meta">10 lessons</div>
+              <div class="course-progress-track">
+                <div class="course-progress-fill" style="width: 20%"></div>
+              </div>
+              <div class="course-pct">20%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Review Session -->
+      <div class="screen" id="screen-review">
+        <div class="review-progress-bar">
+          <div class="review-progress-fill" id="reviewProgressFill" style="width: 42%"></div>
+        </div>
+        <div class="review-count" id="reviewCount">5 / 12</div>
+
+        <div class="flashcard-container" id="flashcard">
+          <div id="flashcardContent">
+            <div class="flashcard-label">question</div>
+            <div class="flashcard-text" id="flashcardText">What is the derivative of sin(x)?</div>
+            <div class="flashcard-hint" id="flashcardHint">tap to reveal</div>
+          </div>
+        </div>
+
+        <div class="rating-buttons" id="ratingButtons" style="display: none;">
+          <button class="rating-btn" onclick="rateCard('again')">Again</button>
+          <span class="rating-sep">&middot;</span>
+          <button class="rating-btn" onclick="rateCard('hard')">Hard</button>
+          <span class="rating-sep">&middot;</span>
+          <button class="rating-btn" onclick="rateCard('good')">Good</button>
+          <span class="rating-sep">&middot;</span>
+          <button class="rating-btn" onclick="rateCard('easy')">Easy</button>
+        </div>
+      </div>
+
+      <!-- Review Complete -->
+      <div class="screen" id="screen-review-complete">
+        <div class="complete-container">
+          <div class="complete-check">&#10003;</div>
+          <div class="complete-title">Session Complete</div>
+          <div class="complete-stats">12 cards &middot; 87% accuracy &middot; 8 minutes</div>
+          <div class="complete-xp">+35 XP earned</div>
+          <div class="complete-links">
+            <a class="complete-link" data-screen="dashboard">Return to dashboard &rarr;</a>
+            <a class="complete-link" data-screen="review">Start another session &rarr;</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Homework Hub -->
+      <div class="screen" id="screen-homework">
+        <div class="section">
+          <h1>Homework</h1>
+          <p class="subtitle">Check your work or get step-by-step guidance</p>
+        </div>
+
+        <div class="section">
+          <div class="homework-options">
+            <div class="homework-option">
+              <div>
+                <div class="ho-title">Check My Work</div>
+                <div class="ho-desc">Upload a photo, AI grades instantly</div>
+              </div>
+              <span class="ho-arrow">&rarr;</span>
+            </div>
+            <div class="homework-option">
+              <div>
+                <div class="ho-title">Help Me Solve</div>
+                <div class="ho-desc">Get hints and explanations step by step</div>
+              </div>
+              <span class="ho-arrow">&rarr;</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Recent</h3>
+          <ul class="recent-list">
+            <li class="recent-item">
+              <span class="ri-name">Math Worksheet p.42</span>
+              <div class="ri-details">
+                <span>92%</span>
+                <span>2 hours ago</span>
+              </div>
+            </li>
+            <li class="recent-item">
+              <span class="ri-name">Physics Problems Ch.3</span>
+              <div class="ri-details">
+                <span>5 steps</span>
+                <span>Yesterday</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="screen" id="screen-progress">
+        <div class="section">
+          <h1>Progress</h1>
+          <hr>
+        </div>
+
+        <div class="section">
+          <div class="stats-row">
+            <div class="stat-item">
+              <div class="stat-number">347</div>
+              <div class="stat-label">Cards Reviewed</div>
+              <div class="stat-change">+23%</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">87%</div>
+              <div class="stat-label">Accuracy</div>
+              <div class="stat-change">+5%</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">12</div>
+              <div class="stat-label">Day Streak</div>
+              <div class="stat-change">&nbsp;</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">4.2h</div>
+              <div class="stat-label">Study Time</div>
+              <div class="stat-change">&nbsp;</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Weekly Activity</h3>
+          <div class="chart-container">
+            <div class="bar-chart">
+              <div class="bar-group">
+                <div class="bar" style="height: 45%"></div>
+                <span class="bar-label">Mon</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar" style="height: 72%"></div>
+                <span class="bar-label">Tue</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar" style="height: 58%"></div>
+                <span class="bar-label">Wed</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar" style="height: 90%"></div>
+                <span class="bar-label">Thu</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar" style="height: 35%"></div>
+                <span class="bar-label">Fri</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar" style="height: 65%"></div>
+                <span class="bar-label">Sat</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar" style="height: 80%"></div>
+                <span class="bar-label">Sun</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Course Mastery</h3>
+          <ul class="mastery-list">
+            <li class="mastery-item">
+              <span class="mastery-name">Algebra II</span>
+              <div class="mastery-track">
+                <div class="mastery-fill" style="width: 75%"></div>
+              </div>
+              <span class="mastery-pct">75%</span>
+            </li>
+            <li class="mastery-item">
+              <span class="mastery-name">Physics: Mechanics</span>
+              <div class="mastery-track">
+                <div class="mastery-fill" style="width: 40%"></div>
+              </div>
+              <span class="mastery-pct">40%</span>
+            </li>
+            <li class="mastery-item">
+              <span class="mastery-name">Chemistry 101</span>
+              <div class="mastery-track">
+                <div class="mastery-fill" style="width: 20%"></div>
+              </div>
+              <span class="mastery-pct">20%</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Settings -->
+      <div class="screen" id="screen-settings">
+        <div class="section">
+          <h1>Settings</h1>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">account</div>
+          <div class="account-row">
+            <div class="account-avatar">YK</div>
+            <div class="account-info">
+              <div class="account-name">Yoav Kahana</div>
+              <div class="account-email">yoav@example.com</div>
+            </div>
+            <a class="account-edit">Edit</a>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">preferences</div>
+          <div class="settings-row">
+            <div>
+              <div class="sr-label">Dark Mode</div>
+              <div class="sr-sublabel">Switch between light and dark themes</div>
+            </div>
+            <div class="toggle" id="settingsDarkToggle" onclick="toggleThemeFromSettings()"></div>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="sr-label">Sound Effects</div>
+              <div class="sr-sublabel">Play sounds on correct answers</div>
+            </div>
+            <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="sr-label">Notifications</div>
+              <div class="sr-sublabel">Daily study reminders</div>
+            </div>
+            <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">study</div>
+          <div class="settings-row">
+            <div>
+              <div class="sr-label">Daily Goal</div>
+              <div class="sr-sublabel">Target cards per day</div>
+            </div>
+            <select class="settings-select">
+              <option>10 cards</option>
+              <option selected>20 cards</option>
+              <option>30 cards</option>
+              <option>50 cards</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="sr-label">Difficulty</div>
+              <div class="sr-sublabel">Adjust question difficulty</div>
+            </div>
+            <select class="settings-select">
+              <option>Easy</option>
+              <option selected>Medium</option>
+              <option>Hard</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+  // Navigation
+  document.querySelectorAll('[data-screen]').forEach(function(link) {
+    link.addEventListener('click', function() {
+      var screenId = this.getAttribute('data-screen');
+      switchScreen(screenId);
+    });
+  });
+
+  function switchScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(function(s) {
+      s.classList.remove('active');
+    });
+    var target = document.getElementById('screen-' + screenId);
+    if (target) target.classList.add('active');
+
+    document.querySelectorAll('.sidebar-nav a').forEach(function(a) {
+      if (a.getAttribute('data-screen') === screenId) {
+        a.classList.add('active');
+      } else {
+        a.classList.remove('active');
+      }
+    });
+
+    if (screenId === 'review') resetFlashcard();
+  }
+
+  // Theme Toggle
+  var isDark = false;
+  var themeToggle = document.getElementById('themeToggle');
+  var settingsDarkToggle = document.getElementById('settingsDarkToggle');
+
+  function applyTheme() {
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    themeToggle.textContent = isDark ? 'Light' : 'Dark';
+    if (isDark) {
+      settingsDarkToggle.classList.add('active');
+    } else {
+      settingsDarkToggle.classList.remove('active');
+    }
+  }
+
+  themeToggle.addEventListener('click', function() {
+    isDark = !isDark;
+    applyTheme();
+  });
+
+  function toggleThemeFromSettings() {
+    isDark = !isDark;
+    applyTheme();
+  }
+
+  // Flashcard
+  var cardRevealed = false;
+  var flashcard = document.getElementById('flashcard');
+  var flashcardText = document.getElementById('flashcardText');
+  var flashcardHint = document.getElementById('flashcardHint');
+  var flashcardLabel = document.querySelector('#flashcardContent .flashcard-label');
+  var ratingButtons = document.getElementById('ratingButtons');
+
+  var questions = [
+    { q: 'What is the derivative of sin(x)?', a: 'The derivative of sin(x) is cos(x). This follows from the limit definition of the derivative and the trigonometric identity for sin(a+b).' },
+    { q: 'State the Pythagorean theorem.', a: 'In a right triangle, the square of the hypotenuse equals the sum of the squares of the other two sides: a\u00B2 + b\u00B2 = c\u00B2.' },
+    { q: 'What is the quadratic formula?', a: 'For ax\u00B2 + bx + c = 0, the solutions are x = (\u2212b \u00B1 \u221A(b\u00B2 \u2212 4ac)) / 2a.' },
+    { q: 'Define the chain rule.', a: 'If y = f(g(x)), then dy/dx = f\u2032(g(x)) \u00B7 g\u2032(x). The derivative of a composition is the outer derivative evaluated at the inner, times the inner derivative.' },
+    { q: 'What is Newton\u2019s Second Law?', a: 'Force equals mass times acceleration: F = ma. The net force on an object is equal to its mass multiplied by its acceleration.' }
+  ];
+  var currentQ = 0;
+  var cardIndex = 5;
+
+  function resetFlashcard() {
+    cardRevealed = false;
+    currentQ = 0;
+    cardIndex = 5;
+    renderQuestion();
+    ratingButtons.style.display = 'none';
+    document.getElementById('reviewProgressFill').style.width = '42%';
+    document.getElementById('reviewCount').textContent = '5 / 12';
+  }
+
+  function renderQuestion() {
+    var q = questions[currentQ % questions.length];
+    flashcardLabel.textContent = 'question';
+    flashcardText.textContent = q.q;
+    flashcardText.classList.remove('answer-text');
+    flashcardHint.textContent = 'tap to reveal';
+    flashcardHint.style.display = '';
+    cardRevealed = false;
+    ratingButtons.style.display = 'none';
+  }
+
+  flashcard.addEventListener('click', function() {
+    if (!cardRevealed) {
+      var q = questions[currentQ % questions.length];
+      flashcardLabel.textContent = 'answer';
+      flashcardText.textContent = q.a;
+      flashcardText.classList.add('answer-text');
+      flashcardHint.style.display = 'none';
+      ratingButtons.style.display = 'flex';
+      cardRevealed = true;
+    }
+  });
+
+  function rateCard(rating) {
+    currentQ++;
+    cardIndex++;
+    var progress = Math.min(100, (cardIndex / 12) * 100);
+    document.getElementById('reviewProgressFill').style.width = progress + '%';
+    document.getElementById('reviewCount').textContent = Math.min(cardIndex, 12) + ' / 12';
+
+    if (cardIndex >= 12) {
+      switchScreen('review-complete');
+    } else {
+      renderQuestion();
+    }
+  }
+
+  // Plan item toggle
+  function togglePlan(item) {
+    item.classList.toggle('done');
+    var check = item.querySelector('.plan-check');
+    if (item.classList.contains('done')) {
+      check.classList.add('done');
+      check.textContent = '\u2713';
+    } else {
+      check.classList.remove('done');
+      check.textContent = '';
+    }
+  }
+</script>
+</body>
+</html>

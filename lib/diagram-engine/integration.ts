@@ -13,6 +13,8 @@
 
 import { generateDiagram, type Pipeline } from './index';
 import { shouldUseEngine } from './tiered-router';
+import { generateLayeredTikz } from './layered-tikz-generator';
+import { routeQuestion } from './router';
 import type { Lesson } from '@/types';
 
 export { shouldUseEngine, tieredRoute } from './tiered-router';
@@ -34,6 +36,17 @@ export interface EngineDiagramResult {
     targetX: number;
     targetY: number;
   }>;
+  /** Layered TikZ source for step-by-step (TikZ pipeline only) */
+  stepByStepSource?: {
+    tikzCode: string;
+    steps: Array<{
+      layer: number;
+      label: string;
+      labelHe: string;
+      explanation: string;
+      explanationHe: string;
+    }>;
+  };
 }
 
 /**
@@ -47,7 +60,6 @@ export async function tryEngineDiagram(
 ): Promise<EngineDiagramResult | undefined> {
   console.log(`[Engine] tryEngineDiagram called with: "${question.slice(0, 80)}..."`);
 
-  // If no forced pipeline, check if the engine should handle this
   if (!forcePipeline && !shouldUseEngine(question)) {
     console.log('[Engine] shouldUseEngine returned false, skipping');
     return undefined;
@@ -56,14 +68,26 @@ export async function tryEngineDiagram(
   console.log('[Engine] Calling generateDiagram...');
 
   try {
-    const result = await generateDiagram(question, forcePipeline);
+    // Determine pipeline to check if TikZ (for step-by-step)
+    const pipeline = forcePipeline || routeQuestion(question);
+    const isTikzPipeline = pipeline === 'tikz';
+
+    // Generate diagram and layered TikZ in parallel (for TikZ pipeline)
+    const [result, layeredSource] = await Promise.all([
+      generateDiagram(question, forcePipeline),
+      isTikzPipeline ? generateLayeredTikz(question) : Promise.resolve(null),
+    ]);
 
     if ('error' in result) {
       console.error(`[Engine] Generation failed: ${result.error}`, { pipeline: result.pipeline });
-      return undefined; // Fall back to React components
+      return undefined;
     }
 
     console.log(`[Engine] Success! Pipeline: ${result.pipeline}, URL length: ${result.imageUrl?.length}`);
+
+    if (layeredSource) {
+      console.log(`[Engine] Layered TikZ: ${layeredSource.steps.length} layers`);
+    }
 
     return {
       type: 'engine_diagram',
@@ -72,10 +96,11 @@ export async function tryEngineDiagram(
       attempts: result.attempts,
       qaVerdict: result.qaVerdict,
       overlay: result.overlay,
+      stepByStepSource: layeredSource || undefined,
     };
   } catch (err) {
     console.error('[Engine] Unexpected error:', err);
-    return undefined; // Fall back to React components
+    return undefined;
   }
 }
 
@@ -166,6 +191,7 @@ export async function generateDiagramsForSteps(
           imageUrl: result.value.imageUrl,
           pipeline: result.value.pipeline,
         },
+        stepByStepSource: result.value.stepByStepSource,
       };
       generated++;
     } else if (result.status === 'rejected') {
