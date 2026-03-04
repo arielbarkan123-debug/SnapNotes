@@ -570,6 +570,10 @@ The student has just submitted their question. Instead of asking Socratic questi
 Do NOT ask the student questions first. Do NOT withhold the answer. Give them the full picture so they can learn from seeing the complete solution path.
 
 Keep it concise but thorough. Use clear formatting with numbered steps.
+
+**CRITICAL: You MUST still respond in the JSON format described above**, including the "diagram" field. Generate an appropriate diagram that shows the problem visually (e.g., a free body diagram for physics forces, a coordinate plane for graphing, an equation diagram for algebra). The diagram should show the COMPLETE solution with all steps revealed (set visibleStep to the last step).
+Set "estimatedProgress" to 50 (the explanation is given, student hasn't confirmed understanding yet).
+Set "pedagogicalIntent" to "show_answer".
 `
 
 const INITIAL_GREETING_PROMPT = `The student has just uploaded their homework question. Generate a warm, encouraging opening message.
@@ -805,15 +809,15 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     tutorResponse.message = stripAsciiDiagrams(tutorResponse.message)
   }
 
-  // Await engine result (was started in parallel with the AI call above)
-  // The engine is the ONLY diagram source — clear any AI-returned diagram
-  delete tutorResponse.diagram  // Don't use AI's old-format diagram
+  // Save AI-generated diagram as fallback before engine processing
+  const greetingAiDiagram = tutorResponse.diagram
 
   // Respect diagram mode from explanation style
   const diagramMode = style.diagramMode
 
   // Skip diagrams entirely for Socratic mode
   if (diagramMode === 'none') {
+    delete tutorResponse.diagram
     return tutorResponse
   }
 
@@ -844,6 +848,7 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     }
   }
 
+  // Engine diagram takes priority over AI diagram (higher quality images)
   const engineResult = await enginePromise
   console.log(`[TutorEngine] Engine result received: ${engineResult ? 'success' : 'undefined'}`)
   if (engineResult) {
@@ -860,8 +865,12 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
       // Pass step-by-step source if available (TikZ pipeline only)
       stepByStepSource: engineResult.stepByStepSource,
     }
+  } else if (greetingAiDiagram) {
+    // Engine didn't produce a result — restore AI-generated diagram as fallback
+    tutorResponse.diagram = greetingAiDiagram
+    console.log(`[TutorEngine] Using AI-generated diagram fallback (type: ${greetingAiDiagram.type})`)
   } else {
-    console.log(`[TutorEngine] No engine result - diagram will be undefined`)
+    console.log(`[TutorEngine] No engine result and no AI diagram - diagram will be undefined`)
   }
 
   // Generate visual update for the panel
@@ -990,15 +999,15 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     tutorResponse.message = stripAsciiDiagrams(tutorResponse.message)
   }
 
-  // Await engine result (was started in parallel with the AI call above)
-  // The engine is the ONLY diagram source — clear any AI-returned diagram
-  delete tutorResponse.diagram  // Don't use AI's old-format diagram
+  // Save AI-generated diagram as fallback before engine processing
+  const aiDiagram = tutorResponse.diagram
 
   // Respect diagram mode from explanation style
   const chatDiagramMode = style.diagramMode
 
   // Skip diagrams entirely for Socratic mode
   if (chatDiagramMode === 'none') {
+    delete tutorResponse.diagram
     return tutorResponse
   }
 
@@ -1034,22 +1043,35 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     }
   }
 
-  const engineResult = await enginePromise
-  if (engineResult) {
-    tutorResponse.diagram = {
-      type: 'engine_image',
-      visibleStep: 0,
-      data: {
-        imageUrl: engineResult.imageUrl,
-        pipeline: engineResult.pipeline,
-        overlay: engineResult.overlay,
-        qaVerdict: engineResult.qaVerdict,
-      },
-      // Pass step-by-step source if available (TikZ pipeline only)
-      stepByStepSource: engineResult.stepByStepSource,
+  // For auto-start: skip waiting for engine if AI already has a diagram (saves 5-15s)
+  // For normal messages: engine takes priority (higher quality images)
+  if (isAutoStart && aiDiagram) {
+    // Use AI diagram immediately — don't wait for engine
+    tutorResponse.diagram = aiDiagram
+    console.log(`[TutorEngine] Auto-start: using AI diagram (type: ${aiDiagram.type}), skipping engine wait`)
+  } else {
+    // Engine diagram takes priority over AI diagram (higher quality images)
+    const engineResult = await enginePromise
+    if (engineResult) {
+      tutorResponse.diagram = {
+        type: 'engine_image',
+        visibleStep: 0,
+        data: {
+          imageUrl: engineResult.imageUrl,
+          pipeline: engineResult.pipeline,
+          overlay: engineResult.overlay,
+          qaVerdict: engineResult.qaVerdict,
+        },
+        // Pass step-by-step source if available (TikZ pipeline only)
+        stepByStepSource: engineResult.stepByStepSource,
+      }
+    } else if (aiDiagram) {
+      // Engine didn't produce a result — restore AI-generated diagram as fallback
+      // (React SVG components render these client-side)
+      tutorResponse.diagram = aiDiagram
+      console.log(`[TutorEngine] Using AI-generated diagram fallback (type: ${aiDiagram.type})`)
     }
   }
-  // If engine failed or previous diagram exists, no new diagram is shown
 
   // Generate visual update for the panel
   attachVisualUpdate(tutorResponse, context)
