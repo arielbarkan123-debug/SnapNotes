@@ -83,7 +83,7 @@ export function parseTikzLayers(tikzCode: string): ParsedTikz {
   let currentLayerNumber = -1 // -1 = haven't seen any layer marker yet
   let currentDescription = ''
   let currentCode: string[] = []
-  let preLayerCode: string[] = []
+  const preLayerCode: string[] = []
   let foundAnyLayerMarker = false
 
   for (const line of lines) {

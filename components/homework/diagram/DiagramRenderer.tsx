@@ -2,7 +2,7 @@
 
 import { Component, type ReactNode, lazy, Suspense, useState, useCallback } from 'react'
 import { type DiagramState, getDiagramTypeName } from './types'
-import type { StepByStepSource, StepLayerMeta } from './types'
+import type { StepLayerMeta } from './types'
 import EngineDiagramImage from './EngineDiagramImage'
 
 const StepSequencePlayer = lazy(() => import('./StepSequencePlayer'))
@@ -120,11 +120,65 @@ export default function DiagramRenderer({
   language,
   onRenderError,
 }: DiagramRendererProps) {
-  // Step-by-step state
+  // ── ALL hooks at top level (before any conditional returns) ──
   const [walkthroughMode, setWalkthroughMode] = useState<'idle' | 'loading' | 'active' | 'fallback'>('idle')
   const [stepImageUrls, setStepImageUrls] = useState<string[]>([])
   const [stepsMeta, setStepsMeta] = useState<StepLayerMeta[]>([])
   const [isPartial, setIsPartial] = useState(false)
+
+  // Extract stepByStepSource upfront (safe even if diagram is null)
+  const stepByStepSource = diagram?.stepByStepSource
+  const hasStepByStep = !!stepByStepSource && stepByStepSource.steps.length > 0
+
+  // Handle "Step by Step" button click
+  const handleStepByStepClick = useCallback(async () => {
+    if (!stepByStepSource) return
+
+    setWalkthroughMode('loading')
+
+    try {
+      const response = await fetch('/api/diagrams/render-steps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stepByStepSource }),
+      })
+
+      if (!response.ok) {
+        console.error('[DiagramRenderer] Step render API failed:', response.status)
+        setStepsMeta(stepByStepSource.steps)
+        setWalkthroughMode('fallback')
+        return
+      }
+
+      const data = await response.json()
+      const urls = data.stepImageUrls as string[]
+      const successCount = urls.filter(Boolean).length
+
+      if (successCount === 0) {
+        setStepsMeta(stepByStepSource.steps)
+        setWalkthroughMode('fallback')
+        return
+      }
+
+      setStepImageUrls(urls)
+      setStepsMeta(data.steps || stepByStepSource.steps)
+      setIsPartial(data.partial || false)
+      setWalkthroughMode('active')
+    } catch (err) {
+      console.error('[DiagramRenderer] Step render error:', err)
+      setStepsMeta(stepByStepSource.steps)
+      setWalkthroughMode('fallback')
+    }
+  }, [stepByStepSource])
+
+  const handleCloseWalkthrough = useCallback(() => {
+    setWalkthroughMode('idle')
+    setStepImageUrls([])
+    setStepsMeta([])
+    setIsPartial(false)
+  }, [])
+
+  // ── Conditional rendering (after all hooks) ──
 
   // Validate diagram prop
   if (!diagram) {
@@ -208,61 +262,6 @@ export default function DiagramRenderer({
       overlay?: Array<{ text: string; x: number; y: number; targetX: number; targetY: number }>
       qaVerdict?: string
     } | undefined
-
-    // Check for step-by-step source availability
-    const stepByStepSource = diagram.stepByStepSource
-    const hasStepByStep = !!stepByStepSource && stepByStepSource.steps.length > 0
-
-    // Handle "Step by Step" button click
-    const handleStepByStepClick = useCallback(async () => {
-      if (!stepByStepSource) return
-
-      setWalkthroughMode('loading')
-
-      try {
-        const response = await fetch('/api/diagrams/render-steps', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ stepByStepSource }),
-        })
-
-        if (!response.ok) {
-          console.error('[DiagramRenderer] Step render API failed:', response.status)
-          // Fallback to text-only steps
-          setStepsMeta(stepByStepSource.steps)
-          setWalkthroughMode('fallback')
-          return
-        }
-
-        const data = await response.json()
-        const urls = data.stepImageUrls as string[]
-        const successCount = urls.filter(Boolean).length
-
-        if (successCount === 0) {
-          // All renders failed — use text-only fallback
-          setStepsMeta(stepByStepSource.steps)
-          setWalkthroughMode('fallback')
-          return
-        }
-
-        setStepImageUrls(urls)
-        setStepsMeta(data.steps || stepByStepSource.steps)
-        setIsPartial(data.partial || false)
-        setWalkthroughMode('active')
-      } catch (err) {
-        console.error('[DiagramRenderer] Step render error:', err)
-        // Fallback to text-only steps
-        setStepsMeta(stepByStepSource.steps)
-        setWalkthroughMode('fallback')
-      }
-    }, [stepByStepSource])
-
-    const handleCloseWalkthrough = useCallback(() => {
-      setWalkthroughMode('idle')
-      setStepImageUrls([])
-      setStepsMeta([])
-      setIsPartial(false)
-    }, [])
 
     if (engineData?.imageUrl) {
       // Show walkthrough when active

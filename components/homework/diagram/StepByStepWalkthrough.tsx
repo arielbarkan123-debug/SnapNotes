@@ -22,7 +22,7 @@ const AUTOPLAY_INTERVAL = 6000
 export default function StepByStepWalkthrough({
   stepImageUrls,
   steps,
-  finalImageUrl,
+  finalImageUrl: _finalImageUrl,
   language = 'en',
   partial,
   onClose,
@@ -30,10 +30,12 @@ export default function StepByStepWalkthrough({
   const t = useTranslations('diagram')
   const isHe = language === 'he'
   const [currentStep, setCurrentStep] = useState(0)
-  const [direction, setDirection] = useState(0)
   const [isAutoPlaying, setIsAutoPlaying] = useState(false)
   const [visitedSteps, setVisitedSteps] = useState<Set<number>>(new Set([0]))
   const autoPlayRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Reserved for future "show final diagram" button
+  void _finalImageUrl
 
   const totalSteps = steps.length
   const step = steps[currentStep]
@@ -45,10 +47,9 @@ export default function StepByStepWalkthrough({
 
   const goToStep = useCallback((index: number) => {
     if (index < 0 || index >= totalSteps) return
-    setDirection(index > currentStep ? 1 : -1)
     setCurrentStep(index)
     setVisitedSteps(prev => new Set([...prev, index]))
-  }, [currentStep, totalSteps])
+  }, [totalSteps])
 
   const goNext = useCallback(() => {
     if (isLast) {
@@ -63,7 +64,6 @@ export default function StepByStepWalkthrough({
   }, [currentStep, isFirst, goToStep])
 
   const restart = useCallback(() => {
-    setDirection(-1)
     setCurrentStep(0)
     setVisitedSteps(new Set([0]))
     setIsAutoPlaying(false)
@@ -90,10 +90,10 @@ export default function StepByStepWalkthrough({
       if (e.key === 'Escape') { onClose(); return }
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
         e.preventDefault()
-        isHe ? goPrev() : goNext()
+        if (isHe) { goPrev() } else { goNext() }
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
         e.preventDefault()
-        isHe ? goNext() : goPrev()
+        if (isHe) { goNext() } else { goPrev() }
       } else if (e.key === ' ') {
         e.preventDefault()
         setIsAutoPlaying(prev => !prev)
@@ -111,7 +111,11 @@ export default function StepByStepWalkthrough({
     if (touchStartX.current === null) return
     const diff = e.changedTouches[0].clientX - touchStartX.current
     if (Math.abs(diff) > 50) {
-      diff > 0 ? (isHe ? goNext() : goPrev()) : (isHe ? goPrev() : goNext())
+      if (diff > 0) {
+        if (isHe) { goNext() } else { goPrev() }
+      } else {
+        if (isHe) { goPrev() } else { goNext() }
+      }
     }
     touchStartX.current = null
   }
