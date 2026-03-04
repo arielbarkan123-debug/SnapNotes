@@ -421,7 +421,25 @@ export default function TutoringChat({
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-          {session.conversation.map((msg, idx) => (
+          {/* Show thinking state when auto-start is in progress */}
+          {session.conversation.filter(msg => msg.content !== '__auto_start__').length === 0 && isLoading && (
+            <div className="flex items-start gap-3 px-4 py-6">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                <span className="text-sm">&#127891;</span>
+              </div>
+              <div className="flex-1">
+                <div className="bg-gray-100 dark:bg-gray-700 rounded-2xl px-4 py-3 inline-flex items-center gap-2">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">{t('thinkingFirst')}</span>
+                </div>
+              </div>
+            </div>
+          )}
+          {session.conversation.filter(msg => msg.content !== '__auto_start__').map((msg, idx) => (
             <div key={idx}>
               <MessageBubble
                 message={msg}

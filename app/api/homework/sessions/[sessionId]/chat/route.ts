@@ -74,7 +74,7 @@ export async function POST(
       return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Message is required')
     }
 
-    const enableDiagrams = body.enableDiagrams !== false
+    const isAutoStart = body.message === '__auto_start__'
     const explanationStyle = body.explanationStyle
 
     // Detect escalation prefix (e.g. "[ESCALATION:REPHRASE] Please explain differently.")
@@ -100,31 +100,42 @@ export async function POST(
 
     const homeworkSession = session as HomeworkSession
 
-    // Step 1: Add student message to conversation (store clean message, without escalation prefix)
-    const studentMessage: ConversationMessage = {
-      role: 'student',
-      content: cleanMessage || body.message,
-      timestamp: new Date().toISOString(),
-    }
+    // Use session's enable_diagrams preference for auto-start, client preference for subsequent messages
+    const enableDiagrams = isAutoStart
+      ? (homeworkSession.enable_diagrams !== false)
+      : (body.enableDiagrams !== false)
 
+    // Step 1: Add student message to conversation (skip for auto-start sentinel)
     let sessionAfterStudentMsg: HomeworkSession
-    try {
-      sessionAfterStudentMsg = await addMessage(sessionId, user.id, studentMessage)
-    } catch {
-      // Fallback: manually update if addMessage fails
-      const updatedConversation = [...(homeworkSession.conversation || []), studentMessage]
-      const { data: updated, error: updateError } = await supabase
-        .from('homework_sessions')
-        .update({ conversation: updatedConversation })
-        .eq('id', sessionId)
-        .eq('user_id', user.id)
-        .select()
-        .single()
 
-      if (updateError) {
-        return createErrorResponse(ErrorCodes.CHAT_FAILED, 'Failed to save message')
+    if (isAutoStart) {
+      // Don't store __auto_start__ in conversation — it's an internal sentinel
+      sessionAfterStudentMsg = homeworkSession
+    } else {
+      const studentMessage: ConversationMessage = {
+        role: 'student',
+        content: cleanMessage || body.message,
+        timestamp: new Date().toISOString(),
       }
-      sessionAfterStudentMsg = updated as HomeworkSession
+
+      try {
+        sessionAfterStudentMsg = await addMessage(sessionId, user.id, studentMessage)
+      } catch {
+        // Fallback: manually update if addMessage fails
+        const updatedConversation = [...(homeworkSession.conversation || []), studentMessage]
+        const { data: updated, error: updateError } = await supabase
+          .from('homework_sessions')
+          .update({ conversation: updatedConversation })
+          .eq('id', sessionId)
+          .eq('user_id', user.id)
+          .select()
+          .single()
+
+        if (updateError) {
+          return createErrorResponse(ErrorCodes.CHAT_FAILED, 'Failed to save message')
+        }
+        sessionAfterStudentMsg = updated as HomeworkSession
+      }
     }
 
     // Step 2: Build tutor context

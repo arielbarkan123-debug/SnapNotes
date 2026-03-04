@@ -357,6 +357,7 @@ export interface HomeworkSession {
   used_show_answer: boolean
   completed_at: string | null
   solution_reached: boolean
+  enable_diagrams?: boolean
   student_final_answer: string | null
   time_spent_seconds: number | null
   breakthrough_moment: string | null
