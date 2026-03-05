@@ -28,6 +28,9 @@ CRITICAL LAYOUT RULES — EVERY DIAGRAM MUST FOLLOW THESE:
 6. ARROW STYLE: For force vectors use: -{Stealth[length=3mm,width=2mm]} with very thick. Make arrows long enough (minimum 1.5cm shaft length).
 7. FONT SIZE: Use \\large or \\footnotesize as appropriate. All text should be clearly readable.
 8. NO CLUTTER: Show ONLY what is asked. Keep diagrams clean and focused.
+
+WHEN PRE-COMPUTED VALUES ARE PROVIDED:
+If the user message starts with "PRE-COMPUTED VALUES", an independent SymPy computation engine has already solved the math. Use those exact numbers in all TikZ labels, annotations, and coordinate calculations. Do NOT recalculate anything. Focus on placement, visual quality, and readability.
 9. WHITE BACKGROUNDS ON LABELS: EVERY text node/label MUST have fill=white, inner sep=2pt so text is always readable over lines, arrows, and shaded areas. No exceptions.
 10. BOUNDING BOX — CRITICAL: ALL elements (curves, arcs, arrows, labels, boxes) MUST stay within the visible area. Never place anything at coordinates that would extend beyond the diagram.
 11. LABEL STAGGERING: When multiple labels would be within 1cm of each other, stagger them vertically or horizontally.

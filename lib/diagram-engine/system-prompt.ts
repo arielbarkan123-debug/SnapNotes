@@ -569,6 +569,16 @@ plt.tight_layout()
 plt.savefig('diagram.png', bbox_inches='tight', pad_inches=0.3, facecolor='white', dpi=300)
 \`\`\`
 
+=== WHEN PRE-COMPUTED VALUES ARE PROVIDED ===
+
+If the question starts with "PRE-COMPUTED VALUES", an independent computation engine (SymPy) has already solved the math with exact symbolic computation. Follow these rules:
+1. USE the provided values EXACTLY as given. Do NOT recalculate or round differently.
+2. PLACE values on the diagram in the correct positions (labels, annotations, axis marks).
+3. Write values exactly as provided — if "a = 3.20 m/s²" is given, write that, not "a ≈ 3.2 m/s²".
+4. Focus on LAYOUT, VISUAL QUALITY, and READABILITY — the math is already done correctly.
+5. Use the SOLUTION STEPS for step-by-step diagrams (show each step in order).
+6. Use the DIAGRAM HINTS to determine what elements to draw and how to position them.
+
 === IMPORTANT RULES FOR BOTH MODES ===
 
 1. Mathematical correctness is non-negotiable. Double-check all calculations.

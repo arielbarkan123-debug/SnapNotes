@@ -8,6 +8,7 @@ import { postProcessDiagram } from './post-process';
 import { getQAPrompt } from './qa-prompts';
 import { trackDiagramEvent } from './telemetry';
 import { getCachedDiagram, cacheDiagram } from './cache';
+import { preCompute } from './smart-pipeline';
 import Anthropic from '@anthropic-ai/sdk';
 import { AI_MODEL } from '@/lib/ai/claude';
 
@@ -24,6 +25,7 @@ export interface DiagramResult {
   code?: string;
   overlay?: OverlayLabel[];
   qaVerdict?: string;
+  smartPipeline?: { computeUsed: boolean; computeTimeMs?: number; attempts?: number };
 }
 
 export interface DiagramError {
@@ -328,7 +330,13 @@ export async function generateDiagram(
   const startTime = performance.now();
   trackDiagramEvent({ type: 'generation_start', pipeline, question, durationMs: 0, attempts: 0 });
 
-  let result: DiagramResult | DiagramError = await runPipeline(pipeline, question);
+  // ── Smart Pre-Compute: compute values with SymPy before rendering ──
+  const { enrichedQuestion, result: smartResult } = await preCompute(question);
+  if (smartResult.computeUsed) {
+    console.log(`[SmartPipeline] Computed ${Object.keys(smartResult.computed!.values).length} values in ${Math.round(smartResult.computed!.computeTimeMs)}ms (${smartResult.computeAttempts} attempt${smartResult.computeAttempts !== 1 ? 's' : ''})`);
+  }
+
+  let result: DiagramResult | DiagramError = await runPipeline(pipeline, enrichedQuestion);
 
   // ── Cross-pipeline fallback: if primary failed and no forced pipeline ──
   if ('error' in result && !forcePipeline) {
@@ -336,7 +344,7 @@ export async function generateDiagram(
     if (fallback) {
       console.log(`[Fallback] ${pipeline} failed → trying ${fallback}`);
       trackDiagramEvent({ type: 'generation_failure', pipeline, question, durationMs: performance.now() - startTime, attempts: 0, error: result.error });
-      result = await runPipeline(fallback, question);
+      result = await runPipeline(fallback, enrichedQuestion);
       if (!('error' in result)) {
         console.log(`[Fallback] ${fallback} succeeded as fallback for ${pipeline}`);
       }
@@ -355,6 +363,15 @@ export async function generateDiagram(
       error: result.error,
     });
   } else {
+    // Attach smart pipeline metadata to result
+    if (smartResult.computeUsed) {
+      result.smartPipeline = {
+        computeUsed: true,
+        computeTimeMs: smartResult.computed?.computeTimeMs,
+        attempts: smartResult.computeAttempts,
+      };
+    }
+
     trackDiagramEvent({
       type: 'generation_success',
       pipeline,
