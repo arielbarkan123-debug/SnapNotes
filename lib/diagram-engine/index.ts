@@ -10,6 +10,7 @@ import { trackDiagramEvent } from './telemetry';
 import { getCachedDiagram, cacheDiagram } from './cache';
 import { preCompute } from './smart-pipeline';
 import { captureSteps } from './step-capture';
+import type { StepImage } from '@/components/homework/diagram/types';
 import Anthropic from '@anthropic-ai/sdk';
 import { AI_MODEL } from '@/lib/ai/claude';
 
@@ -28,7 +29,7 @@ export interface DiagramResult {
   qaVerdict?: string;
   smartPipeline?: { computeUsed: boolean; computeTimeMs?: number; attempts?: number };
   /** Pre-rendered step images from step-capture pipeline */
-  stepImages?: import('@/components/homework/diagram/types').StepImage[];
+  stepImages?: StepImage[];
 }
 
 export interface DiagramError {

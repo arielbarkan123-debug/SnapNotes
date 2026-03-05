@@ -17,6 +17,7 @@ import { generateLayeredTikz } from './layered-tikz-generator';
 import { routeQuestion } from './router';
 import { preCompute } from './smart-pipeline';
 import type { Lesson } from '@/types';
+import type { StepImage } from '@/components/homework/diagram/types';
 
 export { shouldUseEngine, tieredRoute } from './tiered-router';
 
@@ -49,7 +50,7 @@ export interface EngineDiagramResult {
     }>;
   };
   /** Pre-rendered step images from step-capture pipeline */
-  stepImages?: import('@/components/homework/diagram/types').StepImage[];
+  stepImages?: StepImage[];
 }
 
 /**
