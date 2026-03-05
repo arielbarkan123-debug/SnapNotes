@@ -26,6 +26,8 @@ export interface DiagramResult {
   overlay?: OverlayLabel[];
   qaVerdict?: string;
   smartPipeline?: { computeUsed: boolean; computeTimeMs?: number; attempts?: number };
+  /** Pre-rendered step images from step-capture pipeline */
+  stepImages?: import('@/components/homework/diagram/types').StepImage[];
 }
 
 export interface DiagramError {

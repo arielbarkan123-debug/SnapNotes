@@ -78,3 +78,17 @@ export interface StepRenderResult {
   /** Error messages for failed steps (sparse, keyed by step index) */
   errors?: Record<number, string>
 }
+
+/** Pre-rendered step image with bilingual metadata (saved to Supabase Storage during generation) */
+export interface StepImage {
+  /** Supabase Storage public URL */
+  url: string
+  /** Short label (EN) */
+  label: string
+  /** Short label (HE) */
+  labelHe: string
+  /** Pedagogical explanation (EN) */
+  explanation: string
+  /** Pedagogical explanation (HE) */
+  explanationHe: string
+}
