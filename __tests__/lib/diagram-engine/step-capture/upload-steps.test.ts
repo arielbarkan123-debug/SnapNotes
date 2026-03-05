@@ -1,17 +1,17 @@
 import { uploadStepImages, generateDiagramHash } from '@/lib/diagram-engine/step-capture/upload-steps'
 
-// Mock Supabase
+// Mock Supabase — upload-steps uses createServiceClient (sync, bypasses RLS)
 const mockUpload = jest.fn()
 const mockGetPublicUrl = jest.fn()
 jest.mock('@/lib/supabase/server', () => ({
-  createClient: jest.fn().mockResolvedValue({
+  createServiceClient: jest.fn(() => ({
     storage: {
       from: jest.fn(() => ({
         upload: mockUpload,
         getPublicUrl: mockGetPublicUrl,
       })),
     },
-  }),
+  })),
 }))
 
 beforeEach(() => {

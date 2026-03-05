@@ -32,3 +32,12 @@ USING (
   bucket_id = 'diagram-steps'
   AND (storage.foldername(name))[1] = auth.uid()::text
 );
+
+-- Allow users to delete their own step images (cleanup)
+CREATE POLICY "Users can delete their step images"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (
+  bucket_id = 'diagram-steps'
+  AND (storage.foldername(name))[1] = auth.uid()::text
+);

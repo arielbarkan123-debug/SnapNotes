@@ -9,7 +9,7 @@
  */
 
 import { createHash } from 'crypto'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 
 const BUCKET = 'diagram-steps'
 
@@ -37,7 +37,9 @@ export async function uploadStepImages(
   userId: string,
   diagramHash: string,
 ): Promise<(string | null)[]> {
-  const supabase = await createClient()
+  // Use service client to bypass RLS — user identity is verified by the caller
+  // (generateDiagram in index.ts) and userId is passed through for path isolation
+  const supabase = createServiceClient()
 
   const uploadPromises = buffers.map(async (buffer, index) => {
     const storagePath = `${userId}/${diagramHash}/step_${index + 1}.png`

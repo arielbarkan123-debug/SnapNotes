@@ -30,6 +30,8 @@ export interface DiagramResult {
   smartPipeline?: { computeUsed: boolean; computeTimeMs?: number; attempts?: number };
   /** Pre-rendered step images from step-capture pipeline */
   stepImages?: StepImage[];
+  /** Full unprocessed AI response text — used by step-capture to extract metadata JSON */
+  fullResponseText?: string;
 }
 
 export interface DiagramError {
@@ -162,11 +164,16 @@ Reply in 5-7 lines. Numbers only, no prose.`,
  * If qaFeedback is provided, it's folded into the prompt so the model avoids the same mistake.
  * For matplotlib (first attempt, no error/feedback), a planning step runs first.
  */
+interface E2BCodeResult {
+  code: string;
+  fullResponseText: string;
+}
+
 async function generateE2BCode(
   question: string,
   previousError?: string,
   qaFeedback?: string,
-): Promise<string> {
+): Promise<E2BCodeResult> {
   let userMessage: string;
 
   if (previousError) {
@@ -202,7 +209,10 @@ async function generateE2BCode(
     throw new Error('No text response from Claude');
   }
 
-  let code = textBlock.text.trim();
+  // Preserve full response for step metadata extraction
+  const fullResponseText = textBlock.text;
+
+  let code = fullResponseText.trim();
   if (code.startsWith('```python')) {
     code = code.slice('```python'.length);
   } else if (code.startsWith('```latex') || code.startsWith('```tex')) {
@@ -213,7 +223,7 @@ async function generateE2BCode(
   if (code.endsWith('```')) {
     code = code.slice(0, -'```'.length);
   }
-  return code.trim();
+  return { code: code.trim(), fullResponseText };
 }
 
 /**
@@ -228,6 +238,7 @@ async function generateE2BDiagram(
   const MAX_QA_RETRIES = 2;
   let lastError: string | undefined;
   let code: string = '';
+  let fullResponseText: string = '';
   let mode: RenderMode = forcedMode || 'matplotlib';
   let qaFeedback: string | undefined;
 
@@ -236,13 +247,15 @@ async function generateE2BDiagram(
 
     for (let attempt = 1; attempt <= MAX_COMPILE_RETRIES; attempt++) {
       try {
-        code = await generateE2BCode(
+        const e2bResult = await generateE2BCode(
           question,
           lastError,
           // Keep QA feedback for all compile attempts in this round
           // (generateE2BCode prioritizes previousError when both are set)
           qaFeedback,
         );
+        code = e2bResult.code;
+        fullResponseText = e2bResult.fullResponseText;
         mode = forcedMode || detectMode(code);
 
         console.log(`[E2B QA:${qaRound} Attempt:${attempt}] Mode: ${mode}, Code length: ${code.length}`);
@@ -270,6 +283,7 @@ async function generateE2BDiagram(
               pipeline: pipelineId,
               attempts: qaRound * MAX_COMPILE_RETRIES + attempt,
               code,
+              fullResponseText,
               qaVerdict: 'pass',
             };
           }
@@ -281,6 +295,7 @@ async function generateE2BDiagram(
             pipeline: lastPipelineId,
             attempts: qaRound * MAX_COMPILE_RETRIES + attempt,
             code,
+            fullResponseText,
             qaVerdict: qaRound > 0 ? 'pass-after-retry' : 'skipped',
           };
         }
@@ -379,22 +394,32 @@ export async function generateDiagram(
     // ── Step capture: pre-render step images (best-effort, non-blocking) ──
     if (result.code) {
       try {
+        // Use cookie-based client to identify the user, then pass userId to
+        // upload-steps which uses service client to bypass RLS for writes
         const { createClient: createSC } = await import('@/lib/supabase/server');
         const supabase = await createSC();
         const { data: { user } } = await supabase.auth.getUser();
-        const userId = user?.id || 'anonymous';
+        const userId = user?.id;
 
-        const { stepImages, captureTimeMs } = await captureSteps(
-          result.code,
-          result.pipeline,
-          result.code, // Metadata JSON is embedded in the AI-generated code
-          userId,
-          question,
-        );
+        if (!userId) {
+          console.warn('[DiagramEngine] Step capture skipped: no authenticated user');
+        } else {
+          // Use fullResponseText for metadata extraction (contains JSON block after code)
+          // Falls back to code if fullResponseText isn't available (e.g., TikZ pipeline)
+          const metadataText = result.fullResponseText || result.code;
 
-        if (stepImages.length > 0) {
-          result.stepImages = stepImages;
-          console.log(`[DiagramEngine] Step capture: ${stepImages.length} steps in ${captureTimeMs}ms`);
+          const { stepImages, captureTimeMs } = await captureSteps(
+            result.code,
+            result.pipeline,
+            metadataText,
+            userId,
+            question,
+          );
+
+          if (stepImages.length > 0) {
+            result.stepImages = stepImages;
+            console.log(`[DiagramEngine] Step capture: ${stepImages.length} steps in ${captureTimeMs}ms`);
+          }
         }
       } catch (err) {
         // Step capture failure never blocks diagram delivery
