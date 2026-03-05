@@ -210,6 +210,7 @@ export async function generateDiagramsForSteps(
           pipeline: result.value.pipeline,
         },
         stepByStepSource: result.value.stepByStepSource,
+        stepImages: result.value.stepImages,
       };
       generated++;
     } else if (result.status === 'rejected') {

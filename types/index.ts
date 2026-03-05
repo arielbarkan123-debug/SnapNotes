@@ -338,7 +338,7 @@ export interface Step {
       stepLabel?: string
       showCalculation?: string
     }>
-    /** Layered TikZ source for step-by-step diagram build-up (TikZ pipeline only) */
+    /** @deprecated Use stepImages for pre-rendered steps */
     stepByStepSource?: {
       tikzCode: string
       steps: Array<{
@@ -349,6 +349,14 @@ export interface Step {
         explanationHe: string
       }>
     }
+    /** Pre-rendered step images from step-capture pipeline */
+    stepImages?: Array<{
+      url: string
+      label: string
+      labelHe: string
+      explanation: string
+      explanationHe: string
+    }>
   }
 }
 
