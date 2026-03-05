@@ -952,8 +952,10 @@ export async function generateTutorResponse(
   // Fire engine diagram in parallel with AI call
   // Trigger when: (1) diagrams enabled and no previous diagram, OR (2) student explicitly requests a diagram
   // Note: studentRequestsDiagram overrides enableDiagrams toggle — if the student asks for a diagram, we generate it
+  // Skip step capture on auto-start: saves ~15s from engine pipeline, ensuring
+  // the diagram finishes within the 45s timeout. Users get on-demand step-by-step.
   const enginePromise = (enableDiagrams || studentRequestsDiagram) && (!previousDiagram || studentRequestsDiagram) && shouldUseEngine(diagramTopic)
-    ? tryEngineDiagram(diagramTopic).catch((err) => {
+    ? tryEngineDiagram(diagramTopic, undefined, { skipStepCapture: isAutoStart }).catch((err) => {
         console.warn('[TutorEngine] Engine diagram failed for chat:', err)
         return undefined
       })

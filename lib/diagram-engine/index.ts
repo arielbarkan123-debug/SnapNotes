@@ -327,7 +327,8 @@ async function generateE2BDiagram(
  */
 export async function generateDiagram(
   question: string,
-  forcePipeline?: Pipeline
+  forcePipeline?: Pipeline,
+  options?: { skipStepCapture?: boolean }
 ): Promise<DiagramResult | DiagramError> {
   const pipeline = forcePipeline || routeQuestion(question);
   console.log(`[Router] Question: "${question.slice(0, 80)}..." → Pipeline: ${pipeline}`);
@@ -398,7 +399,8 @@ export async function generateDiagram(
     // Strategy: race captureSteps against a 15s timeout. If capture finishes
     // within budget, attach pre-rendered images (instant walkthrough). If not,
     // the frontend falls back to the legacy on-demand path.
-    if (result.code) {
+    // For auto-start: skip entirely — saves 15s, users get on-demand step-by-step.
+    if (result.code && !options?.skipStepCapture) {
       try {
         const { createClient: createSC } = await import('@/lib/supabase/server');
         const supabase = await createSC();

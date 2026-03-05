@@ -61,6 +61,7 @@ export interface EngineDiagramResult {
 export async function tryEngineDiagram(
   question: string,
   forcePipeline?: Pipeline,
+  options?: { skipStepCapture?: boolean },
 ): Promise<EngineDiagramResult | undefined> {
   console.log(`[Engine] tryEngineDiagram called with: "${question.slice(0, 80)}..."`);
 
@@ -85,7 +86,7 @@ export async function tryEngineDiagram(
     // Generate diagram and layered TikZ in parallel (for TikZ pipeline).
     // Both receive the enriched question with pre-computed values.
     const [result, layeredSource] = await Promise.all([
-      generateDiagram(enrichedQuestion, forcePipeline),
+      generateDiagram(enrichedQuestion, forcePipeline, options),
       mayBeTikz ? generateLayeredTikz(enrichedQuestion) : Promise.resolve(null),
     ]);
 
