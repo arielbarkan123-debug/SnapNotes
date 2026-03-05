@@ -391,11 +391,15 @@ export async function generateDiagram(
       };
     }
 
-    // ── Step capture: pre-render step images (best-effort, non-blocking) ──
+    // ── Step capture: pre-render step images (best-effort, truly non-blocking) ──
+    // Step capture compiles each TikZ layer separately + uploads to storage.
+    // This can take 30-60s and MUST NOT block diagram delivery, otherwise the
+    // 90s client-side timeout fires before the response is sent.
+    // Strategy: race captureSteps against a 15s timeout. If capture finishes
+    // within budget, attach pre-rendered images (instant walkthrough). If not,
+    // the frontend falls back to the legacy on-demand path.
     if (result.code) {
       try {
-        // Use cookie-based client to identify the user, then pass userId to
-        // upload-steps which uses service client to bypass RLS for writes
         const { createClient: createSC } = await import('@/lib/supabase/server');
         const supabase = await createSC();
         const { data: { user } } = await supabase.auth.getUser();
@@ -404,21 +408,32 @@ export async function generateDiagram(
         if (!userId) {
           console.warn('[DiagramEngine] Step capture skipped: no authenticated user');
         } else {
-          // Use fullResponseText for metadata extraction (contains JSON block after code)
-          // Falls back to code if fullResponseText isn't available (e.g., TikZ pipeline)
           const metadataText = result.fullResponseText || result.code;
 
-          const { stepImages, captureTimeMs } = await captureSteps(
+          // Race: 15s budget for step capture, then give up and return diagram without step images
+          const STEP_CAPTURE_TIMEOUT_MS = 15_000;
+          const capturePromise = captureSteps(
             result.code,
             result.pipeline,
             metadataText,
             userId,
             question,
           );
+          const timeoutPromise = new Promise<null>((resolve) =>
+            setTimeout(() => resolve(null), STEP_CAPTURE_TIMEOUT_MS)
+          );
 
-          if (stepImages.length > 0) {
-            result.stepImages = stepImages;
-            console.log(`[DiagramEngine] Step capture: ${stepImages.length} steps in ${captureTimeMs}ms`);
+          const captureResult = await Promise.race([capturePromise, timeoutPromise]);
+
+          if (captureResult && captureResult.stepImages.length > 0) {
+            result.stepImages = captureResult.stepImages;
+            console.log(`[DiagramEngine] Step capture: ${captureResult.stepImages.length} steps in ${captureResult.captureTimeMs}ms`);
+          } else if (!captureResult) {
+            console.warn(`[DiagramEngine] Step capture timed out after ${STEP_CAPTURE_TIMEOUT_MS}ms — returning diagram without step images`);
+            // Let the capture finish in background (images will be in storage for future use)
+            capturePromise.catch((err) => {
+              console.warn('[DiagramEngine] Background step capture failed:', err);
+            });
           }
         }
       } catch (err) {
