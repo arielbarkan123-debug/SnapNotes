@@ -9,6 +9,7 @@ import { getQAPrompt } from './qa-prompts';
 import { trackDiagramEvent } from './telemetry';
 import { getCachedDiagram, cacheDiagram } from './cache';
 import { preCompute } from './smart-pipeline';
+import { captureSteps } from './step-capture';
 import Anthropic from '@anthropic-ai/sdk';
 import { AI_MODEL } from '@/lib/ai/claude';
 
@@ -372,6 +373,32 @@ export async function generateDiagram(
         computeTimeMs: smartResult.computed?.computeTimeMs,
         attempts: smartResult.computeAttempts,
       };
+    }
+
+    // ── Step capture: pre-render step images (best-effort, non-blocking) ──
+    if (result.code) {
+      try {
+        const { createClient: createSC } = await import('@/lib/supabase/server');
+        const supabase = await createSC();
+        const { data: { user } } = await supabase.auth.getUser();
+        const userId = user?.id || 'anonymous';
+
+        const { stepImages, captureTimeMs } = await captureSteps(
+          result.code,
+          result.pipeline,
+          result.code, // Metadata JSON is embedded in the AI-generated code
+          userId,
+          question,
+        );
+
+        if (stepImages.length > 0) {
+          result.stepImages = stepImages;
+          console.log(`[DiagramEngine] Step capture: ${stepImages.length} steps in ${captureTimeMs}ms`);
+        }
+      } catch (err) {
+        // Step capture failure never blocks diagram delivery
+        console.warn('[DiagramEngine] Step capture failed (non-blocking):', err);
+      }
     }
 
     trackDiagramEvent({

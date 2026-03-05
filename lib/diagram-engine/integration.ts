@@ -37,7 +37,7 @@ export interface EngineDiagramResult {
     targetX: number;
     targetY: number;
   }>;
-  /** Layered TikZ source for step-by-step (TikZ pipeline only) */
+  /** @deprecated Use stepImages instead — kept for backward compat during migration */
   stepByStepSource?: {
     tikzCode: string;
     steps: Array<{
@@ -48,6 +48,8 @@ export interface EngineDiagramResult {
       explanationHe: string;
     }>;
   };
+  /** Pre-rendered step images from step-capture pipeline */
+  stepImages?: import('@/components/homework/diagram/types').StepImage[];
 }
 
 /**
@@ -111,6 +113,7 @@ export async function tryEngineDiagram(
       qaVerdict: result.qaVerdict,
       overlay: result.overlay,
       stepByStepSource: validLayeredSource || undefined,
+      stepImages: result.stepImages,
     };
   } catch (err) {
     console.error('[Engine] Unexpected error:', err);
