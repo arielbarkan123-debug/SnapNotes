@@ -1061,8 +1061,22 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     tutorResponse.diagram = aiDiagram
     console.log(`[TutorEngine] Auto-start: using AI diagram (type: ${aiDiagram.type}), skipping engine wait`)
   } else {
-    // Engine diagram takes priority over AI diagram (higher quality images)
-    const engineResult = await enginePromise
+    // Engine diagram takes priority over AI diagram (higher quality images).
+    // CRITICAL: The engine can take 60-90s (SymPy + AI + sandbox + TikZ + step capture).
+    // Race against a hard timeout to prevent Vercel function 504 and client AbortError.
+    // Auto-start gets 45s budget (must respond fast), normal messages get 60s.
+    const ENGINE_TIMEOUT_MS = isAutoStart ? 45_000 : 60_000
+    const engineTimeout = new Promise<undefined>((resolve) =>
+      setTimeout(() => resolve(undefined), ENGINE_TIMEOUT_MS)
+    )
+    const engineResult = await Promise.race([enginePromise, engineTimeout])
+
+    if (!engineResult && enginePromise !== Promise.resolve(undefined)) {
+      console.warn(`[TutorEngine] Engine diagram timed out after ${ENGINE_TIMEOUT_MS}ms — returning without diagram`)
+      // Let engine finish in background (result is cached for next request)
+      enginePromise.catch(() => {})
+    }
+
     if (engineResult) {
       tutorResponse.diagram = {
         type: 'engine_image',
