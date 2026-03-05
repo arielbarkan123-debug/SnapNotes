@@ -579,6 +579,40 @@ If the question starts with "PRE-COMPUTED VALUES", an independent computation en
 5. Use the SOLUTION STEPS for step-by-step diagrams (show each step in order).
 6. Use the DIAGRAM HINTS to determine what elements to draw and how to position them.
 
+=== STEP-BY-STEP MARKERS — REQUIRED FOR ALL DIAGRAMS ===
+
+Structure your code with STEP markers so the diagram can be revealed step-by-step for teaching.
+
+For matplotlib (Python):
+# === STEP N: Short description ===
+
+For LaTeX:
+% === STEP N: Short description ===
+
+RULES:
+1. Place a marker before each logical group of elements.
+2. Steps are CUMULATIVE — Step 3 means everything from steps 1+2+3 is visible.
+3. Each step ADDS new elements. Never remove elements from previous steps.
+4. Aim for 3-6 steps per diagram.
+5. Follow TEACHER WHITEBOARD ORDER — build the way a teacher would on a board:
+
+| Topic | Order |
+|-------|-------|
+| Free Body Diagram | Object → Weight → Normal → Applied → Friction → Net force |
+| Inclined Plane | Surface → Object → Weight → Decompose → Normal → Friction |
+| Function Graph | Axes + grid → Plot curve → Key points → Labels + legend |
+| Projectile Motion | Ground + launch → Trajectory → Velocity vectors → Height/range |
+| Circuit | Battery → Main path → Components → Current arrows → Values |
+| Geometry | Given shape → Construction lines → Angles/sides → Measurements |
+| Equation Solving | Original equation → Each operation → Boxed answer |
+
+After your code, output a JSON block with step metadata:
+\`\`\`json
+{ "steps": [
+  { "step": 1, "label": "Short English label", "labelHe": "תווית קצרה בעברית", "explanation": "What this step shows and why", "explanationHe": "הסבר בעברית" }
+]}
+\`\`\`
+
 === IMPORTANT RULES FOR BOTH MODES ===
 
 1. Mathematical correctness is non-negotiable. Double-check all calculations.
