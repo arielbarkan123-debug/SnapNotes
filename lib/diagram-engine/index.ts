@@ -382,7 +382,9 @@ export async function generateDiagram(
     });
 
     // ── Cache store: save successful result (fire-and-forget) ──
-    void cacheDiagram(question, result).catch(() => {
+    // Pass the originally-routed pipeline so fallback results are cached
+    // under the key that future lookups (using routeQuestion) will use.
+    void cacheDiagram(question, result, pipeline).catch(() => {
       // Swallow — caching is best-effort
     });
   }

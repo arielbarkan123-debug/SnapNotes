@@ -142,10 +142,15 @@ export async function getCachedDiagram(
  * Cache a successfully generated diagram.
  * Stores in both memory and Supabase (fire-and-forget for Supabase).
  * Only caches diagrams that passed QA.
+ *
+ * @param routedPipeline - The originally-routed pipeline (before fallback).
+ *   If provided AND different from result.pipeline, we store under BOTH keys
+ *   so that future lookups using routeQuestion() will hit the cache.
  */
 export async function cacheDiagram(
   question: string,
   result: DiagramResult,
+  routedPipeline?: Pipeline,
 ): Promise<void> {
   // Only cache diagrams that passed QA
   if (result.qaVerdict !== 'pass' && result.qaVerdict !== 'pass-after-retry') {
@@ -153,6 +158,28 @@ export async function cacheDiagram(
   }
 
   const key = getCacheKey(question, result.pipeline);
+
+  // Also store under the routed pipeline key if fallback occurred,
+  // so lookups using routeQuestion() will hit the cache.
+  if (routedPipeline && routedPipeline !== result.pipeline) {
+    const routedKey = getCacheKey(question, routedPipeline);
+    memoryCache.set(routedKey, { result, timestamp: Date.now() });
+    // Supabase upsert for routed key too (fire-and-forget)
+    void (async () => {
+      try {
+        const { createClient } = await import('@/lib/supabase/server');
+        const supabase = await createClient();
+        await supabase.from('diagram_cache').upsert({
+          question_hash: routedKey,
+          question_text: question.slice(0, 500),
+          pipeline: result.pipeline,
+          image_data: result.imageUrl,
+          qa_verdict: result.qaVerdict,
+          hit_count: 0,
+        }, { onConflict: 'question_hash' });
+      } catch { /* best-effort */ }
+    })();
+  }
 
   // Tier 1: Memory cache (always)
   memoryCache.set(key, { result, timestamp: Date.now() });

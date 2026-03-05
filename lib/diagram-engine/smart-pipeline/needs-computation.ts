@@ -69,6 +69,9 @@ const HAS_NUMERIC_DATA = /\d+\s*(m\/s²|m\/s|km\/h|mph|kg|cm|mm|km|degrees?|lbs?
  * 3. Is NOT a topic handled by specialized renderers (biology, simple arithmetic)
  */
 export function needsComputation(question: string): boolean {
+  // Already enriched with pre-computed values — skip double computation
+  if (question.startsWith('PRE-COMPUTED VALUES')) return false;
+
   const lower = question.toLowerCase();
 
   // ── Fast reject: hard exclusion patterns (always biology, never physics) ──

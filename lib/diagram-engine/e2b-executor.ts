@@ -185,7 +185,13 @@ else:
  */
 export function detectMode(code: string): RenderMode {
   const firstLine = code.trim().split('\n')[0].trim();
-  if (firstLine.includes('MODE: latex') || firstLine.startsWith('%') || firstLine.startsWith('\\documentclass')) {
+  if (firstLine.includes('MODE: latex') || firstLine.startsWith('\\documentclass')) {
+    return 'latex';
+  }
+  // LaTeX comments start with % followed by space or non-alpha (e.g., "% preamble").
+  // Python magic commands start with % followed by alpha (e.g., "%matplotlib inline").
+  // Only treat % as LaTeX if it's NOT followed by an alphanumeric character.
+  if (firstLine.startsWith('%') && !/^%[a-zA-Z]/.test(firstLine)) {
     return 'latex';
   }
   return 'matplotlib'; // default

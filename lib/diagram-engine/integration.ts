@@ -15,6 +15,7 @@ import { generateDiagram, type Pipeline } from './index';
 import { shouldUseEngine } from './tiered-router';
 import { generateLayeredTikz } from './layered-tikz-generator';
 import { routeQuestion } from './router';
+import { preCompute } from './smart-pipeline';
 import type { Lesson } from '@/types';
 
 export { shouldUseEngine, tieredRoute } from './tiered-router';
@@ -68,14 +69,21 @@ export async function tryEngineDiagram(
   console.log('[Engine] Calling generateDiagram...');
 
   try {
-    // Determine pipeline to check if TikZ (for step-by-step)
-    const pipeline = forcePipeline || routeQuestion(question);
-    const isTikzPipeline = pipeline === 'tikz';
+    // Pre-compute values with SymPy BEFORE parallel generation, so both
+    // generateDiagram and generateLayeredTikz benefit from exact values.
+    const { enrichedQuestion } = await preCompute(question);
 
-    // Generate diagram and layered TikZ in parallel (for TikZ pipeline)
+    // Speculatively start layered TikZ generation if routing predicts tikz.
+    // We check result.pipeline AFTER generation to ensure no mismatch when
+    // a fallback occurs (e.g., tikz → matplotlib or matplotlib → tikz).
+    const predictedPipeline = forcePipeline || routeQuestion(question);
+    const mayBeTikz = predictedPipeline === 'tikz';
+
+    // Generate diagram and layered TikZ in parallel (for TikZ pipeline).
+    // Both receive the enriched question with pre-computed values.
     const [result, layeredSource] = await Promise.all([
-      generateDiagram(question, forcePipeline),
-      isTikzPipeline ? generateLayeredTikz(question) : Promise.resolve(null),
+      generateDiagram(enrichedQuestion, forcePipeline),
+      mayBeTikz ? generateLayeredTikz(enrichedQuestion) : Promise.resolve(null),
     ]);
 
     if ('error' in result) {
@@ -85,8 +93,14 @@ export async function tryEngineDiagram(
 
     console.log(`[Engine] Success! Pipeline: ${result.pipeline}, URL length: ${result.imageUrl?.length}`);
 
-    if (layeredSource) {
-      console.log(`[Engine] Layered TikZ: ${layeredSource.steps.length} layers`);
+    // Only attach layered TikZ if the ACTUAL result pipeline is tikz.
+    // If tikz failed and fell back to matplotlib, layeredSource would be stale.
+    const validLayeredSource = (result.pipeline === 'tikz' && layeredSource) ? layeredSource : null;
+
+    if (validLayeredSource) {
+      console.log(`[Engine] Layered TikZ: ${validLayeredSource.steps.length} layers`);
+    } else if (layeredSource && result.pipeline !== 'tikz') {
+      console.log(`[Engine] Discarding layered TikZ — actual pipeline is ${result.pipeline} (fallback occurred)`);
     }
 
     return {
@@ -96,7 +110,7 @@ export async function tryEngineDiagram(
       attempts: result.attempts,
       qaVerdict: result.qaVerdict,
       overlay: result.overlay,
-      stepByStepSource: layeredSource || undefined,
+      stepByStepSource: validLayeredSource || undefined,
     };
   } catch (err) {
     console.error('[Engine] Unexpected error:', err);

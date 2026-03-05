@@ -208,8 +208,8 @@ describe('generateLayeredTikz - no layer markers', () => {
     const result = await generateLayeredTikz('Draw a line')
 
     expect(result).toBeNull()
-    // Should not make a second API call for metadata
-    expect(mockMessagesCreate).toHaveBeenCalledTimes(1)
+    // 2 calls: first attempt has no layer markers, retry also fails
+    expect(mockMessagesCreate).toHaveBeenCalledTimes(2)
   })
 })
 
@@ -230,7 +230,8 @@ Still not TikZ.`
     const result = await generateLayeredTikz('Draw something')
 
     expect(result).toBeNull()
-    expect(mockMessagesCreate).toHaveBeenCalledTimes(1)
+    // 2 calls: first attempt returns invalid TikZ (no tikzpicture), retry also fails
+    expect(mockMessagesCreate).toHaveBeenCalledTimes(2)
   })
 })
 
