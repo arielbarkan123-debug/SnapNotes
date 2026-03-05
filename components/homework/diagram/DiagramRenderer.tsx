@@ -126,12 +126,31 @@ export default function DiagramRenderer({
   const [stepsMeta, setStepsMeta] = useState<StepLayerMeta[]>([])
   const [isPartial, setIsPartial] = useState(false)
 
-  // Extract stepByStepSource upfront (safe even if diagram is null)
+  // Extract step data (prefer pre-rendered stepImages over legacy stepByStepSource)
+  const preRenderedSteps = diagram?.stepImages
   const stepByStepSource = diagram?.stepByStepSource
-  const hasStepByStep = !!stepByStepSource && stepByStepSource.steps.length > 0
+  const hasPreRenderedSteps = !!preRenderedSteps && preRenderedSteps.length > 1
+  const hasLegacySteps = !!stepByStepSource && stepByStepSource.steps.length > 0
+  const hasStepByStep = hasPreRenderedSteps || hasLegacySteps
 
   // Handle "Step by Step" button click
   const handleStepByStepClick = useCallback(async () => {
+    // Pre-rendered path: instant — no API call needed
+    if (hasPreRenderedSteps && preRenderedSteps) {
+      setStepImageUrls(preRenderedSteps.map(s => s.url))
+      setStepsMeta(preRenderedSteps.map(s => ({
+        layer: 0, // Not used for pre-rendered
+        label: s.label,
+        labelHe: s.labelHe,
+        explanation: s.explanation,
+        explanationHe: s.explanationHe,
+      })))
+      setIsPartial(false)
+      setWalkthroughMode('active')
+      return
+    }
+
+    // Legacy path: on-demand rendering via API (backward compatibility)
     if (!stepByStepSource) return
 
     setWalkthroughMode('loading')
@@ -169,7 +188,7 @@ export default function DiagramRenderer({
       setStepsMeta(stepByStepSource.steps)
       setWalkthroughMode('fallback')
     }
-  }, [stepByStepSource])
+  }, [hasPreRenderedSteps, preRenderedSteps, stepByStepSource])
 
   const handleCloseWalkthrough = useCallback(() => {
     setWalkthroughMode('idle')

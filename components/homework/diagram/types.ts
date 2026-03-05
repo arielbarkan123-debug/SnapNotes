@@ -13,8 +13,10 @@ export interface DiagramState {
   visibleStep?: number
   totalSteps?: number
   stepConfig?: Array<Record<string, unknown>>
-  /** Layered TikZ source for on-demand step-by-step rendering (TikZ pipeline only) */
+  /** @deprecated Use stepImages for pre-rendered steps */
   stepByStepSource?: StepByStepSource
+  /** Pre-rendered step images (from step-capture pipeline) */
+  stepImages?: StepImage[]
 }
 
 // Engine-generated image types (E2B/TikZ/Recraft pipeline)

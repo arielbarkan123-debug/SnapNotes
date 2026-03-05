@@ -3,7 +3,7 @@
  * AI-powered homework review and feedback system
  */
 
-import type { StepByStepSource } from '@/components/homework/diagram/types'
+import type { StepByStepSource, StepImage } from '@/components/homework/diagram/types'
 
 // ============================================================================
 // Core Types
@@ -505,8 +505,10 @@ export interface TutorDiagramState {
   }>
   /** Enable interactive "What If?" mode for exploration (physics diagrams only) */
   enableInteractive?: boolean
-  /** Layered TikZ source for on-demand step-by-step rendering (TikZ pipeline only) */
+  /** @deprecated Use stepImages for pre-rendered steps */
   stepByStepSource?: StepByStepSource
+  /** Pre-rendered step images from step-capture pipeline */
+  stepImages?: StepImage[]
 }
 
 /**

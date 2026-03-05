@@ -860,6 +860,8 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
       },
       // Pass step-by-step source if available (TikZ pipeline only)
       stepByStepSource: engineResult.stepByStepSource,
+      // Pass pre-rendered step images if available (all pipelines)
+      stepImages: engineResult.stepImages,
     }
   } else if (greetingAiDiagram && (greetingAiDiagram.type === 'engine_image' || greetingAiDiagram.type === 'step_sequence')) {
     // Engine didn't produce a result — restore AI-generated diagram only if it's
@@ -1073,6 +1075,8 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
         },
         // Pass step-by-step source if available (TikZ pipeline only)
         stepByStepSource: engineResult.stepByStepSource,
+        // Pass pre-rendered step images if available (all pipelines)
+        stepImages: engineResult.stepImages,
       }
     } else if (aiDiagram && (aiDiagram.type === 'engine_image' || aiDiagram.type === 'step_sequence')) {
       // Engine didn't produce a result — restore AI-generated diagram only if it's
