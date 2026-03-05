@@ -606,10 +606,14 @@ RULES:
 | Geometry | Given shape → Construction lines → Angles/sides → Measurements |
 | Equation Solving | Original equation → Each operation → Boxed answer |
 
-After your code, output a JSON block with step metadata:
+After your code, output a JSON block with step metadata.
+IMPORTANT: Explanations MUST include relevant LaTeX math using $...$ delimiters.
+Use inline math for formulas, values, and equations within the explanation text.
+Example: "The normal force balances gravity: $N = mg\\cos\\theta = 42.4$ N"
+
 \`\`\`json
 { "steps": [
-  { "step": 1, "label": "Short English label", "labelHe": "תווית קצרה בעברית", "explanation": "What this step shows and why", "explanationHe": "הסבר בעברית" }
+  { "step": 1, "label": "Short English label", "labelHe": "תווית קצרה בעברית", "explanation": "Pedagogical explanation with inline LaTeX math, e.g. 'We draw the velocity components: $v_x = v_0 \\cos\\theta = 20$ m/s'", "explanationHe": "הסבר בעברית עם נוסחאות, למשל '$v_x = v_0 \\cos\\theta = 20$ מ/ש'" }
 ]}
 \`\`\`
 

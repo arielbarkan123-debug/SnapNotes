@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { ChevronRight, X } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import EngineDiagramImage from './EngineDiagramImage'
+import { MathText } from '@/components/ui/MathRenderer'
 import type { StepLayerMeta } from './types'
 
 interface StepByStepFallbackProps {
@@ -88,16 +89,18 @@ export default function StepByStepFallback({
                     className={`w-3.5 h-3.5 text-gray-400 transition-transform ${expandedStep === i ? 'rotate-90' : ''}`}
                   />
                 </div>
-                {expandedStep === i && (
-                  <motion.p
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 leading-relaxed"
-                  >
-                    {isHe ? step.explanationHe : step.explanation}
-                  </motion.p>
-                )}
+                <AnimatePresence>
+                  {expandedStep === i && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 leading-relaxed overflow-hidden"
+                    >
+                      <MathText>{isHe ? step.explanationHe : step.explanation}</MathText>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </motion.div>

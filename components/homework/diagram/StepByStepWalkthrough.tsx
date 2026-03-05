@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Play, Pause, RotateCcw, X } from 'lucide-rea
 import { useTranslations } from 'next-intl'
 import StepDot from './StepDot'
 import EngineDiagramImage from './EngineDiagramImage'
+import { MathText } from '@/components/ui/MathRenderer'
 import type { StepLayerMeta } from './types'
 
 interface StepByStepWalkthroughProps {
@@ -180,14 +181,14 @@ export default function StepByStepWalkthrough({
         ))}
       </div>
 
-      {/* Main content: side-by-side on desktop, stacked on mobile */}
+      {/* Main content: stacked vertical (diagram on top, explanation card below) */}
       <div
-        className="flex flex-col md:flex-row"
+        className="flex flex-col"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Diagram panel (60% on desktop) */}
-        <div className="w-full md:w-3/5 p-4 md:p-6 border-b md:border-b-0 md:border-r border-gray-100 dark:border-gray-700">
+        {/* Diagram panel (full width) */}
+        <div className="w-full p-4">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
@@ -201,7 +202,6 @@ export default function StepByStepWalkthrough({
                 <div className="rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700">
                   <EngineDiagramImage
                     imageUrl={imageUrl}
-                    pipeline="tikz"
                   />
                 </div>
               ) : (
@@ -215,8 +215,8 @@ export default function StepByStepWalkthrough({
           </AnimatePresence>
         </div>
 
-        {/* Explanation panel (40% on desktop) */}
-        <div className="w-full md:w-2/5 p-4 md:p-6 flex flex-col justify-center">
+        {/* Explanation card (full width, below diagram) */}
+        <div className="w-full px-4 pb-4">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
@@ -224,9 +224,10 @@ export default function StepByStepWalkthrough({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.25 }}
+              className="rounded-xl bg-violet-50/60 dark:bg-violet-900/15 border border-violet-200/60 dark:border-violet-800/40 p-4"
             >
-              {/* Step badge */}
-              <div className="flex items-center gap-2 mb-3">
+              {/* Step badge + label */}
+              <div className="flex items-center gap-2 mb-2">
                 <span className="flex items-center justify-center w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 text-sm font-bold">
                   {currentStep + 1}
                 </span>
@@ -235,14 +236,14 @@ export default function StepByStepWalkthrough({
                 </h3>
               </div>
 
-              {/* Explanation */}
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                {isHe ? step.explanationHe : step.explanation}
-              </p>
+              {/* Explanation with LaTeX math rendering */}
+              <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                <MathText>{isHe ? step.explanationHe : step.explanation}</MathText>
+              </div>
 
               {/* Final step summary */}
               {isLast && (
-                <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                   <p className="text-xs font-medium text-green-700 dark:text-green-300">
                     {t('stepByStep.complete')}
                   </p>
@@ -270,6 +271,7 @@ export default function StepByStepWalkthrough({
             type="button"
             onClick={() => setIsAutoPlaying(prev => !prev)}
             className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            aria-label={isAutoPlaying ? t('stepSequence.pause') : t('stepSequence.play')}
           >
             {isAutoPlaying ? (
               <Pause className="w-4 h-4 text-violet-600 dark:text-violet-400" />

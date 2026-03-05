@@ -73,10 +73,13 @@ EXAMPLE — Quadratic Function Graph:
 \\draw[dashed,gray] (2.5,-1) -- (2.5,5) node[above,fill=white,inner sep=1pt] {$x=2.5$};
 \\end{tikzpicture}
 
-After the TikZ code, output a JSON block with step metadata:
+After the TikZ code, output a JSON block with step metadata.
+IMPORTANT: Explanations MUST include inline LaTeX math using $...$ for all formulas, values, and equations.
+Example: "We add the weight force: $W = mg = 5 \\times 9.8 = 49$ N acting downward"
+
 \\\`\\\`\\\`json
 { "steps": [
-  { "step": 1, "label": "Short English label", "labelHe": "תווית קצרה בעברית", "explanation": "What this step shows and why", "explanationHe": "הסבר בעברית" }
+  { "step": 1, "label": "Short English label", "labelHe": "תווית קצרה בעברית", "explanation": "Explanation with inline LaTeX, e.g. 'We add the weight: $W = mg = 49$ N downward'", "explanationHe": "הסבר עם נוסחאות, למשל 'מוסיפים את הכוח: $W = mg = 49$ ניוטון כלפי מטה'" }
 ]}
 \\\`\\\`\\\``
 
@@ -93,8 +96,8 @@ Return JSON (no markdown fences, no explanation):
       "step": 1,
       "label": "Short 3-5 word English label",
       "labelHe": "Short 3-5 word Hebrew label",
-      "explanation": "1-2 sentence English explanation of what this step shows and why",
-      "explanationHe": "Same explanation in Hebrew"
+      "explanation": "1-2 sentence explanation with inline LaTeX math ($...$) for all formulas and values. Example: 'The parabola $y = 0.5(x-2.5)^2 - 0.5$ has vertex at $(2.5, -0.5)$.'",
+      "explanationHe": "אותו הסבר בעברית עם נוסחאות בLaTeX, למשל: 'הפרבולה $y = 0.5(x-2.5)^2 - 0.5$ עם קודקוד ב-$(2.5, -0.5)$'"
     }
   ]
 }
@@ -103,4 +106,6 @@ Rules:
 - One entry per STEP marker in the TikZ code
 - Labels should be concise (3-5 words)
 - Explanations should be pedagogical — explain the WHY, not just the WHAT
+- Explanations MUST include LaTeX math using $...$ for all formulas, values, and equations
+- Example: "Weight force $W = mg = 5 \\times 9.8 = 49$ N acts downward from center of mass"
 - Hebrew translations must be natural, not word-for-word`
