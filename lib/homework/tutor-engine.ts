@@ -965,8 +965,17 @@ export async function generateTutorResponse(
   const shouldFireEngine = engineConditions.enabledOrRequested && engineConditions.noPreviousOrRequested && engineConditions.engineSupported
   console.log(`[TutorEngine] Engine conditions: ${JSON.stringify(engineConditions)} → fire=${shouldFireEngine}`)
 
+  // For auto-start: force TikZ pipeline to bypass E2B sandbox entirely.
+  // TikZ uses QuickLaTeX (fast HTTP API, no sandbox) — ~8s vs 20-45s for E2B.
+  // Quality tradeoff is acceptable: user gets a diagram quickly on first load,
+  // and can request better visuals in follow-up messages (which use full routing).
+  const autoStartForcePipeline = isAutoStart ? 'tikz' as const : undefined
+  if (autoStartForcePipeline) {
+    console.log(`[TutorEngine] Auto-start: forcing tikz pipeline (bypasses E2B sandbox)`)
+  }
+
   const enginePromise = shouldFireEngine
-    ? tryEngineDiagram(diagramTopic, undefined, { skipStepCapture: isAutoStart, skipQA: isAutoStart }).catch((err) => {
+    ? tryEngineDiagram(diagramTopic, autoStartForcePipeline, { skipStepCapture: isAutoStart, skipQA: isAutoStart }).catch((err) => {
         console.warn('[TutorEngine] Engine diagram failed for chat:', err)
         return undefined
       })
