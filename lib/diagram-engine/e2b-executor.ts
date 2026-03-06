@@ -21,10 +21,10 @@ async function executeLatex(code: string): Promise<ExecutionResult> {
     return { error: 'E2B_LATEX_TEMPLATE_ID not set. Build the custom template first.' };
   }
 
-  const sandbox = await Sandbox.create(LATEX_TEMPLATE_ID, { timeoutMs: 120000 });
+  const sandbox = await Sandbox.create(LATEX_TEMPLATE_ID, { timeoutMs: 30000 });
   try {
     // Wait for sandbox kernel to be ready
-    await sandbox.runCode('print("ready")', { timeoutMs: 30000 });
+    await sandbox.runCode('print("ready")', { timeoutMs: 15000 });
 
     // Write the LaTeX file
     await sandbox.files.write('/tmp/diagram.tex', code);
@@ -109,9 +109,13 @@ else:
  */
 async function executeMatplotlib(code: string): Promise<ExecutionResult> {
   // Use custom template if available (has better fonts), otherwise default
+  // 30s sandbox creation timeout — if it doesn't start in 30s, it won't start at all
+  console.log(`[E2B] Creating matplotlib sandbox (template: ${LATEX_TEMPLATE_ID || 'default'}, E2B_API_KEY set: ${!!process.env.E2B_API_KEY})`);
+  const sandboxStart = Date.now();
   const sandbox = LATEX_TEMPLATE_ID
-    ? await Sandbox.create(LATEX_TEMPLATE_ID, { timeoutMs: 120000 })
-    : await Sandbox.create();
+    ? await Sandbox.create(LATEX_TEMPLATE_ID, { timeoutMs: 30000 })
+    : await Sandbox.create({ timeoutMs: 30000 });
+  console.log(`[E2B] Sandbox created in ${Date.now() - sandboxStart}ms`);
   try {
     // Write the script
     await sandbox.files.write('/tmp/diagram.py', code);

@@ -357,15 +357,45 @@ export async function generateDiagram(
     console.log(`[SmartPipeline] Computed ${Object.keys(smartResult.computed!.values).length} values in ${Math.round(smartResult.computed!.computeTimeMs)}ms (${smartResult.computeAttempts} attempt${smartResult.computeAttempts !== 1 ? 's' : ''})`);
   }
 
-  let result: DiagramResult | DiagramError = await runPipeline(pipeline, enrichedQuestion, options?.skipQA);
+  // ── Per-pipeline timeout for auto-start (skipQA → quick mode) ──
+  // E2B sandbox creation can hang for 30s+ if the service is slow or down.
+  // Without a per-pipeline timeout, the primary pipeline eats the entire engine
+  // budget (45s) and the fallback (tikz via QuickLaTeX) never gets a chance.
+  // With 20s per pipeline: primary gets 20s, fallback gets ~20s = ~40s total.
+  const PIPELINE_TIMEOUT_MS = options?.skipQA ? 20_000 : undefined;
+
+  let result: DiagramResult | DiagramError;
+
+  if (PIPELINE_TIMEOUT_MS) {
+    console.log(`[Engine] Quick mode: ${PIPELINE_TIMEOUT_MS}ms per-pipeline timeout`);
+    result = await Promise.race([
+      runPipeline(pipeline, enrichedQuestion, options?.skipQA),
+      new Promise<DiagramError>((resolve) =>
+        setTimeout(() => resolve({ error: `Pipeline ${pipeline} timed out after ${PIPELINE_TIMEOUT_MS}ms`, pipeline }), PIPELINE_TIMEOUT_MS)
+      ),
+    ]);
+  } else {
+    result = await runPipeline(pipeline, enrichedQuestion, options?.skipQA);
+  }
 
   // ── Cross-pipeline fallback: if primary failed and no forced pipeline ──
   if ('error' in result && !forcePipeline) {
     const fallback = getFallbackPipeline(pipeline);
     if (fallback) {
-      console.log(`[Fallback] ${pipeline} failed → trying ${fallback}`);
+      console.log(`[Fallback] ${pipeline} failed (${result.error?.slice(0, 100)}) → trying ${fallback}`);
       trackDiagramEvent({ type: 'generation_failure', pipeline, question, durationMs: performance.now() - startTime, attempts: 0, error: result.error });
-      result = await runPipeline(fallback, enrichedQuestion, options?.skipQA);
+
+      if (PIPELINE_TIMEOUT_MS) {
+        result = await Promise.race([
+          runPipeline(fallback, enrichedQuestion, options?.skipQA),
+          new Promise<DiagramError>((resolve) =>
+            setTimeout(() => resolve({ error: `Fallback ${fallback} timed out after ${PIPELINE_TIMEOUT_MS}ms`, pipeline: fallback }), PIPELINE_TIMEOUT_MS)
+          ),
+        ]);
+      } else {
+        result = await runPipeline(fallback, enrichedQuestion, options?.skipQA);
+      }
+
       if (!('error' in result)) {
         console.log(`[Fallback] ${fallback} succeeded as fallback for ${pipeline}`);
       }

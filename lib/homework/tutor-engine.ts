@@ -957,7 +957,15 @@ export async function generateTutorResponse(
   // - skipQA: skip Claude Vision QA loop (saves ~10-30s, 2 rounds × 5-10s each)
   // Without these, the TikZ pipeline takes 30-65s and routinely exceeds
   // the 45s auto-start timeout, resulting in no diagram at all.
-  const enginePromise = (enableDiagrams || studentRequestsDiagram) && (!previousDiagram || studentRequestsDiagram) && shouldUseEngine(diagramTopic)
+  const engineConditions = {
+    enabledOrRequested: enableDiagrams || studentRequestsDiagram,
+    noPreviousOrRequested: !previousDiagram || studentRequestsDiagram,
+    engineSupported: shouldUseEngine(diagramTopic),
+  }
+  const shouldFireEngine = engineConditions.enabledOrRequested && engineConditions.noPreviousOrRequested && engineConditions.engineSupported
+  console.log(`[TutorEngine] Engine conditions: ${JSON.stringify(engineConditions)} → fire=${shouldFireEngine}`)
+
+  const enginePromise = shouldFireEngine
     ? tryEngineDiagram(diagramTopic, undefined, { skipStepCapture: isAutoStart, skipQA: isAutoStart }).catch((err) => {
         console.warn('[TutorEngine] Engine diagram failed for chat:', err)
         return undefined
@@ -1058,6 +1066,9 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     }
   }
 
+  // Log diagram pipeline state for debugging
+  console.log(`[TutorEngine] Diagram pipeline: isAutoStart=${isAutoStart}, enableDiagrams=${enableDiagrams}, aiDiagramType=${aiDiagram?.type || 'none'}, enginePromisePending=${enginePromise !== Promise.resolve(undefined)}`)
+
   // For auto-start: skip waiting for engine if AI already has a renderable diagram (saves 5-15s)
   // For normal messages: engine takes priority (higher quality images)
   // Only engine_image and step_sequence are renderable — SVG component types (fbd, etc.) are NOT supported on frontend
@@ -1071,18 +1082,15 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     // Race against a hard timeout to prevent Vercel function 504 and client AbortError.
     // Auto-start gets 45s budget (must respond fast), normal messages get 60s.
     const ENGINE_TIMEOUT_MS = isAutoStart ? 45_000 : 60_000
+    const engineStartTime = Date.now()
     const engineTimeout = new Promise<undefined>((resolve) =>
       setTimeout(() => resolve(undefined), ENGINE_TIMEOUT_MS)
     )
     const engineResult = await Promise.race([enginePromise, engineTimeout])
-
-    if (!engineResult && enginePromise !== Promise.resolve(undefined)) {
-      console.warn(`[TutorEngine] Engine diagram timed out after ${ENGINE_TIMEOUT_MS}ms — returning without diagram`)
-      // Let engine finish in background (result is cached for next request)
-      enginePromise.catch(() => {})
-    }
+    const engineElapsed = Date.now() - engineStartTime
 
     if (engineResult) {
+      console.log(`[TutorEngine] Engine diagram succeeded in ${engineElapsed}ms — pipeline: ${engineResult.pipeline}, imageUrl length: ${engineResult.imageUrl?.length}`)
       tutorResponse.diagram = {
         type: 'engine_image',
         visibleStep: 0,
@@ -1097,17 +1105,27 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
         // Pass pre-rendered step images if available (all pipelines)
         stepImages: engineResult.stepImages,
       }
-    } else if (aiDiagram && (aiDiagram.type === 'engine_image' || aiDiagram.type === 'step_sequence')) {
-      // Engine didn't produce a result — restore AI-generated diagram only if it's
-      // a type the frontend can render (engine_image or step_sequence).
-      // React SVG component types (fbd, coordinate_plane, etc.) are NOT supported.
-      tutorResponse.diagram = aiDiagram
-      console.log(`[TutorEngine] Using AI-generated diagram fallback (type: ${aiDiagram.type})`)
+    } else if (!engineResult && engineElapsed >= ENGINE_TIMEOUT_MS - 100) {
+      console.warn(`[TutorEngine] Engine diagram TIMED OUT after ${engineElapsed}ms (budget: ${ENGINE_TIMEOUT_MS}ms) — returning without diagram`)
+      // Let engine finish in background (result is cached for next request)
+      enginePromise.catch(() => {})
     } else {
-      // Engine didn't produce a result and AI diagram is not renderable.
-      // MUST delete to prevent non-renderable types (fbd, etc.) from reaching frontend.
-      delete tutorResponse.diagram
-      console.log(`[TutorEngine] No engine result. AI diagram type '${aiDiagram?.type || 'none'}' not renderable. Diagram removed.`)
+      console.warn(`[TutorEngine] Engine diagram returned undefined in ${engineElapsed}ms (did not timeout — engine failed or was skipped)`)
+    }
+
+    if (!engineResult) {
+      if (aiDiagram && (aiDiagram.type === 'engine_image' || aiDiagram.type === 'step_sequence')) {
+        // Engine didn't produce a result — restore AI-generated diagram only if it's
+        // a type the frontend can render (engine_image or step_sequence).
+        // React SVG component types (fbd, coordinate_plane, etc.) are NOT supported.
+        tutorResponse.diagram = aiDiagram
+        console.log(`[TutorEngine] Using AI-generated diagram fallback (type: ${aiDiagram.type})`)
+      } else {
+        // Engine didn't produce a result and AI diagram is not renderable.
+        // MUST delete to prevent non-renderable types (fbd, etc.) from reaching frontend.
+        delete tutorResponse.diagram
+        console.log(`[TutorEngine] No engine result. AI diagram type '${aiDiagram?.type || 'none'}' not renderable. Diagram removed.`)
+      }
     }
   }
 
