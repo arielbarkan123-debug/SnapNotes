@@ -268,8 +268,14 @@ export default function HomeworkResultsPage() {
       clearTimeout(timeoutId)
 
       if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to send message')
+        const errorBody = await res.json()
+        // API returns { success: false, error: { code, message, retryable } }
+        const errorInfo = errorBody.error || {}
+        const errorMessage = typeof errorInfo === 'string' ? errorInfo : (errorInfo.message || 'Failed to send message')
+        const err = new Error(errorMessage)
+        // Attach retryable flag so catch block can decide whether to retry
+        ;(err as Error & { retryable?: boolean }).retryable = errorInfo.retryable ?? true
+        throw err
       }
 
       const { session: updated, solved, relatedVideos: videos } = await res.json()
@@ -294,7 +300,9 @@ export default function HomeworkResultsPage() {
       )
 
       // For auto-start failures: retry up to MAX_AUTO_START_RETRIES times
-      if (isAutoStart && autoStartRetries.current < MAX_AUTO_START_RETRIES) {
+      // but ONLY if the error is retryable (skip for credit exhaustion, auth errors, etc.)
+      const isRetryable = (error as Error & { retryable?: boolean }).retryable !== false
+      if (isAutoStart && isRetryable && autoStartRetries.current < MAX_AUTO_START_RETRIES) {
         autoStartRetries.current += 1
         console.warn(`[AutoStart] Retry ${autoStartRetries.current}/${MAX_AUTO_START_RETRIES}`)
         setIsChatLoading(false)
@@ -303,7 +311,8 @@ export default function HomeworkResultsPage() {
         return
       }
 
-      toast.error('Failed to send message. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send message. Please try again.'
+      toast.error(errorMessage)
     } finally {
       setIsChatLoading(false)
     }

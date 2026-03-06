@@ -11,7 +11,7 @@ import { generateTutorResponse, checkForSolution } from '@/lib/homework/tutor-en
 import { searchYouTubeVideos } from '@/lib/prepare/youtube-search'
 import type { ExplanationStyleId } from '@/lib/homework/explanation-styles'
 import { addMessage, updateProgress, getRecentMessages } from '@/lib/homework/session-manager'
-import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createErrorResponse, ErrorCodes, mapClaudeAPIError } from '@/lib/errors'
 import { loadUserProfile } from '@/lib/user-profile'
 import { getStudentContext, generateDirectives } from '@/lib/student-context'
 import { recordHomeworkMisconception } from '@/lib/homework/misconception-recorder'
@@ -309,6 +309,12 @@ export async function POST(
     })
   } catch (error) {
     console.error('Chat error:', error)
+    // Map Claude API errors (credits exhausted, rate limited, etc.) to specific codes
+    // so the client shows a helpful message instead of a generic "chat failed"
+    const mapped = mapClaudeAPIError(error)
+    if (mapped.code !== ErrorCodes.AI_UNKNOWN) {
+      return createErrorResponse(mapped.code, mapped.message)
+    }
     return createErrorResponse(ErrorCodes.CHAT_FAILED)
   }
 }
