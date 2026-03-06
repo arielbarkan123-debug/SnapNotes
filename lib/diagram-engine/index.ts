@@ -232,10 +232,11 @@ async function generateE2BCode(
  */
 async function generateE2BDiagram(
   question: string,
-  forcedMode?: 'latex' | 'matplotlib'
+  forcedMode?: 'latex' | 'matplotlib',
+  skipQA?: boolean,
 ): Promise<DiagramResult | DiagramError> {
   const MAX_COMPILE_RETRIES = 3;
-  const MAX_QA_RETRIES = 2;
+  const MAX_QA_RETRIES = skipQA ? 0 : 2;
   let lastError: string | undefined;
   let code: string = '';
   let fullResponseText: string = '';
@@ -328,7 +329,7 @@ async function generateE2BDiagram(
 export async function generateDiagram(
   question: string,
   forcePipeline?: Pipeline,
-  options?: { skipStepCapture?: boolean }
+  options?: { skipStepCapture?: boolean; skipQA?: boolean }
 ): Promise<DiagramResult | DiagramError> {
   const pipeline = forcePipeline || routeQuestion(question);
   console.log(`[Router] Question: "${question.slice(0, 80)}..." → Pipeline: ${pipeline}`);
@@ -356,7 +357,7 @@ export async function generateDiagram(
     console.log(`[SmartPipeline] Computed ${Object.keys(smartResult.computed!.values).length} values in ${Math.round(smartResult.computed!.computeTimeMs)}ms (${smartResult.computeAttempts} attempt${smartResult.computeAttempts !== 1 ? 's' : ''})`);
   }
 
-  let result: DiagramResult | DiagramError = await runPipeline(pipeline, enrichedQuestion);
+  let result: DiagramResult | DiagramError = await runPipeline(pipeline, enrichedQuestion, options?.skipQA);
 
   // ── Cross-pipeline fallback: if primary failed and no forced pipeline ──
   if ('error' in result && !forcePipeline) {
@@ -364,7 +365,7 @@ export async function generateDiagram(
     if (fallback) {
       console.log(`[Fallback] ${pipeline} failed → trying ${fallback}`);
       trackDiagramEvent({ type: 'generation_failure', pipeline, question, durationMs: performance.now() - startTime, attempts: 0, error: result.error });
-      result = await runPipeline(fallback, enrichedQuestion);
+      result = await runPipeline(fallback, enrichedQuestion, options?.skipQA);
       if (!('error' in result)) {
         console.log(`[Fallback] ${fallback} succeeded as fallback for ${pipeline}`);
       }
@@ -473,16 +474,17 @@ export async function generateDiagram(
 async function runPipeline(
   pipeline: Pipeline,
   question: string,
+  skipQA?: boolean,
 ): Promise<DiagramResult | DiagramError> {
   switch (pipeline) {
     case 'e2b-latex':
-      return generateE2BDiagram(question, 'latex');
+      return generateE2BDiagram(question, 'latex', skipQA);
     case 'e2b-matplotlib':
-      return generateE2BDiagram(question, 'matplotlib');
+      return generateE2BDiagram(question, 'matplotlib', skipQA);
     case 'tikz':
-      return generateTikzWithQA(question);
+      return generateTikzWithQA(question, skipQA);
     case 'recraft':
-      return generateRecraftWithQA(question);
+      return generateRecraftWithQA(question, skipQA);
   }
 }
 
@@ -490,8 +492,9 @@ async function runPipeline(
 
 async function generateTikzWithQA(
   question: string,
+  skipQA?: boolean,
 ): Promise<DiagramResult | DiagramError> {
-  const MAX_QA_RETRIES = 2;
+  const MAX_QA_RETRIES = skipQA ? 0 : 2;
 
   for (let qaRound = 0; qaRound <= MAX_QA_RETRIES; qaRound++) {
     const tikzResult = await generateTikzDiagram(question);
@@ -533,8 +536,9 @@ async function generateTikzWithQA(
 
 async function generateRecraftWithQA(
   question: string,
+  skipQA?: boolean,
 ): Promise<DiagramResult | DiagramError> {
-  const MAX_QA_RETRIES = 2;
+  const MAX_QA_RETRIES = skipQA ? 0 : 2;
   console.log(`[generateRecraftWithQA] Starting for: "${question.slice(0, 80)}..."`);
 
   for (let qaRound = 0; qaRound <= MAX_QA_RETRIES; qaRound++) {

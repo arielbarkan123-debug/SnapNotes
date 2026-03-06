@@ -952,10 +952,13 @@ export async function generateTutorResponse(
   // Fire engine diagram in parallel with AI call
   // Trigger when: (1) diagrams enabled and no previous diagram, OR (2) student explicitly requests a diagram
   // Note: studentRequestsDiagram overrides enableDiagrams toggle — if the student asks for a diagram, we generate it
-  // Skip step capture on auto-start: saves ~15s from engine pipeline, ensuring
-  // the diagram finishes within the 45s timeout. Users get on-demand step-by-step.
+  // Auto-start optimizations (applied together, saves ~25-40s from pipeline):
+  // - skipStepCapture: skip pre-rendering step images (saves ~15s)
+  // - skipQA: skip Claude Vision QA loop (saves ~10-30s, 2 rounds × 5-10s each)
+  // Without these, the TikZ pipeline takes 30-65s and routinely exceeds
+  // the 45s auto-start timeout, resulting in no diagram at all.
   const enginePromise = (enableDiagrams || studentRequestsDiagram) && (!previousDiagram || studentRequestsDiagram) && shouldUseEngine(diagramTopic)
-    ? tryEngineDiagram(diagramTopic, undefined, { skipStepCapture: isAutoStart }).catch((err) => {
+    ? tryEngineDiagram(diagramTopic, undefined, { skipStepCapture: isAutoStart, skipQA: isAutoStart }).catch((err) => {
         console.warn('[TutorEngine] Engine diagram failed for chat:', err)
         return undefined
       })

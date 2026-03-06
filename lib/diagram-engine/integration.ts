@@ -61,7 +61,7 @@ export interface EngineDiagramResult {
 export async function tryEngineDiagram(
   question: string,
   forcePipeline?: Pipeline,
-  options?: { skipStepCapture?: boolean },
+  options?: { skipStepCapture?: boolean; skipQA?: boolean },
 ): Promise<EngineDiagramResult | undefined> {
   console.log(`[Engine] tryEngineDiagram called with: "${question.slice(0, 80)}..."`);
 
@@ -85,9 +85,13 @@ export async function tryEngineDiagram(
 
     // Generate diagram and layered TikZ in parallel (for TikZ pipeline).
     // Both receive the enriched question with pre-computed values.
+    // Skip layered TikZ when step capture is skipped — layered code is only used
+    // for step-by-step walkthrough, which requires step capture to pre-render images.
+    // Skipping saves an AI API call (runs in parallel, but reduces load/cost).
+    const shouldGenerateLayered = mayBeTikz && !options?.skipStepCapture;
     const [result, layeredSource] = await Promise.all([
       generateDiagram(enrichedQuestion, forcePipeline, options),
-      mayBeTikz ? generateLayeredTikz(enrichedQuestion) : Promise.resolve(null),
+      shouldGenerateLayered ? generateLayeredTikz(enrichedQuestion) : Promise.resolve(null),
     ]);
 
     if ('error' in result) {
