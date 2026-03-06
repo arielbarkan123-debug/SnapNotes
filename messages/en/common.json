@@ -72,6 +72,10 @@
   },
   "settings": {
     "diagramsEnabled": "AI Diagrams: ON",
-    "diagramsDisabled": "AI Diagrams: OFF"
+    "diagramsDisabled": "AI Diagrams: OFF",
+    "diagramMode": "Diagram mode",
+    "diagramOff": "Off",
+    "diagramQuick": "Quick",
+    "diagramAccurate": "Accurate"
   }
 }

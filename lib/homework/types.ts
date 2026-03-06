@@ -13,6 +13,9 @@ export type CheckStatus = 'pending' | 'analyzing' | 'completed' | 'error'
 export type GradeLevel = 'excellent' | 'good' | 'needs_improvement' | 'incomplete'
 export type CheckMode = 'standard' | 'batch_worksheet' | 'before_submit' | 'rubric'
 
+/** Diagram generation mode: off = no diagram, quick = TikZ only (~8s), accurate = full routing with QA (~20s) */
+export type DiagramMode = 'off' | 'quick' | 'accurate'
+
 export interface HomeworkCheck {
   id: string
   user_id: string
@@ -177,6 +180,8 @@ export interface CreateSessionRequest {
   initialAttempt?: string
   /** Whether to generate engine diagrams (default: true) */
   enableDiagrams?: boolean
+  /** Diagram generation mode (replaces binary enableDiagrams) */
+  diagramMode?: DiagramMode
 }
 
 export interface UpdateSessionRequest {
@@ -358,6 +363,8 @@ export interface HomeworkSession {
   completed_at: string | null
   solution_reached: boolean
   enable_diagrams?: boolean
+  /** Diagram mode: 'off' | 'quick' | 'accurate' (DB column, nullable) */
+  diagram_mode?: string | null
   student_final_answer: string | null
   time_spent_seconds: number | null
   breakthrough_moment: string | null

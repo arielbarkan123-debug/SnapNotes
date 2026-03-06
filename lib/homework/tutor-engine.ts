@@ -739,16 +739,22 @@ function attachVisualUpdate(tutorResponse: TutorResponse, context: TutorContext)
 /**
  * Generate the initial greeting when a session starts
  */
-export async function generateInitialGreeting(context: TutorContext, enableDiagrams = true, explanationStyle?: ExplanationStyleId): Promise<TutorResponse> {
+export async function generateInitialGreeting(context: TutorContext, enableDiagrams = true, explanationStyle?: ExplanationStyleId, pipelineMode: 'off' | 'quick' | 'accurate' = 'quick'): Promise<TutorResponse> {
   const client = getAnthropicClient()
   const questionText = context.questionAnalysis.questionText
 
-  console.log(`[TutorEngine] generateInitialGreeting called with: "${questionText.slice(0, 80)}..."`)
+  console.log(`[TutorEngine] generateInitialGreeting called with: "${questionText.slice(0, 80)}...", pipelineMode=${pipelineMode}`)
   console.log(`[TutorEngine] shouldUseEngine result: ${shouldUseEngine(questionText)}`)
+
+  // Pipeline selection based on diagram pipeline mode (quick = TikZ only, accurate = full routing)
+  const isQuickMode = pipelineMode === 'quick'
+  const forcePipeline = isQuickMode ? 'tikz' as const : undefined
+  const skipQA = isQuickMode
+  const skipStepCapture = isQuickMode
 
   // Fire engine diagram in parallel with AI call (if topic needs it)
   const enginePromise = enableDiagrams && shouldUseEngine(questionText)
-    ? tryEngineDiagram(questionText).catch((err) => {
+    ? tryEngineDiagram(questionText, forcePipeline, { skipStepCapture, skipQA }).catch((err) => {
         console.warn('[TutorEngine] Engine diagram failed for greeting:', err)
         return undefined
       })
@@ -886,6 +892,7 @@ export async function generateTutorResponse(
   studentMessage: string,
   enableDiagrams = true,
   explanationStyle?: ExplanationStyleId,
+  pipelineMode: 'off' | 'quick' | 'accurate' = 'quick',
 ): Promise<TutorResponse> {
   const client = getAnthropicClient()
 
@@ -952,30 +959,28 @@ export async function generateTutorResponse(
   // Fire engine diagram in parallel with AI call
   // Trigger when: (1) diagrams enabled and no previous diagram, OR (2) student explicitly requests a diagram
   // Note: studentRequestsDiagram overrides enableDiagrams toggle — if the student asks for a diagram, we generate it
-  // Auto-start optimizations (applied together, saves ~25-40s from pipeline):
-  // - skipStepCapture: skip pre-rendering step images (saves ~15s)
-  // - skipQA: skip Claude Vision QA loop (saves ~10-30s, 2 rounds × 5-10s each)
-  // Without these, the TikZ pipeline takes 30-65s and routinely exceeds
-  // the 45s auto-start timeout, resulting in no diagram at all.
   const engineConditions = {
     enabledOrRequested: enableDiagrams || studentRequestsDiagram,
     noPreviousOrRequested: !previousDiagram || studentRequestsDiagram,
     engineSupported: shouldUseEngine(diagramTopic),
   }
   const shouldFireEngine = engineConditions.enabledOrRequested && engineConditions.noPreviousOrRequested && engineConditions.engineSupported
-  console.log(`[TutorEngine] Engine conditions: ${JSON.stringify(engineConditions)} → fire=${shouldFireEngine}`)
+  console.log(`[TutorEngine] Engine conditions: ${JSON.stringify(engineConditions)} → fire=${shouldFireEngine}, pipelineMode=${pipelineMode}`)
 
-  // For auto-start: force TikZ pipeline to bypass E2B sandbox entirely.
-  // TikZ uses QuickLaTeX (fast HTTP API, no sandbox) — ~8s vs 20-45s for E2B.
-  // Quality tradeoff is acceptable: user gets a diagram quickly on first load,
-  // and can request better visuals in follow-up messages (which use full routing).
-  const autoStartForcePipeline = isAutoStart ? 'tikz' as const : undefined
-  if (autoStartForcePipeline) {
-    console.log(`[TutorEngine] Auto-start: forcing tikz pipeline (bypasses E2B sandbox)`)
+  // Pipeline selection based on diagram pipeline mode:
+  // - 'quick': force TikZ pipeline (QuickLaTeX HTTP API, ~8s, no sandbox)
+  // - 'accurate': full routing via routeQuestion() with QA and step capture
+  // - 'off': no engine diagram (handled by shouldFireEngine = false)
+  const isQuickMode = pipelineMode === 'quick'
+  const forcePipeline = isQuickMode ? 'tikz' as const : undefined
+  const skipQA = isQuickMode
+  const skipStepCapture = isQuickMode
+  if (forcePipeline) {
+    console.log(`[TutorEngine] Quick mode: forcing tikz pipeline (bypasses E2B sandbox)`)
   }
 
   const enginePromise = shouldFireEngine
-    ? tryEngineDiagram(diagramTopic, autoStartForcePipeline, { skipStepCapture: isAutoStart, skipQA: isAutoStart }).catch((err) => {
+    ? tryEngineDiagram(diagramTopic, forcePipeline, { skipStepCapture, skipQA }).catch((err) => {
         console.warn('[TutorEngine] Engine diagram failed for chat:', err)
         return undefined
       })
@@ -1047,7 +1052,7 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
   // SKIP step sequence on auto-start: it generates 3-5 diagrams sequentially (30-150s)
   // which causes Vercel function timeouts. The single engine diagram (parallel) is enough.
   const intent = tutorResponse.pedagogicalIntent
-  if (enableDiagrams && !previousDiagram && !isAutoStart &&
+  if (enableDiagrams && !previousDiagram && !isAutoStart && !isQuickMode &&
       (chatDiagramMode === 'step_sequence' ||
        (isMultiStepProblem(diagramTopic) && (intent === 'show_answer' || intent === 'guide_next_step')))) {
     try {
@@ -1076,7 +1081,7 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
   }
 
   // Log diagram pipeline state for debugging
-  console.log(`[TutorEngine] Diagram pipeline: isAutoStart=${isAutoStart}, enableDiagrams=${enableDiagrams}, aiDiagramType=${aiDiagram?.type || 'none'}, enginePromisePending=${enginePromise !== Promise.resolve(undefined)}`)
+  console.log(`[TutorEngine] Diagram pipeline: isAutoStart=${isAutoStart}, pipelineMode=${pipelineMode}, enableDiagrams=${enableDiagrams}, aiDiagramType=${aiDiagram?.type || 'none'}, enginePromisePending=${enginePromise !== Promise.resolve(undefined)}`)
 
   // For auto-start: skip waiting for engine if AI already has a renderable diagram (saves 5-15s)
   // For normal messages: engine takes priority (higher quality images)

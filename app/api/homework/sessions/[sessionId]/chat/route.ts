@@ -63,7 +63,7 @@ export async function POST(
     }
 
     // Parse request
-    let body: { message: string; enableDiagrams?: boolean; explanationStyle?: string }
+    let body: { message: string; enableDiagrams?: boolean; diagramMode?: string; explanationStyle?: string }
     try {
       body = await request.json()
     } catch {
@@ -100,10 +100,14 @@ export async function POST(
 
     const homeworkSession = session as HomeworkSession
 
-    // Use session's enable_diagrams preference for auto-start, client preference for subsequent messages
-    const enableDiagrams = isAutoStart
-      ? (homeworkSession.enable_diagrams !== false)
-      : (body.enableDiagrams !== false)
+    // Derive diagram mode: 'off' | 'quick' | 'accurate'
+    // For auto-start: use session's enable_diagrams preference (backward compat → 'quick')
+    // For follow-up messages: use client-sent diagramMode (falls back to enableDiagrams boolean)
+    type DiagramMode = 'off' | 'quick' | 'accurate'
+    const diagramMode: DiagramMode = isAutoStart
+      ? (homeworkSession.enable_diagrams !== false ? 'quick' : 'off')
+      : ((body.diagramMode as DiagramMode) || (body.enableDiagrams !== false ? 'quick' : 'off'))
+    const enableDiagrams = diagramMode !== 'off'
 
     // Step 1: Add student message to conversation (skip for auto-start sentinel)
     let sessionAfterStudentMsg: HomeworkSession
@@ -194,7 +198,7 @@ export async function POST(
     const messageForTutor = escalationAction
       ? `${getEscalationInstruction(escalationAction)}\n\nStudent says: ${cleanMessage}`
       : body.message
-    const tutorResponse = await generateTutorResponse(context, messageForTutor, enableDiagrams, explanationStyle as ExplanationStyleId | undefined)
+    const tutorResponse = await generateTutorResponse(context, messageForTutor, enableDiagrams, explanationStyle as ExplanationStyleId | undefined, diagramMode as 'off' | 'quick' | 'accurate')
 
     // Step 4: Check if student solved the problem (if high progress)
     let solutionCheck = { solved: false, feedback: '' }

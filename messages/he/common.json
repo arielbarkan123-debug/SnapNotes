@@ -72,6 +72,10 @@
   },
   "settings": {
     "diagramsEnabled": "דיאגרמות AI: פעיל",
-    "diagramsDisabled": "דיאגרמות AI: כבוי"
+    "diagramsDisabled": "דיאגרמות AI: כבוי",
+    "diagramMode": "מצב תרשים",
+    "diagramOff": "כבוי",
+    "diagramQuick": "מהיר",
+    "diagramAccurate": "מדויק"
   }
 }
