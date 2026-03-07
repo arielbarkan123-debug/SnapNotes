@@ -235,5 +235,21 @@
     "rubricSuggestions": "הצעות",
     "rubricReasoning": "נימוק",
     "noRubricCriteria": "לא זוהו קריטריוני מחוון"
+  },
+  "walkthrough": {
+    "title": "פתרון צעד אחר צעד",
+    "startButton": "הדרכה צעד אחר צעד",
+    "previous": "הקודם",
+    "next": "הבא",
+    "complete": "הפתרון הושלם! עברת על כל השלבים.",
+    "askAboutStep": "שאל על שלב זה",
+    "noMessages": "שאל שאלה על שלב זה...",
+    "thinking": "חושב...",
+    "typeQuestion": "כתוב את השאלה שלך...",
+    "compilingDiagrams": "מעבד תרשימים... {rendered}/{total}",
+    "diagramNotAvailable": "תרשים לא זמין",
+    "errorTitle": "אירעה שגיאה",
+    "errorMessage": "לא ניתן ליצור את ההדרכה",
+    "tryAgain": "נסה שוב"
   }
 }

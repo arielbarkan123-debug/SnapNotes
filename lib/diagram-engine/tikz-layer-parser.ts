@@ -205,3 +205,54 @@ export function buildCumulativeStep(parsed: ParsedTikz, stepNumber: number): str
 
   return parts.join('\n')
 }
+
+/**
+ * Build a cumulative TikZ document for step N with RED HIGHLIGHTING
+ * on the current step's new elements.
+ *
+ * - Layer 0 (setup): always included, normal colors
+ * - Layers 1..N-1 (previous steps): normal colors
+ * - Layer N (current step): wrapped in \begingroup\color{red}...\endgroup
+ *
+ * For step 1, the current layer IS highlighted (there are no previous layers).
+ * The xcolor package is required (already in tikz-executor.ts preamble).
+ */
+export function buildCumulativeStepWithHighlight(parsed: ParsedTikz, stepNumber: number): string {
+  const { preamble, tikzpictureOptions, layers } = parsed
+
+  // Separate layers into categories
+  const setupLayer = layers.find(l => l.layerNumber === 0)
+  const previousLayers = layers.filter(
+    l => l.layerNumber > 0 && l.layerNumber < stepNumber
+  )
+  const currentLayer = layers.find(l => l.layerNumber === stepNumber)
+
+  // Build body: setup + previous (normal) + current (red)
+  const bodyParts: string[] = []
+
+  if (setupLayer?.code) {
+    bodyParts.push(setupLayer.code)
+  }
+
+  for (const layer of previousLayers) {
+    if (layer.code) {
+      bodyParts.push(layer.code)
+    }
+  }
+
+  if (currentLayer?.code) {
+    // Wrap current layer in red color group
+    bodyParts.push('% --- NEW elements (highlighted in red) ---')
+    bodyParts.push('\\begingroup\\color{red}')
+    bodyParts.push(currentLayer.code)
+    bodyParts.push('\\endgroup')
+  }
+
+  const parts: string[] = []
+  if (preamble) parts.push(preamble)
+  parts.push(`\\begin{tikzpicture}${tikzpictureOptions}`)
+  parts.push(bodyParts.filter(Boolean).join('\n\n'))
+  parts.push('\\end{tikzpicture}')
+
+  return parts.join('\n')
+}

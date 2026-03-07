@@ -235,5 +235,21 @@
     "rubricSuggestions": "Suggestions",
     "rubricReasoning": "Reasoning",
     "noRubricCriteria": "No rubric criteria detected"
+  },
+  "walkthrough": {
+    "title": "Step-by-Step Solution",
+    "startButton": "Step-by-Step Walkthrough",
+    "previous": "Previous",
+    "next": "Next",
+    "complete": "Solution complete! You've walked through all the steps.",
+    "askAboutStep": "Ask about this step",
+    "noMessages": "Ask a question about this step...",
+    "thinking": "Thinking...",
+    "typeQuestion": "Type your question...",
+    "compilingDiagrams": "Compiling diagrams... {rendered}/{total}",
+    "diagramNotAvailable": "Diagram not available",
+    "errorTitle": "Something went wrong",
+    "errorMessage": "Could not generate the walkthrough",
+    "tryAgain": "Try Again"
   }
 }

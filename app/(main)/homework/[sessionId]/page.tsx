@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import Button from '@/components/ui/Button'
 import { AnnotatedImageViewer, TutoringChat, BatchWorksheetResult as BatchWorksheetResultView, BeforeSubmitResult as BeforeSubmitResultView, RubricTable } from '@/components/homework'
+import { WalkthroughView } from '@/components/homework/walkthrough'
 import { useToast } from '@/contexts/ToastContext'
 import { useXP } from '@/contexts/XPContext'
 import { useVisuals } from '@/contexts/VisualsContext'
@@ -137,6 +138,8 @@ export default function HomeworkResultsPage() {
   const [isChatLoading, setIsChatLoading] = useState(false)
   // Related YouTube videos from the latest tutor response
   const [relatedVideos, setRelatedVideos] = useState<Array<{ videoId: string; title: string; channelTitle: string; thumbnailUrl: string }>>([])
+  // Walkthrough mode: when true, shows the step-by-step walkthrough instead of chat
+  const [showWalkthrough, setShowWalkthrough] = useState(false)
   // Track which improvement points are being practiced (loading state)
   const [practicingIndex, setPracticingIndex] = useState<number | null>(null)
 
@@ -641,16 +644,40 @@ export default function HomeworkResultsPage() {
           </div>
         )}
 
-        {/* Tutoring Chat */}
+        {/* Walkthrough or Tutoring Chat */}
         <div className="flex-1">
-          <TutoringChat
-            session={helpSession}
-            onSendMessage={handleSendMessage}
-            onRequestHint={handleRequestHint}
-            onComplete={handleComplete}
-            isLoading={isChatLoading}
-            relatedVideos={relatedVideos}
-          />
+          {showWalkthrough ? (
+            <div className="container mx-auto px-4 py-4 max-w-3xl">
+              <WalkthroughView
+                sessionId={sessionId}
+                onClose={() => setShowWalkthrough(false)}
+              />
+            </div>
+          ) : (
+            <>
+              {/* Step-by-step walkthrough button */}
+              <div className="container mx-auto px-4 max-w-2xl mb-2">
+                <button
+                  type="button"
+                  onClick={() => setShowWalkthrough(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl text-sm font-medium text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  {t('walkthrough.startButton')}
+                </button>
+              </div>
+              <TutoringChat
+                session={helpSession}
+                onSendMessage={handleSendMessage}
+                onRequestHint={handleRequestHint}
+                onComplete={handleComplete}
+                isLoading={isChatLoading}
+                relatedVideos={relatedVideos}
+              />
+            </>
+          )}
         </div>
 
         {/* Question Image Modal */}

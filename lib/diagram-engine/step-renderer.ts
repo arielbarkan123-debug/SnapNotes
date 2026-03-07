@@ -6,7 +6,7 @@
  * Includes retry logic and graceful fallback.
  */
 
-import { parseTikzLayers, buildCumulativeStep } from './tikz-layer-parser'
+import { parseTikzLayers, buildCumulativeStep, buildCumulativeStepWithHighlight } from './tikz-layer-parser'
 import { compileTikZ } from './tikz-executor'
 import type { StepByStepSource, StepRenderResult } from '@/components/homework/diagram/types'
 
@@ -99,6 +99,64 @@ export async function renderStepByStep(
     partial: hasFailures,
     errors: Object.keys(errors).length > 0 ? errors : undefined,
   }
+}
+
+/**
+ * Render walkthrough steps with red highlighting for the current step.
+ *
+ * For each step N (1-indexed layer), builds a cumulative TikZ document
+ * where layers 0..N-1 are normal and layer N is wrapped in red.
+ * Compiles each step via QuickLaTeX and calls onStepRendered() as each
+ * image completes, enabling progressive streaming to the client.
+ *
+ * @param tikzCode - Complete TikZ code with % === LAYER N === markers
+ * @param totalSteps - Number of steps to render
+ * @param onStepRendered - Callback fired each time a step image is ready
+ */
+export async function renderWalkthroughSteps(
+  tikzCode: string,
+  totalSteps: number,
+  onStepRendered: (stepIndex: number, imageUrl: string) => void,
+): Promise<void> {
+  const parsed = parseTikzLayers(tikzCode)
+
+  if (parsed.layers.length === 0) {
+    console.error('[WalkthroughRenderer] No layers found in TikZ code')
+    return
+  }
+
+  // Get the numbered layers (layer 0 is setup, layers 1+ are steps)
+  const numberedLayers = parsed.layers.filter(l => l.layerNumber > 0)
+  const stepsToRender = Math.min(totalSteps, numberedLayers.length)
+
+  console.log(`[WalkthroughRenderer] Rendering ${stepsToRender} highlighted steps...`)
+
+  // Build TikZ code for each step with red highlighting
+  const stepCodes: string[] = []
+  for (let i = 0; i < stepsToRender; i++) {
+    const layerNumber = numberedLayers[i].layerNumber
+    stepCodes.push(buildCumulativeStepWithHighlight(parsed, layerNumber))
+  }
+
+  // Render in batches of MAX_CONCURRENT_RENDERS
+  for (let i = 0; i < stepCodes.length; i += MAX_CONCURRENT_RENDERS) {
+    const batch = stepCodes.slice(i, i + MAX_CONCURRENT_RENDERS)
+    const batchResults = await Promise.all(
+      batch.map((tikz, batchIdx) => renderSingleStep(tikz, i + batchIdx)),
+    )
+
+    for (let j = 0; j < batchResults.length; j++) {
+      const stepIndex = i + j
+      const result = batchResults[j]
+      if (result.url) {
+        onStepRendered(stepIndex, result.url)
+      } else {
+        console.warn(`[WalkthroughRenderer] Step ${stepIndex + 1} failed: ${result.error?.slice(0, 100)}`)
+      }
+    }
+  }
+
+  console.log(`[WalkthroughRenderer] Done rendering highlighted steps`)
 }
 
 /**
