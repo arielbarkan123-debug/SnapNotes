@@ -22,6 +22,12 @@ jest.mock('@/lib/supabase/server', () => ({
 jest.mock('@/lib/youtube/transcript', () => ({
   extractYouTubeTranscript: jest.fn(),
   parseVideoId: jest.fn(),
+  YouTubeBotDetectionError: class YouTubeBotDetectionError extends Error {
+    constructor(message?: string) {
+      super(message || 'Bot detection triggered')
+      this.name = 'YouTubeBotDetectionError'
+    }
+  },
 }))
 
 jest.mock('@/lib/youtube/course-from-video', () => ({
