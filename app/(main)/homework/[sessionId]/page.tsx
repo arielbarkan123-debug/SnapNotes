@@ -655,12 +655,13 @@ export default function HomeworkResultsPage() {
             </div>
           ) : (
             <>
-              {/* Step-by-step walkthrough button */}
-              <div className="container mx-auto px-4 max-w-2xl mb-2">
+              {/* Step-by-step walkthrough button — always visible in help sessions */}
+              <div className="container mx-auto px-4 max-w-2xl mb-2" data-testid="walkthrough-btn-container">
                 <button
                   type="button"
                   onClick={() => setShowWalkthrough(true)}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl text-sm font-medium text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors"
+                  data-testid="walkthrough-start-btn"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
