@@ -81,74 +81,77 @@ export const PHYSICS_CIRCUITS_GUIDANCE = `PHYSICS — CIRCUITS:
 - Calculations box: show Ohm's law steps, total resistance, current, voltage drops`
 
 export const PHYSICS_PROJECTILE_GUIDANCE = `PHYSICS — PROJECTILE MOTION / KINEMATICS:
-- Draw trajectory as a smooth parabolic arc using \\draw[smooth] with pre-computed plot points
-- The ball/projectile is a SMALL FILLED CIRCLE (3pt), NEVER a rectangle or box
-- Show initial velocity vector at launch point, decomposed into vx (horizontal) and vy (vertical)
-- Mark key points: launch, max height, landing — with filled circles and labeled coordinates
-- Show max height with a vertical dashed line, range with a horizontal dashed line
-- Use hatching for the ground, and a clean axis line
-- Keep all annotations on the OUTER side of the trajectory (above for top labels, below for bottom)
-- Calculations box below the diagram: show range, max height, time of flight formulas with numeric substitution
-- PRE-COMPUTE ALL coordinates yourself. NEVER use complex math expressions in TikZ coordinates.
-- Here is the REFERENCE TEMPLATE. Adapt values but keep this exact structure:
+Rules:
+- Trajectory: \\draw[smooth] plot coordinates {(x1,y1) (x2,y2) ...} with 8-10 pre-computed points. NEVER use plot[domain=...].
+- Ball = SMALL FILLED CIRCLE (3pt). NEVER a rectangle.
+- Show: velocity vector at launch, max height dashed line, range arrow, landing dot.
+- NO decorative elements (windows, grass, sky, clouds, backgrounds).
+- PRE-COMPUTE ALL coordinates as decimal numbers. NEVER use \\pgfmathsetmacro.
+- Keep total code under 2000 characters.
+
+REFERENCE TEMPLATE (ground launch). FOLLOW THIS EXACTLY — only change numbers:
 
 \\usetikzlibrary{arrows.meta, calc}
 \\begin{tikzpicture}[scale=1.3]
-% --- GROUND AND AXES ---
+% Ground
 \\draw[thick] (-0.5,0) -- (10,0);
-\\foreach \\x in {-0.3,0,...,9.8} { \\draw (\\x,0) -- (\\x-0.2,-0.2); }
-\\node[below,fill=white,inner sep=2pt] at (0,0) {Origin};
-\\node[below,fill=white,inner sep=2pt] at (8.16,0) {Landing};
-
-% --- TRAJECTORY (smooth parabola) ---
-% Pre-compute points: x(t) = v0x * t, y(t) = v0y * t - 0.5*g*t^2
-% Example: v0=20 m/s, theta=45 deg => v0x=14.14, v0y=14.14, t_land=2.89s
+\\draw[thick] (-0.3,0) -- (-0.3,-0.2) (0.3,0) -- (0.3,-0.2) (0.9,0) -- (0.9,-0.2) (1.5,0) -- (1.5,-0.2) (2.1,0) -- (2.1,-0.2);
+% Trajectory (pre-computed points)
 \\draw[very thick, blue!70, smooth] plot coordinates {
   (0,0) (0.82,1.15) (1.63,1.91) (2.45,2.30) (3.27,2.30)
   (4.08,1.91) (4.90,1.15) (5.71,0.00)
 };
-% Scale: 1 TikZ unit = R/5.71 meters (fit to diagram width)
-
-% --- KEY POINTS ---
-% Launch point
+% Key points
 \\fill[red] (0,0) circle (3pt);
-% Max height
 \\fill[red] (2.86,2.30) circle (3pt);
-\\draw[dashed, gray] (2.86,0) -- (2.86,2.30);
-\\node[above=0.3cm, fill=white, inner sep=2pt] at (2.86,2.30) {\\large $H_{\\max} = 10.2\\,\\text{m}$};
-% Landing point
 \\fill[red] (5.71,0) circle (3pt);
-
-% --- RANGE ARROW ---
+% Max height line
+\\draw[dashed, gray] (2.86,0) -- (2.86,2.30);
+\\node[above=0.3cm, fill=white, inner sep=2pt] at (2.86,2.30) {$H_{\\max}=10.2\\,\\text{m}$};
+% Range arrow
 \\draw[{Stealth[length=2mm]}-{Stealth[length=2mm]}, thick, green!60!black] (0,-0.6) -- (5.71,-0.6)
-  node[midway, below, fill=white, inner sep=2pt] {\\large $R = 40.8\\,\\text{m}$};
-
-% --- INITIAL VELOCITY VECTORS at launch ---
+  node[midway, below, fill=white, inner sep=2pt] {$R = 40.8\\,\\text{m}$};
+% Velocity vector
 \\draw[-{Stealth[length=3mm,width=2mm]}, very thick, red] (0,0) -- (1.5,1.5)
   node[above left, fill=white, inner sep=2pt] {$\\vec{v}_0 = 20\\,\\text{m/s}$};
-\\draw[-{Stealth[length=2.5mm]}, thick, dashed, orange!80!black] (0,0) -- (1.5,0)
-  node[below=0.15cm, fill=white, inner sep=2pt] {\\footnotesize $v_{0x} = 14.1\\,\\text{m/s}$};
-\\draw[-{Stealth[length=2.5mm]}, thick, dashed, green!50!black] (0,0) -- (0,1.5)
-  node[left=0.15cm, fill=white, inner sep=2pt] {\\footnotesize $v_{0y} = 14.1\\,\\text{m/s}$};
-
-% --- ANGLE ARC ---
+% Angle arc
 \\draw[thick] (0.8,0) arc (0:45:0.8);
 \\node[fill=white, inner sep=1pt] at (1.1,0.35) {$\\theta$};
-
-% --- CALCULATIONS BOX ---
-\\node[draw, rounded corners=4pt, fill=gray!5, text width=12cm, font=\\footnotesize,
-  anchor=north west, inner sep=8pt, align=left]
-  at (-0.5,-1.5) {
-  \\textbf{Projectile Motion} \\quad $v_0 = 20\\,\\text{m/s}$, $\\theta = 45^{\\circ}$, $g = 9.8\\,\\text{m/s}^2$\\\\[4pt]
-  $v_{0x} = v_0\\cos\\theta = 20\\times 0.707 = \\textcolor{orange!80!black}{14.1\\,\\text{m/s}}$\\\\[3pt]
-  $v_{0y} = v_0\\sin\\theta = 20\\times 0.707 = \\textcolor{green!50!black}{14.1\\,\\text{m/s}}$\\\\[3pt]
-  $t_{\\text{land}} = \\frac{2v_{0y}}{g} = \\frac{2\\times 14.1}{9.8} = \\textcolor{blue}{2.89\\,\\text{s}}$\\\\[3pt]
-  $R = v_{0x} \\times t = 14.1 \\times 2.89 = \\textcolor{green!60!black}{40.8\\,\\text{m}}$\\\\[3pt]
-  $H_{\\max} = \\frac{v_{0y}^2}{2g} = \\frac{14.1^2}{19.6} = \\textcolor{red}{10.2\\,\\text{m}}$
-};
 \\end{tikzpicture}
 
-Adapt this template: change velocity, angle, and computed values as needed. ALWAYS include the calculations box. The projectile MUST be drawn as filled circles (dots), NEVER as rectangles or boxes. Pre-compute all trajectory coordinates before placing them.`
+ELEVATED LAUNCH TEMPLATE (launch from a building/cliff). Use when there is a height:
+
+\\usetikzlibrary{arrows.meta}
+\\begin{tikzpicture}[scale=1.3]
+% Ground
+\\draw[thick] (-0.5,0) -- (11,0);
+% Building (simple rectangle)
+\\fill[gray!20] (0,0) rectangle (1.2,3);
+\\draw[thick] (0,0) rectangle (1.2,3);
+% Height label
+\\draw[{Stealth[length=2mm]}-{Stealth[length=2mm]}, thick, red] (-0.4,0) -- (-0.4,3)
+  node[midway, left, fill=white, inner sep=2pt] {$h=10\\,\\text{m}$};
+% Trajectory (8 pre-computed points from (1.2, 3) down to landing)
+\\draw[very thick, blue!70, smooth] plot coordinates {
+  (1.2,3.0) (2.5,3.5) (3.8,3.5) (5.1,3.1)
+  (6.4,2.2) (7.7,0.9) (8.6,0.0)
+};
+% Key points
+\\fill[red] (1.2,3) circle (3pt);
+\\fill[red] (8.6,0) circle (3pt);
+\\node[below=0.2cm, fill=white, inner sep=2pt] at (8.6,0) {Landing};
+% Velocity vector at launch
+\\draw[-{Stealth[length=3mm,width=2mm]}, very thick, red] (1.2,3) -- (2.7,3.87)
+  node[above, fill=white, inner sep=2pt] {$\\vec{v}_0 = 20\\,\\text{m/s}$};
+% Angle arc
+\\draw[thick] (2.0,3) arc (0:30:0.8);
+\\node[fill=white, inner sep=1pt] at (2.3,3.2) {$30^{\\circ}$};
+% Range arrow (from building base)
+\\draw[{Stealth[length=2mm]}-{Stealth[length=2mm]}, thick, green!60!black] (1.2,-0.6) -- (8.6,-0.6)
+  node[midway, below, fill=white, inner sep=2pt] {$R=47.0\\,\\text{m}$};
+\\end{tikzpicture}
+
+CRITICAL: Follow the template structure EXACTLY. Only change numeric values. Do NOT add \\definecolor, \\pgfmathsetmacro, plot[domain], \\foreach, or decorative elements.`
 
 export const PHYSICS_PENDULUM_GUIDANCE = `PHYSICS — PENDULUM / OSCILLATION:
 - Draw support point at top center, string as a line, bob as a filled circle

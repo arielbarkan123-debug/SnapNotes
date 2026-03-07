@@ -63,6 +63,22 @@ export interface CompileFailure { error: string }
  */
 export async function compileTikZ(tikzCode: string): Promise<CompileSuccess | CompileFailure> {
   try {
+    // Guard: reject oversized code that will timeout on QuickLaTeX
+    if (tikzCode.length > 3500) {
+      console.warn(`[TikZ] Code too large (${tikzCode.length} chars) — will timeout on QuickLaTeX. Rejecting.`);
+      return { error: `TikZ code too large (${tikzCode.length} chars, max 3500). Simplify the diagram: remove decorative elements, reduce plot points, pre-compute coordinates.` };
+    }
+
+    // Guard: reject known-problematic features
+    if (/\\pgfmathsetmacro|\\pgfmathparse/.test(tikzCode)) {
+      console.warn('[TikZ] Code uses \\pgfmathsetmacro — known to cause QuickLaTeX timeouts');
+      return { error: 'Do not use \\pgfmathsetmacro or \\pgfmathparse. Pre-compute all values as decimal numbers and write them directly.' };
+    }
+    if (/plot\s*\[.*domain\s*=.*variable\s*=/.test(tikzCode)) {
+      console.warn('[TikZ] Code uses parametric plot[domain=...] — known to cause QuickLaTeX 500 errors');
+      return { error: 'Do not use plot[domain=..., variable=\\t]. Use \\draw[smooth] plot coordinates {(x1,y1) (x2,y2) ...} with pre-computed points instead.' };
+    }
+
     const libraryMatches = tikzCode.match(/\\usetikzlibrary\{[^}]+\}/g);
     const libraries = libraryMatches ? libraryMatches.join('\n') : '';
 
@@ -81,13 +97,26 @@ export async function compileTikZ(tikzCode: string): Promise<CompileSuccess | Co
       `preamble=${encodeURIComponent(preamble)}`,
     ];
 
+    // 15s timeout — if QuickLaTeX takes longer, the code is too complex
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+
     const response = await fetch('https://quicklatex.com/latex3.f', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: parts.join('&'),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     const text = await response.text();
+
+    // Check for HTTP error responses (HTML instead of plain text)
+    if (text.includes('<!DOCTYPE') || text.includes('<html') || response.status >= 500) {
+      console.error('[TikZ] QuickLaTeX returned HTTP error (likely 500). Code too complex.');
+      return { error: 'QuickLaTeX server error (500). The TikZ code is too complex. Simplify: use plot coordinates with pre-computed points, remove \\pgfmathsetmacro, remove decorative elements, keep under 2000 chars.' };
+    }
+
     const lines = text.trim().split(/\r?\n/);
 
     if (lines[0].trim() !== '0') {
@@ -105,6 +134,10 @@ export async function compileTikZ(tikzCode: string): Promise<CompileSuccess | Co
 
     return { url: imageUrl };
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.error('[TikZ] QuickLaTeX timed out after 15s — code too complex');
+      return { error: 'QuickLaTeX compilation timed out (>15s). The TikZ code is too complex. Simplify: remove decorative elements, use fewer plot points, pre-compute all coordinates as numbers.' };
+    }
     const errMsg = error instanceof Error ? error.message : 'Unknown QuickLaTeX error';
     console.error('QuickLaTeX error:', error);
     return { error: errMsg };
