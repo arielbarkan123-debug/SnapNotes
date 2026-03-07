@@ -357,12 +357,13 @@ export async function generateDiagram(
     console.log(`[SmartPipeline] Computed ${Object.keys(smartResult.computed!.values).length} values in ${Math.round(smartResult.computed!.computeTimeMs)}ms (${smartResult.computeAttempts} attempt${smartResult.computeAttempts !== 1 ? 's' : ''})`);
   }
 
-  // ── Per-pipeline timeout for auto-start (skipQA → quick mode) ──
-  // E2B sandbox creation can hang for 30s+ if the service is slow or down.
-  // Without a per-pipeline timeout, the primary pipeline eats the entire engine
-  // budget (45s) and the fallback (tikz via QuickLaTeX) never gets a chance.
-  // With 20s per pipeline: primary gets 20s, fallback gets ~20s = ~40s total.
-  const PIPELINE_TIMEOUT_MS = options?.skipQA ? 20_000 : undefined;
+  // ── Per-pipeline timeout for quick mode (skipQA) ──
+  // When NO forced pipeline: E2B sandbox can hang 30s+, so 20s primary + 20s fallback = 40s total.
+  // When forced pipeline (e.g. 'tikz'): no fallback runs, so give the single pipeline 40s.
+  // TikZ pipeline = Claude API (~10-15s) + QuickLaTeX compile (~5-10s) = 15-25s typical.
+  const PIPELINE_TIMEOUT_MS = options?.skipQA
+    ? (forcePipeline ? 40_000 : 20_000)
+    : undefined;
 
   let result: DiagramResult | DiagramError;
 
