@@ -23,6 +23,9 @@ const YouTubeEmbed = dynamic(() => import('@/components/prepare/YouTubeEmbed'), 
 // Lazy-load VisualSolvingPanel (client-only, no SSR)
 const VisualSolvingPanel = dynamic(() => import('./VisualSolvingPanel'), { ssr: false })
 
+// Lazy-load MarkdownWithMath for rendering tutor responses
+const MarkdownWithMath = dynamic(() => import('@/components/prepare/MarkdownWithMath'), { ssr: false })
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -158,7 +161,13 @@ function MessageBubble({
             }
           `}
         >
-          <p className="whitespace-pre-wrap">{message.content}</p>
+          {isTutor ? (
+            <MarkdownWithMath className="tutor-markdown [&>p]:my-1.5 [&>p:first-child]:mt-0 [&>p:last-child]:mb-0 [&_strong]:font-semibold [&_strong]:text-violet-700 dark:[&_strong]:text-violet-300 [&_em]:italic [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:my-1.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:my-1.5 [&_li]:my-0.5 [&_h1]:text-lg [&_h1]:font-bold [&_h1]:my-2 [&_h2]:text-base [&_h2]:font-bold [&_h2]:my-2 [&_h3]:font-semibold [&_h3]:my-1.5 [&_code]:bg-gray-100 dark:[&_code]:bg-gray-700 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_a]:text-violet-600 dark:[&_a]:text-violet-400 [&_a]:underline">
+              {message.content}
+            </MarkdownWithMath>
+          ) : (
+            <p className="whitespace-pre-wrap">{message.content}</p>
+          )}
 
           {/* Inline Diagram — shows fully revealed, expand for step-by-step */}
           {diagramState && (
