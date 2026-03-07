@@ -90,7 +90,7 @@ export async function compileTikZ(tikzCode: string): Promise<CompileSuccess | Co
 
     const parts = [
       `formula=${encodeURIComponent(formula)}`,
-      `fsize=40px`,
+      `fsize=48px`,
       `fcolor=000000`,
       `mode=0`,
       `out=1`,

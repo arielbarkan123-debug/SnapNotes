@@ -247,7 +247,11 @@
     "thinking": "חושב...",
     "typeQuestion": "כתוב את השאלה שלך...",
     "compilingDiagrams": "מעבד תרשימים... {rendered}/{total}",
+    "compilingDiagram": "מעבד תרשים...",
     "diagramNotAvailable": "תרשים לא זמין",
+    "retryDiagram": "נסה שוב",
+    "tapToZoom": "הקש להגדלה",
+    "generatingSolution": "מייצר פתרון...",
     "errorTitle": "אירעה שגיאה",
     "errorMessage": "לא ניתן ליצור את ההדרכה",
     "tryAgain": "נסה שוב"

@@ -207,14 +207,16 @@ export function buildCumulativeStep(parsed: ParsedTikz, stepNumber: number): str
 }
 
 /**
- * Build a cumulative TikZ document for step N with RED HIGHLIGHTING
- * on the current step's new elements.
+ * Build a cumulative TikZ document for step N with visual highlighting.
  *
- * - Layer 0 (setup): always included, normal colors
- * - Layers 1..N-1 (previous steps): normal colors
- * - Layer N (current step): wrapped in \begingroup\color{red}...\endgroup
+ * Visual strategy:
+ * - Layer 0 (setup): always included at full color — axes, ground, etc.
+ * - Layers 1..N-1 (previous steps): faded to gray so they visually recede
+ * - Layer N (current step): lines/arrows in red, text stays black for readability
  *
- * For step 1, the current layer IS highlighted (there are no previous layers).
+ * This creates a clear visual hierarchy: you instantly see what's new (red)
+ * vs. what was already there (gray) vs. the base canvas (normal).
+ *
  * The xcolor package is required (already in tikz-executor.ts preamble).
  */
 export function buildCumulativeStepWithHighlight(parsed: ParsedTikz, stepNumber: number): string {
@@ -227,25 +229,32 @@ export function buildCumulativeStepWithHighlight(parsed: ParsedTikz, stepNumber:
   )
   const currentLayer = layers.find(l => l.layerNumber === stepNumber)
 
-  // Build body: setup + previous (normal) + current (red)
+  // Build body: setup (normal) + previous (gray) + current (red lines, black text)
   const bodyParts: string[] = []
 
+  // Setup layer stays at full color — it's the "canvas"
   if (setupLayer?.code) {
     bodyParts.push(setupLayer.code)
   }
 
-  for (const layer of previousLayers) {
-    if (layer.code) {
-      bodyParts.push(layer.code)
+  // Previous layers fade to gray for visual depth
+  if (previousLayers.length > 0) {
+    bodyParts.push('% --- Previous steps (faded) ---')
+    bodyParts.push('\\begingroup\\color{gray!50}')
+    for (const layer of previousLayers) {
+      if (layer.code) {
+        bodyParts.push(layer.code)
+      }
     }
+    bodyParts.push('\\endgroup')
   }
 
+  // Current layer: red lines/arrows but BLACK text for readability
   if (currentLayer?.code) {
-    // Wrap current layer in red color group
-    bodyParts.push('% --- NEW elements (highlighted in red) ---')
-    bodyParts.push('\\begingroup\\color{red}')
+    bodyParts.push('% --- Current step (highlighted) ---')
+    bodyParts.push('\\begin{scope}[every path/.append style={draw=red!80, line width=1.2pt}, every node/.append style={text=black}]')
     bodyParts.push(currentLayer.code)
-    bodyParts.push('\\endgroup')
+    bodyParts.push('\\end{scope}')
   }
 
   const parts: string[] = []

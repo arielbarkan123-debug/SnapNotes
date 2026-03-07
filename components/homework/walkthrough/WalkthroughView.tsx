@@ -155,6 +155,7 @@ export default function WalkthroughView({
           currentStep={currentStep}
           stepImages={stepImages}
           isCompiling={isCompiling}
+          stepDescription={step ? (isHe ? step.titleHe : step.title) : undefined}
         />
 
         {/* Step explanation */}

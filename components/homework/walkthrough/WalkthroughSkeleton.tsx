@@ -1,12 +1,14 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { useTranslations } from 'next-intl'
 
 /**
  * Skeleton loading state for the walkthrough view.
  * Shows animated placeholders for diagram, step text, and navigation.
  */
 export default function WalkthroughSkeleton() {
+  const t = useTranslations('homework.walkthrough')
   const shimmer = {
     initial: { opacity: 0.4 },
     animate: { opacity: 1 },
@@ -52,7 +54,7 @@ export default function WalkthroughSkeleton() {
         >
           <div className="flex flex-col items-center gap-2">
             <div className="w-8 h-8 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs text-gray-400 dark:text-gray-500">Generating solution...</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">{t('generatingSolution')}</span>
           </div>
         </motion.div>
       </div>

@@ -247,7 +247,11 @@
     "thinking": "Thinking...",
     "typeQuestion": "Type your question...",
     "compilingDiagrams": "Compiling diagrams... {rendered}/{total}",
+    "compilingDiagram": "Compiling diagram...",
     "diagramNotAvailable": "Diagram not available",
+    "retryDiagram": "Retry diagram",
+    "tapToZoom": "Tap to zoom",
+    "generatingSolution": "Generating solution...",
     "errorTitle": "Something went wrong",
     "errorMessage": "Could not generate the walkthrough",
     "tryAgain": "Try Again"
