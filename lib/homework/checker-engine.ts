@@ -42,6 +42,7 @@ import {
   similarityRatio,
 } from '@/lib/evaluation/answer-checker'
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
+import { smartExtractAndSolve } from './smart-solver'
 
 // ============================================================================
 // Error Codes for Homework Checker Engine
@@ -1143,6 +1144,13 @@ async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput)
   // ============================================================================
   // Phase 1 + Phase 2 (truly parallel in separate-image mode)
   // ============================================================================
+  // Smart Solver: decompose → solve → compute-verify → auto-retry
+  const SMART_SOLVER_ENABLED = process.env.SMART_SOLVER_ENABLED === 'true'
+  const phase1Fn = SMART_SOLVER_ENABLED ? smartExtractAndSolve : extractAndSolveProblems
+  if (SMART_SOLVER_ENABLED) {
+    console.log('[Checker/3Phase] Smart Solver ENABLED — using decompose-solve-verify pipeline')
+  }
+
   let solutionSet: SolutionSet
   let studentAnswerSet: StudentAnswerSet | null = null
 
@@ -1153,8 +1161,20 @@ async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput)
     // Phase 1 and Phase 2 run truly in parallel — they look at different images.
     // Phase 2 runs without a problem list; it transcribes all answers in visual
     // order with sequential IDs (q1, q2, ...). Phase 3 matches by index.
+    let phase1Promise: Promise<SolutionSet>
+    if (SMART_SOLVER_ENABLED) {
+      // Smart solver with fallback to legacy on failure
+      phase1Promise = phase1Fn(client, taskImage.base64, taskMediaType, false, referenceImages)
+        .catch((err) => {
+          console.warn(`[Checker/3Phase] Smart solver failed, falling back to legacy: ${err instanceof Error ? err.message : err}`)
+          return extractAndSolveProblems(client, taskImage.base64, taskMediaType, false, referenceImages)
+        })
+    } else {
+      phase1Promise = phase1Fn(client, taskImage.base64, taskMediaType, false, referenceImages)
+    }
+
     const [phase1Result, phase2Result] = await Promise.all([
-      extractAndSolveProblems(client, taskImage.base64, taskMediaType, false, referenceImages),
+      phase1Promise,
       readStudentWork(client, answerImage.base64, answerMediaType),
     ])
 
@@ -1185,7 +1205,16 @@ async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput)
   } else {
     // Combined image mode: Phase 1 extracts problems AND reads student answers
     console.log('[Checker/3Phase] Running Phase 1 (combined mode — extract + solve + read)...')
-    solutionSet = await extractAndSolveProblems(client, taskImage.base64, taskMediaType, true, referenceImages)
+    if (SMART_SOLVER_ENABLED) {
+      try {
+        solutionSet = await phase1Fn(client, taskImage.base64, taskMediaType, true, referenceImages)
+      } catch (err) {
+        console.warn(`[Checker/3Phase] Smart solver failed in combined mode, falling back: ${err instanceof Error ? err.message : err}`)
+        solutionSet = await extractAndSolveProblems(client, taskImage.base64, taskMediaType, true, referenceImages)
+      }
+    } else {
+      solutionSet = await extractAndSolveProblems(client, taskImage.base64, taskMediaType, true, referenceImages)
+    }
   }
 
   // ============================================================================
