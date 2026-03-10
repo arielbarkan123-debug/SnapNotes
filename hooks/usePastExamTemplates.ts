@@ -15,7 +15,7 @@
  * if (canUpload) {
  *   // Show upload button
  * } else {
- *   console.log(`Upload limit reached for this subject`)
+ *   log.info(`Upload limit reached for this subject`)
  * }
  * ```
  */
@@ -25,6 +25,9 @@
 import { useCallback } from 'react'
 import useSWR from 'swr'
 import type { PastExamTemplate, PastExamTemplatesResponse } from '@/types/past-exam'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('hook:usePastExamTemplates')
 
 export const PAST_EXAMS_CACHE_KEY = '/api/past-exams'
 

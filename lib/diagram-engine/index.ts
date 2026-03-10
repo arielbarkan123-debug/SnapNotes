@@ -13,6 +13,9 @@ import { captureSteps } from './step-capture';
 import type { StepImage } from '@/components/homework/diagram/types';
 import Anthropic from '@anthropic-ai/sdk';
 import { AI_MODEL } from '@/lib/ai/claude';
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram-engine')
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -114,7 +117,7 @@ async function qaCheckDiagram(
       issues: typeof parsed.issues === 'string' ? parsed.issues : '',
     };
   } catch (err) {
-    console.error('[QA] Vision check failed, passing by default:', err);
+    log.error({ err }, 'Vision check failed, passing by default');
     // If QA itself fails, don't block the user
     return { pass: true, issues: '' };
   }
@@ -152,7 +155,7 @@ Reply in 5-7 lines. Numbers only, no prose.`,
     const textBlock = response.content.find((b) => b.type === 'text');
     return textBlock && textBlock.type === 'text' ? textBlock.text.trim() : null;
   } catch (err) {
-    console.warn('[Planning] Matplotlib planning failed, proceeding without plan:', err);
+    log.warn({ err }, 'Matplotlib planning failed, proceeding without plan');
     return null; // Non-fatal — just skip planning
   }
 }
@@ -259,7 +262,7 @@ async function generateE2BDiagram(
         fullResponseText = e2bResult.fullResponseText;
         mode = forcedMode || detectMode(code);
 
-        console.log(`[E2B QA:${qaRound} Attempt:${attempt}] Mode: ${mode}, Code length: ${code.length}`);
+        log.info(`[E2B QA:${qaRound} Attempt:${attempt}] Mode: ${mode}, Code length: ${code.length}`);
 
         const result = await executeCode(code, mode);
 
@@ -268,16 +271,16 @@ async function generateE2BDiagram(
 
           // QA check (skip on last allowed round — just return what we have)
           if (qaRound < MAX_QA_RETRIES) {
-            console.log(`[QA] Checking E2B result (round ${qaRound + 1})...`);
+            log.info(`Checking E2B result (round ${qaRound + 1})...`);
             const verdict = await qaCheckDiagram(imageUrl, question, mode === 'latex' ? 'e2b-latex' : 'e2b-matplotlib');
 
             if (!verdict.pass) {
-              console.log(`[QA] FAILED: ${verdict.issues}`);
+              log.info(`FAILED: ${verdict.issues}`);
               qaFeedback = verdict.issues;
               break; // break compile loop, start new QA round
             }
 
-            console.log(`[QA] PASSED`);
+            log.info(`PASSED`);
             const pipelineId = mode === 'latex' ? 'e2b-latex' as Pipeline : 'e2b-matplotlib' as Pipeline;
             return {
               imageUrl: await postProcessDiagram(imageUrl, pipelineId),
@@ -302,10 +305,10 @@ async function generateE2BDiagram(
         }
 
         lastError = result.error;
-        console.log(`[E2B Attempt ${attempt}] Failed: ${lastError?.slice(0, 200)}`);
+        log.info(`[E2B Attempt ${attempt}] Failed: ${lastError?.slice(0, 200)}`);
       } catch (err) {
         lastError = err instanceof Error ? err.message : 'Unknown error';
-        console.log(`[E2B Attempt ${attempt}] Error: ${lastError}`);
+        log.info(`[E2B Attempt ${attempt}] Error: ${lastError}`);
       }
     }
 
@@ -332,17 +335,17 @@ export async function generateDiagram(
   options?: { skipStepCapture?: boolean; skipQA?: boolean }
 ): Promise<DiagramResult | DiagramError> {
   const pipeline = forcePipeline || routeQuestion(question);
-  console.log(`[Router] Question: "${question.slice(0, 80)}..." → Pipeline: ${pipeline}`);
+  log.info(`Question: "${question.slice(0, 80)}..." → Pipeline: ${pipeline}`);
 
   // ── Cache check: return immediately if we have a cached result ──
   try {
     const cached = await getCachedDiagram(question, pipeline);
     if (cached) {
-      console.log(`[Cache] HIT for pipeline ${pipeline} — returning cached diagram`);
+      log.info(`HIT for pipeline ${pipeline} — returning cached diagram`);
       trackDiagramEvent({ type: 'cache_hit', pipeline, question, durationMs: 0, attempts: 0, cacheHit: true });
       return cached;
     }
-    console.log(`[Cache] MISS for pipeline ${pipeline}`);
+    log.info(`MISS for pipeline ${pipeline}`);
     trackDiagramEvent({ type: 'cache_miss', pipeline, question, durationMs: 0, attempts: 0, cacheHit: false });
   } catch {
     // Cache unavailable — not fatal, proceed with generation
@@ -354,7 +357,7 @@ export async function generateDiagram(
   // ── Smart Pre-Compute: compute values with SymPy before rendering ──
   const { enrichedQuestion, result: smartResult } = await preCompute(question);
   if (smartResult.computeUsed) {
-    console.log(`[SmartPipeline] Computed ${Object.keys(smartResult.computed!.values).length} values in ${Math.round(smartResult.computed!.computeTimeMs)}ms (${smartResult.computeAttempts} attempt${smartResult.computeAttempts !== 1 ? 's' : ''})`);
+    log.info(`Computed ${Object.keys(smartResult.computed!.values).length} values in ${Math.round(smartResult.computed!.computeTimeMs)}ms (${smartResult.computeAttempts} attempt${smartResult.computeAttempts !== 1 ? 's' : ''})`);
   }
 
   // ── Per-pipeline timeout for quick mode (skipQA) ──
@@ -368,7 +371,7 @@ export async function generateDiagram(
   let result: DiagramResult | DiagramError;
 
   if (PIPELINE_TIMEOUT_MS) {
-    console.log(`[Engine] Quick mode: ${PIPELINE_TIMEOUT_MS}ms per-pipeline timeout`);
+    log.info(`Quick mode: ${PIPELINE_TIMEOUT_MS}ms per-pipeline timeout`);
     result = await Promise.race([
       runPipeline(pipeline, enrichedQuestion, options?.skipQA),
       new Promise<DiagramError>((resolve) =>
@@ -383,7 +386,7 @@ export async function generateDiagram(
   if ('error' in result && !forcePipeline) {
     const fallback = getFallbackPipeline(pipeline);
     if (fallback) {
-      console.log(`[Fallback] ${pipeline} failed (${result.error?.slice(0, 100)}) → trying ${fallback}`);
+      log.info(`${pipeline} failed (${result.error?.slice(0, 100)}) → trying ${fallback}`);
       trackDiagramEvent({ type: 'generation_failure', pipeline, question, durationMs: performance.now() - startTime, attempts: 0, error: result.error });
 
       if (PIPELINE_TIMEOUT_MS) {
@@ -398,7 +401,7 @@ export async function generateDiagram(
       }
 
       if (!('error' in result)) {
-        console.log(`[Fallback] ${fallback} succeeded as fallback for ${pipeline}`);
+        log.info(`${fallback} succeeded as fallback for ${pipeline}`);
       }
     }
   }
@@ -440,7 +443,7 @@ export async function generateDiagram(
         const userId = user?.id;
 
         if (!userId) {
-          console.warn('[DiagramEngine] Step capture skipped: no authenticated user');
+          log.warn('Step capture skipped: no authenticated user');
         } else {
           const metadataText = result.fullResponseText || result.code;
 
@@ -461,18 +464,18 @@ export async function generateDiagram(
 
           if (captureResult && captureResult.stepImages.length > 0) {
             result.stepImages = captureResult.stepImages;
-            console.log(`[DiagramEngine] Step capture: ${captureResult.stepImages.length} steps in ${captureResult.captureTimeMs}ms`);
+            log.info(`Step capture: ${captureResult.stepImages.length} steps in ${captureResult.captureTimeMs}ms`);
           } else if (!captureResult) {
-            console.warn(`[DiagramEngine] Step capture timed out after ${STEP_CAPTURE_TIMEOUT_MS}ms — returning diagram without step images`);
+            log.warn(`Step capture timed out after ${STEP_CAPTURE_TIMEOUT_MS}ms — returning diagram without step images`);
             // Let the capture finish in background (images will be in storage for future use)
             capturePromise.catch((err) => {
-              console.warn('[DiagramEngine] Background step capture failed:', err);
+              log.warn('Background step capture failed:', err);
             });
           }
         }
       } catch (err) {
         // Step capture failure never blocks diagram delivery
-        console.warn('[DiagramEngine] Step capture failed (non-blocking):', err);
+        log.warn({ err }, 'Step capture failed (non-blocking)');
       }
     }
 
@@ -536,18 +539,18 @@ async function generateTikzWithQA(
 
     // QA check (skip on last round)
     if (qaRound < MAX_QA_RETRIES) {
-      console.log(`[QA] Checking TikZ result (round ${qaRound + 1})...`);
+      log.info(`Checking TikZ result (round ${qaRound + 1})...`);
       const verdict = await qaCheckDiagram(tikzResult.imageUrl, question, 'tikz');
 
       if (!verdict.pass) {
-        console.log(`[QA] TikZ FAILED: ${verdict.issues}`);
+        log.info(`TikZ FAILED: ${verdict.issues}`);
         // For TikZ, we can't easily inject feedback into the template system,
         // so we append the feedback to the question for the next attempt
         question = `${question}\n\nIMPORTANT: The previous diagram had these issues that MUST be fixed: ${verdict.issues}`;
         continue;
       }
 
-      console.log(`[QA] TikZ PASSED`);
+      log.info(`TikZ PASSED`);
     }
 
     return {
@@ -570,12 +573,12 @@ async function generateRecraftWithQA(
   skipQA?: boolean,
 ): Promise<DiagramResult | DiagramError> {
   const MAX_QA_RETRIES = skipQA ? 0 : 2;
-  console.log(`[generateRecraftWithQA] Starting for: "${question.slice(0, 80)}..."`);
+  log.info(`Starting for: "${question.slice(0, 80)}..."`);
 
   for (let qaRound = 0; qaRound <= MAX_QA_RETRIES; qaRound++) {
-    console.log(`[generateRecraftWithQA] QA round ${qaRound + 1}/${MAX_QA_RETRIES + 1}`);
+    log.info(`QA round ${qaRound + 1}/${MAX_QA_RETRIES + 1}`);
     const recraftResult = await generateRecraftDiagram(question);
-    console.log(`[generateRecraftWithQA] Recraft result:`, 'error' in recraftResult ? recraftResult.error : 'success');
+    log.info({ result: 'error' in recraftResult ? recraftResult.error : 'success' }, 'Recraft result');
 
     if ('error' in recraftResult) {
       return { error: recraftResult.error, pipeline: 'recraft' };
@@ -583,17 +586,17 @@ async function generateRecraftWithQA(
 
     // QA check (skip on last round)
     if (qaRound < MAX_QA_RETRIES) {
-      console.log(`[QA] Checking Recraft result (round ${qaRound + 1})...`);
+      log.info(`Checking Recraft result (round ${qaRound + 1})...`);
       const verdict = await qaCheckDiagram(recraftResult.imageUrl, question, 'recraft');
 
       if (!verdict.pass) {
-        console.log(`[QA] Recraft FAILED: ${verdict.issues}`);
+        log.info(`Recraft FAILED: ${verdict.issues}`);
         // For Recraft, append feedback to question so the prompt rewriter avoids the issue
         question = `${question}\n\nIMPORTANT: The previous illustration had these issues that MUST be fixed: ${verdict.issues}`;
         continue;
       }
 
-      console.log(`[QA] Recraft PASSED`);
+      log.info(`Recraft PASSED`);
     }
 
     return {

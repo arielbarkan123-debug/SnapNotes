@@ -12,6 +12,9 @@ import type Anthropic from '@anthropic-ai/sdk'
 import { AI_MODEL } from '@/lib/ai/claude'
 import { getVerificationStrategy } from './subject-utils'
 import type { DecompositionResult, DecomposedProblem, SubProblem, SubjectCategory } from './types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('homework:decompose')
 
 const MAX_TOKENS = 4096
 
@@ -262,11 +265,7 @@ function parseDecompositionResponse(
     }
   )
 
-  console.log(
-    `[SmartSolver/Decompose] Extracted ${problems.length} problems, ` +
-    `language: ${detectedLanguage}, ` +
-    `total sub-problems: ${problems.reduce((sum, p) => sum + p.subProblems.length, 0)}`
-  )
+  log.info({ problemCount: problems.length, detectedLanguage, totalSubProblems: problems.reduce((sum, p) => sum + p.subProblems.length, 0) }, 'Decomposition complete')
 
   return { problems, detectedLanguage }
 }

@@ -7,6 +7,9 @@
 
 import { createClient } from '@/lib/supabase/server'
 import type { ExtractedImage } from '@/lib/documents/pptx'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('images:upload')
 
 // =============================================================================
 // Types
@@ -86,7 +89,7 @@ export async function uploadExtractedImages(
         })
 
       if (uploadError) {
-        console.error(`Failed to upload image ${filename}:`, uploadError)
+        log.error({ detail: uploadError }, `Failed to upload image ${filename}`)
         results.push({
           filename,
           error: uploadError.message,
@@ -121,7 +124,7 @@ export async function uploadExtractedImages(
         })
       }
     } catch (error) {
-      console.error(`Failed to upload image ${filename}:`, error)
+      log.error({ detail: error }, `Failed to upload image ${filename}`)
       results.push({
         filename,
         error: error instanceof Error ? error.message : 'Unknown error',

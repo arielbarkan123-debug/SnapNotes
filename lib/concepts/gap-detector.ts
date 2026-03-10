@@ -20,6 +20,9 @@ import type {
   GapType,
   GapSeverity,
 } from './types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('concepts:gap-detector')
 
 // =============================================================================
 // Constants
@@ -54,7 +57,7 @@ async function getUserMasteryMap(userId: string): Promise<Map<string, UserConcep
     .eq('user_id', userId)
 
   if (error) {
-    console.error('Failed to get user mastery:', error)
+    log.error({ err: error }, 'Failed to get user mastery:')
     return new Map()
   }
 
@@ -77,7 +80,7 @@ async function getConceptsByIds(conceptIds: string[]): Promise<Map<string, Conce
   const { data, error } = await supabase.from('concepts').select('*').in('id', conceptIds)
 
   if (error) {
-    console.error('Failed to get concepts:', error)
+    log.error({ err: error }, 'Failed to get concepts:')
     return new Map()
   }
 
@@ -410,7 +413,7 @@ Be concise, supportive, and actionable. Use simple language.`
       }
     }
   } catch (error) {
-    console.error('Failed to enrich gaps with AI:', error)
+    log.error({ err: error }, 'Failed to enrich gaps with AI:')
     // Return gaps without AI enrichment
   }
 
@@ -485,7 +488,7 @@ export async function getUnresolvedGaps(userId: string): Promise<UserKnowledgeGa
     .order('detected_at', { ascending: false })
 
   if (error) {
-    console.error('Failed to get unresolved gaps:', error)
+    log.error({ err: error }, 'Failed to get unresolved gaps:')
     return []
   }
 
@@ -511,7 +514,7 @@ export async function getGapsForConcepts(
     .in('concept_id', conceptIds)
 
   if (error) {
-    console.error('Failed to get gaps for concepts:', error)
+    log.error({ err: error }, 'Failed to get gaps for concepts:')
     return []
   }
 

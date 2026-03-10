@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/api/errors'
 import { extractYouTubeTranscript, parseVideoId, YouTubeBotDetectionError } from '@/lib/youtube/transcript'
 import { generateCourseFromVideo } from '@/lib/youtube/course-from-video'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:courses-from-youtube')
 
 export const maxDuration = 180
 
@@ -132,7 +135,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[YouTube] Error:', error)
+    log.error({ err: error }, 'Error')
     const message = error instanceof Error ? error.message : 'Failed to process YouTube video'
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, message)
   }

@@ -24,7 +24,10 @@ import type {
   PageState,
   TestContext,
 } from './types'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('e2e:runner:orchestrator')
 // ============================================================================
 // Orchestrator Instructions
 // ============================================================================
@@ -446,7 +449,7 @@ const timestamp = getTimestamp()
 // Write to e2e/reports/report-{timestamp}.md
 
 // Print summary
-console.log(generateConsoleSummary(report))
+log.info('generateConsoleSummary(report))
 `
 
 // ============================================================================

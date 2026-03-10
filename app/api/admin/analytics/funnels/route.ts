@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { checkAdminAccess, parseDateRange } from '@/lib/admin/utils'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:admin-analytics-funnels')
 
 /**
  * GET /api/admin/analytics/funnels
@@ -99,7 +102,7 @@ export async function GET(request: NextRequest) {
       availableFunnels,
     })
   } catch (error) {
-    console.error('[Admin Analytics] Funnels error:', error)
+    log.error({ err: error }, 'Funnels error')
     return createErrorResponse(ErrorCodes.ADMIN_ANALYTICS_FETCH_FAILED)
   }
 }

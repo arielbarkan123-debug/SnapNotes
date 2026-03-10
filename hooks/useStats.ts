@@ -9,8 +9,8 @@
  * const { stats, isLoading } = useStats()
  *
  * if (stats) {
- *   console.log(`Level ${stats.level}: ${stats.totalXP} XP`)
- *   console.log(`Streak: ${stats.streak.current} days`)
+ *   log.info(`Level ${stats.level}: ${stats.totalXP} XP`)
+ *   log.info(`Streak: ${stats.streak.current} days`)
  * }
  * ```
  */
@@ -19,6 +19,9 @@
 
 import { useCallback } from 'react'
 import useSWR from 'swr'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('hook:useStats')
 
 // ============================================================================
 // Types

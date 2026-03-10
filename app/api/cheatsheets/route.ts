@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/api/errors'
 import { generateCheatsheet } from '@/lib/cheatsheet/generator'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:cheatsheets')
 
 export const maxDuration = 120
 
@@ -22,7 +25,7 @@ export async function GET() {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('[Cheatsheets] List error:', error)
+      log.error({ err: error }, 'List error')
       return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to fetch cheatsheets')
     }
 
@@ -31,7 +34,7 @@ export async function GET() {
       cheatsheets: cheatsheets || [],
     })
   } catch (error) {
-    console.error('[Cheatsheets] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to list cheatsheets')
   }
 }
@@ -102,7 +105,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (saveError) {
-      console.error('[Cheatsheets] Save error:', saveError)
+      log.error({ err: saveError }, 'Save error')
       return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to save cheatsheet')
     }
 
@@ -115,7 +118,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[Cheatsheets] Generate error:', error)
+    log.error({ err: error }, 'Generate error')
     const message = error instanceof Error ? error.message : 'Failed to generate cheatsheet'
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, message)
   }

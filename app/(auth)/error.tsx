@@ -2,7 +2,10 @@
 
 import { useEffect } from 'react'
 import { ErrorFallback } from '@/components/ErrorBoundary'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('page:errorx')
 interface ErrorPageProps {
   error: Error & { digest?: string }
   reset: () => void
@@ -10,7 +13,7 @@ interface ErrorPageProps {
 
 export default function AuthErrorPage({ error, reset }: ErrorPageProps) {
   useEffect(() => {
-    console.error('[Auth] Error caught:', error.message, error.digest || '')
+    log.error({ detail: [error.message, error.digest || ''] }, 'Error caught')
   }, [error])
 
   return (

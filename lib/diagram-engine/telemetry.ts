@@ -10,6 +10,9 @@
  */
 
 import type { Pipeline } from './router';
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:telemetry')
 
 export interface DiagramTelemetryEvent {
   type: 'generation_start' | 'generation_success' | 'generation_failure' | 'qa_pass' | 'qa_fail' | 'cache_hit' | 'cache_miss'
@@ -39,11 +42,11 @@ export function trackDiagramEvent(event: DiagramTelemetryEvent): void {
 
     // Use appropriate log level based on event type
     if (event.type === 'generation_failure') {
-      console.error('[DiagramTelemetry]', JSON.stringify(logEntry));
+      log.error(logEntry, 'Diagram telemetry event');
     } else if (event.type === 'qa_fail') {
-      console.warn('[DiagramTelemetry]', JSON.stringify(logEntry));
+      log.warn(logEntry, 'Diagram telemetry event');
     } else {
-      console.log('[DiagramTelemetry]', JSON.stringify(logEntry));
+      log.info(logEntry, 'Diagram telemetry event');
     }
 
     // Fire-and-forget Supabase insert (async, never awaited)

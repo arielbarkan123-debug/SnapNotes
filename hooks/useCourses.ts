@@ -26,6 +26,9 @@ import { useState, useCallback, useMemo } from 'react'
 import useSWR from 'swr'
 import { type Course } from '@/types'
 import { useDebounce } from './useDebounce'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('hook:useCourses')
 
 // ============================================================================
 // Types
@@ -134,23 +137,23 @@ export function useCourses(options: UseCoursesOptions = {}): UseCoursesReturn {
       const rawCourses = data?.courses || initialCourses
       // Ensure it's an array
       if (!Array.isArray(rawCourses)) {
-        console.warn('[useCourses] courses is not an array:', rawCourses)
+        log.warn({ rawCourses }, 'courses is not an array')
         return []
       }
       // Filter out any invalid course objects
       return rawCourses.filter(course => {
         if (!course || typeof course !== 'object') {
-          console.warn('[useCourses] Invalid course object:', course)
+          log.warn({ course }, 'Invalid course object')
           return false
         }
         if (!course.id) {
-          console.warn('[useCourses] Course missing id:', course)
+          log.warn({ course }, 'Course missing id')
           return false
         }
         return true
       })
     } catch (error) {
-      console.error('[useCourses] Error extracting courses:', error)
+      log.error({ err: error }, 'Error extracting courses')
       return []
     }
   }, [data?.courses, initialCourses])
@@ -174,7 +177,7 @@ export function useCourses(options: UseCoursesOptions = {}): UseCoursesReturn {
         }
       })
     } catch (error) {
-      console.error('[useCourses] Error sorting courses:', error)
+      log.error({ err: error }, 'Error sorting courses')
       return courses // Return unsorted if error
     }
   }, [courses, sortOrder])
@@ -223,12 +226,12 @@ export function useCourses(options: UseCoursesOptions = {}): UseCoursesReturn {
 
           return false
         } catch (filterError) {
-          console.error('[useCourses] Error filtering course:', course?.id, filterError)
+          log.error({ err: filterError, courseId: course?.id }, 'Error filtering course')
           return false // Skip this course on error
         }
       })
     } catch (error) {
-      console.error('[useCourses] Error in filteredCourses:', error)
+      log.error({ err: error }, 'Error in filteredCourses')
       return sortedCourses // Return unfiltered if error
     }
   }, [sortedCourses, debouncedSearchQuery])

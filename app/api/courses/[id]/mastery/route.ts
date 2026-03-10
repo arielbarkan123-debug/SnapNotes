@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:courses-mastery')
 
 interface LessonMastery {
   lessonIndex: number
@@ -171,7 +174,7 @@ export async function GET(
       masteredConcepts: masteredCount,
     })
   } catch (error) {
-    console.error('[Course Mastery API] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.MASTERY_FETCH_FAILED)
   }
 }

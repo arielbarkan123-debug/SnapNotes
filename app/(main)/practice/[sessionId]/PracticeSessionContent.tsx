@@ -23,7 +23,10 @@ import type {
   DeepDiveAnalysis,
 } from '@/lib/practice/types'
 import DeepDiveCard from '@/components/practice/DeepDiveCard'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('page:practice-sessionId-PracticeSessionContentx')
 // Lazy load InfiniteHeader - only loaded for infinite sessions
 const InfiniteHeader = dynamic(() => import('@/components/practice/InfiniteHeader'), { ssr: false })
 
@@ -600,7 +603,7 @@ export default function PracticeSessionContent({
         // Check if response is JSON before parsing
         const contentType = res.headers.get('content-type')
         if (!contentType || !contentType.includes('application/json')) {
-          console.error('[PracticeSession] Non-JSON response:', res.status)
+          log.error({ detail: res.status }, 'Non-JSON response')
           if (res.status === 504 || res.status === 503 || res.status === 502) {
             throw new Error('Server timeout. Please try again.')
           }
@@ -611,7 +614,7 @@ export default function PracticeSessionContent({
         try {
           data = await res.json()
         } catch (parseError) {
-          console.error('[PracticeSession] JSON parse error:', parseError)
+          log.error({ detail: parseError }, 'JSON parse error')
           throw new Error('Server error. Please try again.')
         }
 

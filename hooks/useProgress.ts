@@ -9,8 +9,8 @@
  * const { data, isLoading } = useProgress()
  *
  * if (data) {
- *   console.log(`Weekly study time: ${data.overview.studyTime.week} minutes`)
- *   console.log(`Overall mastery: ${data.overview.mastery.percent}%`)
+ *   log.info(`Weekly study time: ${data.overview.studyTime.week} minutes`)
+ *   log.info(`Overall mastery: ${data.overview.mastery.percent}%`)
  * }
  * ```
  */
@@ -19,6 +19,9 @@
 
 import { useCallback } from 'react'
 import useSWR from 'swr'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('hook:useProgress')
 
 // ============================================================================
 // Types

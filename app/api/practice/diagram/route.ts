@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:practice-diagram')
 
 /**
  * Lightweight endpoint to generate a single diagram for a practice question.
@@ -48,7 +51,7 @@ export async function POST(request: NextRequest) {
       pipeline: result.pipeline,
     })
   } catch (error) {
-    console.error('[Practice Diagram] Error:', error)
+    log.error({ err: error }, 'Error')
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

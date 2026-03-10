@@ -11,6 +11,9 @@ import { Sandbox } from '@e2b/code-interpreter';
 import Anthropic from '@anthropic-ai/sdk';
 import { AI_MODEL } from '@/lib/ai/claude';
 import type { AnalysisResult, ComputedProblem, ComputedValue } from './types';
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:smart-pipeline:compute')
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -139,7 +142,7 @@ Return ONLY the corrected Python code. No markdown fences. No explanation. Just 
 
     return code.trim();
   } catch (err) {
-    console.warn('[SmartPipeline] Self-debug LLM call failed:', err);
+    log.warn({ detail: err }, 'Self-debug LLM call failed');
     return null;
   }
 }
@@ -188,12 +191,12 @@ function parseComputeOutput(output: string, computeTimeMs: number): ComputedProb
     }
 
     if (!parsed) {
-      console.warn('[SmartPipeline] No valid JSON with "values" found in compute output');
+      log.warn('No valid JSON with "values" found in compute output');
       return null;
     }
 
     if (!parsed.values || typeof parsed.values !== 'object') {
-      console.warn('[SmartPipeline] Compute output missing "values" object');
+      log.warn('Compute output missing "values" object');
       return null;
     }
 
@@ -211,13 +214,13 @@ function parseComputeOutput(output: string, computeTimeMs: number): ComputedProb
 
       // Validate the value is actually a number
       if (isNaN(values[key].value)) {
-        console.warn(`[SmartPipeline] Value "${key}" is NaN, skipping`);
+        log.warn(`Value "${key}" is NaN, skipping`);
         delete values[key];
       }
     }
 
     if (Object.keys(values).length === 0) {
-      console.warn('[SmartPipeline] No valid values in compute output');
+      log.warn('No valid values in compute output');
       return null;
     }
 
@@ -228,7 +231,7 @@ function parseComputeOutput(output: string, computeTimeMs: number): ComputedProb
       computeTimeMs,
     };
   } catch (err) {
-    console.warn('[SmartPipeline] Failed to parse compute output:', err);
+    log.warn({ detail: err }, 'Failed to parse compute output');
     return null;
   }
 }
@@ -272,7 +275,7 @@ except ImportError:
 
     for (let attempt = 1; attempt <= MAX_COMPUTE_ATTEMPTS; attempt++) {
       lastAttempt = attempt;
-      console.log(`[SmartPipeline] Compute attempt ${attempt}/${MAX_COMPUTE_ATTEMPTS}`);
+      log.info(`Compute attempt ${attempt}/${MAX_COMPUTE_ATTEMPTS}`);
 
       const result = await executeSympyCode(sandbox, currentCode);
 
@@ -281,7 +284,7 @@ except ImportError:
         const computed = parseComputeOutput(result.output, computeTimeMs);
 
         if (computed) {
-          console.log(
+          log.info(
             `[SmartPipeline] Compute succeeded on attempt ${attempt} (${Math.round(computeTimeMs)}ms, ${Object.keys(computed.values).length} values)`,
           );
           return { computed, attempts: attempt };
@@ -293,16 +296,16 @@ except ImportError:
         lastError = result.error;
       }
 
-      console.log(`[SmartPipeline] Attempt ${attempt} failed: ${lastError.slice(0, 200)}`);
+      log.info(`Attempt ${attempt} failed: ${lastError.slice(0, 200)}`);
 
       // Self-debug: ask Sonnet to fix the code (except on last attempt)
       if (attempt < MAX_COMPUTE_ATTEMPTS) {
         const fixedCode = await selfDebug(question, currentCode, lastError, attempt);
         if (fixedCode) {
           currentCode = fixedCode;
-          console.log(`[SmartPipeline] Self-debug produced new code (${fixedCode.length} chars)`);
+          log.info(`Self-debug produced new code (${fixedCode.length} chars)`);
         } else {
-          console.log('[SmartPipeline] Self-debug failed to produce fix');
+          log.info('Self-debug failed to produce fix');
           break; // No point retrying with the same code
         }
       }

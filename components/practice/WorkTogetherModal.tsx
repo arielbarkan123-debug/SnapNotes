@@ -2,6 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo, Component, type ReactNode } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('ui:work-together-modal')
 import dynamic from 'next/dynamic'
 import { useVisuals } from '@/contexts/VisualsContext'
 import DiagramToggle from '@/components/ui/DiagramToggle'
@@ -39,7 +42,7 @@ class WorkTogetherErrorBoundary extends Component<ErrorBoundaryProps, ErrorBound
   }
 
   componentDidCatch(error: Error): void {
-    console.error('[WorkTogetherModal] Error:', error)
+    log.error({ err: error }, 'Error')
     this.props.onError?.(error)
   }
 
@@ -472,7 +475,7 @@ export default function WorkTogetherModal({
         throw new Error(data.error || 'Failed to get response from tutor')
       }
     } catch (err) {
-      console.error('Failed to send message:', err)
+      log.error({ err }, 'Failed to send message')
       const errorMsg = err instanceof Error ? err.message : 'Unknown error'
 
       // Auto-retry once on network errors
@@ -543,7 +546,7 @@ export default function WorkTogetherModal({
         }
       }
     } catch (error) {
-      console.error('Failed to request hint:', error)
+      log.error({ err: error }, 'Failed to request hint')
     } finally {
       setIsLoading(false)
     }
@@ -582,7 +585,7 @@ export default function WorkTogetherModal({
         role="presentation"
       >
         <WorkTogetherErrorBoundary
-          onError={(err) => console.error('[WorkTogether] Caught error:', err)}
+          onError={(err) => log.error({ err }, 'Caught error')}
           fallback={
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 max-w-md mx-auto" role="alertdialog" aria-labelledby="error-title" aria-describedby="error-desc">
               <div className="text-center">

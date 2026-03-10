@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { checkAdminAccess, parseDateRange } from '@/lib/admin/utils'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:admin-analytics-sessions')
 
 /**
  * GET /api/admin/analytics/sessions
@@ -88,7 +91,7 @@ export async function GET(request: NextRequest) {
       hourlyDistribution,
     })
   } catch (error) {
-    console.error('[Admin Analytics] Sessions error:', error)
+    log.error({ err: error }, 'Sessions error')
     return createErrorResponse(ErrorCodes.ADMIN_ANALYTICS_FETCH_FAILED)
   }
 }

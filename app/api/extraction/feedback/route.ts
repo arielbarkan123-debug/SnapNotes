@@ -16,6 +16,9 @@ import {
   type ExtractionFeedback,
 } from '@/lib/extraction/confidence-scorer'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:extraction-feedback')
 
 // =============================================================================
 // GET: Fetch extraction feedback
@@ -59,7 +62,7 @@ export async function GET(request: NextRequest) {
         return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Invalid action')
     }
   } catch (error) {
-    console.error('Error in extraction feedback GET:', error)
+    log.error({ err: error }, 'Error in extraction feedback GET')
     return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch extraction feedback')
   }
 }
@@ -135,7 +138,7 @@ export async function POST(request: NextRequest) {
       feedbackId: result.feedbackId,
     })
   } catch (error) {
-    console.error('Error in extraction feedback POST:', error)
+    log.error({ err: error }, 'Error in extraction feedback POST')
     return createErrorResponse(ErrorCodes.INSERT_FAILED, 'Failed to submit extraction feedback')
   }
 }
@@ -183,7 +186,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error in extraction feedback PATCH:', error)
+    log.error({ err: error }, 'Error in extraction feedback PATCH')
     return createErrorResponse(ErrorCodes.UPDATE_FAILED, 'Failed to update feedback status')
   }
 }

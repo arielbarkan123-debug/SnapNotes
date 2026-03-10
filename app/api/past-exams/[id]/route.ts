@@ -7,6 +7,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { PastExamTemplate } from '@/types/past-exam'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:past-exams')
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -54,7 +57,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       template: template as PastExamTemplate,
     })
   } catch (error) {
-    console.error('Error in GET /api/past-exams/[id]:', error)
+    log.error({ err: error }, 'Error in GET /api/past-exams/[id]')
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
@@ -111,7 +114,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       }
     } catch {
       // Ignore URL parsing errors
-      console.warn('Could not extract storage path from URL:', template.file_url)
+      log.warn({ fileUrl: template.file_url }, 'Could not extract storage path from URL')
     }
 
     // Delete database record
@@ -122,7 +125,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       .eq('user_id', user.id)
 
     if (deleteError) {
-      console.error('Error deleting template:', deleteError)
+      log.error({ err: deleteError }, 'Error deleting template')
       return NextResponse.json(
         { success: false, error: 'Failed to delete template' },
         { status: 500 }
@@ -134,7 +137,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       message: 'Template deleted successfully',
     })
   } catch (error) {
-    console.error('Error in DELETE /api/past-exams/[id]:', error)
+    log.error({ err: error }, 'Error in DELETE /api/past-exams/[id]')
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

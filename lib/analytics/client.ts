@@ -16,6 +16,9 @@ import {
   type ElementInfo,
 } from './types'
 import { getDeviceInfo, getUTMParams, getReferrer } from './device'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('analytics:client')
 
 // Storage keys
 const SESSION_KEY = 'notesnap_analytics_session'
@@ -95,7 +98,7 @@ class AnalyticsClient {
     // Start session timeout checker
     this.startSessionChecker()
 
-    console.log('[Analytics] Initialized with session:', this.sessionId)
+    log.info({ sessionId: this.sessionId }, 'Initialized with session')
   }
 
   /**
@@ -111,7 +114,7 @@ class AnalyticsClient {
   setIsAdmin(isAdmin: boolean): void {
     this.isAdmin = isAdmin
     if (isAdmin) {
-      console.log('[Analytics] Admin user detected - tracking disabled')
+      log.info('Admin user detected - tracking disabled')
       // Clear any queued data
       this.eventQueue = []
       this.pageViewQueue = []
@@ -203,7 +206,7 @@ class AnalyticsClient {
         }),
       })
     } catch (error) {
-      console.error('[Analytics] Failed to create session:', error)
+      log.error({ err: error }, 'Failed to create session:')
     }
   }
 
@@ -499,7 +502,7 @@ class AnalyticsClient {
       })
 
       if (!response.ok) {
-        console.error('[Analytics] Failed to send batch:', response.statusText)
+        log.error({ err: response.statusText }, 'Failed to send batch:')
         // Re-queue on failure (with limit to prevent memory issues)
         if (this.eventQueue.length < 100) {
           this.eventQueue.push(...batch.events)
@@ -509,7 +512,7 @@ class AnalyticsClient {
         }
       }
     } catch (error) {
-      console.error('[Analytics] Failed to send batch:', error)
+      log.error({ err: error }, 'Failed to send batch:')
     }
   }
 

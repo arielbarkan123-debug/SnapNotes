@@ -12,6 +12,9 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('hook:useAgeAdaptiveSettings')
 import {
   type AgeGroupConfig,
   getAgeGroupConfig,
@@ -251,7 +254,7 @@ export function useDynamicAgeAdaptiveSettings(): DynamicAgeAdaptiveSettings {
           }
         }
       } catch (error) {
-        console.error('Failed to fetch effective profile:', error)
+        log.error({ err: error }, 'Failed to fetch effective profile')
       } finally {
         setIsLoadingProfile(false)
       }

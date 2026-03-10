@@ -1,5 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('middleware')
 
 // Auth routes (redirect to dashboard if already authenticated)
 const authRoutes = ['/login', '/signup', '/forgot-password', '/reset-password']
@@ -21,10 +24,10 @@ export async function middleware(request: NextRequest) {
   // Log auth callback requests for debugging (development only)
   if (pathname.startsWith('/auth/callback')) {
     if (process.env.NODE_ENV === 'development') {
-      console.log('[Middleware] Auth callback detected')
-      console.log('[Middleware] Full URL:', request.url)
-      console.log('[Middleware] Pathname:', pathname)
-      console.log('[Middleware] Search params:', request.nextUrl.searchParams.toString())
+      log.info('Auth callback detected')
+      log.info({ detail: request.url }, 'Full URL')
+      log.info({ detail: pathname }, 'Pathname')
+      log.info({ detail: request.nextUrl.searchParams.toString() }, 'Search params')
     }
     // IMPORTANT: Let auth callback pass through WITHOUT session update
     // The callback route will handle the code exchange itself

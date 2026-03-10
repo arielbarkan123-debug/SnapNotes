@@ -15,7 +15,10 @@ import { verifyComputed } from '@/lib/diagram-engine/smart-pipeline/verify'
 import { answersMatch } from '@/lib/homework/math-verifier'
 import type { AnalysisResult } from '@/lib/diagram-engine/smart-pipeline/types'
 import type { SolvedDecomposedProblem, ComputeVerificationResult } from './types'
+import { createLogger } from '@/lib/logger'
 // subject-utils used by index.ts orchestrator
+
+const log = createLogger('homework:compute-verify')
 
 const MAX_TOKENS = 2048
 
@@ -108,7 +111,7 @@ Return ONLY the Python code. No markdown fences. No explanation.`,
 
     return analysis
   } catch (err) {
-    console.warn(`[SmartSolver/ComputeVerify] Failed to generate verification code for ${problem.id}:`, err)
+    log.warn({ err, problemId: problem.id }, 'Failed to generate verification code')
     return null
   }
 }
@@ -154,7 +157,7 @@ export async function computeVerifyProblem(
   // Step A: Generate SymPy code for independent verification
   const analysis = await generateVerificationCode(client, problem)
   if (!analysis) {
-    console.warn(`[SmartSolver/ComputeVerify] Could not generate verification code for ${problem.id}`)
+    log.warn({ problemId: problem.id }, 'Could not generate verification code')
     return {
       problemId: problem.id,
       computedAnswer: '',
@@ -168,7 +171,7 @@ export async function computeVerifyProblem(
   // Step B: Execute in E2B sandbox (reuses existing infrastructure)
   const { computed, attempts } = await computeWithRetry(analysis, problem.questionText)
   if (!computed) {
-    console.warn(`[SmartSolver/ComputeVerify] E2B computation failed for ${problem.id} after ${attempts} attempts`)
+    log.warn({ problemId: problem.id, attempts }, 'E2B computation failed')
     return {
       problemId: problem.id,
       computedAnswer: '',
@@ -182,9 +185,7 @@ export async function computeVerifyProblem(
   // Step C: Run sanity checks on computed values
   const verification = await verifyComputed(computed, analysis, problem.questionText)
   if (!verification.allPassed) {
-    console.warn(
-      `[SmartSolver/ComputeVerify] Sanity checks failed for ${problem.id}: ${verification.failureReason}`
-    )
+    log.warn({ problemId: problem.id, failureReason: verification.failureReason }, 'Sanity checks failed')
     return {
       problemId: problem.id,
       computedAnswer: extractComputedAnswer(computed),
@@ -199,12 +200,7 @@ export async function computeVerifyProblem(
   const computedAnswer = extractComputedAnswer(computed)
   const matches = answersMatch(problem.finalAnswer, computedAnswer)
 
-  console.log(
-    `[SmartSolver/ComputeVerify] Problem ${problem.id}: ` +
-    `AI="${problem.finalAnswer}", Computed="${computedAnswer}", ` +
-    `match=${matches}, attempts=${attempts}, ` +
-    `time=${Math.round(performance.now() - startTime)}ms`
-  )
+  log.info({ problemId: problem.id, aiAnswer: problem.finalAnswer, computedAnswer, matches, attempts, timeMs: Math.round(performance.now() - startTime) }, 'Compute verification result')
 
   return {
     problemId: problem.id,

@@ -9,6 +9,9 @@ import { NextResponse } from 'next/server'
 import { type ErrorCode, ErrorCodes, type ErrorCategory } from './codes'
 import { getErrorMessage } from './messages'
 import { getHttpStatus, isRetryable } from './http-status'
+import { createLogger } from '@/lib/logger'
+
+const errorLog = createLogger('errors')
 
 // ============================================================================
 // Types
@@ -159,13 +162,8 @@ export function logError(
     }
   }
 
-  // In development, log with more detail
-  if (process.env.NODE_ENV === 'development') {
-    console.error(`[${code}]`, structuredError)
-  } else {
-    // In production, log in a structured format suitable for log aggregation
-    console.error(JSON.stringify(structuredError))
-  }
+  // Use structured logger for all environments
+  errorLog.error({ structuredError }, `[${code}] ${structuredError.message}`)
 
   // In production, you would also send this to an error tracking service like Sentry
   // Example: Sentry.captureException(originalError, { tags: { code }, extra: context })

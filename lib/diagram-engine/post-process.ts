@@ -12,6 +12,9 @@
 
 import sharp from 'sharp';
 import type { Pipeline } from './router';
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:post-process')
 
 /** Max pixel dimension for the longest side (width or height) */
 const MAX_DIMENSION = 1600;
@@ -39,7 +42,7 @@ export async function postProcessDiagram(
       // HTTP URL (TikZ/QuickLaTeX CDN)
       const response = await fetch(imageBase64OrUrl);
       if (!response.ok) {
-        console.warn(`[PostProcess] Failed to fetch image: ${response.status}`);
+        log.warn({ status: response.status }, 'Failed to fetch image');
         return imageBase64OrUrl; // Return original on fetch failure
       }
       const arrayBuffer = await response.arrayBuffer();
@@ -69,7 +72,7 @@ export async function postProcessDiagram(
     // Step 3: Convert back to data URL
     return `data:image/png;base64,${processed.toString('base64')}`;
   } catch (err) {
-    console.error('[PostProcess] Error processing image, returning original:', err);
+    log.error({ err: err }, 'Error processing image, returning original:');
     // Never block diagram delivery — return the original on any error
     return imageBase64OrUrl;
   }

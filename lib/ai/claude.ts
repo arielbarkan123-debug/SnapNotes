@@ -28,6 +28,9 @@ import {
 import type { ExtractedDocument } from '@/lib/documents'
 import { type GeneratedCourse, type Lesson, type LessonOutline, type LessonIntensityMode, type StepType, type LearningObjective } from '@/types'
 import { filterForbiddenContent } from './course-validator'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('ai:claude')
 
 // ============================================================================
 // Configuration
@@ -181,8 +184,9 @@ async function withStreamRetry<T>(
 
       // Exponential backoff: 1s, 2s, 4s
       const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1)
-      console.warn(
-        `[${operationName}] Attempt ${attempt}/${MAX_RETRIES} failed: ${lastError.message}. Retrying in ${delay}ms...`
+      log.warn(
+        { attempt, maxRetries: MAX_RETRIES, error: lastError.message, delayMs: delay },
+        `${operationName} attempt failed, retrying`
       )
       await new Promise(resolve => setTimeout(resolve, delay))
     }
@@ -279,7 +283,7 @@ function repairTruncatedJson(json: string): string {
     openBraces--
   }
 
-  console.log(`[repairTruncatedJson] Added ${json.length !== repaired.length ? repaired.length - json.length : 0} closing chars`)
+  log.debug({ addedChars: json.length !== repaired.length ? repaired.length - json.length : 0 }, 'Repaired truncated JSON')
 
   return repaired
 }
@@ -316,7 +320,7 @@ async function fetchWebImagesParallel(
     batches.push(webImageQueries.slice(i, i + BATCH_SIZE))
   }
 
-  console.log(`[fetchWebImagesParallel] Fetching ${webImageQueries.length} images in ${batches.length} batches`)
+  log.debug({ imageCount: webImageQueries.length, batchCount: batches.length }, 'Fetching web images in parallel')
 
   for (const batch of batches) {
     const results = await Promise.all(
@@ -348,7 +352,7 @@ async function fetchWebImagesParallel(
     }
   }
 
-  console.log(`[fetchWebImagesParallel] Done fetching images`)
+  log.debug('Done fetching web images')
 }
 
 // ============================================================================
@@ -392,14 +396,10 @@ export class ClaudeAPIError extends Error {
 
   static fromAnthropicError(error: unknown): ClaudeAPIError {
     // Log the actual error for debugging
-    console.error('[ClaudeAPIError] Raw error:', error instanceof Error ? error.message : error)
+    log.error({ err: error instanceof Error ? error : undefined, rawError: !(error instanceof Error) ? error : undefined }, 'Raw error')
 
     if (error instanceof Anthropic.APIError) {
-      console.error('[ClaudeAPIError] Anthropic API error:', {
-        status: error.status,
-        message: error.message,
-        name: error.name
-      })
+      log.error({ status: error.status, message: error.message, name: error.name }, 'Anthropic API error')
 
       if (error.status === 429) {
         return new ClaudeAPIError(
@@ -497,7 +497,7 @@ export class ClaudeAPIError extends Error {
       }
       // Don't expose raw error messages - they may contain technical details
       // Log it for debugging but return a user-friendly message
-      console.error('[ClaudeAPIError] Unexpected error:', error.message)
+      log.error({ err: error }, 'Unexpected error')
       return new ClaudeAPIError('Something went wrong. Please try again.', 'API_ERROR')
     }
 
@@ -540,7 +540,7 @@ async function convertHeicToJpegServerSide(heicBuffer: Buffer): Promise<Buffer> 
     // Use sharp - it's already installed and much more reliable than heic-convert
     const sharp = (await import('sharp')).default
 
-    console.log('[HEIC Server Convert] Converting HEIC to JPEG using sharp, input size:', heicBuffer.byteLength)
+    log.debug({ inputSize: heicBuffer.byteLength }, 'Converting HEIC to JPEG using sharp')
 
     const jpegBuffer = await sharp(heicBuffer)
       .jpeg({ quality: 90 })
@@ -556,14 +556,14 @@ async function convertHeicToJpegServerSide(heicBuffer: Buffer): Promise<Buffer> 
       throw new Error('Conversion did not produce valid JPEG')
     }
 
-    console.log('[HEIC Server Convert] Success with sharp, output size:', jpegBuffer.byteLength)
+    log.debug({ outputSize: jpegBuffer.byteLength }, 'HEIC conversion success with sharp')
     return jpegBuffer
   } catch (error) {
-    console.error('[HEIC Server Convert] Sharp conversion failed:', error)
+    log.error({ err: error instanceof Error ? error : undefined }, 'Sharp HEIC conversion failed')
 
     // Try heic-convert as fallback (in case sharp doesn't have HEIC support in this env)
     try {
-      console.log('[HEIC Server Convert] Trying heic-convert as fallback...')
+      log.debug('Trying heic-convert as fallback')
       const heicConvert = (await import('heic-convert')).default
 
       const arrayBuffer = heicBuffer.buffer.slice(
@@ -586,10 +586,10 @@ async function convertHeicToJpegServerSide(heicBuffer: Buffer): Promise<Buffer> 
         throw new Error('Fallback conversion did not produce valid JPEG')
       }
 
-      console.log('[HEIC Server Convert] Fallback heic-convert succeeded, output size:', jpegArrayBuffer.byteLength)
+      log.debug({ outputSize: jpegArrayBuffer.byteLength }, 'Fallback heic-convert succeeded')
       return Buffer.from(jpegArrayBuffer)
     } catch (fallbackError) {
-      console.error('[HEIC Server Convert] Both sharp and heic-convert failed:', fallbackError)
+      log.error({ err: fallbackError instanceof Error ? fallbackError : undefined }, 'Both sharp and heic-convert failed')
       throw new ClaudeAPIError(
         'Failed to process HEIC image. Please try taking a new photo in JPEG format (iPhone: Settings > Camera > Formats > Most Compatible).',
         'INVALID_IMAGE'
@@ -665,7 +665,7 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
 
   for (let attempt = 1; attempt <= MAX_FETCH_RETRIES; attempt++) {
     try {
-      console.log(`[fetchImageAsBase64] Attempt ${attempt}/${MAX_FETCH_RETRIES}: ${urlForLog}`)
+      log.debug({ attempt, maxRetries: MAX_FETCH_RETRIES, url: urlForLog }, 'Fetching image')
 
       // Create AbortController for timeout
       const controller = new AbortController()
@@ -680,7 +680,7 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
       if (!response.ok) {
         // Don't retry on 4xx errors (client errors like 404, 403)
         if (response.status >= 400 && response.status < 500) {
-          console.error('[fetchImageAsBase64] HTTP client error:', response.status, response.statusText)
+          log.error({ status: response.status, statusText: response.statusText }, 'HTTP client error fetching image')
           throw new ClaudeAPIError(
             `Image not found or access denied (HTTP ${response.status})`,
             'INVALID_IMAGE',
@@ -695,14 +695,10 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
       const arrayBuffer = await response.arrayBuffer()
       const byteLength = arrayBuffer.byteLength
 
-      console.log('[fetchImageAsBase64] Received:', {
-        contentType,
-        byteLength,
-        firstBytes: getFirstBytesAsHex(arrayBuffer)
-      })
+      log.debug({ contentType, byteLength, firstBytes: getFirstBytesAsHex(arrayBuffer) }, 'Image received')
 
       if (byteLength === 0) {
-        console.error('[fetchImageAsBase64] Empty file received')
+        log.error('Empty file received')
         throw new ClaudeAPIError(
           'Image file is empty. Please try uploading the image again.',
           'INVALID_IMAGE'
@@ -711,7 +707,7 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
 
       // Minimum size check - extremely small files are likely corrupted
       if (byteLength < 100) {
-        console.error('[fetchImageAsBase64] File too small:', byteLength, 'bytes')
+        log.error({ byteLength }, 'File too small')
         throw new ClaudeAPIError(
           'Image file is too small and may be corrupted. Please try a different image.',
           'INVALID_IMAGE'
@@ -725,14 +721,14 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
       // If HEIC detected, automatically convert to JPEG (server-side)
       // This handles the common case where iOS Safari uploads HEIC with wrong content-type
       if (isHeicByMagicBytes(arrayBuffer)) {
-        console.log('[fetchImageAsBase64] HEIC detected by magic bytes, converting server-side. Original content-type:', contentType)
+        log.debug({ contentType }, 'HEIC detected by magic bytes, converting server-side')
         try {
           finalBuffer = await convertHeicToJpegServerSide(finalBuffer)
           finalMediaType = 'image/jpeg'
-          console.log('[fetchImageAsBase64] HEIC conversion successful')
+          log.debug('HEIC conversion successful')
         } catch (conversionError) {
           // If server-side conversion fails, throw with helpful message
-          console.error('[fetchImageAsBase64] HEIC conversion failed:', conversionError)
+          log.error({ err: conversionError instanceof Error ? conversionError : undefined }, 'HEIC conversion failed')
           throw conversionError // Already a ClaudeAPIError
         }
       } else {
@@ -751,7 +747,7 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
         } else if (isGif) {
           finalMediaType = 'image/gif'
         } else {
-          console.error('[fetchImageAsBase64] Unknown image format. Content-type:', contentType, 'First bytes:', getFirstBytesAsHex(arrayBuffer))
+          log.error({ contentType, firstBytes: getFirstBytesAsHex(arrayBuffer) }, 'Unknown image format')
           throw new ClaudeAPIError(
             'Could not read the image. The file may be corrupted or in an unsupported format. Please try uploading as JPEG or PNG.',
             'INVALID_IMAGE'
@@ -761,10 +757,7 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
 
       const base64 = finalBuffer.toString('base64')
 
-      console.log('[fetchImageAsBase64] Success:', {
-        mediaType: finalMediaType,
-        base64Length: base64.length,
-      })
+      log.debug({ mediaType: finalMediaType, base64Length: base64.length }, 'Image fetch success')
 
       return { base64, mediaType: finalMediaType }
 
@@ -778,7 +771,7 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
 
       // Handle timeout
       if (error instanceof Error && error.name === 'AbortError') {
-        console.error(`[fetchImageAsBase64] Timeout on attempt ${attempt}`)
+        log.error({ attempt }, 'Image fetch timeout')
         if (attempt === MAX_FETCH_RETRIES) {
           throw new ClaudeAPIError(
             'Image fetch timed out. The image server is taking too long to respond. Please try again.',
@@ -786,20 +779,20 @@ export async function fetchImageAsBase64(imageUrl: string): Promise<ImageData> {
           )
         }
       } else {
-        console.warn(`[fetchImageAsBase64] Attempt ${attempt} failed:`, lastError.message)
+        log.warn({ attempt, error: lastError.message }, 'Image fetch attempt failed')
       }
 
       // Exponential backoff before retry: 1s, 2s, 4s
       if (attempt < MAX_FETCH_RETRIES) {
         const delay = 1000 * Math.pow(2, attempt - 1)
-        console.log(`[fetchImageAsBase64] Retrying in ${delay}ms...`)
+        log.debug({ delayMs: delay }, 'Retrying image fetch')
         await new Promise(resolve => setTimeout(resolve, delay))
       }
     }
   }
 
   // All retries exhausted
-  console.error('[fetchImageAsBase64] All retries failed:', lastError?.message)
+  log.error({ error: lastError?.message }, 'All image fetch retries failed')
   throw new ClaudeAPIError(
     'Failed to fetch image after multiple attempts. Please try again later.',
     'NETWORK_ERROR'
@@ -824,7 +817,7 @@ export async function analyzeNotebookImage(imageUrl: string): Promise<AnalysisRe
 
   try {
     // Use streaming WITH RETRY to prevent mobile connection timeouts
-    console.log('[analyzeNotebookImage] Starting streaming request with retry')
+    log.debug('Starting streaming request with retry for notebook image analysis')
 
     const rawText = await withStreamRetry(
       () => client.messages.stream({
@@ -864,17 +857,17 @@ export async function analyzeNotebookImage(imageUrl: string): Promise<AnalysisRe
 
           const now = Date.now()
           if (now - lastLogTime > LOG_INTERVAL_MS) {
-            console.log(`[analyzeNotebookImage] Streaming: ${rawText.length} chars`)
+            log.debug({ chars: rawText.length }, 'analyzeNotebookImage streaming')
             lastLogTime = now
           }
         }
 
         const finalMessage = await stream.finalMessage()
         if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
-          console.warn(`[analyzeNotebookImage] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
+          log.warn({ stopReason: finalMessage.stop_reason }, 'analyzeNotebookImage stream ended unexpectedly')
         }
 
-        console.log(`[analyzeNotebookImage] Complete: ${rawText.length} chars`)
+        log.debug({ chars: rawText.length }, 'analyzeNotebookImage complete')
         return rawText
       },
       'analyzeNotebookImage'
@@ -903,7 +896,7 @@ export async function analyzeNotebookImage(imageUrl: string): Promise<AnalysisRe
     // and contains unreadable indicators
     if (!rawText.trim().startsWith('{') && rawText.length < 1000) {
       if (unreadableIndicators.some(indicator => lowerResponse.includes(indicator))) {
-        console.error('[analyzeNotebookImage] Claude indicated image unreadable:', rawText.substring(0, 300))
+        log.error({ responsePreview: rawText.substring(0, 300) }, 'Claude indicated image unreadable')
         throw new ClaudeAPIError(
           'The image could not be read clearly. Please try a clearer, well-lit photo with visible text.',
           'EMPTY_CONTENT'
@@ -920,7 +913,7 @@ export async function analyzeNotebookImage(imageUrl: string): Promise<AnalysisRe
     } catch {
       // If JSON parsing fails and the response is short, might be an error message
       if (rawText.length < 500) {
-        console.error('[analyzeNotebookImage] Non-JSON response (possible error):', rawText.substring(0, 300))
+        log.error({ responsePreview: rawText.substring(0, 300) }, 'Non-JSON response (possible error)')
       }
       throw new ClaudeAPIError(
         'Failed to process the image. Please try uploading a clearer photo.',
@@ -983,7 +976,7 @@ export async function generateStudyCourse(
   try {
     // Use streaming WITH RETRY to avoid timeout for large content
     // Streaming keeps the connection alive and collects response incrementally
-    console.log('[generateStudyCourse] Starting streaming request with retry for course generation')
+    log.debug('Starting streaming request with retry for course generation')
 
     const { rawText, stopReason } = await withStreamRetry(
       () => client.messages.stream({
@@ -1013,13 +1006,13 @@ export async function generateStudyCourse(
           // Log progress periodically during generation
           const now = Date.now()
           if (now - lastLogTime > LOG_INTERVAL_MS) {
-            console.log(`[generateStudyCourse] Streaming in progress: ${rawText.length} chars received`)
+            log.debug({ chars: rawText.length }, 'generateStudyCourse streaming in progress')
             lastLogTime = now
           }
 
           // Warn if no activity for 30 seconds
           if (now - lastActivity > 30000) {
-            console.warn(`[generateStudyCourse] No activity for 30s at ${rawText.length} chars, still waiting...`)
+            log.warn({ chars: rawText.length }, 'generateStudyCourse no activity for 30s, still waiting')
             lastActivity = now // Reset to avoid spamming logs
           }
         }
@@ -1028,14 +1021,14 @@ export async function generateStudyCourse(
         const finalMessage = await stream.finalMessage()
         const stopReason = finalMessage.stop_reason
 
-        console.log(`[generateStudyCourse] Streaming complete, received ${rawText.length} characters`)
+        log.debug({ chars: rawText.length }, 'generateStudyCourse streaming complete')
         return { rawText, stopReason }
       },
       'generateStudyCourse'
     )
 
     if (stopReason !== 'end_turn' && stopReason !== 'stop_sequence') {
-      console.warn(`[generateStudyCourse] Stream ended with stop_reason: ${stopReason}`)
+      log.warn({ stopReason }, 'generateStudyCourse stream ended unexpectedly')
     }
 
     if (!rawText || rawText.trim().length === 0) {
@@ -1146,7 +1139,7 @@ export async function generateCourseFromImageSingleCall(
 
   try {
     // Use streaming WITH RETRY to prevent mobile connection timeouts
-    console.log('[generateCourseFromImageSingleCall] Starting streaming request with retry')
+    log.debug('Starting streaming request with retry for single-call course generation')
 
     const rawText = await withStreamRetry(
       () => client.messages.stream({
@@ -1186,17 +1179,17 @@ export async function generateCourseFromImageSingleCall(
 
           const now = Date.now()
           if (now - lastLogTime > LOG_INTERVAL_MS) {
-            console.log(`[generateCourseFromImageSingleCall] Streaming: ${rawText.length} chars`)
+            log.debug({ chars: rawText.length }, 'generateCourseFromImageSingleCall streaming')
             lastLogTime = now
           }
         }
 
         const finalMessage = await stream.finalMessage()
         if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
-          console.warn(`[generateCourseFromImageSingleCall] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
+          log.warn({ stopReason: finalMessage.stop_reason }, 'generateCourseFromImageSingleCall stream ended unexpectedly')
         }
 
-        console.log(`[generateCourseFromImageSingleCall] Complete: ${rawText.length} chars`)
+        log.debug({ chars: rawText.length }, 'generateCourseFromImageSingleCall complete')
         return rawText
       },
       'generateCourseFromImageSingleCall'
@@ -1304,7 +1297,7 @@ async function analyzeImageBatch(imageUrls: string[]): Promise<AnalysisResult> {
       successfulImages.push({ data: result.value, originalIndex: index })
     } else {
       failedIndices.push(index)
-      console.warn(`[analyzeImageBatch] Failed to fetch image ${index + 1}/${imageUrls.length}: ${result.reason?.message || 'Unknown error'}`)
+      log.warn({ imageIndex: index + 1, total: imageUrls.length, error: result.reason?.message || 'Unknown error' }, 'Failed to fetch image in batch')
     }
   })
 
@@ -1318,7 +1311,7 @@ async function analyzeImageBatch(imageUrls: string[]): Promise<AnalysisResult> {
 
   // Log if some images were skipped
   if (failedIndices.length > 0) {
-    console.warn(`[analyzeImageBatch] Proceeding with ${successfulImages.length}/${imageUrls.length} images. Failed indices: ${failedIndices.join(', ')}`)
+    log.warn({ successCount: successfulImages.length, totalCount: imageUrls.length, failedIndices }, 'Proceeding with partial image batch')
   }
 
   // Use multi-page prompts for multiple images (based on successful count)
@@ -1352,7 +1345,7 @@ async function analyzeImageBatch(imageUrls: string[]): Promise<AnalysisResult> {
 
   try {
     // Use streaming WITH RETRY to prevent mobile connection timeouts
-    console.log(`[analyzeImageBatch] Starting streaming request with retry for ${imageUrls.length} images`)
+    log.debug({ imageCount: imageUrls.length }, 'Starting streaming request with retry for image batch')
 
     const rawText = await withStreamRetry(
       () => client.messages.stream({
@@ -1379,17 +1372,17 @@ async function analyzeImageBatch(imageUrls: string[]): Promise<AnalysisResult> {
 
           const now = Date.now()
           if (now - lastLogTime > LOG_INTERVAL_MS) {
-            console.log(`[analyzeImageBatch] Streaming: ${rawText.length} chars`)
+            log.debug({ chars: rawText.length }, 'analyzeImageBatch streaming')
             lastLogTime = now
           }
         }
 
         const finalMessage = await stream.finalMessage()
         if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
-          console.warn(`[analyzeImageBatch] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
+          log.warn({ stopReason: finalMessage.stop_reason }, 'analyzeImageBatch stream ended unexpectedly')
         }
 
-        console.log(`[analyzeImageBatch] Complete: ${rawText.length} chars`)
+        log.debug({ chars: rawText.length }, 'analyzeImageBatch complete')
         return rawText
       },
       'analyzeImageBatch'
@@ -1453,13 +1446,13 @@ async function analyzeImagesInBatches(imageUrls: string[]): Promise<AnalysisResu
     batches.push(imageUrls.slice(i, i + MAX_IMAGES_PER_REQUEST))
   }
 
-  console.log(`[analyzeImagesInBatches] Processing ${batches.length} batches in parallel`)
+  log.debug({ batchCount: batches.length }, 'Processing image batches in parallel')
 
   // Process all batches in PARALLEL for faster performance
   // Using Promise.allSettled to handle partial failures gracefully
   const settledBatchResults = await Promise.allSettled(
     batches.map((batch, index) => {
-      console.log(`[analyzeImagesInBatches] Starting batch ${index + 1}/${batches.length} with ${batch.length} images`)
+      log.debug({ batchIndex: index + 1, totalBatches: batches.length, imageCount: batch.length }, 'Starting image batch')
       return analyzeImageBatch(batch)
     })
   )
@@ -1471,10 +1464,10 @@ async function analyzeImagesInBatches(imageUrls: string[]): Promise<AnalysisResu
   settledBatchResults.forEach((result, index) => {
     if (result.status === 'fulfilled') {
       batchResults.push(result.value)
-      console.log(`[analyzeImagesInBatches] Batch ${index + 1} completed successfully`)
+      log.debug({ batchIndex: index + 1 }, 'Image batch completed successfully')
     } else {
       failedBatches.push(index)
-      console.error(`[analyzeImagesInBatches] Batch ${index + 1} failed: ${result.reason?.message || 'Unknown error'}`)
+      log.error({ batchIndex: index + 1, error: result.reason?.message || 'Unknown error' }, 'Image batch failed')
     }
   })
 
@@ -1488,7 +1481,7 @@ async function analyzeImagesInBatches(imageUrls: string[]): Promise<AnalysisResu
 
   // Log warning if some batches failed
   if (failedBatches.length > 0) {
-    console.warn(`[analyzeImagesInBatches] ${failedBatches.length}/${batches.length} batches failed. Proceeding with ${batchResults.length} successful batches.`)
+    log.warn({ failedCount: failedBatches.length, totalBatches: batches.length, successCount: batchResults.length }, 'Some image batches failed, proceeding with successful ones')
   }
 
   // Combine results from all batches
@@ -1649,13 +1642,13 @@ export async function generateCourseFromMultipleImagesProgressive(
   userContext?: UserLearningContext,
   intensityMode?: LessonIntensityMode
 ): Promise<InitialImageCourseResult> {
-  console.log(`[generateCourseFromMultipleImagesProgressive] Starting progressive generation for ${imageUrls.length} images`)
+  log.info({ imageCount: imageUrls.length }, 'Starting progressive multi-image course generation')
 
   // Step 1: Extract content from all images (parallel batch processing)
   const { extractedContent, rawText: extractionRawText } =
     await analyzeMultipleNotebookImages(imageUrls)
 
-  console.log(`[generateCourseFromMultipleImagesProgressive] Image analysis complete, generating initial course`)
+  log.debug('Image analysis complete, generating initial course')
 
   // Step 2: Convert extracted content to document format for initial course generation
   const document = extractedContentToDocument(extractedContent, imageUrls.length)
@@ -1669,7 +1662,7 @@ export async function generateCourseFromMultipleImagesProgressive(
     intensityMode
   )
 
-  console.log(`[generateCourseFromMultipleImagesProgressive] Initial course generated: ${initialResult.generatedCourse.lessons.length} lessons ready, ${initialResult.totalLessons} total planned`)
+  log.info({ lessonsReady: initialResult.generatedCourse.lessons.length, totalPlanned: initialResult.totalLessons }, 'Initial course generated from progressive pipeline')
 
   return {
     extractedContent,
@@ -1725,11 +1718,11 @@ export async function generateCourseFromDocument(
     ? getExamCoursePrompt(document, safeTitle, imageCount, userContext)
     : getDocumentCoursePrompt(document, safeTitle, imageCount, userContext, undefined, intensityMode)
 
-  console.log(`[generateCourseFromDocument] Using ${isExam ? 'EXAM' : 'DOCUMENT'} prompt for content`)
+  log.debug({ promptType: isExam ? 'EXAM' : 'DOCUMENT' }, 'Using prompt for document course generation')
 
   try {
     // Use streaming WITH RETRY to prevent mobile connection timeouts
-    console.log('[generateCourseFromDocument] Starting streaming request with retry')
+    log.debug('Starting streaming request with retry for document course generation')
 
     const { rawText, stopReason } = await withStreamRetry(
       () => client.messages.stream({
@@ -1757,7 +1750,7 @@ export async function generateCourseFromDocument(
           // Log progress periodically
           const now = Date.now()
           if (now - lastLogTime > LOG_INTERVAL_MS) {
-            console.log(`[generateCourseFromDocument] Streaming in progress: ${rawText.length} chars received`)
+            log.debug({ chars: rawText.length }, 'generateCourseFromDocument streaming in progress')
             lastLogTime = now
           }
         }
@@ -1766,14 +1759,14 @@ export async function generateCourseFromDocument(
         const finalMessage = await stream.finalMessage()
         const stopReason = finalMessage.stop_reason
 
-        console.log(`[generateCourseFromDocument] Streaming complete, received ${rawText.length} characters`)
+        log.debug({ chars: rawText.length }, 'generateCourseFromDocument streaming complete')
         return { rawText, stopReason }
       },
       'generateCourseFromDocument'
     )
 
     if (stopReason !== 'end_turn' && stopReason !== 'stop_sequence') {
-      console.warn(`[generateCourseFromDocument] Stream ended with stop_reason: ${stopReason}`)
+      log.warn({ stopReason }, 'generateCourseFromDocument stream ended unexpectedly')
     }
 
     if (!rawText || rawText.trim().length === 0) {
@@ -1781,8 +1774,7 @@ export async function generateCourseFromDocument(
     }
 
     // Log raw response length for debugging
-    console.log(`[generateCourseFromDocument] Raw response length: ${rawText.length} characters`)
-    console.log(`[generateCourseFromDocument] First 500 chars: ${rawText.substring(0, 500)}`)
+    log.debug({ rawLength: rawText.length, preview: rawText.substring(0, 500) }, 'generateCourseFromDocument raw response')
 
     // Parse JSON response with improved extraction
     const jsonText = extractJsonFromResponse(rawText)
@@ -1792,9 +1784,7 @@ export async function generateCourseFromDocument(
       course = JSON.parse(jsonText)
     } catch (parseError) {
       // Log the actual error and response for debugging
-      console.error(`[generateCourseFromDocument] JSON parse error:`, parseError)
-      console.error(`[generateCourseFromDocument] Cleaned text (first 1000 chars): ${jsonText.substring(0, 1000)}`)
-      console.error(`[generateCourseFromDocument] Cleaned text (last 500 chars): ${jsonText.substring(Math.max(0, jsonText.length - 500))}`)
+      log.error({ err: parseError instanceof Error ? parseError : undefined, first1000: jsonText.substring(0, 1000), last500: jsonText.substring(Math.max(0, jsonText.length - 500)) }, 'generateCourseFromDocument JSON parse error')
 
       throw new ClaudeAPIError(
         'Failed to parse course structure as JSON. The AI response format was unexpected.',
@@ -1892,11 +1882,11 @@ export async function generateCourseFromText(
     ? getExamCoursePrompt(textContent, safeTitle, undefined, userContext)
     : getTextCoursePrompt(textContent, safeTitle, userContext, undefined, intensityMode)
 
-  console.log(`[generateCourseFromText] Using ${isExam ? 'EXAM' : 'TEXT'} prompt for content (intensity: ${intensityMode || 'standard'})`)
+  log.debug({ promptType: isExam ? 'EXAM' : 'TEXT', intensityMode: intensityMode || 'standard' }, 'Using prompt for text course generation')
 
   try {
     // Use streaming WITH RETRY to prevent mobile connection timeouts
-    console.log('[generateCourseFromText] Starting streaming request with retry')
+    log.debug('Starting streaming request with retry for text course generation')
 
     const { rawText, stopReason } = await withStreamRetry(
       () => client.messages.stream({
@@ -1923,7 +1913,7 @@ export async function generateCourseFromText(
 
           const now = Date.now()
           if (now - lastLogTime > LOG_INTERVAL_MS) {
-            console.log(`[generateCourseFromText] Streaming in progress: ${rawText.length} chars received`)
+            log.debug({ chars: rawText.length }, 'generateCourseFromText streaming in progress')
             lastLogTime = now
           }
         }
@@ -1932,14 +1922,14 @@ export async function generateCourseFromText(
         const finalMessage = await stream.finalMessage()
         const stopReason = finalMessage.stop_reason
 
-        console.log(`[generateCourseFromText] Streaming complete, received ${rawText.length} characters`)
+        log.debug({ chars: rawText.length }, 'generateCourseFromText streaming complete')
         return { rawText, stopReason }
       },
       'generateCourseFromText'
     )
 
     if (stopReason !== 'end_turn' && stopReason !== 'stop_sequence') {
-      console.warn(`[generateCourseFromText] Stream ended with stop_reason: ${stopReason}`)
+      log.warn({ stopReason }, 'generateCourseFromText stream ended unexpectedly')
     }
 
     if (!rawText || rawText.trim().length === 0) {
@@ -2187,7 +2177,7 @@ export async function generateInitialCourse(
     intensityMode
   )
 
-  console.log(`[generateInitialCourse] Starting fast initial generation (streaming with retry)`)
+  log.info('Starting fast initial course generation')
 
   try {
     // Use streaming with retry to handle transient Safari/network issues
@@ -2211,7 +2201,7 @@ export async function generateInitialCourse(
 
           const now = Date.now()
           if (now - lastLogTime > LOG_INTERVAL_MS) {
-            console.log(`[generateInitialCourse] Streaming in progress: ${rawText.length} chars received`)
+            log.debug({ chars: rawText.length }, 'generateInitialCourse streaming in progress')
             lastLogTime = now
           }
         }
@@ -2219,7 +2209,7 @@ export async function generateInitialCourse(
         const finalMessage = await stream.finalMessage()
         const stopReason = finalMessage.stop_reason
 
-        console.log(`[generateInitialCourse] Streaming complete: ${rawText.length} chars, stop_reason: ${stopReason}`)
+        log.debug({ chars: rawText.length, stopReason }, 'generateInitialCourse streaming complete')
         return { rawText, stopReason }
       },
       'generateInitialCourse'
@@ -2231,14 +2221,14 @@ export async function generateInitialCourse(
 
     // Check if response was truncated
     if (stopReason === 'max_tokens') {
-      console.warn(`[generateInitialCourse] Response was truncated due to max_tokens`)
+      log.warn('generateInitialCourse response was truncated due to max_tokens')
     }
 
     let jsonText = extractJsonFromResponse(rawText)
 
     // Try to repair truncated JSON by closing open brackets
     if (stopReason === 'max_tokens' || !jsonText.trim().endsWith('}')) {
-      console.log(`[generateInitialCourse] Attempting JSON repair...`)
+      log.debug('Attempting JSON repair for generateInitialCourse')
       jsonText = repairTruncatedJson(jsonText)
     }
     let parsed: {
@@ -2253,7 +2243,7 @@ export async function generateInitialCourse(
     try {
       parsed = JSON.parse(jsonText)
     } catch (parseError) {
-      console.error(`[generateInitialCourse] JSON parse error:`, parseError)
+      log.error({ err: parseError instanceof Error ? parseError : undefined }, 'generateInitialCourse JSON parse error')
       throw new ClaudeAPIError(
         'Failed to parse initial course as JSON',
         'PARSE_ERROR'
@@ -2292,7 +2282,7 @@ export async function generateInitialCourse(
     // Apply content filter
     const filteredCourse = filterForbiddenContent(partialCourse)
 
-    console.log(`[generateInitialCourse] Generated ${filteredCourse.lessons.length} lessons, outline has ${parsed.lessonOutline.length} total`)
+    log.info({ lessonsGenerated: filteredCourse.lessons.length, outlineTotal: parsed.lessonOutline.length }, 'Initial course generated')
 
     return {
       generatedCourse: filteredCourse,
@@ -2337,7 +2327,7 @@ export async function generateContinuationLessons(
     userContext
   )
 
-  console.log(`[generateContinuationLessons] Generating lessons ${targetLessonIndices.map(i => i + 1).join(', ')} (streaming with retry)`)
+  log.debug({ lessonNumbers: targetLessonIndices.map(i => i + 1) }, 'Generating continuation lessons')
 
   try {
     // Use streaming WITH RETRY to prevent mobile connection timeouts
@@ -2361,17 +2351,17 @@ export async function generateContinuationLessons(
 
           const now = Date.now()
           if (now - lastLogTime > LOG_INTERVAL_MS) {
-            console.log(`[generateContinuationLessons] Streaming in progress: ${rawText.length} chars received`)
+            log.debug({ chars: rawText.length }, 'generateContinuationLessons streaming in progress')
             lastLogTime = now
           }
         }
 
         const finalMessage = await stream.finalMessage()
         if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
-          console.warn(`[generateContinuationLessons] Stream ended with stop_reason: ${finalMessage.stop_reason}`)
+          log.warn({ stopReason: finalMessage.stop_reason }, 'generateContinuationLessons stream ended unexpectedly')
         }
 
-        console.log(`[generateContinuationLessons] Streaming complete: ${rawText.length} chars`)
+        log.debug({ chars: rawText.length }, 'generateContinuationLessons streaming complete')
         return rawText
       },
       'generateContinuationLessons'
@@ -2387,7 +2377,7 @@ export async function generateContinuationLessons(
     try {
       parsed = JSON.parse(jsonText)
     } catch (parseError) {
-      console.error(`[generateContinuationLessons] JSON parse error:`, parseError)
+      log.error({ err: parseError instanceof Error ? parseError : undefined }, 'generateContinuationLessons JSON parse error')
       throw new ClaudeAPIError(
         'Failed to parse continuation lessons as JSON',
         'PARSE_ERROR'
@@ -2417,7 +2407,7 @@ export async function generateContinuationLessons(
       }),
     }))
 
-    console.log(`[generateContinuationLessons] Generated ${newLessons.length} new lessons`)
+    log.info({ lessonCount: newLessons.length }, 'Continuation lessons generated')
 
     return {
       newLessons,

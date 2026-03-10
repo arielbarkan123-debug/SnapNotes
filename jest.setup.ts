@@ -23,6 +23,9 @@ if (typeof Element !== 'undefined') {
 
 // Polyfill for Request/Response in Node environment
 import { TextEncoder, TextDecoder } from 'util'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('test:setup')
 global.TextEncoder = TextEncoder
 global.TextDecoder = TextDecoder as typeof global.TextDecoder
 
@@ -223,10 +226,10 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-key'
 process.env.ANTHROPIC_API_KEY = 'test-anthropic-key'
 
 // Suppress console errors during tests (optional)
-// const originalError = console.error
+// const originalError = log.error
 // beforeAll(() => {
-//   console.error = jest.fn()
+//   log.error = jest.fn()
 // })
 // afterAll(() => {
-//   console.error = originalError
+//   log.error = originalError
 // })

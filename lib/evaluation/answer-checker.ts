@@ -7,6 +7,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { classifyTopicType } from '@/lib/ai/content-classifier'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('evaluation:answer-checker')
 
 // =============================================================================
 // Types
@@ -519,11 +522,11 @@ Respond with ONLY valid JSON (no markdown):
       feedback: result.feedback || (result.correct ? 'Correct!' : 'Not quite right.')
     }
   } catch (error) {
-    console.error('[evaluateWithAI] AI evaluation failed:', {
+    log.error({
       error: error instanceof Error ? error.message : String(error),
       question: question.substring(0, 100),
       hasApiKey: !!process.env.ANTHROPIC_API_KEY,
-    })
+    }, 'AI evaluation failed')
     throw error
   }
 }
@@ -666,13 +669,13 @@ export async function evaluateAnswer(params: EvaluateAnswerParams): Promise<Eval
     }
   } catch (error) {
     // Log the failure so we can diagnose in Vercel logs
-    console.error('[evaluateAnswer] AI evaluation failed, falling back:', {
+    log.error({
       error: error instanceof Error ? error.message : String(error),
       question: question.substring(0, 80),
       hasApiKey: !!process.env.ANTHROPIC_API_KEY,
       isLongAnswer: longAnswer,
       isExplanation: explanationQ,
-    })
+    }, 'AI evaluation failed, falling back')
 
     // For long-answer / explanation questions: use keyword overlap instead of Levenshtein
     if (longAnswer || explanationQ) {

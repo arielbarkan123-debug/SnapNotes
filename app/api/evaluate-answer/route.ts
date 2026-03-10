@@ -4,6 +4,9 @@ import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum
 import type { StudySystem } from '@/lib/curriculum/types'
 import { evaluateAnswer } from '@/lib/evaluation/answer-checker'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:evaluate-answer')
 
 // Allow 90 seconds for AI evaluation (Claude API call)
 // Increased to handle slower mobile network connections
@@ -117,7 +120,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         lessonIndex,
         responseTimeMs
       ).catch(err => {
-        console.error('[Evaluate Answer] Gap detection recording failed:', err)
+        log.error({ err: err }, 'Gap detection recording failed')
       })
     }
 

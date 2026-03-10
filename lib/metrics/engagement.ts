@@ -6,6 +6,9 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('metrics:engagement')
 
 // =============================================================================
 // Types
@@ -118,7 +121,7 @@ export async function recordEngagementEvent(
 
     return { success: true, eventId: data.id }
   } catch (error) {
-    console.error('Error recording engagement event:', error)
+    log.error({ err: error }, 'Error recording engagement event:')
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -155,7 +158,7 @@ export async function recordEngagementEventsBatch(
 
     return { success: true, count: events.length }
   } catch (error) {
-    console.error('Error recording engagement events batch:', error)
+    log.error({ err: error }, 'Error recording engagement events batch:')
     return {
       success: false,
       count: 0,
@@ -267,7 +270,7 @@ export async function calculateEngagementMetrics(
       avgTimePerLessonMinutes: Number(avgTimePerLessonMinutes.toFixed(1)),
     }
   } catch (error) {
-    console.error('Error calculating engagement metrics:', error)
+    log.error({ err: error }, 'Error calculating engagement metrics:')
     return getEmptyEngagementMetrics()
   }
 }
@@ -355,7 +358,7 @@ export async function calculateRetentionMetrics(
       questionsToMasteryAvg: Number(questionsToMasteryAvg.toFixed(1)),
     }
   } catch (error) {
-    console.error('Error calculating retention metrics:', error)
+    log.error({ err: error }, 'Error calculating retention metrics:')
     return getEmptyRetentionMetrics()
   }
 }
@@ -445,7 +448,7 @@ export async function aggregateLearningEffectiveness(
 
     return { success: true }
   } catch (error) {
-    console.error('Error aggregating learning effectiveness:', error)
+    log.error({ err: error }, 'Error aggregating learning effectiveness:')
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

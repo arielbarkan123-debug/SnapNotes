@@ -15,6 +15,9 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('hook:useProfileRefinement')
 import {
   type RefinementState,
   type EffectiveProfile,
@@ -188,7 +191,7 @@ export function useProfileRefinement(): ProfileRefinementState & ProfileRefineme
         // Use a small delay to allow DB to update
         setTimeout(fetchProfile, 100)
       } catch (err) {
-        console.error('Failed to report question signal:', err)
+        log.error({ err }, 'Failed to report question signal')
       }
     },
     [userId, fetchProfile]
@@ -208,7 +211,7 @@ export function useProfileRefinement(): ProfileRefinementState & ProfileRefineme
         // Refresh state after signal
         setTimeout(fetchProfile, 100)
       } catch (err) {
-        console.error('Failed to report session signal:', err)
+        log.error({ err }, 'Failed to report session signal')
       }
     },
     [userId, fetchProfile]
@@ -228,7 +231,7 @@ export function useProfileRefinement(): ProfileRefinementState & ProfileRefineme
         // Refresh state after signal
         setTimeout(fetchProfile, 100)
       } catch (err) {
-        console.error('Failed to report self-assessment signal:', err)
+        log.error({ err }, 'Failed to report self-assessment signal')
       }
     },
     [userId, fetchProfile]

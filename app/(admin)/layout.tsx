@@ -2,7 +2,10 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import AdminNav from '@/components/admin/AdminNav'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('page:layoutx')
 export default async function AdminLayout({
   children,
 }: {
@@ -12,11 +15,11 @@ export default async function AdminLayout({
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    console.log('[Admin] No user found, redirecting to login')
+    log.info('No user found, redirecting to login')
     redirect('/login')
   }
 
-  console.log('[Admin] User found:', user.id, user.email)
+  log.info({ detail: [user.id, user.email] }, 'User found')
 
   // Use service client to bypass RLS for admin check
   const serviceClient = createServiceClient()
@@ -26,10 +29,10 @@ export default async function AdminLayout({
     .eq('user_id', user.id)
     .maybeSingle()
 
-  console.log('[Admin] Admin check result:', { adminUser, error })
+  log.info({ detail: { adminUser, error } }, 'Admin check result')
 
   if (!adminUser) {
-    console.log('[Admin] Not an admin, redirecting to dashboard')
+    log.info('Not an admin, redirecting to dashboard')
     redirect('/dashboard')
   }
 

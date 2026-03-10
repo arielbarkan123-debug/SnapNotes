@@ -13,6 +13,9 @@ import type {
   SystemSubjects,
   AvailableSubject,
 } from './types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('curriculum:loader')
 
 // =============================================================================
 // Cache
@@ -43,7 +46,7 @@ export async function loadSystemOverview(system: StudySystem): Promise<SystemOve
     systemCache.set(system, systemData)
     return systemData
   } catch {
-    console.warn(`[Curriculum] System data not found for: ${system}`)
+    log.warn(`System data not found for: ${system}`)
     return null
   }
 }
@@ -73,7 +76,7 @@ export async function loadSubjectOverview(
     subjectCache.set(cacheKey, subjectData)
     return subjectData
   } catch {
-    console.warn(`[Curriculum] Subject data not found: ${system}/${subjectId}`)
+    log.warn(`Subject data not found: ${system}/${subjectId}`)
     return null
   }
 }
@@ -110,7 +113,7 @@ export async function loadTopicDetails(
     topicCache.set(cacheKey, topicData)
     return topicData
   } catch {
-    console.warn(`[Curriculum] Topic data not found: ${system}/${baseSubject}/${topicId}`)
+    log.warn(`Topic data not found: ${system}/${baseSubject}/${topicId}`)
     return null
   }
 }

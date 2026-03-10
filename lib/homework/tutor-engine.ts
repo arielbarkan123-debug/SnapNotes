@@ -25,6 +25,9 @@ import { adaptToGeoGebraProps } from '@/lib/diagram-engine/geogebra-adapter'
 import { classifyTopicType, inferDifficultyFromTopic, resolveEffectiveLanguageLevel, type TopicType } from '@/lib/ai/content-classifier'
 
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('homework:tutor')
 
 // ============================================================================
 // Configuration
@@ -743,8 +746,8 @@ export async function generateInitialGreeting(context: TutorContext, enableDiagr
   const client = getAnthropicClient()
   const questionText = context.questionAnalysis.questionText
 
-  console.log(`[TutorEngine] generateInitialGreeting called with: "${questionText.slice(0, 80)}...", pipelineMode=${pipelineMode}`)
-  console.log(`[TutorEngine] shouldUseEngine result: ${shouldUseEngine(questionText)}`)
+  log.info(`generateInitialGreeting called with: "${questionText.slice(0, 80)}...", pipelineMode=${pipelineMode}`)
+  log.info(`shouldUseEngine result: ${shouldUseEngine(questionText)}`)
 
   // Pipeline selection based on diagram pipeline mode (quick = TikZ only, accurate = full routing)
   const isQuickMode = pipelineMode === 'quick'
@@ -755,7 +758,7 @@ export async function generateInitialGreeting(context: TutorContext, enableDiagr
   // Fire engine diagram in parallel with AI call (if topic needs it)
   const enginePromise = enableDiagrams && shouldUseEngine(questionText)
     ? tryEngineDiagram(questionText, forcePipeline, { skipStepCapture, skipQA }).catch((err) => {
-        console.warn('[TutorEngine] Engine diagram failed for greeting:', err)
+        log.warn('Engine diagram failed for greeting:', err)
         return undefined
       })
     : Promise.resolve(undefined)
@@ -826,7 +829,7 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
   // For step_sequence mode (Visual Builder) or multi-step problems, try step sequence
   if (enableDiagrams && (diagramMode === 'step_sequence' || isMultiStepProblem(questionText))) {
     try {
-      console.log(`[TutorEngine] Multi-step problem detected, generating step sequence`)
+      log.info(`Multi-step problem detected, generating step sequence`)
       const sequence = await generateStepSequence(questionText)
       if (sequence.steps.length > 0) {
         tutorResponse.diagram = {
@@ -845,16 +848,16 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
         return tutorResponse
       }
     } catch (err) {
-      console.warn('[TutorEngine] Step sequence failed, falling back to single diagram:', err)
+      log.warn({ detail: err }, 'Step sequence failed, falling back to single diagram')
       // Fall through to single diagram
     }
   }
 
   // Engine diagram takes priority over AI diagram (higher quality images)
   const engineResult = await enginePromise
-  console.log(`[TutorEngine] Engine result received: ${engineResult ? 'success' : 'undefined'}`)
+  log.info(`Engine result received: ${engineResult ? 'success' : 'undefined'}`)
   if (engineResult) {
-    console.log(`[TutorEngine] Engine result details - pipeline: ${engineResult.pipeline}, imageUrl length: ${engineResult.imageUrl?.length || 0}`)
+    log.info(`Engine result details - pipeline: ${engineResult.pipeline}, imageUrl length: ${engineResult.imageUrl?.length || 0}`)
     tutorResponse.diagram = {
       type: 'engine_image',
       visibleStep: 0,
@@ -873,9 +876,9 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     // Engine didn't produce a result — restore AI-generated diagram only if it's
     // a type the frontend can render (engine_image or step_sequence).
     tutorResponse.diagram = greetingAiDiagram
-    console.log(`[TutorEngine] Using AI-generated diagram fallback (type: ${greetingAiDiagram.type})`)
+    log.info(`Using AI-generated diagram fallback (type: ${greetingAiDiagram.type})`)
   } else {
-    console.log(`[TutorEngine] No engine result and no AI diagram - diagram will be undefined`)
+    log.info(`No engine result and no AI diagram - diagram will be undefined`)
   }
 
   // Generate visual update for the panel
@@ -953,7 +956,7 @@ export async function generateTutorResponse(
   const studentRequestsDiagram = !isAutoStart && DIAGRAM_REQUEST_PATTERN.test(effectiveStudentMessage)
 
   if (studentRequestsDiagram) {
-    console.log(`[TutorEngine] Student explicitly requested diagram. enableDiagrams=${enableDiagrams}, previousDiagram=${!!previousDiagram}. Overriding toggle.`)
+    log.info(`Student explicitly requested diagram. enableDiagrams=${enableDiagrams}, previousDiagram=${!!previousDiagram}. Overriding toggle.`)
   }
 
   // Fire engine diagram in parallel with AI call
@@ -965,7 +968,7 @@ export async function generateTutorResponse(
     engineSupported: shouldUseEngine(diagramTopic),
   }
   const shouldFireEngine = engineConditions.enabledOrRequested && engineConditions.noPreviousOrRequested && engineConditions.engineSupported
-  console.log(`[TutorEngine] Engine conditions: ${JSON.stringify(engineConditions)} → fire=${shouldFireEngine}, pipelineMode=${pipelineMode}`)
+  log.info(`Engine conditions: ${JSON.stringify(engineConditions)} → fire=${shouldFireEngine}, pipelineMode=${pipelineMode}`)
 
   // Pipeline selection based on diagram pipeline mode:
   // - 'quick': force TikZ pipeline (QuickLaTeX HTTP API, ~8s, no sandbox)
@@ -976,12 +979,12 @@ export async function generateTutorResponse(
   const skipQA = isQuickMode
   const skipStepCapture = isQuickMode
   if (forcePipeline) {
-    console.log(`[TutorEngine] Quick mode: forcing tikz pipeline (bypasses E2B sandbox)`)
+    log.info(`Quick mode: forcing tikz pipeline (bypasses E2B sandbox)`)
   }
 
   const enginePromise = shouldFireEngine
     ? tryEngineDiagram(diagramTopic, forcePipeline, { skipStepCapture, skipQA }).catch((err) => {
-        console.warn('[TutorEngine] Engine diagram failed for chat:', err)
+        log.warn('Engine diagram failed for chat:', err)
         return undefined
       })
     : Promise.resolve(undefined)
@@ -1056,7 +1059,7 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
       (chatDiagramMode === 'step_sequence' ||
        (isMultiStepProblem(diagramTopic) && (intent === 'show_answer' || intent === 'guide_next_step')))) {
     try {
-      console.log(`[TutorEngine] Multi-step problem with ${intent} intent, generating step sequence`)
+      log.info(`Multi-step problem with ${intent} intent, generating step sequence`)
       const sequence = await generateStepSequence(diagramTopic)
       if (sequence.steps.length > 0) {
         tutorResponse.diagram = {
@@ -1075,13 +1078,13 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
         return tutorResponse
       }
     } catch (err) {
-      console.warn('[TutorEngine] Step sequence failed, falling back to single diagram:', err)
+      log.warn({ detail: err }, 'Step sequence failed, falling back to single diagram')
       // Fall through to single diagram
     }
   }
 
   // Log diagram pipeline state for debugging
-  console.log(`[TutorEngine] Diagram pipeline: isAutoStart=${isAutoStart}, pipelineMode=${pipelineMode}, enableDiagrams=${enableDiagrams}, aiDiagramType=${aiDiagram?.type || 'none'}, enginePromisePending=${enginePromise !== Promise.resolve(undefined)}`)
+  log.info(`Diagram pipeline: isAutoStart=${isAutoStart}, pipelineMode=${pipelineMode}, enableDiagrams=${enableDiagrams}, aiDiagramType=${aiDiagram?.type || 'none'}, enginePromisePending=${enginePromise !== Promise.resolve(undefined)}`)
 
   // For auto-start: skip waiting for engine if AI already has a renderable diagram (saves 5-15s)
   // For normal messages: engine takes priority (higher quality images)
@@ -1089,7 +1092,7 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
   if (isAutoStart && aiDiagram && (aiDiagram.type === 'engine_image' || aiDiagram.type === 'step_sequence')) {
     // Use AI diagram immediately — don't wait for engine
     tutorResponse.diagram = aiDiagram
-    console.log(`[TutorEngine] Auto-start: using AI diagram (type: ${aiDiagram.type}), skipping engine wait`)
+    log.info(`Auto-start: using AI diagram (type: ${aiDiagram.type}), skipping engine wait`)
   } else {
     // Engine diagram takes priority over AI diagram (higher quality images).
     // CRITICAL: The engine can take 60-90s (SymPy + AI + sandbox + TikZ + step capture).
@@ -1104,7 +1107,7 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     const engineElapsed = Date.now() - engineStartTime
 
     if (engineResult) {
-      console.log(`[TutorEngine] Engine diagram succeeded in ${engineElapsed}ms — pipeline: ${engineResult.pipeline}, imageUrl length: ${engineResult.imageUrl?.length}`)
+      log.info(`Engine diagram succeeded in ${engineElapsed}ms — pipeline: ${engineResult.pipeline}, imageUrl length: ${engineResult.imageUrl?.length}`)
       tutorResponse.diagram = {
         type: 'engine_image',
         visibleStep: 0,
@@ -1120,11 +1123,11 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
         stepImages: engineResult.stepImages,
       }
     } else if (!engineResult && engineElapsed >= ENGINE_TIMEOUT_MS - 100) {
-      console.warn(`[TutorEngine] Engine diagram TIMED OUT after ${engineElapsed}ms (budget: ${ENGINE_TIMEOUT_MS}ms) — returning without diagram`)
+      log.warn(`Engine diagram TIMED OUT after ${engineElapsed}ms (budget: ${ENGINE_TIMEOUT_MS}ms) — returning without diagram`)
       // Let engine finish in background (result is cached for next request)
       enginePromise.catch(() => {})
     } else {
-      console.warn(`[TutorEngine] Engine diagram returned undefined in ${engineElapsed}ms (did not timeout — engine failed or was skipped)`)
+      log.warn(`Engine diagram returned undefined in ${engineElapsed}ms (did not timeout — engine failed or was skipped)`)
     }
 
     if (!engineResult) {
@@ -1133,12 +1136,12 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
         // a type the frontend can render (engine_image or step_sequence).
         // React SVG component types (fbd, coordinate_plane, etc.) are NOT supported.
         tutorResponse.diagram = aiDiagram
-        console.log(`[TutorEngine] Using AI-generated diagram fallback (type: ${aiDiagram.type})`)
+        log.info(`Using AI-generated diagram fallback (type: ${aiDiagram.type})`)
       } else {
         // Engine didn't produce a result and AI diagram is not renderable.
         // MUST delete to prevent non-renderable types (fbd, etc.) from reaching frontend.
         delete tutorResponse.diagram
-        console.log(`[TutorEngine] No engine result. AI diagram type '${aiDiagram?.type || 'none'}' not renderable. Diagram removed.`)
+        log.info(`No engine result. AI diagram type '${aiDiagram?.type || 'none'}' not renderable. Diagram removed.`)
       }
     }
   }
@@ -1475,7 +1478,7 @@ function parseDiagramResponse(diagram: unknown): TutorResponse['diagram'] {
 
       // Log warnings for debugging (in development)
       if (process.env.NODE_ENV === 'development' && result.warnings.length > 0) {
-        console.log(`[Diagram Validation] ${visualType}:`, result.warnings.map(w => w.message))
+        log.info({ detail: result.warnings.map(w => w.message) }, `${visualType}`)
       }
     } catch {
       // If validation fails, use original data

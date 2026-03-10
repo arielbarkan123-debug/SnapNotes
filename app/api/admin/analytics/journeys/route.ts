@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { checkAdminAccess, parseDateRange } from '@/lib/admin/utils'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:admin-analytics-journeys')
 
 interface PageTransition {
   from: string
@@ -121,7 +124,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[Admin Analytics] Journeys error:', error)
+    log.error({ err: error }, 'Journeys error')
     return createErrorResponse(ErrorCodes.ADMIN_ANALYTICS_FETCH_FAILED)
   }
 }

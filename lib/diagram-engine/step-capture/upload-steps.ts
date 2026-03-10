@@ -10,6 +10,9 @@
 
 import { createHash } from 'crypto'
 import { createServiceClient } from '@/lib/supabase/server'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:upload-steps')
 
 const BUCKET = 'diagram-steps'
 
@@ -54,7 +57,7 @@ export async function uploadStepImages(
         })
 
       if (error || !data) {
-        console.warn(`[StepCapture] Failed to upload step ${index + 1}:`, error?.message)
+        log.warn({ detail: error?.message }, `Failed to upload step ${index + 1}`)
         return null
       }
 
@@ -64,7 +67,7 @@ export async function uploadStepImages(
 
       return urlData.publicUrl
     } catch (err) {
-      console.error(`[StepCapture] Upload error step ${index + 1}:`, err)
+      log.error({ detail: err }, `Upload error step ${index + 1}`)
       return null
     }
   })

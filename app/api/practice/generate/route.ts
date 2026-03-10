@@ -9,6 +9,9 @@ import {
 import { generatePracticeQuestions } from '@/lib/practice/question-generator'
 import type { GeneratedQuestion, PracticeQuestionType } from '@/lib/practice/types'
 import type { ReviewCard, CardType } from '@/types/srs'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:practice-generate')
 
 interface RequestBody {
   course_ids: string[]
@@ -257,7 +260,7 @@ export async function POST(request: NextRequest) {
       MAX_CARD_COUNT
     ))
 
-    console.log(`[Practice API] User requested: ${card_count} AI-generated questions`)
+    log.debug({ card_count: card_count }, 'User requested: AI-generated questions')
 
     if (!course_ids || !Array.isArray(course_ids) || course_ids.length === 0) {
       return NextResponse.json(
@@ -309,14 +312,9 @@ export async function POST(request: NextRequest) {
           )
           allGeneratedCards.push(...cards)
 
-          console.log(
-            `[Practice API] Generated ${cards.length} AI questions for course ${courseId}`
-          )
+          log.debug({ length: cards.length, courseId: courseId }, 'Generated AI questions for course')
         } catch (err) {
-          console.error(
-            `[Practice API] AI generation failed for course ${courseId}:`,
-            err
-          )
+          log.error({ err: err }, 'AI generation failed for course')
           failedCourses.push(courseId)
         }
       })
@@ -331,9 +329,7 @@ export async function POST(request: NextRequest) {
       }
       const result = allGeneratedCards.slice(0, card_count)
 
-      console.log(
-        `[Practice API] Returning ${result.length} AI-generated questions (requested: ${card_count})`
-      )
+      log.debug({ length: result.length, card_count: card_count }, 'Returning AI-generated questions (requested: )')
 
       return NextResponse.json({
         cards: result,
@@ -349,9 +345,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fallback: If ALL AI generations failed, use old review_cards method
-    console.log(
-      '[Practice API] All AI generations failed, falling back to review cards'
-    )
+    log.debug('All AI generations failed, falling back to review cards')
     const fallbackResult = await fetchReviewCardsFallback(
       user.id,
       course_ids,
@@ -364,7 +358,7 @@ export async function POST(request: NextRequest) {
       source: 'review_cards_fallback',
     })
   } catch (error) {
-    console.error('Error generating practice session:', error)
+    log.error({ err: error }, 'Error generating practice session')
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:reflections')
 
 /**
  * POST /api/reflections
@@ -78,7 +81,7 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      console.error('Reflection insert error:', error)
+      log.error({ err: error }, 'Reflection insert error')
       return createErrorResponse(ErrorCodes.INSERT_FAILED, 'Failed to save reflection')
     }
 
@@ -87,7 +90,7 @@ export async function POST(request: Request) {
       reflection: data,
     })
   } catch (error) {
-    console.error('Reflection error:', error)
+    log.error({ err: error }, 'Reflection error')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
@@ -137,7 +140,7 @@ export async function GET(request: Request) {
     const { data, error } = await query
 
     if (error) {
-      console.error('Reflection fetch error:', error)
+      log.error({ err: error }, 'Reflection fetch error')
       return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch reflections')
     }
 
@@ -149,7 +152,7 @@ export async function GET(request: Request) {
       stats,
     })
   } catch (error) {
-    console.error('Reflection GET error:', error)
+    log.error({ err: error }, 'Reflection GET error')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }

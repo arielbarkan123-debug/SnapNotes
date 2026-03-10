@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:tracking-explanation-engagement')
 
 /**
  * POST /api/tracking/explanation-engagement
@@ -52,13 +55,13 @@ export async function POST(request: Request) {
 
     if (error) {
       // Don't fail loudly for tracking — it's non-critical
-      console.warn('[Explanation Engagement] Insert error:', error.message)
+      log.warn({ err: error }, 'Insert error')
       return NextResponse.json({ success: false }, { status: 200 })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.warn('[Explanation Engagement] Error:', error)
+    log.warn({ error }, 'Error')
     // Always return 200 for tracking endpoints — don't block the UI
     return NextResponse.json({ success: false }, { status: 200 })
   }

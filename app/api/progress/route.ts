@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:progress')
 
 /**
  * GET /api/progress
@@ -340,7 +343,7 @@ export async function GET() {
       insights,
     })
   } catch (error) {
-    console.error('Progress API error:', error)
+    log.error({ err: error }, 'Progress API error')
     return createErrorResponse(ErrorCodes.PROGRESS_FETCH_FAILED)
   }
 }

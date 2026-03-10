@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:lesson-progress')
 
 export interface UpdateLessonProgressRequest {
   courseId: string
@@ -142,13 +145,13 @@ export async function POST(request: Request) {
         )
       } catch (err) {
         // Log but don't fail the request - concept mastery is optional
-        console.error('[Lesson Progress API] Concept mastery update error:', err)
+        log.error({ err: err }, 'Concept mastery update error')
       }
     }
 
     return NextResponse.json({ success: true, progress })
   } catch (error) {
-    console.error('[Lesson Progress API] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.PROGRESS_SAVE_FAILED)
   }
 }
@@ -184,7 +187,7 @@ export async function GET(request: Request) {
     if (error) {
       // Don't log error if table doesn't exist - feature is optional
       if (error.code !== 'PGRST205') {
-        console.error('[Lesson Progress API] Fetch error:', error)
+        log.error({ err: error }, 'Fetch error')
       }
       // Return empty progress if table doesn't exist
       return NextResponse.json({ success: true, progress: [] })
@@ -192,7 +195,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, progress })
   } catch (error) {
-    console.error('[Lesson Progress API] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.PROGRESS_FETCH_FAILED)
   }
 }

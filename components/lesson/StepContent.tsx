@@ -2,6 +2,9 @@
 
 import { type Step } from '@/types'
 import Image from 'next/image'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('ui:step-content')
 import { useState, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { AnimatePresence } from 'framer-motion'
@@ -331,18 +334,18 @@ function DiagramStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, i
 
   // Log validation errors in development
   if (diagramData && !isValidDiagramData) {
-    console.error('[StepContent] Invalid diagramData:', {
+    log.error({
       hasType: !!diagramData.type,
       typeIsString: typeof diagramData.type === 'string',
       hasData: !!diagramData.data,
       dataIsObject: typeof diagramData.data === 'object',
       diagramData,
-    })
+    }, 'Invalid diagramData')
   }
 
   // Error handler for diagram rendering
   const handleDiagramError = (error: Error) => {
-    console.error('[StepContent] Diagram render error:', error.message)
+    log.error({ err: error }, 'Diagram render error')
     setDiagramError(error.message)
   }
 

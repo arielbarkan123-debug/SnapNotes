@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:self-assessment')
 
 /**
  * POST /api/self-assessment
@@ -68,7 +71,7 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      console.error('Self-assessment insert error:', error)
+      log.error({ err: error }, 'Self-assessment insert error')
       return createErrorResponse(ErrorCodes.INSERT_FAILED, 'Failed to save self-assessment')
     }
 
@@ -84,7 +87,7 @@ export async function POST(request: Request) {
       },
     })
   } catch (error) {
-    console.error('Self-assessment error:', error)
+    log.error({ err: error }, 'Self-assessment error')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
@@ -119,7 +122,7 @@ export async function GET(request: Request) {
     const { data, error } = await query
 
     if (error) {
-      console.error('Self-assessment fetch error:', error)
+      log.error({ err: error }, 'Self-assessment fetch error')
       return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch self-assessments')
     }
 
@@ -131,7 +134,7 @@ export async function GET(request: Request) {
       stats,
     })
   } catch (error) {
-    console.error('Self-assessment GET error:', error)
+    log.error({ err: error }, 'Self-assessment GET error')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }

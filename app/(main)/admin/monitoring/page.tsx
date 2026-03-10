@@ -4,7 +4,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Button from '@/components/ui/Button'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('page:admin-monitoring-pagex')
 // ============================================================================
 // Types
 // ============================================================================
@@ -101,7 +104,7 @@ export default function MonitoringDashboard() {
         calculateStats(data.errors)
       }
     } catch (err) {
-      console.error('Failed to fetch errors:', err)
+      log.error({ detail: err }, 'Failed to fetch errors')
     } finally {
       setIsLoading(false)
     }
@@ -165,7 +168,7 @@ export default function MonitoringDashboard() {
       await fetch('/api/monitoring/errors?olderThan=7d', { method: 'DELETE' })
       fetchErrors()
     } catch (err) {
-      console.error('Failed to clear errors:', err)
+      log.error({ detail: err }, 'Failed to clear errors')
     }
   }
 

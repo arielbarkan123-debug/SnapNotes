@@ -11,6 +11,9 @@
 import { createHash } from 'crypto';
 import type { Pipeline } from './router';
 import type { DiagramResult } from './index';
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:cache')
 
 // ─── Tier 1: In-Memory LRU Cache ───────────────────────────────────────────
 
@@ -91,7 +94,7 @@ export async function getCachedDiagram(
     // Move to end (refresh LRU position)
     memoryCache.delete(key);
     memoryCache.set(key, { ...memEntry, timestamp: Date.now() });
-    console.log(`[DiagramCache] Memory HIT for key ${key.slice(0, 12)}...`);
+    log.info(`Memory HIT for key ${key.slice(0, 12)}...`);
     return memEntry.result;
   }
 
@@ -130,7 +133,7 @@ export async function getCachedDiagram(
       .eq('question_hash', key)
       .then(() => {});
 
-    console.log(`[DiagramCache] Supabase HIT for key ${key.slice(0, 12)}...`);
+    log.info(`Supabase HIT for key ${key.slice(0, 12)}...`);
     return result;
   } catch {
     // Supabase unavailable — not fatal

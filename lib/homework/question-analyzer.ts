@@ -6,6 +6,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
 import type { QuestionAnalysis, QuestionSubject } from './types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('homework:question-analyzer')
 
 // ============================================================================
 // Error Codes for Question Analyzer
@@ -292,12 +295,12 @@ function parseAnalysisResponse(responseText: string): QuestionAnalysis {
     // Validate question text - ensure we got something meaningful
     const questionText = String(parsed.questionText || '')
     if (!questionText || questionText.length < 5) {
-      console.warn('[Question Analyzer] Short or missing question text:', questionText)
+      log.warn({ questionText }, 'Short or missing question text')
     }
 
     // Log if there are ambiguity issues
     if (parsed.hasAmbiguity) {
-      console.log('[Question Analyzer] Ambiguity detected:', parsed.ambiguityNotes)
+      log.info({ ambiguityNotes: parsed.ambiguityNotes }, 'Ambiguity detected')
     }
 
     // Validate and normalize the response
@@ -319,7 +322,7 @@ function parseAnalysisResponse(responseText: string): QuestionAnalysis {
       ambiguityNotes: parsed.ambiguityNotes ? String(parsed.ambiguityNotes) : undefined,
     }
   } catch (error) {
-    console.error('[Question Analyzer] JSON parse error:', error)
+    log.error({ err: error }, 'JSON parse error')
     // If JSON parsing fails, try to extract information from plain text
     return {
       questionText: extractQuestionFromText(responseText),

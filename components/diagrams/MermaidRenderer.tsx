@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import DOMPurify from 'dompurify'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('ui:mermaid-renderer')
 
 // ---------------------------------------------------------------------------
 // Types
@@ -109,7 +112,7 @@ export default function MermaidRenderer({
         setLoading(false)
       } catch (err) {
         if (signal.cancelled) return
-        console.error('[MermaidRenderer] Render error:', err)
+        log.error({ err }, 'Render error')
         setError(t('mermaidError'))
         setLoading(false)
       }

@@ -12,6 +12,9 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { renderStepByStep, validateStepByStepSource } from '@/lib/diagram-engine/step-renderer'
 import type { StepByStepSource } from '@/components/homework/diagram/types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:render-steps')
 
 export async function POST(request: Request) {
   try {
@@ -49,14 +52,12 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log(`[RenderSteps] Rendering ${stepByStepSource.steps.length} steps for user ${user.id}`)
+    log.info({ steps: stepByStepSource.steps.length, userId: user.id }, 'Rendering steps')
 
     // Render all steps
     const result = await renderStepByStep(stepByStepSource)
 
-    console.log(
-      `[RenderSteps] Done: ${result.stepImageUrls.filter(Boolean).length}/${stepByStepSource.steps.length} rendered`,
-    )
+    log.info({ rendered: result.stepImageUrls.filter(Boolean).length, total: stepByStepSource.steps.length }, 'Rendering done')
 
     return NextResponse.json({
       stepImageUrls: result.stepImageUrls,
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
       steps: stepByStepSource.steps, // Echo back step metadata for frontend
     })
   } catch (err) {
-    console.error('[RenderSteps] Error:', err)
+    log.error({ err }, 'Render steps error')
     return NextResponse.json(
       { error: 'Failed to render step-by-step diagram' },
       { status: 500 },

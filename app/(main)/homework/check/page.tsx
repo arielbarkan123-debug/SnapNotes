@@ -9,6 +9,9 @@ import Button from '@/components/ui/Button'
 import RichTextInput from '@/components/ui/RichTextInput'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('ui:homework-check')
 
 // HEIC conversion is done client-side before upload because:
 // - Vercel's sharp doesn't have HEIC codec support
@@ -137,17 +140,17 @@ async function convertHeicToJpeg(file: File): Promise<HeicConversionResult> {
     return { file, converted: false }
   }
 
-  console.log('[HEIC] Converting HEIC to JPEG:', file.name)
+  log.debug({ fileName: file.name }, 'Converting HEIC to JPEG')
 
   try {
     // Dynamically import the converter module - keeps heic2any out of main bundle
     const { convertHeicToJpeg: convert } = await import('@/lib/upload/heic-converter')
     const convertedFile = await convert(file)
 
-    console.log('[HEIC] Conversion successful:', convertedFile.name)
+    log.info({ fileName: convertedFile.name }, 'HEIC conversion successful')
     return { file: convertedFile, converted: true }
   } catch (error) {
-    console.error('[HEIC] Conversion failed:', error)
+    log.error({ err: error }, 'HEIC conversion failed')
     // Return error info so caller can show user-friendly message
     return {
       file,
@@ -633,7 +636,7 @@ export default function HomeworkCheckPage() {
     try {
       return URL.createObjectURL(file)
     } catch (err) {
-      console.error('Failed to create object URL:', err)
+      log.error({ err }, 'Failed to create object URL')
       return null
     }
   }, [])
@@ -805,7 +808,7 @@ export default function HomeworkCheckPage() {
 
       trackFeature('heic_conversion_success', { type: heicWarning.type })
     } catch (err) {
-      console.error('[HomeworkChecker/HEIC] Unexpected conversion error:', err)
+      log.error({ err }, 'Unexpected HEIC conversion error')
       setError(formatError(ERROR_CODES.HC_HEIC_001, 'Could not convert this image. Please export it as JPEG from your Gallery app.', `HomeworkChecker/HEIC/${heicWarning.type}`))
       trackFeature('heic_conversion_error', { type: heicWarning.type, error: err instanceof Error ? err.message : 'unknown' })
     } finally {
@@ -924,7 +927,7 @@ export default function HomeworkCheckPage() {
             }
 
             if (Date.now() - lastHeartbeat > 30000) {
-              console.warn('[HomeworkCheck] No heartbeat for 30 seconds')
+              log.warn('No heartbeat for 30 seconds')
             }
           }
 
@@ -995,7 +998,7 @@ export default function HomeworkCheckPage() {
       // Check if response is JSON before parsing
       const uploadContentType = uploadResponse.headers.get('content-type')
       if (!uploadContentType || !uploadContentType.includes('application/json')) {
-        console.error('[HomeworkChecker/Upload] Non-JSON response:', uploadResponse.status)
+        log.error({ status: uploadResponse.status }, 'Non-JSON upload response')
         if (uploadResponse.status === 504 || uploadResponse.status === 503 || uploadResponse.status === 502) {
           throw new Error(formatError(ERROR_CODES.HC_UPL_001, 'Upload timeout. Please try again with fewer or smaller files.', `HomeworkChecker/Upload/Status:${uploadResponse.status}`))
         }
@@ -1006,7 +1009,7 @@ export default function HomeworkCheckPage() {
       try {
         uploadData = await uploadResponse.json()
       } catch (parseError) {
-        console.error('[HomeworkChecker/Upload] JSON parse error:', parseError)
+        log.error({ err: parseError }, 'Upload JSON parse error')
         throw new Error(formatError(ERROR_CODES.HC_UPL_003, 'Server error parsing response. Please try again.', 'HomeworkChecker/Upload/JSONParse'))
       }
 
@@ -1070,11 +1073,11 @@ export default function HomeworkCheckPage() {
             const docData = await docResponse.json()
             if (docData.extractedContent?.fullText) {
               taskDocumentText = docData.extractedContent.fullText
-              console.log('[HomeworkCheck] Extracted task DOCX text, length:', taskDocumentText?.length || 0)
+              log.debug({ length: taskDocumentText?.length || 0 }, 'Extracted task DOCX text')
             }
           }
         } catch (err) {
-          console.error('[HomeworkCheck] Failed to extract task DOCX:', err)
+          log.error({ err }, 'Failed to extract task DOCX')
           // Continue without extracted text - will use the file URL
         }
       }
@@ -1096,11 +1099,11 @@ export default function HomeworkCheckPage() {
             const docData = await docResponse.json()
             if (docData.extractedContent?.fullText) {
               answerDocumentText = docData.extractedContent.fullText
-              console.log('[HomeworkCheck] Extracted answer DOCX text, length:', answerDocumentText?.length || 0)
+              log.debug({ length: answerDocumentText?.length || 0 }, 'Extracted answer DOCX text')
             }
           }
         } catch (err) {
-          console.error('[HomeworkCheck] Failed to extract answer DOCX:', err)
+          log.error({ err }, 'Failed to extract answer DOCX')
           // Continue without extracted text - will use the file URL
         }
       }
@@ -1121,7 +1124,7 @@ export default function HomeworkCheckPage() {
 
       const controller = new AbortController()
       let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
-        console.log(`[HomeworkCheck] Client-side timeout after ${timeoutMs / 1000}s`)
+        log.warn({ timeoutSeconds: timeoutMs / 1000 }, 'Client-side timeout')
         controller.abort()
       }, timeoutMs)
 
@@ -1192,22 +1195,22 @@ export default function HomeworkCheckPage() {
               if (message.type === 'heartbeat') {
                 // Heartbeat received - connection is alive
                 lastHeartbeat = Date.now()
-                console.log('[HomeworkCheck] Heartbeat:', message.elapsed, 'seconds')
+                log.debug({ elapsed: message.elapsed }, 'Heartbeat')
               } else if (message.type === 'status') {
-                console.log('[HomeworkCheck] Status:', message.status, message.checkId)
+                log.debug({ status: message.status, checkId: message.checkId }, 'Status update')
               } else if (message.type === 'result') {
                 check = message.check
               } else if (message.type === 'error') {
                 streamError = message.error
               }
             } catch (parseErr) {
-              console.error('[HomeworkCheck] Failed to parse stream message:', line, parseErr)
+              log.error({ line, err: parseErr }, 'Failed to parse stream message')
             }
           }
 
           // Safety check: if no heartbeat for 30 seconds during stream, something's wrong
           if (Date.now() - lastHeartbeat > 30000) {
-            console.warn('[HomeworkCheck] No heartbeat for 30 seconds, connection may be stale')
+            log.warn('No heartbeat for 30 seconds, connection may be stale')
           }
         }
 
@@ -1259,7 +1262,7 @@ export default function HomeworkCheckPage() {
       // Check if we should auto-retry transient errors (Safari fix)
       if (isTransientError(errorMessage) && autoRetryCountRef.current < MAX_AUTO_RETRIES) {
         autoRetryCountRef.current += 1
-        console.log(`[HomeworkCheck] Auto-retrying (${autoRetryCountRef.current}/${MAX_AUTO_RETRIES}) after error: ${errorMessage}`)
+        log.info({ attempt: autoRetryCountRef.current, maxRetries: MAX_AUTO_RETRIES, errorMessage }, 'Auto-retrying after error')
 
         // Brief delay before retry
         setSubmissionStatus(t('check.retrying'))

@@ -7,6 +7,9 @@
 
 import type { ImageAnalysis, DiagramType } from '@/types/past-exam'
 import { searchEducationalImages, type SearchedImage } from './search'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('images:smart-search')
 
 // =============================================================================
 // Types
@@ -365,7 +368,7 @@ export async function smartSearchImages(
       // Stop if we have enough images
       if (images.length >= 5) break
     } catch (error) {
-      console.error('Failed to search for "' + query + '":', error)
+      log.error({ detail: error }, 'Failed to search for "' + query + '"')
     }
   }
 

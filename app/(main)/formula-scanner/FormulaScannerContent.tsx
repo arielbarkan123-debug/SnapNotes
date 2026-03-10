@@ -12,7 +12,10 @@ import SolveResult from '@/components/formula-scanner/SolveResult'
 import type { FormulaAnalysis } from '@/lib/formula-scanner/analyzer'
 import type { FormulaSolution } from '@/lib/formula-scanner/solver'
 import { createClient } from '@/lib/supabase/client'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('page:formula-scanner-FormulaScannerContentx')
 type InputTab = 'image' | 'text'
 
 export default function FormulaScannerContent() {
@@ -123,7 +126,7 @@ export default function FormulaScannerContent() {
       const data = await response.json()
       setAnalysis(data.analysis)
     } catch (err) {
-      console.error('[FormulaScanner] Error:', err)
+      log.error({ detail: err }, 'Error')
       showError(err instanceof Error ? err.message : t('errors.analysisFailed'))
     } finally {
       setIsAnalyzing(false)
@@ -154,7 +157,7 @@ export default function FormulaScannerContent() {
       const data = await response.json()
       setSolution(data.solution)
     } catch (err) {
-      console.error('[FormulaScanner] Solve error:', err)
+      log.error({ detail: err }, 'Solve error')
       showError(err instanceof Error ? err.message : t('errors.solveFailed'))
     } finally {
       setIsSolving(false)

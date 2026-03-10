@@ -5,6 +5,9 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('practice:practice-to-srs')
 
 interface PracticeErrorCard {
   userId: string
@@ -64,7 +67,7 @@ export async function createSRSCardFromPracticeError(
         lapses: 0,
       })
   } catch (err) {
-    console.error('[practice-to-srs] Failed to create SRS card:', err)
+    log.error({ err }, 'Failed to create SRS card')
   }
 }
 

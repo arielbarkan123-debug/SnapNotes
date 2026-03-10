@@ -4,6 +4,9 @@ import { createErrorResponse, ErrorCodes } from '@/lib/api/errors'
 import { generateWeeklyReport } from '@/lib/email/report-generator'
 import { generateReportHtml } from '@/lib/email/templates/WeeklyProgressReport'
 import { sendEmail } from '@/lib/email/resend-client'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:reports-weekly')
 
 export const maxDuration = 60
 
@@ -26,7 +29,7 @@ export async function GET() {
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
     })
   } catch (error) {
-    console.error('[Reports] Preview error:', error)
+    log.error({ err: error }, 'Preview error')
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to generate report preview')
   }
 }
@@ -81,7 +84,7 @@ export async function POST() {
       emailId: result.id,
     })
   } catch (error) {
-    console.error('[Reports] Send error:', error)
+    log.error({ err: error }, 'Send error')
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to send report')
   }
 }

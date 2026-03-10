@@ -9,6 +9,7 @@
 
 import type { ExtractedDocument } from '@/lib/documents'
 import type { CurriculumContext } from '@/lib/curriculum'
+import { createLogger } from '@/lib/logger'
 import {
   type AgeGroupConfig,
   getAgeGroupConfig,
@@ -19,6 +20,8 @@ import type { LessonIntensityMode } from '@/types'
 import { getIntensityConfig } from '@/lib/learning/intensity-config'
 import { detectMathTopic, getMathMethodsPromptInstructions, ALL_MATH_METHODS } from './math-methods'
 import { getVisualGuidanceForPrompt, getFullVisualGuidance, ERROR_VISUAL_GUIDANCE } from './visual-guidance'
+
+const log = createLogger('ai:prompts')
 
 // ============================================================================
 // User Context Types for Personalization
@@ -439,7 +442,7 @@ export function isExamContent(content: string): boolean {
   // If any strong indicator is found, it's exam content
   for (const indicator of strongIndicators) {
     if (lowerContent.includes(indicator.toLowerCase())) {
-      console.log(`[isExamContent] Strong indicator found: "${indicator}"`)
+      log.debug({ indicator }, 'Strong exam indicator found')
       return true
     }
   }
@@ -467,7 +470,7 @@ export function isExamContent(content: string): boolean {
   ).length
 
   const isExam = matchCount >= 3
-  console.log(`[isExamContent] Matched ${matchCount} indicators, isExam: ${isExam}`)
+  log.debug({ matchCount, isExam }, 'Exam content detection result')
   return isExam
 }
 
@@ -616,6 +619,38 @@ ${ERROR_VISUAL_GUIDANCE}
 ${Object.entries(ALL_MATH_METHODS).slice(0, 6).map(([_key, topic]) =>
   `- **${topic.topicName}**: ${topic.methods.map(m => m.name).join(', ')}`
 ).join('\n')}
+`
+}
+
+/**
+ * Builds notation-first instructions for computational questions.
+ * Self-contained computations → pure notation. Context-dependent → words OK.
+ */
+function buildComputationalNotationInstructions(language: 'en' | 'he' = 'en'): string {
+  return language === 'he' ? `
+
+## שפה מתמטית - לשאלות חישוביות עצמאיות
+- כאשר חישוב עומד בפני עצמו (ביטוי/משוואה), השתמש בסימון בלבד — ללא מילים מיותרות
+- נכון: "588 ÷ 3 = ?" | לא נכון: "תלמיד פתר 588 חלקי 3 וקיבל 193..."
+- נכון: "2x² - 5x + 3 = 0, x = ?" | לא נכון: "פתור את המשוואה הריבועית הבאה..."
+- נכון: "F = ma, m = 5kg, a = 3m/s², F = ?" | לא נכון: "חשב את הכוח כאשר המסה היא..."
+- אבל שאלות שצריכות הקשר — מותר להשתמש במילים:
+  - "בשקית 5 כדורים: 3 אדומים ו-2 כחולים. מה ההסתברות לשלוף כדור אדום?"
+  - "רכבת נוסעת 120 קמ״ש במשך 3 שעות. מה המרחק הכולל?"
+- כלל: אם הביטוי המתמטי מספיק לבד → סימון בלבד. אם צריך סיפור/הקשר → מילים בסדר
+- תשובות שגויות לשאלות חישוביות: מספרים/ביטויים סבירים, לא מילים
+` : `
+
+## Mathematical Notation - for Self-Contained Computations
+- When a computation stands alone (expression/equation), use NOTATION ONLY — no unnecessary words
+- Correct: "588 ÷ 3 = ?" | Wrong: "A student solves 588 ÷ 3 and writes..."
+- Correct: "2x² - 5x + 3 = 0, x = ?" | Wrong: "Solve the following quadratic equation..."
+- Correct: "F = ma, m = 5kg, a = 3m/s², F = ?" | Wrong: "Calculate the force when mass is..."
+- BUT questions that genuinely need context — words are fine:
+  - "A bag has 5 balls: 3 red and 2 blue. What is the probability of drawing a red ball?"
+  - "A train travels at 120 km/h for 3 hours. What is the total distance?"
+- Rule: if the math expression alone is enough → notation only. If it needs a story/context → words are OK
+- Wrong answer options for computation: plausible numbers/expressions, not word descriptions
 `
 }
 
@@ -998,13 +1033,16 @@ Use images where they would enhance understanding of the concepts.`
   // Detect if content is math-related and add appropriate instructions
   const mathInstructions = buildMathContentInstructions(extractedContent)
 
+  // Add notation-first instructions for computational questions
+  const notationInstructions = buildComputationalNotationInstructions(userContext?.language || 'en')
+
   // Add learning objectives generation section
   const loSection = buildLearningObjectivesSection()
 
   // Add intensity-specific instructions
   const intensityInstructions = intensityMode ? buildIntensityInstructions(intensityMode) : ''
 
-  return `Based on the following extracted notes, create a comprehensive study course with embedded active recall questions.${imageInstruction}${personalizationSection}${examInstructions}${mathInstructions}${intensityInstructions}${loSection}
+  return `Based on the following extracted notes, create a comprehensive study course with embedded active recall questions.${imageInstruction}${personalizationSection}${examInstructions}${mathInstructions}${notationInstructions}${intensityInstructions}${loSection}
 
 ## Extracted Notes Content:
 ${extractedContent}
@@ -1142,6 +1180,8 @@ Create a structured course that transforms these notes into complete study mater
    - Never make wrong answers obviously ridiculous
 
 6. **Correct answer position**: Vary correctIndex (0-3) across questions. Don't always put correct answer first or last.
+
+7. **Mathematical notation**: When a computation is self-contained (expression/equation), use PURE notation — write "588 ÷ 3 = ?" not a word problem. But if the question genuinely needs context (probability scenarios, applied problems with real-world setup), words are fine.
 
 ## Other Guidelines:
 
@@ -1355,6 +1395,11 @@ For non-math subjects, use a plain string: "workedSolution": "Step 1: ... Step 2
 - Problems 4-7: Variations (difficulty 2-3) - Different numbers, slight twists
 - Problems 8-10: Challenging (difficulty 3-4) - Multi-step, combined concepts
 - Problems 11-15: Advanced (difficulty 4-5) - Complex scenarios, edge cases
+
+### Mathematical Notation Rule:
+- Self-contained computations → pure notation: "3x + 7 = 22, x = ?" NOT "Solve the equation 3x + 7 = 22"
+- Context-dependent problems → words are fine: "A bag has 5 balls: 3 red, 2 blue. P(red) = ?"
+- Options should be numbers/expressions for computation questions, not word descriptions
 
 ### Mistake-Aware Wrong Options:
 Each wrong option represents a SPECIFIC common mistake:
@@ -1727,13 +1772,16 @@ IMPORTANT: You MUST include images in your course! For each image available, add
   // Detect if content is math-related and add appropriate instructions
   const mathInstructions = buildMathContentInstructions(allDocumentContent)
 
+  // Add notation-first instructions for computational questions
+  const notationInstructions = buildComputationalNotationInstructions(userContext?.language || 'en')
+
   // Add learning objectives generation section
   const loSection = buildLearningObjectivesSection()
 
   // Add intensity-specific instructions
   const intensityInstructions = intensityMode ? buildIntensityInstructions(intensityMode) : ''
 
-  return `Create a comprehensive study course from this ${documentTypeLabel}.${personalizationSection}${examInstructions}${mathInstructions}${intensityInstructions}${loSection}
+  return `Create a comprehensive study course from this ${documentTypeLabel}.${personalizationSection}${examInstructions}${mathInstructions}${notationInstructions}${intensityInstructions}${loSection}
 
 ## Document Information:
 - Title: ${document.title}
@@ -1842,7 +1890,9 @@ Create a structured course that transforms this document content into complete s
 
 5. **Correct answer position**: Vary correctIndex (0-3) across questions.
 
-6. **Create multiple sections** based on the document's natural structure (slides, chapters, headings).
+6. **Mathematical notation**: Self-contained computations → pure notation ("588 ÷ 3 = ?"). Context-dependent problems → words are fine.
+
+7. **Create multiple sections** based on the document's natural structure (slides, chapters, headings).
 
 7. **Be thorough** - this should feel like a complete mini-course covering all the document content.
 
@@ -1990,13 +2040,16 @@ function buildTextCourseGenerationUserPrompt(
   // Detect if content is math-related and add appropriate instructions
   const mathInstructions = buildMathContentInstructions(textContent)
 
+  // Add notation-first instructions for computational questions
+  const notationInstructions = buildComputationalNotationInstructions(userContext?.language || 'en')
+
   // Add learning objectives generation section
   const loSection = buildLearningObjectivesSection()
 
   // Add intensity-specific instructions
   const intensityInstructions = intensityMode ? buildIntensityInstructions(intensityMode) : ''
 
-  return `Create a comprehensive study course from the following text content. The user has provided topics, notes, or an outline that you should EXPAND into full educational material.${personalizationSection}${examInstructions}${mathInstructions}${intensityInstructions}${loSection}
+  return `Create a comprehensive study course from the following text content. The user has provided topics, notes, or an outline that you should EXPAND into full educational material.${personalizationSection}${examInstructions}${mathInstructions}${notationInstructions}${intensityInstructions}${loSection}
 
 ## User-Provided Content:
 
@@ -2119,7 +2172,9 @@ Create a structured course that transforms these topics into complete study mate
 
 6. **Correct answer position**: Vary correctIndex (0-3) across questions.
 
-7. **Create multiple sections** based on the topics provided. Each major topic should be its own section.
+7. **Mathematical notation**: Self-contained computations → pure notation ("588 ÷ 3 = ?"). Context-dependent problems → words are fine.
+
+8. **Create multiple sections** based on the topics provided. Each major topic should be its own section.
 
 8. **Include formulas** if the topics are mathematical or scientific in nature.
 
@@ -2377,6 +2432,7 @@ Return a JSON object with this structure:
 3. Practice questions must test the SAME SKILLS as the exam
 4. NO lessons about exam structure, points, duration, rules
 5. ALL content must be about SOLVING PROBLEMS, not about THE EXAM
+6. **Mathematical notation**: Self-contained computations → pure notation ("2x + 5 = 13, x = ?"). Context-dependent problems → words are fine.
 
 Return ONLY the JSON object, no additional text or markdown.`
 }
@@ -2630,6 +2686,7 @@ Return JSON with this EXACT structure:
 2. **lessons** array must contain ONLY first 2 lessons with FULL content
 3. **documentSummary** must be comprehensive (400-600 words) for later use
 4. Each lesson: 8-12 steps with 2-3 questions distributed throughout
+5. **Mathematical notation**: Self-contained computations → pure notation ("2x + 5 = 13, x = ?"). Context-dependent problems → words are fine.
 
 Return ONLY the JSON object.`
 }
@@ -2757,6 +2814,7 @@ Return JSON with ONLY the new lessons:
 3. Match quality/style of previous lessons
 4. 8-12 steps per lesson, 2-3 questions each
 5. Questions test subject matter, NOT exam logistics
+6. **Mathematical notation**: Self-contained computations → pure notation ("2x + 5 = 13, x = ?"). Context-dependent problems → words are fine.
 
 Return ONLY the JSON object.`
 }

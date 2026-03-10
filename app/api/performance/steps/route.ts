@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { calculateMastery, type UserPerformance } from '@/lib/adaptive/mastery'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:performance-steps')
 
 interface StepPerformanceInput {
   stepIndex: number
@@ -59,7 +62,7 @@ export async function POST(request: NextRequest) {
     if (insertError) {
       // Don't log error if table doesn't exist - feature is optional
       if (insertError.code !== 'PGRST205') {
-        console.error('Failed to insert step performance:', insertError)
+        log.error({ err: insertError }, 'Failed to insert step performance')
       }
       // Return success even if table doesn't exist
       return NextResponse.json({ success: true })
@@ -112,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error in step performance API:', error)
+    log.error({ err: error }, 'Error in step performance API')
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -155,7 +158,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       // Don't log error if table doesn't exist - feature is optional
       if (error.code !== 'PGRST205') {
-        console.error('Failed to fetch step performance:', error)
+        log.error({ err: error }, 'Failed to fetch step performance')
       }
       // Return empty data if table doesn't exist
       return NextResponse.json({
@@ -177,7 +180,7 @@ export async function GET(request: NextRequest) {
       mastery: mastery || null,
     })
   } catch (error) {
-    console.error('Error in step performance API:', error)
+    log.error({ err: error }, 'Error in step performance API')
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

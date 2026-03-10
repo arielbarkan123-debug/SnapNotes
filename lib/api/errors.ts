@@ -10,6 +10,7 @@
  */
 
 import { NextResponse } from 'next/server'
+import { createLogger } from '@/lib/logger'
 import {
   ErrorCodes as NewErrorCodes,
   type ErrorCode as NewErrorCode,
@@ -210,11 +211,12 @@ export function getSafeErrorMessage(error: unknown): string {
 }
 
 /**
- * Logs error to console (in production, would send to monitoring service)
+ * Logs error using structured logger (in production, would send to monitoring service)
  * @deprecated Use logError from '@/lib/errors' for new code
  */
+const _log = createLogger('api')
 export function logError(context: string, error: unknown): void {
-  console.error(`[${context}]`, error)
+  _log.error({ err: error, context }, `[${context}] Error`)
 }
 
 /**

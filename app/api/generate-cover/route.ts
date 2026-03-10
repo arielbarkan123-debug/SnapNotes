@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateCourseImage } from '@/lib/ai/image-generation'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:generate-cover')
 
 export const maxDuration = 60
 
@@ -36,7 +39,7 @@ export async function POST(request: Request) {
       .eq('user_id', user.id)
 
     if (updateError) {
-      console.error('Failed to update course with cover image:', updateError)
+      log.error({ err: updateError }, 'Failed to update course with cover image')
       return createErrorResponse(ErrorCodes.UPDATE_FAILED, 'Failed to save cover image')
     }
 
@@ -45,7 +48,7 @@ export async function POST(request: Request) {
       imageUrl: result.imageUrl,
     })
   } catch (error) {
-    console.error('Generate cover error:', error)
+    log.error({ err: error }, 'Generate cover error')
     return createErrorResponse(ErrorCodes.AI_UNKNOWN)
   }
 }

@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { generateDiagram, type Pipeline } from '@/lib/diagram-engine'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:diagram-generate')
 
 export const maxDuration = 120 // E2B sandboxes + QA can take time
 
@@ -56,7 +59,7 @@ export async function POST(request: NextRequest) {
       overlay: result.overlay,
     })
   } catch (err) {
-    console.error('[diagram-engine] Unexpected error:', err)
+    log.error({ err: err }, 'Unexpected error')
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },
       { status: 500 }

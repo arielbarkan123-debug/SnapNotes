@@ -16,6 +16,9 @@ import {
   type EngagementEventType,
 } from '@/lib/metrics'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:metrics-engagement')
 
 // =============================================================================
 // GET: Fetch engagement metrics
@@ -85,7 +88,7 @@ export async function GET(request: NextRequest) {
         return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Invalid action')
     }
   } catch (error) {
-    console.error('Error in engagement GET:', error)
+    log.error({ err: error }, 'Error in engagement GET')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
@@ -191,7 +194,7 @@ export async function POST(request: NextRequest) {
       eventId: result.eventId,
     })
   } catch (error) {
-    console.error('Error in engagement POST:', error)
+    log.error({ err: error }, 'Error in engagement POST')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }

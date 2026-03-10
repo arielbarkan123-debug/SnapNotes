@@ -14,6 +14,9 @@ import { computeWithRetry } from './compute';
 import { verifyComputed } from './verify';
 import { inject } from './inject';
 import type { SmartPipelineResult } from './types';
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:smart-pipeline')
 
 // Feature flag — disabled by default until validated in production
 // Enable via: SMART_PIPELINE_ENABLED=true
@@ -58,14 +61,14 @@ export async function preCompute(question: string): Promise<PreComputeResult> {
     const result = await Promise.race([
       runSmartPipeline(question, pipelineStart),
       timeout(PIPELINE_TIMEOUT_MS).then(() => {
-        console.warn(`[SmartPipeline] Timeout after ${PIPELINE_TIMEOUT_MS}ms`);
+        log.warn(`Timeout after ${PIPELINE_TIMEOUT_MS}ms`);
         return fallback(question, `timeout after ${PIPELINE_TIMEOUT_MS}ms`);
       }),
     ]);
 
     return result;
   } catch (err) {
-    console.error('[SmartPipeline] Unexpected error:', err);
+    log.error({ err }, 'Unexpected error');
     return fallback(question, `unexpected error: ${err instanceof Error ? err.message : err}`);
   }
 }
@@ -78,39 +81,39 @@ async function runSmartPipeline(
   pipelineStart: number,
 ): Promise<PreComputeResult> {
   // Phase 1: ANALYZE — extract problem structure + generate SymPy code
-  console.log('[SmartPipeline] Analyzing question...');
+  log.info('Analyzing question...');
   let analysis = await analyzeQuestion(question);
   if (!analysis) {
     return fallback(question, 'analysis failed (no structured output)');
   }
-  console.log(`[SmartPipeline] Analysis: domain=${analysis.domain}, type=${analysis.problemType}, unknowns=${analysis.unknowns.join(', ')}`);
+  log.info(`Analysis: domain=${analysis.domain}, type=${analysis.problemType}, unknowns=${analysis.unknowns.join(', ')}`);
 
   let totalAttempts = 0;
 
   // GPAI-style retry loop: if verification fails, re-analyze with feedback
   for (let verifyRetry = 0; verifyRetry <= MAX_VERIFY_RETRIES; verifyRetry++) {
     // Phase 2: COMPUTE — execute SymPy with self-debugging loop
-    console.log('[SmartPipeline] Computing with SymPy...');
+    log.info('Computing with SymPy...');
     const { computed, attempts } = await computeWithRetry(analysis, question);
     totalAttempts += attempts;
 
     if (!computed) {
       return fallback(question, `computation failed after ${totalAttempts} attempts`);
     }
-    console.log(`[SmartPipeline] Computed ${Object.keys(computed.values).length} values in ${Math.round(computed.computeTimeMs)}ms (${attempts} attempt${attempts > 1 ? 's' : ''})`);
+    log.info(`Computed ${Object.keys(computed.values).length} values in ${Math.round(computed.computeTimeMs)}ms (${attempts} attempt${attempts > 1 ? 's' : ''})`);
 
     // Phase 3: VERIFY — sanity checks + Sonnet cross-check
-    console.log('[SmartPipeline] Verifying computed values...');
+    log.info('Verifying computed values...');
     const verification = await verifyComputed(computed, analysis, question);
 
     if (verification.allPassed) {
-      console.log('[SmartPipeline] Verification passed (sanity + Sonnet cross-check)');
+      log.info('Verification passed (sanity + Sonnet cross-check)');
 
       // Phase 4: INJECT — prepend computed values to question
       const enrichedQuestion = inject(computed, analysis, question);
 
       const totalMs = Math.round(performance.now() - pipelineStart);
-      console.log(`[SmartPipeline] Complete in ${totalMs}ms — ${Object.keys(computed.values).length} values injected`);
+      log.info(`Complete in ${totalMs}ms — ${Object.keys(computed.values).length} values injected`);
 
       return {
         enrichedQuestion,
@@ -126,14 +129,14 @@ async function runSmartPipeline(
 
     // Verification failed — try re-analyzing with feedback (GPAI-style)
     if (verifyRetry < MAX_VERIFY_RETRIES) {
-      console.warn(`[SmartPipeline] Verification failed: ${verification.failureReason}. Re-analyzing with feedback...`);
+      log.warn(`Verification failed: ${verification.failureReason}. Re-analyzing with feedback...`);
       const feedbackQuestion = `${question}\n\nPREVIOUS ATTEMPT FEEDBACK: The computed answer was incorrect. ${verification.failureReason}. Please re-analyze and generate corrected SymPy code.`;
       analysis = await analyzeQuestion(feedbackQuestion);
       if (!analysis) {
         return fallback(question, `re-analysis failed after verification failure: ${verification.failureReason}`);
       }
     } else {
-      console.warn(`[SmartPipeline] Verification failed after retry: ${verification.failureReason}`);
+      log.warn(`Verification failed after retry: ${verification.failureReason}`);
       return fallback(question, `verification failed: ${verification.failureReason}`);
     }
   }
@@ -153,7 +156,7 @@ function timeout(ms: number): Promise<void> {
  * The existing rendering pipeline handles it as before.
  */
 function fallback(question: string, reason: string): PreComputeResult {
-  console.log(`[SmartPipeline] Skipped/fallback: ${reason}`);
+  log.info(`Skipped/fallback: ${reason}`);
   return {
     enrichedQuestion: question,
     result: {

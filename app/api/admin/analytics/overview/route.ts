@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { checkAdminAccess, parseDateRange, formatDateForSQL } from '@/lib/admin/utils'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:admin-analytics-overview')
 
 /**
  * GET /api/admin/analytics/overview
@@ -154,7 +157,7 @@ export async function GET(request: NextRequest) {
       deviceBreakdown,
     })
   } catch (error) {
-    console.error('[Admin Analytics] Overview error:', error)
+    log.error({ err: error }, 'Overview error')
     return createErrorResponse(ErrorCodes.ADMIN_ANALYTICS_FETCH_FAILED)
   }
 }

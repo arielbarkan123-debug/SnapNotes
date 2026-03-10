@@ -18,6 +18,9 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('hook:useCurriculumStatus')
 import { CURRICULUM_SYSTEMS } from '@/lib/curriculum/grades'
 import type { StudySystem, CurriculumSetupStatus } from '@/lib/curriculum/types'
 
@@ -79,7 +82,7 @@ export function useCurriculumStatus(): UseCurriculumStatusResult {
 
       setStatus(curriculumStatus)
     } catch (err) {
-      console.error('Error fetching curriculum status:', err)
+      log.error({ err }, 'Error fetching curriculum status')
       setError('Failed to load curriculum status')
     } finally {
       setLoading(false)

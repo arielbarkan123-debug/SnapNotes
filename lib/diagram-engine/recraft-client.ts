@@ -1,6 +1,9 @@
 // Recraft V3 API client
 // Docs: https://www.recraft.ai/docs/api-reference/getting-started
 
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:recraft-client')
 export type RecraftStyle =
   | 'digital_illustration'
   | 'realistic_image'
@@ -48,7 +51,7 @@ export async function generateRecraftImage(
   params: RecraftGenerateParams
 ): Promise<RecraftImage> {
   const apiKey = process.env.RECRAFT_API_KEY
-  console.log(`[RecraftClient] API key present: ${!!apiKey}, length: ${apiKey?.length || 0}`)
+  log.info(`API key present: ${!!apiKey}, length: ${apiKey?.length || 0}`)
   if (!apiKey) {
     throw new Error('RECRAFT_API_KEY is not configured. Add it to .env.local')
   }
@@ -81,7 +84,7 @@ export async function generateRecraftImage(
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
 
-  console.log(`[RecraftClient] Calling API with prompt: "${params.prompt.slice(0, 100)}..."`)
+  log.info(`Calling API with prompt: "${params.prompt.slice(0, 100)}..."`)
 
   try {
     const response = await fetch(RECRAFT_API_URL, {
@@ -94,7 +97,7 @@ export async function generateRecraftImage(
       signal: controller.signal,
     })
 
-    console.log(`[RecraftClient] API response status: ${response.status}`)
+    log.info(`API response status: ${response.status}`)
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -117,13 +120,13 @@ export async function generateRecraftImage(
     }
 
     const result: RecraftResponse = await response.json()
-    console.log(`[RecraftClient] API response data count: ${result.data?.length || 0}`)
+    log.info(`API response data count: ${result.data?.length || 0}`)
 
     if (!result.data || result.data.length === 0) {
       throw new Error('Recraft API returned no images')
     }
 
-    console.log(`[RecraftClient] Success! Image URL: ${result.data[0].url.slice(0, 80)}...`)
+    log.info(`Success! Image URL: ${result.data[0].url.slice(0, 80)}...`)
     return result.data[0]
   } finally {
     clearTimeout(timeout)

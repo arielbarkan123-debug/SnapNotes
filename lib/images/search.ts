@@ -10,6 +10,9 @@
 // Types
 // =============================================================================
 
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('images:search')
 export interface SearchedImage {
   /** URL to the image (regular size, ~1080px) */
   url: string
@@ -91,7 +94,7 @@ export async function searchImages(
   const accessKey = process.env.UNSPLASH_ACCESS_KEY
 
   if (!accessKey) {
-    console.warn('UNSPLASH_ACCESS_KEY not set, skipping image search')
+    log.warn('UNSPLASH_ACCESS_KEY not set, skipping image search')
     return []
   }
 
@@ -125,11 +128,11 @@ export async function searchImages(
 
     if (!response.ok) {
       if (response.status === 401) {
-        console.error('Invalid Unsplash API key')
+        log.error('Invalid Unsplash API key')
       } else if (response.status === 403) {
-        console.error('Unsplash API rate limit exceeded')
+        log.error('Unsplash API rate limit exceeded')
       } else {
-        console.error(`Unsplash API error: ${response.status}`)
+        log.error(`Unsplash API error: ${response.status}`)
       }
       return []
     }
@@ -151,7 +154,7 @@ export async function searchImages(
       // Timeout - silently return empty array
       return []
     }
-    console.error('Failed to search images:', error)
+    log.error({ err: error }, 'Failed to search images:')
     return []
   }
 }

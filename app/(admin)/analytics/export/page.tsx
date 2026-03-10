@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('page:analytics-export-pagex')
 type DataType = 'sessions' | 'page-views' | 'events' | 'errors' | 'funnels'
 type ExportFormat = 'csv' | 'json'
 
@@ -78,7 +81,7 @@ export default function ExportPage() {
 
       setExportStatus(`Successfully exported ${selectedTypes.length} file(s)`)
     } catch (error) {
-      console.error('Export error:', error)
+      log.error({ detail: error }, 'Export error')
       setExportStatus(error instanceof Error ? error.message : 'Export failed')
     } finally {
       setIsExporting(false)

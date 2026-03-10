@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:courses-recent')
 
 /**
  * GET /api/courses/recent
@@ -36,7 +39,7 @@ export async function GET(): Promise<NextResponse> {
       .maybeSingle()
 
     if (courseError) {
-      console.error('[API:courses/recent] Error fetching course:', courseError)
+      log.error({ err: courseError }, 'Error fetching course')
       return NextResponse.json(
         { error: 'Failed to fetch course' },
         { status: 500 }
@@ -58,7 +61,7 @@ export async function GET(): Promise<NextResponse> {
       cardsGenerated: cardsCount || 0,
     })
   } catch (error) {
-    console.error('[API:courses/recent] Unexpected error:', error)
+    log.error({ err: error }, 'Unexpected error')
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -9,6 +9,9 @@ import {
   type ReactNode,
 } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('ctx:visuals')
 
 // ============================================================================
 // Types
@@ -209,7 +212,7 @@ export function VisualsProvider({ children }: VisualsProviderProps) {
           }
         }
       } catch (error) {
-        console.error('Error loading visual preferences:', error)
+        log.error({ err: error }, 'Error loading visual preferences')
       } finally {
         setIsLoading(false)
       }
@@ -296,7 +299,7 @@ export function VisualsProvider({ children }: VisualsProviderProps) {
         .update({ visual_preferences: preferences })
         .eq('user_id', user.id)
     } catch (error) {
-      console.error('Error saving visual preferences:', error)
+      log.error({ err: error }, 'Error saving visual preferences')
       throw error
     }
   }, [supabase, preferences])

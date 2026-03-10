@@ -13,6 +13,9 @@
 import type Anthropic from '@anthropic-ai/sdk'
 import type { FeedbackPoint, FeedbackQualityResult } from './types'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('homework:feedback-quality')
 
 // ============================================================================
 // Configuration
@@ -74,7 +77,7 @@ export function validateFeedbackQuality(
   const passed = failingCorrectIndices.length === 0 && failingImprovementIndices.length === 0
 
   if (!passed) {
-    console.log('[FeedbackQuality] Validation failed:', reasons)
+    log.info({ reasons }, 'Validation failed:')
   }
 
   return {
@@ -199,7 +202,7 @@ Respond with ONLY the JSON array.`
         : undefined,
     }))
   } catch (error) {
-    console.error('[FeedbackQuality] Regeneration failed:', error)
+    log.error({ err: error }, 'Regeneration failed:')
     return failingItems.map(i => i.point)
   }
 }

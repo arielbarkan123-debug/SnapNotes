@@ -2,6 +2,9 @@
 
 import { Component, type ReactNode, lazy, Suspense, useState, useCallback } from 'react'
 import { type DiagramState, getDiagramTypeName } from './types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('ui:diagram-renderer')
 import type { StepLayerMeta } from './types'
 import EngineDiagramImage from './EngineDiagramImage'
 
@@ -41,14 +44,13 @@ class DiagramErrorBoundary extends Component<DiagramErrorBoundaryProps, DiagramE
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    console.warn('[DiagramRenderer] Failed to render diagram:', {
+    log.warn({
       type: this.props.diagramType,
       error: error.message,
       data: this.props.diagramData,
       stack: error.stack,
       componentStack: errorInfo.componentStack,
-      timestamp: new Date().toISOString(),
-    })
+    }, 'Failed to render diagram')
 
     this.setState({ errorInfo: errorInfo.componentStack || null })
     this.props.onError?.(error, errorInfo)
@@ -163,7 +165,7 @@ export default function DiagramRenderer({
       })
 
       if (!response.ok) {
-        console.error('[DiagramRenderer] Step render API failed:', response.status)
+        log.error({ status: response.status }, 'Step render API failed')
         setStepsMeta(stepByStepSource.steps)
         setWalkthroughMode('fallback')
         return
@@ -184,7 +186,7 @@ export default function DiagramRenderer({
       setIsPartial(data.partial || false)
       setWalkthroughMode('active')
     } catch (err) {
-      console.error('[DiagramRenderer] Step render error:', err)
+      log.error({ err }, 'Step render error')
       setStepsMeta(stepByStepSource.steps)
       setWalkthroughMode('fallback')
     }
@@ -201,11 +203,7 @@ export default function DiagramRenderer({
 
   // Validate diagram prop
   if (!diagram) {
-    console.warn('[DiagramRenderer] Failed to render diagram:', {
-      type: undefined,
-      error: 'Missing diagram prop - diagram data is null or undefined',
-      data: undefined,
-    })
+    log.warn({ error: 'Missing diagram prop - diagram data is null or undefined' }, 'Failed to render diagram')
     return (
       <div className="flex items-center justify-center h-32 text-amber-600 dark:text-amber-400 text-xs">
         <div className="text-center px-4">
@@ -217,11 +215,7 @@ export default function DiagramRenderer({
   }
 
   if (!diagram.type) {
-    console.warn('[DiagramRenderer] Failed to render diagram:', {
-      type: undefined,
-      error: 'Diagram missing required type field',
-      data: diagram.data,
-    })
+    log.warn({ error: 'Diagram missing required type field', data: diagram.data }, 'Failed to render diagram')
     return (
       <div className="flex items-center justify-center h-32 text-amber-600 dark:text-amber-400 text-xs">
         <div className="text-center px-4">
@@ -344,11 +338,7 @@ export default function DiagramRenderer({
   }
 
   // Fallback for unknown/unsupported diagram types
-  console.warn('[DiagramRenderer] Failed to render diagram:', {
-    type: diagramType,
-    error: `Unknown diagram type '${diagramType}'`,
-    data: diagram.data,
-  })
+  log.warn({ type: diagramType, data: diagram.data }, `Unknown diagram type '${diagramType}'`)
   return (
     <div className="flex flex-col items-center justify-center py-6 px-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
       <div className="text-amber-500 dark:text-amber-400 mb-2">

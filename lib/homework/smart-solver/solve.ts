@@ -13,6 +13,9 @@ import type {
   SolvedDecomposedProblem,
   SubProblemSolution,
 } from './types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('homework:solve')
 
 const MAX_TOKENS = 4096
 
@@ -127,10 +130,7 @@ function parseSolveResponse(
     throw new Error(`[SmartSolver/Solve] No final answer for problem ${problem.id}`)
   }
 
-  console.log(
-    `[SmartSolver/Solve] Problem ${problem.id}: ` +
-    `${subProblemSolutions.length} sub-solutions, answer: "${finalAnswer.slice(0, 50)}"`
-  )
+  log.info({ problemId: problem.id, subSolutionCount: subProblemSolutions.length, answer: finalAnswer.slice(0, 50) }, 'Problem solved')
 
   return {
     ...problem,

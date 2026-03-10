@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateCourseImage } from '@/lib/ai/image-generation'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:generate-all-covers')
 
 export const maxDuration = 300 // 5 minutes for multiple images
 
@@ -43,7 +46,7 @@ export async function POST() {
     // Generate cover images for each course
     for (const course of courses) {
       try {
-        console.log(`[GenerateAllCovers] Generating cover for: ${course.title}`)
+        log.debug({ title: course.title }, 'Generating cover for')
         const result = await generateCourseImage(course.title)
 
         if (!result.success) {
@@ -66,7 +69,7 @@ export async function POST() {
             })
 
           if (uploadError) {
-            console.error(`[GenerateAllCovers] Upload failed for ${course.title}:`, uploadError)
+            log.error({ err: uploadError }, 'Upload failed for')
             // Use data URL as fallback
             coverUrl = `data:${result.mimeType || 'image/png'};base64,${result.imageBase64}`
           } else {
@@ -92,7 +95,7 @@ export async function POST() {
 
         if (!updateError) {
           updated++
-          console.log(`[GenerateAllCovers] Updated cover for: ${course.title}`)
+          log.debug({ title: course.title }, 'Updated cover for')
         } else {
           errors.push(`${course.title}: Failed to update database`)
         }
@@ -109,7 +112,7 @@ export async function POST() {
       errors: errors.length > 0 ? errors : undefined,
     })
   } catch (error) {
-    console.error('Generate all covers error:', error)
+    log.error({ err: error }, 'Generate all covers error')
     return createErrorResponse(ErrorCodes.AI_UNKNOWN)
   }
 }

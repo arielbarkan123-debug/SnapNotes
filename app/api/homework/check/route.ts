@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { analyzeHomework } from '@/lib/homework/checker-engine'
 import type { CreateCheckRequest } from '@/lib/homework/types'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:homework-check')
 
 // ============================================================================
 // Error Codes for Homework Check API
@@ -177,15 +180,7 @@ export async function POST(request: NextRequest) {
           .single()
 
         if (insertError) {
-          console.error('[API/HomeworkCheck/DB] Insert error:', insertError)
-          console.error('[API/HomeworkCheck/DB] Insert data was:', {
-            input_mode: inputMode,
-            task_image_url: body.taskImageUrl,
-            task_text: inputMode === 'text' ? body.taskText?.substring(0, 50) : null,
-            answer_image_url: body.answerImageUrl || null,
-            reference_image_urls: body.referenceImageUrls || [],
-            teacher_review_urls: body.teacherReviewUrls || [],
-          })
+          log.error({ err: insertError, inputMode, taskImageUrl: body.taskImageUrl, taskText: inputMode === 'text' ? body.taskText?.substring(0, 50) : null }, 'Insert error')
           // Provide more specific error message
           const errorMsg = insertError.code === '23502' // NOT NULL violation
             ? formatApiError(API_ERROR_CODES.API_CHK_DB_001, 'Database schema error. Please contact support.', `API/HomeworkCheck/DB/Insert/Code:${insertError.code}`)
@@ -199,7 +194,7 @@ export async function POST(request: NextRequest) {
         send({ type: 'status', status: 'created', checkId: check.id })
 
         // Analyze the homework
-        console.log('[Homework Check] Starting analysis for check:', check.id)
+        log.info({ checkId: check.id }, 'Starting analysis')
 
         let result
         try {
@@ -221,9 +216,9 @@ export async function POST(request: NextRequest) {
             additionalImageUrls: body.additionalImageUrls,
             rubricImageUrls: body.rubricImageUrls,
           })
-          console.log('[Homework Check] Analysis completed, grade:', result.feedback?.gradeEstimate)
+          log.info({ grade: result.feedback?.gradeEstimate }, 'Analysis completed')
         } catch (analysisError) {
-          console.error('[API/HomeworkCheck/Analysis] Analysis threw error:', analysisError)
+          log.error({ err: analysisError }, 'Analysis threw error')
 
           // Update check with error status
           await supabase
@@ -267,7 +262,7 @@ export async function POST(request: NextRequest) {
             .single()
 
           if (updateError) {
-            console.error('[API/HomeworkCheck/DB] Update error:', updateError)
+            log.error({ err: updateError }, 'Update error')
             // Mark as error so it doesn't stay stuck in 'analyzing'
             await supabase
               .from('homework_checks')
@@ -280,13 +275,13 @@ export async function POST(request: NextRequest) {
             return
           }
 
-          console.log('[Homework Check] Successfully saved check:', check.id)
+          log.info({ checkId: check.id }, 'Successfully saved check')
 
           // Send final result
           send({ type: 'result', check: updatedCheck })
           closeStream()
         } catch (saveError) {
-          console.error('[Homework Check] Save threw error:', saveError)
+          log.error({ err: saveError }, 'Save threw error')
 
           // Try to mark as error (ignore if this also fails)
           try {
@@ -303,7 +298,7 @@ export async function POST(request: NextRequest) {
           closeStream()
         }
       } catch (error) {
-        console.error('Homework check error:', error)
+        log.error({ err: error }, 'Homework check error')
         send({ type: 'error', error: 'An unexpected error occurred' })
         closeStream()
       } finally {
@@ -363,13 +358,13 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1)
 
     if (error) {
-      console.error('Fetch error:', error)
+      log.error({ err: error }, 'Fetch checks error')
       return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch homework checks')
     }
 
     return NextResponse.json({ checks })
   } catch (error) {
-    console.error('Get checks error:', error)
+    log.error({ err: error }, 'Get checks error')
     return createErrorResponse(ErrorCodes.HOMEWORK_UNKNOWN)
   }
 }

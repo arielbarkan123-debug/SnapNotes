@@ -6,6 +6,9 @@ import Button from './ui/Button'
 import { analytics } from '@/lib/analytics'
 import { errorReporter } from '@/lib/monitoring'
 import { ErrorCodes, type ErrorCode, getDisplayErrorCode } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('ui:error-boundary')
 
 // ============================================================================
 // Types
@@ -54,8 +57,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log error to console with error code
     const errorCode = this.state.errorCode || ErrorCodes.CLIENT_UNKNOWN
-    console.error(`[${errorCode}] ErrorBoundary caught an error:`, error)
-    console.error('Component stack:', errorInfo.componentStack)
+    log.error({ err: error, errorCode }, 'ErrorBoundary caught an error')
+    log.error({ componentStack: errorInfo.componentStack }, 'Component stack')
 
     this.setState({ errorInfo })
 

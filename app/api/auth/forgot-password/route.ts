@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:auth-forgot-password')
 
 // In-memory rate limiting (in production, use Redis or similar)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
@@ -90,7 +93,7 @@ export async function POST(request: NextRequest) {
     // Log for security monitoring (don't expose to client)
     // Note: We intentionally don't check if user exists - resetPasswordForEmail()
     // handles non-existent emails silently, and checking would require loading all users
-    console.log(`[Password Reset] Request for ${email.substring(0, 3)}***@***`)
+    log.debug('Request for ***@***')
 
     // Always attempt to send the reset email
     // Supabase will ONLY send to the registered email - this is secure by design
@@ -102,7 +105,7 @@ export async function POST(request: NextRequest) {
     )
 
     if (resetError) {
-      console.error('[Password Reset] Supabase error:', resetError.message)
+      log.error({ err: resetError }, 'Supabase password reset error')
 
       // Don't reveal specific errors to prevent email enumeration
       // Just return success message regardless
@@ -116,7 +119,7 @@ export async function POST(request: NextRequest) {
       adminEmail: ADMIN_EMAIL,
     })
   } catch (error) {
-    console.error('[Password Reset] Error:', error)
+    log.error({ err: error }, 'Error')
     return NextResponse.json(
       { success: false, error: 'An unexpected error occurred. Please try again.' },
       { status: 500 }

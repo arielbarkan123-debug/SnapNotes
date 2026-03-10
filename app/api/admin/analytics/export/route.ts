@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { checkAdminAccess, parseDateRange } from '@/lib/admin/utils'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:admin-analytics-export')
 
 /**
  * GET /api/admin/analytics/export
@@ -151,7 +154,7 @@ export async function GET(request: NextRequest) {
       data,
     })
   } catch (error) {
-    console.error('[Admin Analytics] Export error:', error)
+    log.error({ err: error }, 'Export error')
     return createErrorResponse(ErrorCodes.ADMIN_ANALYTICS_EXPORT_FAILED)
   }
 }

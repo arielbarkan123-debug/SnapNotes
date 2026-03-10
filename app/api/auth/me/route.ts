@@ -1,6 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:auth-me')
 
 export async function GET() {
   try {
@@ -13,7 +16,7 @@ export async function GET() {
 
     return NextResponse.json({ userId: user.id })
   } catch (error) {
-    console.error('Auth check error:', error)
+    log.error({ err: error }, 'Auth check error')
     return createErrorResponse(ErrorCodes.AUTH_UNKNOWN)
   }
 }

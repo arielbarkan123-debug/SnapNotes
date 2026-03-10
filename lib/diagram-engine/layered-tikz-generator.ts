@@ -16,6 +16,9 @@ import type { StepByStepSource } from '@/components/homework/diagram/types'
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 })
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:layered-tikz-generator')
 
 /**
  * Generate layered TikZ code + step metadata for a question.
@@ -67,7 +70,7 @@ ${question}`
 
   const tikzBlock = tikzResponse.content.find(b => b.type === 'text')
   if (!tikzBlock || tikzBlock.type !== 'text') {
-    console.warn(`[LayeredTikZ] Attempt ${attempt}: No text in response`)
+    log.warn({ attempt }, 'No text in response')
     return null
   }
 
@@ -80,12 +83,12 @@ ${question}`
   }
 
   if (!tikzCode.includes('% === LAYER')) {
-    console.warn(`[LayeredTikZ] Attempt ${attempt}: No layer markers in output`)
+    log.warn({ attempt }, 'No layer markers in output')
     return null
   }
 
   if (!tikzCode.includes('\\begin{tikzpicture}')) {
-    console.warn(`[LayeredTikZ] Attempt ${attempt}: Not valid TikZ`)
+    log.warn({ attempt }, 'Not valid TikZ')
     return null
   }
 
@@ -96,7 +99,7 @@ export async function generateLayeredTikz(
   question: string,
 ): Promise<StepByStepSource | null> {
   try {
-    console.log(`[LayeredTikZ] Generating for: "${question.slice(0, 80)}..."`)
+    log.info({ question: question.slice(0, 80) }, 'Generating layered TikZ')
 
     // Build prompt with layer instructions appended
     const basePrompt = buildTikzPrompt(question)
@@ -105,16 +108,16 @@ export async function generateLayeredTikz(
     // Step 1: Generate layered TikZ code (with 1 retry on missing markers)
     let tikzCode = await generateTikzWithLayers(systemPrompt, question, 1)
     if (!tikzCode) {
-      console.log('[LayeredTikZ] Retrying with explicit layer format...')
+      log.info('Retrying with explicit layer format...')
       tikzCode = await generateTikzWithLayers(systemPrompt, question, 2)
     }
 
     if (!tikzCode) {
-      console.warn('[LayeredTikZ] Both attempts failed to produce layered code')
+      log.warn('Both attempts failed to produce layered code')
       return null
     }
 
-    console.log(`[LayeredTikZ] Got layered TikZ code: ${tikzCode.length} chars`)
+    log.info({ chars: tikzCode.length }, 'Got layered TikZ code')
 
     // Step 2: Generate step metadata
     const metaResponse = await anthropic.messages.create({
@@ -131,14 +134,14 @@ export async function generateLayeredTikz(
 
     const metaBlock = metaResponse.content.find(b => b.type === 'text')
     if (!metaBlock || metaBlock.type !== 'text') {
-      console.warn('[LayeredTikZ] No metadata in response')
+      log.warn('No metadata in response')
       return null
     }
 
     // Parse JSON from response
     const jsonMatch = metaBlock.text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
-      console.warn('[LayeredTikZ] Could not parse metadata JSON')
+      log.warn('Could not parse metadata JSON')
       return null
     }
 
@@ -151,14 +154,14 @@ export async function generateLayeredTikz(
 
     // Validate structure
     if (!validateStepByStepSource(source)) {
-      console.warn('[LayeredTikZ] Source validation failed')
+      log.warn('Source validation failed')
       return null
     }
 
-    console.log(`[LayeredTikZ] Generated ${source.steps.length} layers successfully`)
+    log.info({ layers: source.steps.length }, 'Generated layers successfully')
     return source
   } catch (err) {
-    console.error('[LayeredTikZ] Error:', err)
+    log.error({ err: err }, 'Error:')
     return null
   }
 }

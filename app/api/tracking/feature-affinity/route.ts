@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:tracking-feature-affinity')
 
 /**
  * POST /api/tracking/feature-affinity
@@ -38,13 +41,13 @@ export async function POST(request: Request) {
     })
 
     if (error) {
-      console.warn('[Feature Affinity] RPC error:', error.message)
+      log.warn({ err: error }, 'RPC error')
       return NextResponse.json({ success: false }, { status: 200 })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.warn('[Feature Affinity] Error:', error)
+    log.warn({ error }, 'Error')
     return NextResponse.json({ success: false }, { status: 200 })
   }
 }

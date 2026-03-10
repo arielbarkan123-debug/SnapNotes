@@ -4,6 +4,9 @@
  */
 
 import type { GuideYouTubeVideo } from '@/types/prepare'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('prepare:youtube-search')
 
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3'
 
@@ -33,7 +36,7 @@ export async function searchYouTubeVideos(
 ): Promise<GuideYouTubeVideo[]> {
   const apiKey = process.env.YOUTUBE_DATA_API_KEY
   if (!apiKey) {
-    console.warn('[YouTube] No YOUTUBE_DATA_API_KEY configured, skipping video search')
+    log.warn('No YOUTUBE_DATA_API_KEY configured, skipping video search')
     return []
   }
 
@@ -54,7 +57,7 @@ export async function searchYouTubeVideos(
     })
 
     if (!response.ok) {
-      console.error(`[YouTube] API error: ${response.status} ${response.statusText}`)
+      log.error(`API error: ${response.status} ${response.statusText}`)
       return []
     }
 
@@ -72,7 +75,7 @@ export async function searchYouTubeVideos(
       searchQuery: query,
     }))
   } catch (error) {
-    console.error('[YouTube] Search failed:', error)
+    log.error({ err: error }, 'Search failed:')
     return []
   }
 }

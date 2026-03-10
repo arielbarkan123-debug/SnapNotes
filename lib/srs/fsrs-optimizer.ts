@@ -13,6 +13,9 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { FSRS_PARAMS } from './fsrs'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('srs:fsrs-optimizer')
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -195,7 +198,7 @@ export async function optimizeFSRSParams(
     .eq('user_id', userId)
 
   if (updateError) {
-    console.error('[fsrs-optimizer] Failed to persist params:', updateError.message)
+    log.error({ err: updateError }, 'Failed to persist params')
     return { optimized: false, reviewCount: count || 0 }
   }
 

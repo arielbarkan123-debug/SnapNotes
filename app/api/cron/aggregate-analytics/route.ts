@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:cron-aggregate')
 
 // Secret key for cron authentication (REQUIRED in environment variables)
 const CRON_SECRET = process.env.CRON_SECRET
@@ -85,7 +88,7 @@ export async function POST(request: NextRequest) {
       aggregatedAt: new Date().toISOString(),
     })
   } catch (error) {
-    console.error('Aggregation failed:', error)
+    log.error({ err: error }, 'Aggregation failed')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }

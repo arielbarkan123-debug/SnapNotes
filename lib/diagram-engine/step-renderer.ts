@@ -9,6 +9,9 @@
 import { parseTikzLayers, buildCumulativeStep, buildCumulativeStepWithHighlight } from './tikz-layer-parser'
 import { compileTikZ } from './tikz-executor'
 import type { StepByStepSource, StepRenderResult } from '@/components/homework/diagram/types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:step-renderer')
 
 const MAX_RETRIES = 2
 const MAX_CONCURRENT_RENDERS = 3
@@ -31,13 +34,13 @@ async function renderSingleStep(
       }
 
       lastError = result.error
-      console.warn(
-        `[StepRenderer] Step ${stepIndex + 1} compile attempt ${attempt + 1} failed:`,
-        result.error.slice(0, 200),
+      log.warn(
+        { detail: result.error.slice(0, 200) },
+        `Step ${stepIndex + 1} compile attempt ${attempt + 1} failed`,
       )
     } catch (err) {
       lastError = err instanceof Error ? err.message : 'Unknown error'
-      console.error(`[StepRenderer] Step ${stepIndex + 1} unexpected error:`, err)
+      log.error({ detail: err }, `Step ${stepIndex + 1} unexpected error`)
     }
   }
 
@@ -55,12 +58,12 @@ async function renderSingleStep(
 export async function renderStepByStep(
   source: StepByStepSource,
 ): Promise<StepRenderResult> {
-  console.log(`[StepRenderer] Rendering ${source.steps.length} steps...`)
+  log.info(`Rendering ${source.steps.length} steps...`)
 
   const parsed = parseTikzLayers(source.tikzCode)
 
   if (parsed.layers.length === 0) {
-    console.error('[StepRenderer] No layers found in TikZ code')
+    log.error('No layers found in TikZ code')
     return { stepImageUrls: [], partial: true, errors: { 0: 'No layers found in TikZ code' } }
   }
 
@@ -92,7 +95,7 @@ export async function renderStepByStep(
   }
 
   const successCount = stepImageUrls.filter(Boolean).length
-  console.log(`[StepRenderer] Done: ${successCount}/${source.steps.length} steps rendered`)
+  log.info(`Done: ${successCount}/${source.steps.length} steps rendered`)
 
   return {
     stepImageUrls,
@@ -117,11 +120,12 @@ export async function renderWalkthroughSteps(
   tikzCode: string,
   totalSteps: number,
   onStepRendered: (stepIndex: number, imageUrl: string) => void,
+  _onStepFailed?: (stepIndex: number, error: string) => void,
 ): Promise<void> {
   const parsed = parseTikzLayers(tikzCode)
 
   if (parsed.layers.length === 0) {
-    console.error('[WalkthroughRenderer] No layers found in TikZ code')
+    log.error('No layers found in TikZ code')
     return
   }
 
@@ -129,7 +133,7 @@ export async function renderWalkthroughSteps(
   const numberedLayers = parsed.layers.filter(l => l.layerNumber > 0)
   const stepsToRender = Math.min(totalSteps, numberedLayers.length)
 
-  console.log(`[WalkthroughRenderer] Rendering ${stepsToRender} highlighted steps...`)
+  log.info(`Rendering ${stepsToRender} highlighted steps...`)
 
   // Build TikZ code for each step with red highlighting
   const stepCodes: string[] = []
@@ -151,12 +155,12 @@ export async function renderWalkthroughSteps(
       if (result.url) {
         onStepRendered(stepIndex, result.url)
       } else {
-        console.warn(`[WalkthroughRenderer] Step ${stepIndex + 1} failed: ${result.error?.slice(0, 100)}`)
+        log.warn(`Step ${stepIndex + 1} failed: ${result.error?.slice(0, 100)}`)
       }
     }
   }
 
-  console.log(`[WalkthroughRenderer] Done rendering highlighted steps`)
+  log.info(`Done rendering highlighted steps`)
 }
 
 /**

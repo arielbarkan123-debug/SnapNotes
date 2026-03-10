@@ -3,6 +3,9 @@
 import { SWRConfig } from 'swr'
 import { type ReactNode, useRef } from 'react'
 import { fetcher } from '@/lib/fetcher'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('ui:swr-provider')
 
 interface SWRProviderProps {
   children: ReactNode
@@ -72,7 +75,7 @@ export function SWRProvider({ children }: SWRProviderProps) {
           } else if (now - startTime > MAX_RETRY_TIMEOUT_MS) {
             // Exceeded max retry timeout - stop retrying
             retryStartTimes.current.delete(key)
-            console.warn(`[SWR] Stopped retrying ${key} after ${MAX_RETRY_TIMEOUT_MS / 1000}s`)
+            log.warn({ key, timeoutSec: MAX_RETRY_TIMEOUT_MS / 1000 }, 'Stopped retrying after timeout')
             return
           }
 

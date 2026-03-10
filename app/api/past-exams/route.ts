@@ -7,6 +7,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { PastExamTemplate, PastExamTemplatesResponse, PastExamUploadResponse, PastExamFileType } from '@/types/past-exam'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:past-exams')
 
 const MAX_TEMPLATES_PER_SUBJECT = 3
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024 // 20MB
@@ -66,7 +69,7 @@ export async function GET(request: NextRequest) {
     const { data: templates, error: fetchError } = await query
 
     if (fetchError) {
-      console.error('Error fetching past exam templates:', fetchError)
+      log.error({ err: fetchError }, 'Error fetching past exam templates')
       return NextResponse.json(
         { success: false, error: 'Failed to fetch templates' },
         { status: 500 }
@@ -90,7 +93,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response)
   } catch (error) {
-    console.error('Error in GET /api/past-exams:', error)
+    log.error({ err: error }, 'Error in GET /api/past-exams')
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
@@ -162,7 +165,7 @@ export async function POST(request: NextRequest) {
       .eq('subject_id', subjectId)
 
     if (countError) {
-      console.error('Error counting templates:', countError)
+      log.error({ err: countError }, 'Error counting templates')
       return NextResponse.json(
         { success: false, error: 'Failed to check template limit' },
         { status: 500 }
@@ -210,7 +213,7 @@ export async function POST(request: NextRequest) {
       })
 
     if (uploadError) {
-      console.error('Error uploading file:', uploadError)
+      log.error({ err: uploadError }, 'Error uploading file')
       return NextResponse.json(
         { success: false, error: 'Failed to upload file' },
         { status: 500 }
@@ -223,7 +226,7 @@ export async function POST(request: NextRequest) {
       .createSignedUrl(storagePath, 60 * 60 * 24 * 365) // 1 year
 
     if (urlError || !urlData?.signedUrl) {
-      console.error('Error getting signed URL:', urlError)
+      log.error({ err: urlError }, 'Error getting signed URL')
       // Clean up uploaded file
       await supabase.storage.from('past-exams').remove([storagePath])
       return NextResponse.json(
@@ -252,7 +255,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError || !template) {
-      console.error('Error creating template record:', insertError)
+      log.error({ err: insertError }, 'Error creating template record')
       // Clean up uploaded file
       await supabase.storage.from('past-exams').remove([storagePath])
 
@@ -284,7 +287,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 201 })
   } catch (error) {
-    console.error('Error in POST /api/past-exams:', error)
+    log.error({ err: error }, 'Error in POST /api/past-exams')
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

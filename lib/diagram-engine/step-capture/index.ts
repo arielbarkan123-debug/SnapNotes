@@ -18,6 +18,9 @@ import { captureMatplotlibSteps } from './matplotlib-steps'
 import { captureLatexSteps } from './latex-steps'
 import { parseStepMetadata } from './parse-metadata'
 import { uploadStepImages, generateDiagramHash } from './upload-steps'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:step-capture')
 
 /** Feature flag — can be disabled via env var */
 const STEP_CAPTURE_ENABLED = process.env.STEP_CAPTURE_ENABLED !== 'false'
@@ -54,7 +57,7 @@ export async function captureSteps(
     // 1. Parse metadata from AI response
     const metadata = parseStepMetadata(metadataText)
     if (!metadata || metadata.length === 0) {
-      console.warn('[StepCapture] No valid metadata found')
+      log.warn('No valid metadata found')
       return { stepImages: [], captureTimeMs: Date.now() - startTime }
     }
 
@@ -89,7 +92,7 @@ export async function captureSteps(
     // 3. Upload to Supabase Storage
     const validBuffers = buffers.filter((b): b is Buffer => b !== null)
     if (validBuffers.length === 0) {
-      console.warn('[StepCapture] All step compilations failed')
+      log.warn('All step compilations failed')
       return { stepImages: [], captureTimeMs: Date.now() - startTime }
     }
 
@@ -119,11 +122,11 @@ export async function captureSteps(
     }
 
     const captureTimeMs = Date.now() - startTime
-    console.log(`[StepCapture] Completed: ${stepImages.length} steps in ${captureTimeMs}ms`)
+    log.info(`Completed: ${stepImages.length} steps in ${captureTimeMs}ms`)
 
     return { stepImages, captureTimeMs }
   } catch (err) {
-    console.error('[StepCapture] Unexpected error:', err)
+    log.error({ err: err }, 'Unexpected error:')
     return { stepImages: [], captureTimeMs: Date.now() - startTime }
   }
 }

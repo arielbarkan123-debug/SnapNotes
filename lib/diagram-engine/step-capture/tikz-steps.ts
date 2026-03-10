@@ -11,6 +11,9 @@
 
 import { parseTikzLayers, buildCumulativeStep } from '../tikz-layer-parser'
 import { compileTikZ } from '../tikz-executor'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:tikz-steps')
 
 const MAX_CONCURRENT = 3
 
@@ -48,21 +51,21 @@ export async function captureTikzSteps(tikzCode: string): Promise<TikzStepResult
       const result = await compileTikZ(stepTikz)
 
       if ('error' in result) {
-        console.warn(`[TikzSteps] Step ${stepNumber} compile failed:`, result.error.slice(0, 200))
+        log.warn({ detail: [result.error.slice(0, 200)] }, `Step ${stepNumber} compile failed`)
         return null
       }
 
       // Download the image from QuickLaTeX URL
       const response = await fetch(result.url)
       if (!response.ok) {
-        console.warn(`[TikzSteps] Step ${stepNumber} download failed: ${response.status}`)
+        log.warn(`Step ${stepNumber} download failed: ${response.status}`)
         return null
       }
 
       const arrayBuffer = await response.arrayBuffer()
       return Buffer.from(arrayBuffer)
     } catch (err) {
-      console.error(`[TikzSteps] Step ${stepNumber} error:`, err)
+      log.error({ detail: err }, `Step ${stepNumber} error`)
       return null
     }
   }
@@ -78,6 +81,6 @@ export async function captureTikzSteps(tikzCode: string): Promise<TikzStepResult
     buffers.push(...batchResults)
   }
 
-  console.log(`[TikzSteps] Captured ${buffers.filter(Boolean).length}/${stepsToRender.length} steps`)
+  log.info(`Captured ${buffers.filter(Boolean).length}/${stepsToRender.length} steps`)
   return { buffers }
 }

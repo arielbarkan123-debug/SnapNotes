@@ -16,7 +16,6 @@ import {
   isUserFriendlyMessage,
   type ErrorCode,
 } from '@/lib/errors'
-
 // Re-export from the new error system for backward compatibility
 export { isUserFriendlyMessage }
 
@@ -68,7 +67,7 @@ export function createErrorHandler(
  *   await doSomething()
  * } catch (err) {
  *   const { message, code } = sanitizeErrorWithCode(err)
- *   console.log(`[${code}] ${message}`)
+ *   log.info(`[${code}] ${message}`)
  * }
  */
 export function sanitizeErrorWithCode(

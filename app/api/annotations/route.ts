@@ -1,5 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:annotations')
 
 // GET - Fetch annotations for a course/lesson
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -32,13 +35,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { data, error } = await query.order('step_index', { ascending: true })
 
     if (error) {
-      console.error('[Annotations API] Fetch error:', error)
+      log.error({ err: error }, 'Fetch error')
       return NextResponse.json({ error: 'Failed to fetch annotations' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, annotations: data || [] })
   } catch (err) {
-    console.error('[Annotations API] Unexpected error:', err)
+    log.error({ err: err }, 'Unexpected error')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -80,13 +83,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .single()
 
     if (error) {
-      console.error('[Annotations API] Upsert error:', error)
+      log.error({ err: error }, 'Upsert error')
       return NextResponse.json({ error: 'Failed to save annotation' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, annotation: data })
   } catch (err) {
-    console.error('[Annotations API] Unexpected error:', err)
+    log.error({ err: err }, 'Unexpected error')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -115,13 +118,13 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
       .eq('user_id', user.id)
 
     if (error) {
-      console.error('[Annotations API] Delete error:', error)
+      log.error({ err: error }, 'Delete error')
       return NextResponse.json({ error: 'Failed to delete annotation' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('[Annotations API] Unexpected error:', err)
+    log.error({ err: err }, 'Unexpected error')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

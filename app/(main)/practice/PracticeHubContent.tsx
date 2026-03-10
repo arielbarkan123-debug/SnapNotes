@@ -14,7 +14,10 @@ import { usePracticeStats } from '@/hooks/usePracticeSession'
 import { ToastContainer, type Toast } from '@/components/ui/Toast'
 import type { SessionType, PracticeSession } from '@/lib/practice/types'
 import type { DifficultyLevel } from '@/lib/adaptive/types'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('page:practice-PracticeHubContentx')
 // -----------------------------------------------------------------------------
 // Types
 // -----------------------------------------------------------------------------
@@ -235,7 +238,7 @@ export default function PracticeHubContent({
         // Check if response is JSON before parsing
         const contentType = res.headers.get('content-type')
         if (!contentType || !contentType.includes('application/json')) {
-          console.error('[PracticeHub] Non-JSON response:', res.status)
+          log.error({ detail: res.status }, 'Non-JSON response')
           if (res.status === 504 || res.status === 503 || res.status === 502) {
             throw new Error('Server timeout. Please try again.')
           }
@@ -246,7 +249,7 @@ export default function PracticeHubContent({
         try {
           data = await res.json()
         } catch (parseError) {
-          console.error('[PracticeHub] JSON parse error:', parseError)
+          log.error({ detail: parseError }, 'JSON parse error')
           throw new Error('Server error. Please try again.')
         }
 
@@ -306,7 +309,7 @@ export default function PracticeHubContent({
       // Check if response is JSON before parsing
       const contentType = res.headers.get('content-type')
       if (!contentType || !contentType.includes('application/json')) {
-        console.error('[PracticeHub] Non-JSON response (custom):', res.status)
+        log.error({ detail: res.status }, 'Non-JSON response (custom)')
         if (res.status === 504 || res.status === 503 || res.status === 502) {
           throw new Error('Server timeout. Please try again.')
         }
@@ -317,7 +320,7 @@ export default function PracticeHubContent({
       try {
         data = await res.json()
       } catch (parseError) {
-        console.error('[PracticeHub] JSON parse error (custom):', parseError)
+        log.error({ detail: parseError }, 'JSON parse error (custom)')
         throw new Error('Server error. Please try again.')
       }
 

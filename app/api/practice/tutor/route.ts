@@ -7,6 +7,9 @@ import { getFilteredDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-s
 import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
 import { getExplanationStyle } from '@/lib/homework/explanation-styles'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:practice-tutor')
 
 // Allow 120 seconds — engine diagram generation can take 10-60s on top of AI response
 export const maxDuration = 120
@@ -235,7 +238,7 @@ ${wasCorrect === false ? '**The student answered incorrectly and is asking for h
     // This saves 10-60s vs running them sequentially.
     const enginePromise = enableDiagrams && shouldUseEngine(question)
       ? tryEngineDiagram(question).catch((err) => {
-          console.warn('[PracticeTutor] Engine diagram failed, using fallback:', err)
+          log.warn({ err }, 'Engine diagram failed, using fallback')
           return undefined
         })
       : Promise.resolve(undefined)
@@ -300,7 +303,7 @@ ${wasCorrect === false ? '**The student answered incorrectly and is asking for h
       response: tutorResponse,
     })
   } catch (error) {
-    console.error('[PracticeTutor] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.CHAT_FAILED, 'Failed to generate tutor response')
   }
 }

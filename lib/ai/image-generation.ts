@@ -3,25 +3,15 @@
  * Uses gemini-2.5-flash-image model for AI-generated course covers
  */
 
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('ai:image-generation')
+
 const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY
-const IS_DEV = process.env.NODE_ENV === 'development'
 
 // Retry configuration
 const MAX_RETRIES = 3
 const INITIAL_DELAY_MS = 1000
-
-// Only log in development to avoid leaking data in production
-function devLog(...args: unknown[]) {
-  if (IS_DEV) {
-    console.log(...args)
-  }
-}
-
-function devError(...args: unknown[]) {
-  if (IS_DEV) {
-    console.error(...args)
-  }
-}
 
 interface GenerateImageResult {
   success: boolean
@@ -85,7 +75,7 @@ function isRetryableError(error: string): boolean {
  */
 export async function generateCourseImage(courseTitle: string): Promise<GenerateImageResult> {
   if (!GOOGLE_AI_API_KEY) {
-    devError('[ImageGen] GOOGLE_AI_API_KEY not configured')
+    log.error('GOOGLE_AI_API_KEY not configured')
     return { success: false, error: 'API key not configured' }
   }
 
@@ -108,7 +98,7 @@ export async function generateCourseImage(courseTitle: string): Promise<Generate
     // Don't sleep after the last attempt
     if (attempt < MAX_RETRIES) {
       const delay = INITIAL_DELAY_MS * Math.pow(2, attempt - 1) // Exponential backoff
-      devLog(`[ImageGen] Retry ${attempt}/${MAX_RETRIES} in ${delay}ms`)
+      log.debug({ attempt, maxRetries: MAX_RETRIES, delay }, 'Retrying image generation')
       await sleep(delay)
     }
   }
@@ -132,7 +122,7 @@ Requirements:
 - Good color harmony and composition`
 
   try {
-    devLog(`[ImageGen] Attempt ${attempt}/${MAX_RETRIES} - Generating image`)
+    log.debug({ attempt, maxRetries: MAX_RETRIES }, 'Generating image')
 
     const response = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent',
@@ -157,7 +147,7 @@ Requirements:
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      devError('[ImageGen] Gemini API error:', response.status)
+      log.error({ status: response.status }, 'Gemini API error')
 
       const errorMessage = errorData?.error?.message || response.statusText
 
@@ -190,7 +180,7 @@ Requirements:
 
       for (const part of parts) {
         if (part.inlineData) {
-          devLog(`[ImageGen] Success on attempt ${attempt}`)
+          log.debug({ attempt }, 'Image generation succeeded')
           return {
             success: true,
             imageBase64: part.inlineData.data,
@@ -200,10 +190,10 @@ Requirements:
       }
     }
 
-    devError('[ImageGen] No image in response')
+    log.error('No image in response')
     return { success: false, error: 'No image generated in response' }
   } catch (error) {
-    devError('[ImageGen] Failed to generate image:', error instanceof Error ? error.message : 'Unknown')
+    log.error({ err: error instanceof Error ? error : new Error('Unknown') }, 'Failed to generate image')
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'

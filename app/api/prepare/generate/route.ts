@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { generateGuide } from '@/lib/prepare/guide-generator'
 import { searchMultipleQueries } from '@/lib/prepare/youtube-search'
 import type { PrepareGuideInsert, GuideYouTubeVideo } from '@/types/prepare'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:prepare-generate')
 
 export const maxDuration = 240
 
@@ -159,7 +162,7 @@ export async function POST(request: NextRequest) {
           learningContext,
           language,
         })
-        console.log(`[Prepare] Guide generated in ${((Date.now() - genStart) / 1000).toFixed(1)}s`)
+        log.info({ durationSec: ((Date.now() - genStart) / 1000).toFixed(1) }, 'Guide generated')
 
         send('status', { stage: 'videos', message: 'Searching for educational videos...' })
 
@@ -200,7 +203,7 @@ export async function POST(request: NextRequest) {
           .eq('id', guideId)
 
         if (updateError) {
-          console.error('[Prepare] Failed to update guide:', updateError)
+          log.error({ err: updateError }, 'Failed to update guide')
           await supabase
             .from('prepare_guides')
             .update({ generation_status: 'failed' })
@@ -220,7 +223,7 @@ export async function POST(request: NextRequest) {
         })
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : 'Failed to generate study guide'
-        console.error(`[Prepare] Generation error after ${((Date.now() - funcStart) / 1000).toFixed(1)}s:`, errMsg)
+        log.error({ err: errMsg, durationSec: ((Date.now() - funcStart) / 1000).toFixed(1) }, 'Generation error')
         send('error', { message: errMsg })
       } finally {
         if (heartbeatInterval) {

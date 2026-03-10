@@ -4,6 +4,9 @@ import { type HelpAPIRequest, type HelpRequestType } from '@/types'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import Anthropic from '@anthropic-ai/sdk'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:help')
 
 // Allow 90 seconds for AI help generation (Claude API call)
 export const maxDuration = 90
@@ -83,7 +86,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           }
         }
       } catch (e) {
-        console.error('[Help API] Content extraction error:', e)
+        log.error({ err: e }, 'Content extraction error')
       }
     }
 
@@ -174,13 +177,13 @@ RULES:
         source_reference: sourceReference,
       })
     } catch (e) {
-      console.error('[Help API] DB error:', e)
+      log.error({ err: e }, 'DB error')
     }
 
     return NextResponse.json({ success: true, response: responseText, sourceReference })
 
   } catch (error) {
-    console.error('[Help API] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.HELP_UNKNOWN)
   }
 }

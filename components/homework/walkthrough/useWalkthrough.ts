@@ -5,6 +5,9 @@ import type {
   WalkthroughSolution,
   WalkthroughStreamEvent,
 } from '@/types/walkthrough'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('hook:useWalkthrough')
 
 export type WalkthroughState =
   | 'idle'
@@ -34,6 +37,7 @@ export interface UseWalkthroughReturn {
 
   // Actions
   startWalkthrough: (sessionId: string) => Promise<void>
+  retryStep: (stepIndex: number) => Promise<void>
 }
 
 /**
@@ -86,6 +90,32 @@ export function useWalkthrough(): UseWalkthroughReturn {
   const toggleAutoPlay = useCallback(() => {
     setIsAutoPlaying(prev => !prev)
   }, [])
+
+  // ─── Retry single step ─────────────────────────────────────────
+
+  const retryStep = useCallback(async (stepIndex: number) => {
+    if (!walkthroughId || !solution) return
+    try {
+      const res = await fetch(`/api/homework/walkthrough/${walkthroughId}/retry-step`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stepIndex }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.imageUrl) {
+          setStepImages(prev => {
+            const next = [...prev]
+            next[stepIndex] = data.imageUrl
+            return next
+          })
+          setStepsRendered(prev => prev + 1)
+        }
+      }
+    } catch (err) {
+      log.warn({ err, stepIndex }, 'Retry step failed')
+    }
+  }, [walkthroughId, solution])
 
   // ─── Streaming ───────────────────────────────────────────────
 
@@ -196,7 +226,12 @@ export function useWalkthrough(): UseWalkthroughReturn {
         setSolution(event.solution)
         setTotalSteps(event.totalSteps)
         setStepImages(new Array(event.totalSteps).fill(''))
-        setState('compiling')
+        // For text-only walkthroughs, skip compiling state
+        if (event.solution.mode === 'text-only') {
+          setState('ready')
+        } else {
+          setState('compiling')
+        }
         break
 
       case 'step_image':
@@ -205,6 +240,11 @@ export function useWalkthrough(): UseWalkthroughReturn {
           next[event.stepIndex] = event.imageUrl
           return next
         })
+        break
+
+      case 'step_failed':
+        // A specific step's diagram failed to compile
+        log.warn({ stepIndex: event.stepIndex + 1, error: event.error }, 'Step diagram failed')
         break
 
       case 'compilation_progress':
@@ -255,5 +295,6 @@ export function useWalkthrough(): UseWalkthroughReturn {
     restart,
     toggleAutoPlay,
     startWalkthrough,
+    retryStep,
   }
 }

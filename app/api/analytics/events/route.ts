@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:analytics-events')
 
 // UUID v4 regex pattern
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -130,7 +133,7 @@ export async function POST(request: NextRequest) {
 
       const { error } = await serviceClient.from('analytics_page_views').insert(pageViewRecords)
       if (error) {
-        console.error('[Analytics] Failed to insert page views:', error)
+        log.error({ err: error }, 'Failed to insert page views')
       } else {
         results.pageViews = pageViewRecords.length
       }
@@ -155,7 +158,7 @@ export async function POST(request: NextRequest) {
 
       const { error } = await serviceClient.from('analytics_events').insert(eventRecords)
       if (error) {
-        console.error('[Analytics] Failed to insert events:', error)
+        log.error({ err: error }, 'Failed to insert events')
       } else {
         results.events = eventRecords.length
       }
@@ -180,7 +183,7 @@ export async function POST(request: NextRequest) {
 
       const { error } = await serviceClient.from('analytics_errors').insert(errorRecords)
       if (error) {
-        console.error('[Analytics] Failed to insert errors:', error)
+        log.error({ err: error }, 'Failed to insert errors')
       } else {
         results.errors = errorRecords.length
       }
@@ -225,7 +228,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, results })
   } catch (error) {
-    console.error('[Analytics] Batch insert error:', error)
+    log.error({ err: error }, 'Batch insert error')
     return createErrorResponse(ErrorCodes.ANALYTICS_UNKNOWN)
   }
 }

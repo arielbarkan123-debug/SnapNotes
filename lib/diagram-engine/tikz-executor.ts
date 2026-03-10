@@ -5,6 +5,9 @@ import { AI_MODEL } from '@/lib/ai/claude';
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 });
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:tikz-executor')
 
 export interface TikzResult {
   imageUrl: string;
@@ -20,7 +23,7 @@ export interface TikzError {
 /**
  * Sanitize Unicode characters that break LaTeX compilation.
  */
-function sanitizeUnicode(code: string): string {
+export function sanitizeUnicode(code: string): string {
   return code
     .replace(/°/g, '^{\\circ}')
     .replace(/→/g, '\\rightarrow ')
@@ -65,17 +68,17 @@ export async function compileTikZ(tikzCode: string): Promise<CompileSuccess | Co
   try {
     // Guard: reject oversized code that will timeout on QuickLaTeX
     if (tikzCode.length > 3500) {
-      console.warn(`[TikZ] Code too large (${tikzCode.length} chars) — will timeout on QuickLaTeX. Rejecting.`);
+      log.warn({ charCount: tikzCode.length }, 'Code too large, will timeout on QuickLaTeX. Rejecting.');
       return { error: `TikZ code too large (${tikzCode.length} chars, max 3500). Simplify the diagram: remove decorative elements, reduce plot points, pre-compute coordinates.` };
     }
 
     // Guard: reject known-problematic features
     if (/\\pgfmathsetmacro|\\pgfmathparse/.test(tikzCode)) {
-      console.warn('[TikZ] Code uses \\pgfmathsetmacro — known to cause QuickLaTeX timeouts');
+      log.warn('Code uses \\pgfmathsetmacro — known to cause QuickLaTeX timeouts');
       return { error: 'Do not use \\pgfmathsetmacro or \\pgfmathparse. Pre-compute all values as decimal numbers and write them directly.' };
     }
     if (/plot\s*\[.*domain\s*=.*variable\s*=/.test(tikzCode)) {
-      console.warn('[TikZ] Code uses parametric plot[domain=...] — known to cause QuickLaTeX 500 errors');
+      log.warn('Code uses parametric plot[domain=...] — known to cause QuickLaTeX 500 errors');
       return { error: 'Do not use plot[domain=..., variable=\\t]. Use \\draw[smooth] plot coordinates {(x1,y1) (x2,y2) ...} with pre-computed points instead.' };
     }
 
@@ -90,7 +93,7 @@ export async function compileTikZ(tikzCode: string): Promise<CompileSuccess | Co
 
     const parts = [
       `formula=${encodeURIComponent(formula)}`,
-      `fsize=48px`,
+      `fsize=64px`,
       `fcolor=000000`,
       `mode=0`,
       `out=1`,
@@ -113,7 +116,7 @@ export async function compileTikZ(tikzCode: string): Promise<CompileSuccess | Co
 
     // Check for HTTP error responses (HTML instead of plain text)
     if (text.includes('<!DOCTYPE') || text.includes('<html') || response.status >= 500) {
-      console.error('[TikZ] QuickLaTeX returned HTTP error (likely 500). Code too complex.');
+      log.error('QuickLaTeX returned HTTP error (likely 500). Code too complex.');
       return { error: 'QuickLaTeX server error (500). The TikZ code is too complex. Simplify: use plot coordinates with pre-computed points, remove \\pgfmathsetmacro, remove decorative elements, keep under 2000 chars.' };
     }
 
@@ -121,7 +124,7 @@ export async function compileTikZ(tikzCode: string): Promise<CompileSuccess | Co
 
     if (lines[0].trim() !== '0') {
       const errorText = text.substring(0, 500);
-      console.error('QuickLaTeX compilation failed:', errorText);
+      log.error({ err: errorText }, 'QuickLaTeX compilation failed:');
       return { error: errorText };
     }
 
@@ -135,11 +138,11 @@ export async function compileTikZ(tikzCode: string): Promise<CompileSuccess | Co
     return { url: imageUrl };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      console.error('[TikZ] QuickLaTeX timed out after 15s — code too complex');
+      log.error('QuickLaTeX timed out after 15s — code too complex');
       return { error: 'QuickLaTeX compilation timed out (>15s). The TikZ code is too complex. Simplify: remove decorative elements, use fewer plot points, pre-compute all coordinates as numbers.' };
     }
     const errMsg = error instanceof Error ? error.message : 'Unknown QuickLaTeX error';
-    console.error('QuickLaTeX error:', error);
+    log.error({ err: error }, 'QuickLaTeX error:');
     return { error: errMsg };
   }
 }
@@ -194,7 +197,7 @@ export async function generateTikzDiagram(
 
   if ('error' in compileResult) {
     for (let retry = 0; retry < 2; retry++) {
-      console.log(`[TikZ] Compilation retry ${retry + 1}...`);
+      log.info(`Compilation retry ${retry + 1}...`);
       const fixMessage = await anthropic.messages.create({
         model: AI_MODEL,
         max_tokens: 4096,

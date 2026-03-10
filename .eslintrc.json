@@ -14,20 +14,18 @@
     "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "warn",
     "prefer-const": "error",
-    "no-console": ["warn", {
-      "allow": ["warn", "error"]
-    }]
+    "no-console": "error"
   },
   "overrides": [
     {
-      "files": ["*.test.ts", "*.test.tsx", "*.spec.ts", "*.spec.tsx"],
+      "files": ["*.test.ts", "*.test.tsx", "*.spec.ts", "*.spec.tsx", "**/__tests__/**/*.ts", "**/__tests__/**/*.tsx", "jest.setup.ts"],
       "rules": {
         "@typescript-eslint/no-explicit-any": "off",
         "no-console": "off"
       }
     },
     {
-      "files": ["app/api/**/*.ts"],
+      "files": ["lib/logger.ts"],
       "rules": {
         "no-console": "off"
       }

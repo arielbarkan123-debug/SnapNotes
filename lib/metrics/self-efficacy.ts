@@ -6,6 +6,9 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('metrics:self-efficacy')
 
 // =============================================================================
 // Types
@@ -199,7 +202,7 @@ export async function recordSelfEfficacySurvey(
 
     return { success: true, surveyId: data.id, score: score || undefined }
   } catch (error) {
-    console.error('Error recording self-efficacy survey:', error)
+    log.error({ err: error }, 'Error recording self-efficacy survey:')
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -249,7 +252,7 @@ export async function getSelfEfficacyHistory(
       createdAt: new Date(row.created_at),
     }))
   } catch (error) {
-    console.error('Error fetching self-efficacy history:', error)
+    log.error({ err: error }, 'Error fetching self-efficacy history:')
     return []
   }
 }
@@ -363,7 +366,7 @@ export async function analyzeSelfEfficacy(
       recommendations,
     }
   } catch (error) {
-    console.error('Error analyzing self-efficacy:', error)
+    log.error({ err: error }, 'Error analyzing self-efficacy:')
     return null
   }
 }

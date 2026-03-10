@@ -12,6 +12,9 @@ import type { AnalysisResult } from './types';
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 });
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:analyze')
 
 /**
  * Extract the first valid top-level JSON object from a string
@@ -128,7 +131,7 @@ export async function analyzeQuestion(question: string): Promise<AnalysisResult 
 
     const textBlock = response.content.find((b) => b.type === 'text');
     if (!textBlock || textBlock.type !== 'text') {
-      console.warn('[SmartPipeline] Analysis returned no text');
+      log.warn('Analysis returned no text');
       return null;
     }
 
@@ -142,30 +145,30 @@ export async function analyzeQuestion(question: string): Promise<AnalysisResult 
     // Use a balanced-brace approach to find the top-level JSON object.
     const raw = extractTopLevelJson(jsonStr);
     if (!raw) {
-      console.warn('[SmartPipeline] Could not parse analysis JSON');
+      log.warn('Could not parse analysis JSON');
       return null;
     }
 
     // Validate required fields exist and have correct types
     if (!raw.domain || typeof raw.domain !== 'string') {
-      console.warn('[SmartPipeline] Analysis missing or invalid "domain"');
+      log.warn('Analysis missing or invalid "domain"');
       return null;
     }
     if (!raw.sympyCode || typeof raw.sympyCode !== 'string') {
-      console.warn('[SmartPipeline] Analysis missing or invalid "sympyCode"');
+      log.warn('Analysis missing or invalid "sympyCode"');
       return null;
     }
     if (!Array.isArray(raw.unknowns) || raw.unknowns.length === 0) {
-      console.warn('[SmartPipeline] Analysis missing or empty "unknowns"');
+      log.warn('Analysis missing or empty "unknowns"');
       return null;
     }
     // Default optional fields
     if (!raw.problemType || typeof raw.problemType !== 'string') {
-      console.warn('[SmartPipeline] Analysis missing "problemType", defaulting');
+      log.warn('Analysis missing "problemType", defaulting');
       raw.problemType = 'unknown';
     }
     if (!raw.givenValues || typeof raw.givenValues !== 'object') {
-      console.warn('[SmartPipeline] Analysis missing "givenValues", defaulting to empty');
+      log.warn('Analysis missing "givenValues", defaulting to empty');
       raw.givenValues = {};
     }
     if (!Array.isArray(raw.formulas)) {
@@ -180,7 +183,7 @@ export async function analyzeQuestion(question: string): Promise<AnalysisResult 
 
     return raw as unknown as AnalysisResult;
   } catch (err) {
-    console.warn('[SmartPipeline] Analysis failed:', err instanceof Error ? err.message : err);
+    log.warn({ err: err instanceof Error ? err : new Error(String(err)) }, 'Analysis failed');
     return null;
   }
 }

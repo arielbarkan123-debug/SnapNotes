@@ -12,7 +12,10 @@ import { useVisuals } from '@/contexts/VisualsContext'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
 
 import type { InputMode } from '@/lib/homework/types'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('page:homework-help-pagex')
 // ============================================================================
 // Error Codes for Homework Helper Page
 // ============================================================================
@@ -337,7 +340,7 @@ export default function HomeworkHelpPage() {
     try {
       return URL.createObjectURL(file)
     } catch (err) {
-      console.error('Failed to create object URL:', err)
+      log.error({ detail: err }, 'Failed to create object URL')
       setError(t('uploadError'))
       return null
     }

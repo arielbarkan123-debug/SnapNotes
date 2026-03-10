@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/api/errors'
 import { analyzeFormulaFromText, analyzeFormulaFromImage } from '@/lib/formula-scanner/analyzer'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:formula-analyze')
 
 export const maxDuration = 60
 
@@ -40,7 +43,7 @@ export async function POST(request: NextRequest) {
       analysis,
     })
   } catch (error) {
-    console.error('[FormulaScanner] Error:', error)
+    log.error({ err: error }, 'Error')
     const message = error instanceof Error ? error.message : 'Failed to analyze formula'
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, message)
   }

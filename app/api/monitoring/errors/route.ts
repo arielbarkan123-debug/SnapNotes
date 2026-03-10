@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:monitoring-errors')
 
 // ============================================================================
 // Types
@@ -71,14 +74,14 @@ export async function POST(request: NextRequest) {
       })
 
     if (insertError) {
-      console.error('[Error Monitoring] Failed to log error:', insertError)
+      log.error({ err: insertError }, 'Failed to log error')
       // Don't fail the request - error logging should be silent
       return NextResponse.json({ logged: false })
     }
 
     return NextResponse.json({ logged: true })
   } catch (err) {
-    console.error('[Error Monitoring] Exception:', err)
+    log.error({ err: err }, 'Exception')
     return NextResponse.json({ logged: false })
   }
 }
@@ -177,7 +180,7 @@ export async function GET(request: NextRequest) {
       offset,
     })
   } catch (err) {
-    console.error('[Error Monitoring] GET error:', err)
+    log.error({ err: err }, 'GET error')
     return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch error logs')
   }
 }
@@ -226,7 +229,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ deleted: count || 0 })
   } catch (err) {
-    console.error('[Error Monitoring] DELETE error:', err)
+    log.error({ err: err }, 'DELETE error')
     return createErrorResponse(ErrorCodes.DELETE_FAILED, 'Failed to delete error logs')
   }
 }

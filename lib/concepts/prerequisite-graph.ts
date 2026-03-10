@@ -7,6 +7,9 @@
 
 import { createClient } from '@/lib/supabase/server'
 import type { Concept, ConceptNode, LearningPath, DependencyStrength } from './types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('concepts:prerequisite-graph')
 
 // =============================================================================
 // Prerequisite Graph Class
@@ -102,7 +105,7 @@ export class PrerequisiteGraph {
 
     // Prevent infinite recursion due to cycles in prerequisite graph
     if (currentDepth >= maxDepth) {
-      console.warn(`[PrerequisiteGraph] Max recursion depth (${maxDepth}) reached, stopping prerequisite loading`)
+      log.warn(`Max recursion depth (${maxDepth}) reached, stopping prerequisite loading`)
       return
     }
 

@@ -12,6 +12,9 @@
 import mammoth from 'mammoth'
 import JSZip from 'jszip'
 import type { ExtractedDocument, ExtractedImage } from './types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('documents:docx')
 
 // =============================================================================
 // Configuration
@@ -227,12 +230,12 @@ async function extractImagesFromDOCX(buffer: Buffer): Promise<ExtractedImage[]> 
         })
       } catch {
         // Skip images that fail to extract
-        console.warn(`Failed to extract image: ${mediaFile.filename}`)
+        log.warn(`Failed to extract image: ${mediaFile.filename}`)
       }
     }
   } catch {
     // Image extraction failed, continue without images
-    console.warn('Failed to extract images from DOCX')
+    log.warn('Failed to extract images from DOCX')
   }
 
   return extractedImages

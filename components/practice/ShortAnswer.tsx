@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { MathText } from '@/components/ui/MathRenderer'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('ui:short-answer')
 
 // =============================================================================
 // Types
@@ -74,7 +77,7 @@ export default function ShortAnswer({
       // Check if response is JSON before parsing
       const contentType = response.headers.get('content-type')
       if (!contentType || !contentType.includes('application/json')) {
-        console.error('[ShortAnswer] Non-JSON response:', response.status)
+        log.error({ status: response.status }, 'Non-JSON response')
         throw new Error('Server error')
       }
 
@@ -82,7 +85,7 @@ export default function ShortAnswer({
       setEvaluationResult(result)
       onAnswer(result.isCorrect, result.score)
     } catch (error) {
-      console.error('[ShortAnswer] Evaluation error:', error)
+      log.error({ err: error }, 'Evaluation error')
       // The entire API call failed — show "could not evaluate" instead of fake score
       setEvaluationResult({
         isCorrect: false,

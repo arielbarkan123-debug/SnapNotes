@@ -5,6 +5,9 @@
  */
 
 import { Resend } from 'resend'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('email:resend-client')
 
 let resendClient: Resend | null = null
 
@@ -50,13 +53,13 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
     })
 
     if (error) {
-      console.error('[Email] Resend error:', error)
+      log.error({ err: error }, 'Resend error:')
       return { success: false, error: error.message }
     }
 
     return { success: true, id: data?.id }
   } catch (err) {
-    console.error('[Email] Send error:', err)
+    log.error({ err: err }, 'Send error:')
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Unknown email error',

@@ -16,7 +16,10 @@ import type {
   DetectedError,
   AppliedFix,
 } from './types'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('e2e:runner:reporter')
 // ============================================================================
 // Report Generation
 // ============================================================================
@@ -450,7 +453,7 @@ After test execution completes:
    Content: generateMarkdownReport(report)
 
 4. Print console summary:
-   console.log(generateConsoleSummary(report))
+   log.info('generateConsoleSummary(report))
 
 5. Return report to user with key findings
 `

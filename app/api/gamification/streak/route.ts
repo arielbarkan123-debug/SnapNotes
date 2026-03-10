@@ -11,6 +11,9 @@ import {
   getMilestoneMessage,
 } from '@/lib/gamification/streak'
 import { calculateLevel, awardCustomXP } from '@/lib/gamification/xp'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:gamification-streak')
 
 // =============================================================================
 // Types
@@ -53,7 +56,7 @@ export async function POST(): Promise<NextResponse> {
       return createErrorResponse(ErrorCodes.UNAUTHORIZED, 'Please log in to update streak')
     }
 
-    console.log('[Streak:POST] User authenticated:', user.id)
+    log.debug({ userId: user.id }, 'User authenticated')
 
     // Get current gamification record
     const { data: gamification, error: gamificationError } = await supabase
@@ -65,12 +68,12 @@ export async function POST(): Promise<NextResponse> {
     if (gamificationError && gamificationError.code !== 'PGRST116') {
       // PGRST116 = no rows found, which is OK for new users
       // For other errors, log and return error response
-      console.error('[Streak:POST] Error fetching gamification:', gamificationError)
+      log.error({ err: gamificationError }, 'Error fetching gamification')
       logError('Gamification:streak:fetch', gamificationError)
       return createErrorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to fetch gamification data')
     }
 
-    console.log('[Streak:POST] Current gamification:', gamification)
+    log.debug({ gamification }, 'Current gamification')
 
     // Prepare streak data
     const streakData: StreakData = {
@@ -157,7 +160,7 @@ export async function POST(): Promise<NextResponse> {
 
     return NextResponse.json(response)
   } catch (error) {
-    console.error('[Streak:POST] Unhandled error:', error)
+    log.error({ err: error }, 'Unhandled error')
     logError('Gamification:streak:post', error)
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to update streak')
   }
@@ -210,7 +213,7 @@ export async function GET(): Promise<NextResponse> {
       daysToMilestone: status.daysToMilestone,
     })
   } catch (error) {
-    console.error('[Streak:GET] Unhandled error:', error)
+    log.error({ err: error }, 'Unhandled error')
     logError('Gamification:streak:get', error)
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to fetch streak status')
   }

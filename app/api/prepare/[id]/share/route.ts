@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ErrorCodes, createErrorResponse } from '@/lib/api/errors'
 import { randomBytes } from 'crypto'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:prepare-share')
 
 export async function POST(
   _request: NextRequest,
@@ -57,7 +60,7 @@ export async function POST(
       shareToken,
     })
   } catch (error) {
-    console.error('[PrepareShare] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to generate share link')
   }
 }

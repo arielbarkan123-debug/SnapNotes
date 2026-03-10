@@ -43,9 +43,7 @@ export default function ProgressPage() {
 
   // Log performance
   useEffect(() => {
-    console.time('progress-page-load')
     return () => {
-      console.timeEnd('progress-page-load')
     }
   }, [])
 

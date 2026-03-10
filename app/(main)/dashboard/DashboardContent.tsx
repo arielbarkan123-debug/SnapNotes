@@ -13,7 +13,10 @@ import { useStudyPlan } from '@/hooks/useStudyPlan'
 import { ChevronRight, Check, ArrowRight, Flame, Zap, Trophy, Coffee } from 'lucide-react'
 import type { StudyPlanTask } from '@/lib/study-plan/types'
 import { useFeatureTracker } from '@/lib/student-context/feature-tracker'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('page:dashboard-DashboardContentx')
 // =============================================================================
 // Dashboard Intelligence Hook
 // =============================================================================
@@ -84,8 +87,8 @@ class SilentErrorBoundary extends Component<SilentErrorBoundaryProps, SilentErro
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error(`[Dashboard] Error in ${this.props.componentName || 'unknown'}:`, error.message)
-    console.error('Component stack:', errorInfo.componentStack)
+    log.error({ detail: error.message }, `Error in ${this.props.componentName || 'unknown'}`)
+    log.error({ detail: errorInfo.componentStack }, 'Component stack')
   }
 
   render() {

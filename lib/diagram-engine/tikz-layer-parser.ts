@@ -265,3 +265,79 @@ export function buildCumulativeStepWithHighlight(parsed: ParsedTikz, stepNumber:
 
   return parts.join('\n')
 }
+
+/**
+ * Validate that layer count matches expected step count.
+ *
+ * Returns alignment info including whether they match,
+ * how many numbered layers exist, and a descriptive message.
+ */
+export function validateLayerStepAlignment(
+  parsed: ParsedTikz,
+  expectedSteps: number,
+): { valid: boolean; layerCount: number; message?: string } {
+  const numbered = parsed.layers.filter(l => l.layerNumber > 0)
+  if (numbered.length === expectedSteps) {
+    return { valid: true, layerCount: numbered.length }
+  }
+  if (numbered.length < expectedSteps) {
+    return {
+      valid: false,
+      layerCount: numbered.length,
+      message: `Expected ${expectedSteps} layers, found ${numbered.length}. Last ${expectedSteps - numbered.length} step(s) will have no diagram.`,
+    }
+  }
+  return {
+    valid: false,
+    layerCount: numbered.length,
+    message: `Found ${numbered.length} layers for ${expectedSteps} steps. Extra layers will be ignored.`,
+  }
+}
+
+/**
+ * Estimate cumulative TikZ document size (in characters) for each step.
+ *
+ * Returns an array where index i is the total character count of the
+ * TikZ document for step i+1 (including preamble, setup, and all
+ * cumulative layers + highlight wrappers).
+ *
+ * Used to predict which steps may exceed the QuickLaTeX 3500 char limit.
+ */
+export function estimateCumulativeSize(parsed: ParsedTikz): number[] {
+  const { preamble, tikzpictureOptions, layers } = parsed
+  const numbered = layers.filter(l => l.layerNumber > 0)
+  const setupLayer = layers.find(l => l.layerNumber === 0)
+
+  // Base overhead: preamble + \begin{tikzpicture}[...] + \end{tikzpicture}
+  const baseOverhead =
+    (preamble ? preamble.length + 1 : 0) +
+    `\\begin{tikzpicture}${tikzpictureOptions}`.length + 1 +
+    '\\end{tikzpicture}'.length + 1
+
+  // Setup layer (always included)
+  const setupSize = setupLayer?.code.length || 0
+
+  // Highlight wrapping overhead per step
+  const grayWrapOverhead = '% --- Previous steps (faded) ---\n\\begingroup\\color{gray!50}\n\\endgroup'.length
+  const redScopeOverhead = '% --- Current step (highlighted) ---\n\\begin{scope}[every path/.append style={draw=red!80, line width=1.2pt}, every node/.append style={text=black}]\n\\end{scope}'.length
+
+  const sizes: number[] = []
+  let cumulativePrevious = 0
+
+  for (let i = 0; i < numbered.length; i++) {
+    const currentLayerSize = numbered[i].code.length
+
+    let totalSize = baseOverhead + setupSize
+    if (i > 0) {
+      // Previous layers wrapped in gray
+      totalSize += grayWrapOverhead + cumulativePrevious
+    }
+    // Current layer wrapped in red scope
+    totalSize += redScopeOverhead + currentLayerSize
+
+    sizes.push(totalSize)
+    cumulativePrevious += numbered[i].code.length
+  }
+
+  return sizes
+}

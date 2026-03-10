@@ -38,6 +38,9 @@ import { validateLearningObjectives, type LearningObjective } from '@/lib/curric
 import { scoreExtraction, type ExtractionConfidence } from '@/lib/extraction/confidence-scorer'
 import { generateDiagramsForSteps } from '@/lib/diagram-engine/integration'
 import { getStudentContext, generateDirectives } from '@/lib/student-context'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:generate-course')
 
 // ============================================================================
 // Route Configuration
@@ -93,7 +96,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   const needsAggressiveHeartbeat = isSafari || isIOS
 
   if (needsAggressiveHeartbeat) {
-    console.log('[GenerateCourse] Detected Safari/iOS - using aggressive heartbeat')
+    log.debug('Detected Safari/iOS - using aggressive heartbeat')
   }
 
   // Create a TransformStream to send data to client
@@ -109,7 +112,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       } catch (e) {
         // Stream might be closed - mark it
         streamClosed = true
-        console.warn('[GenerateCourse] Stream write failed:', e)
+        log.warn({ e }, 'Stream write failed')
       }
     }
   }
@@ -469,7 +472,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         )
         // Log validation summary for debugging
         if (validationResult.summary.errorCount > 0) {
-          console.warn('Learning objectives validation:', validationResult.summary)
+          log.warn({ summary: validationResult.summary }, 'Learning objectives validation')
         }
       }
 
@@ -493,15 +496,15 @@ export async function POST(request: NextRequest): Promise<Response> {
           await generateDiagramsForSteps(generatedCourse.lessons, '[GenerateCourse]')
         } catch (diagramErr) {
           // Diagram generation is non-critical; log and continue without diagrams
-          console.error('[GenerateCourse] Diagram batch generation failed:', diagramErr)
+          log.error({ err: diagramErr }, 'Diagram batch generation failed')
         }
       }
 
       sendMessage({ type: 'progress', stage: 'Saving course', percent: 80 })
 
       // Log extraction confidence for monitoring
-      console.log('[GenerateCourse] Extraction confidence:', extractionConfidence.overall)
-      console.log('[GenerateCourse] Learning objectives:', learningObjectives.length)
+      log.info({ confidence: extractionConfidence.overall }, 'Extraction confidence')
+      log.info({ count: learningObjectives.length }, 'Learning objectives')
 
       // 6d. Save to database
       // Check for progressive generation metadata

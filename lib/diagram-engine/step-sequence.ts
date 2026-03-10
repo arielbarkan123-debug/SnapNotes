@@ -8,6 +8,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { AI_MODEL } from '@/lib/ai/claude'
 import { generateDiagram } from './index'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:step-sequence')
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -114,7 +117,7 @@ export async function generateStepSequence(
   question: string,
   _context?: { subject?: string; language?: string },
 ): Promise<StepSequenceResult> {
-  console.log(`[StepSequence] Generating for: "${question.slice(0, 80)}..."`)
+  log.info({ question: question.slice(0, 80) }, 'Generating step sequence')
 
   // Step 1: Decompose problem into steps via Claude
   const decomposition = await decomposeIntoSteps(question)
@@ -123,20 +126,20 @@ export async function generateStepSequence(
     throw new Error('No steps generated from decomposition')
   }
 
-  console.log(`[StepSequence] Decomposed into ${decomposition.steps.length} steps`)
+  log.info({ stepCount: decomposition.steps.length }, 'Decomposed into steps')
 
   // Step 2: Generate diagrams sequentially (avoid rate limits)
   const steps: DiagramStep[] = []
   let hasFailures = false
 
   for (const step of decomposition.steps) {
-    console.log(`[StepSequence] Generating diagram for step ${step.stepNumber}: "${step.diagramPrompt.slice(0, 60)}..."`)
+    log.info({ stepNumber: step.stepNumber, prompt: step.diagramPrompt.slice(0, 60) }, 'Generating diagram for step')
 
     try {
       const result = await generateDiagram(step.diagramPrompt)
 
       if ('error' in result) {
-        console.warn(`[StepSequence] Step ${step.stepNumber} diagram failed: ${result.error}`)
+        log.warn({ stepNumber: step.stepNumber, error: result.error }, 'Step diagram failed')
         hasFailures = true
         steps.push({
           ...step,
@@ -151,7 +154,7 @@ export async function generateStepSequence(
         })
       }
     } catch (err) {
-      console.error(`[StepSequence] Step ${step.stepNumber} error:`, err)
+      log.error({ stepNumber: step.stepNumber, err }, 'Step diagram error')
       hasFailures = true
       steps.push({
         ...step,
@@ -162,7 +165,7 @@ export async function generateStepSequence(
   }
 
   const successCount = steps.filter(s => s.diagramImageUrl).length
-  console.log(`[StepSequence] Complete: ${successCount}/${steps.length} diagrams generated`)
+  log.info({ successCount, total: steps.length }, 'Step sequence complete')
 
   return {
     question,

@@ -33,8 +33,10 @@ export interface WalkthroughStep {
 export interface WalkthroughSolution {
   /** Step-by-step solution */
   steps: WalkthroughStep[]
-  /** Complete layered TikZ code with % === LAYER N === markers */
+  /** Complete layered TikZ code with % === LAYER N === markers (empty string for text-only) */
   tikzCode: string
+  /** Walkthrough mode: 'diagram' (has TikZ) or 'text-only' (no diagram needed) */
+  mode?: 'diagram' | 'text-only'
   /** Final answer (EN) */
   finalAnswer: string
   /** Final answer (HE) */
@@ -101,6 +103,7 @@ export type WalkthroughStreamEvent =
   | { type: 'session_created'; walkthroughId: string }
   | { type: 'solution_ready'; solution: WalkthroughSolution; totalSteps: number }
   | { type: 'step_image'; stepIndex: number; imageUrl: string }
+  | { type: 'step_failed'; stepIndex: number; error: string }
   | { type: 'compilation_progress'; stepsRendered: number; totalSteps: number }
   | { type: 'complete'; stepsRendered: number; totalSteps: number }
   | { type: 'error'; error: string; partial?: boolean }

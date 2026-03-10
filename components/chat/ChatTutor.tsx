@@ -2,6 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('ui:chat-tutor')
 
 interface Message {
   id: string
@@ -91,7 +94,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
         // Check if response is JSON before parsing
         const contentType = response.headers.get('content-type')
         if (!contentType || !contentType.includes('application/json')) {
-          console.error('[ChatTutor] Non-JSON response:', response.status)
+          log.error({ status: response.status }, 'Non-JSON response')
           if (response.status === 504 || response.status === 503 || response.status === 502) {
             throw new Error('Server is taking too long. Please try again.')
           }
@@ -100,7 +103,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
         data = await response.json()
       } catch (parseError) {
         if (parseError instanceof SyntaxError) {
-          console.error('[ChatTutor] JSON parse error:', parseError)
+          log.error({ err: parseError }, 'JSON parse error')
           throw new Error('Server error. Please try again.')
         }
         throw parseError

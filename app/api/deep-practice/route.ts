@@ -1,5 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:deep-practice')
 
 // Allow 60 seconds for database operations
 export const maxDuration = 60
@@ -75,7 +78,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('[DeepPractice API] Error saving progress:', error)
+      log.error({ err: error }, 'Error saving progress')
       return NextResponse.json(
         { success: false, error: 'Failed to save progress' },
         { status: 500 }
@@ -87,7 +90,7 @@ export async function POST(request: NextRequest) {
       progress: data,
     })
   } catch (error) {
-    console.error('[DeepPractice API] Unexpected error:', error)
+    log.error({ err: error }, 'Unexpected error')
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
@@ -134,7 +137,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
 
     if (error) {
-      console.error('[DeepPractice API] Error fetching progress:', error)
+      log.error({ err: error }, 'Error fetching progress')
       return NextResponse.json(
         { success: false, error: 'Failed to fetch progress' },
         { status: 500 }
@@ -146,7 +149,7 @@ export async function GET(request: NextRequest) {
       progress: lessonIndex !== null ? data?.[0] || null : data,
     })
   } catch (error) {
-    console.error('[DeepPractice API] Unexpected error:', error)
+    log.error({ err: error }, 'Unexpected error')
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

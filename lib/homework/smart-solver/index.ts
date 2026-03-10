@@ -18,7 +18,10 @@ import { retryWithFeedback } from './retry'
 import { isComputeVerifiable, getSubjectFromCategory } from './subject-utils'
 import { answersMatch } from '@/lib/homework/math-verifier'
 import type { SolvedDecomposedProblem, SmartSolverMetadata } from './types'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('homework:smart-solver:index')
 const MAX_RETRY_ATTEMPTS = 3
 const PIPELINE_TIMEOUT_MS = 60000 // 60 seconds
 
@@ -52,7 +55,7 @@ export async function smartExtractAndSolve(
     ])
 
     metadata.totalTimeMs = performance.now() - startTime
-    console.log(
+    log.info(
       `[SmartSolver] Pipeline completed in ${Math.round(metadata.totalTimeMs)}ms, ` +
       `${metadata.totalAICalls} AI calls, ${metadata.totalComputeCalls} compute calls`
     )
@@ -61,7 +64,7 @@ export async function smartExtractAndSolve(
   } catch (err) {
     const elapsed = Math.round(performance.now() - startTime)
     const reason = err instanceof Error ? err.message : 'Unknown error'
-    console.warn(`[SmartSolver] Pipeline failed after ${elapsed}ms: ${reason}. Falling back to legacy.`)
+    log.warn(`Pipeline failed after ${elapsed}ms: ${reason}. Falling back to legacy.`)
     throw err // Let the caller (checker-engine) handle fallback
   }
 }
@@ -78,14 +81,14 @@ async function runSmartPipeline(
   metadata: SmartSolverMetadata
 ): Promise<SolutionSet> {
   // ── Step 1: Classify & Decompose ──────────────────────────────────────────
-  console.log('[SmartSolver] Step 1: Classify & Decompose...')
+  log.info('Step 1: Classify & Decompose...')
   const decomposition = await decomposeProblems(
     client, imageBase64, mediaType, includeStudentAnswers, referenceImages
   )
   metadata.totalAICalls++
 
   // ── Step 2: Solve Sub-Problems (parallel across problems) ─────────────────
-  console.log(`[SmartSolver] Step 2: Solving ${decomposition.problems.length} problems...`)
+  log.info(`Step 2: Solving ${decomposition.problems.length} problems...`)
   const solvedProblems: SolvedDecomposedProblem[] = await Promise.all(
     decomposition.problems.map(async (problem) => {
       const solved = await solveDecomposedProblem(client, problem, decomposition.detectedLanguage)
@@ -96,7 +99,7 @@ async function runSmartPipeline(
 
   // ── Step 3: Compute-Verify (math/physics only, parallel) ──────────────────
   const computeVerifiableProblems = solvedProblems.filter(p => isComputeVerifiable(p.subjectCategory))
-  console.log(
+  log.info(
     `[SmartSolver] Step 3: Compute-verifying ${computeVerifiableProblems.length}/${solvedProblems.length} problems...`
   )
 
@@ -115,7 +118,7 @@ async function runSmartPipeline(
   // ── Step 4: Auto-Retry on Mismatch ────────────────────────────────────────
   const mismatches = computeResults.filter(r => !r.matchesAI && r.computedAnswer)
   if (mismatches.length > 0) {
-    console.log(`[SmartSolver] Step 4: ${mismatches.length} mismatches, retrying...`)
+    log.info(`Step 4: ${mismatches.length} mismatches, retrying...`)
   }
 
   for (const mismatch of mismatches) {
@@ -130,7 +133,7 @@ async function runSmartPipeline(
       metadata.totalAICalls++
 
       if (!retry) {
-        console.warn(`[SmartSolver/Retry] Retry ${attempt} failed for ${mismatch.problemId}`)
+        log.warn(`Retry ${attempt} failed for ${mismatch.problemId}`)
         break
       }
 
@@ -146,7 +149,7 @@ async function runSmartPipeline(
 
       // Check if the corrected answer matches compute
       if (answersMatch(retry.correctedAnswer, mismatch.computedAnswer)) {
-        console.log(`[SmartSolver/Retry] Problem ${mismatch.problemId} resolved on attempt ${attempt}`)
+        log.info(`Problem ${mismatch.problemId} resolved on attempt ${attempt}`)
         resolved = true
         break
       }
@@ -154,7 +157,7 @@ async function runSmartPipeline(
 
     if (!resolved) {
       // Max retries exhausted — use compute answer if available
-      console.warn(
+      log.warn(
         `[SmartSolver/Retry] Problem ${mismatch.problemId}: retries exhausted, ` +
         `using compute answer "${mismatch.computedAnswer}"`
       )
@@ -207,7 +210,7 @@ async function runSmartPipeline(
     return verifiedProblem
   })
 
-  console.log(
+  log.info(
     `[SmartSolver] Converting to SolutionSet: ${problems.length} problems, ` +
     `${problems.filter(p => p.verificationStatus === 'verified').length} compute-verified`
   )

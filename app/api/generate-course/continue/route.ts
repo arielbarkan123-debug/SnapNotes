@@ -5,6 +5,9 @@ import type { UserLearningContext } from '@/lib/ai'
 import { logError } from '@/lib/api/errors'
 import type { LessonOutline, Lesson, GeneratedCourse } from '@/types'
 import { generateDiagramsForSteps } from '@/lib/diagram-engine/integration'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:generate-course-continue')
 
 // Allow 3 minutes for continuation (generates 2 lessons at a time)
 export const maxDuration = 180
@@ -139,7 +142,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       })
     }
 
-    console.log(`[continue] Generating lessons ${targetIndices.map(i => i + 1).join(', ')} for course ${courseId}`)
+    log.debug({ courseId: courseId }, 'Generating lessons for course')
 
     // 9. Generate next batch of lessons
     const result = await generateContinuationLessons(
@@ -155,7 +158,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       await generateDiagramsForSteps(result.newLessons, '[continue]')
     } catch (diagramErr) {
       // Diagram generation is non-critical; log and continue without diagrams
-      console.error('[continue] Diagram batch generation failed:', diagramErr)
+      log.error({ err: diagramErr }, 'Diagram batch generation failed')
     }
 
     // 10. Merge new lessons into course
@@ -191,7 +194,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       )
     }
 
-    console.log(`[continue] Course ${courseId}: ${updatedLessons.length}/${course.total_lessons} lessons ready`)
+    log.debug({ courseId: courseId, length: updatedLessons.length, total_lessons: course.total_lessons }, 'Course : / lessons ready')
 
     // 12. Return status
     return NextResponse.json({

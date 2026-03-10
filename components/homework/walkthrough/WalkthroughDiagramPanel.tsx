@@ -74,24 +74,22 @@ export default function WalkthroughDiagramPanel({
               aria-label={stepDescription || `Step ${currentStep + 1} diagram`}
             >
               <div
-                className="relative w-full flex items-center justify-center p-2 cursor-zoom-in"
-                style={{ minHeight: '280px', maxHeight: '420px' }}
+                className="relative w-full flex items-center justify-center p-2 cursor-zoom-in min-h-[200px] max-h-[35vh] sm:min-h-[250px] sm:max-h-[45vh] lg:min-h-[300px] lg:max-h-[70vh]"
                 onClick={() => setZoomed(true)}
               >
                 <Image
                   src={imageUrl}
                   alt={stepDescription || `Step ${currentStep + 1} diagram`}
-                  width={600}
-                  height={400}
-                  className="max-w-full h-auto object-contain dark:invert dark:hue-rotate-180"
+                  width={900}
+                  height={600}
+                  className="max-w-full max-h-full h-auto object-contain dark:invert dark:hue-rotate-180"
                   unoptimized
                 />
               </div>
             </div>
           ) : isCompiling ? (
             <div
-              className="flex items-center justify-center rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-dashed border-gray-200 dark:border-gray-700"
-              style={{ minHeight: '280px' }}
+              className="flex items-center justify-center rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-dashed border-gray-200 dark:border-gray-700 min-h-[200px] sm:min-h-[250px] lg:min-h-[300px]"
             >
               <div className="flex flex-col items-center gap-2">
                 <div className="w-6 h-6 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
@@ -102,8 +100,7 @@ export default function WalkthroughDiagramPanel({
             </div>
           ) : (
             <div
-              className="flex flex-col items-center justify-center gap-3 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-dashed border-gray-200 dark:border-gray-700"
-              style={{ minHeight: '280px' }}
+              className="flex flex-col items-center justify-center gap-3 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-dashed border-gray-200 dark:border-gray-700 min-h-[200px] sm:min-h-[250px] lg:min-h-[300px]"
             >
               <p className="text-xs text-gray-400 dark:text-gray-500">
                 {t('diagramNotAvailable')}
@@ -142,8 +139,8 @@ export default function WalkthroughDiagramPanel({
               <Image
                 src={imageUrl}
                 alt={stepDescription || `Step ${currentStep + 1} diagram (zoomed)`}
-                width={1200}
-                height={800}
+                width={1800}
+                height={1200}
                 className="max-w-full max-h-[90vh] object-contain rounded-lg dark:invert dark:hue-rotate-180"
                 unoptimized
               />

@@ -10,7 +10,10 @@ import type { PastExamTemplate, AnalysisStatus } from '@/types/past-exam'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { ToastContainer, type Toast } from '@/components/ui/Toast'
 import dynamic from 'next/dynamic'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('page:settings-past-exams-pagex')
 const ExamPredictionPanel = dynamic(
   () => import('@/components/exams/ExamPredictionPanel'),
   { ssr: false }
@@ -587,7 +590,7 @@ export default function PastExamsPage() {
 
         setUserSubjects(subjects)
       } catch (err) {
-        console.error('Failed to load subjects:', err)
+        log.error({ detail: err }, 'Failed to load subjects')
       } finally {
         setLoadingSubjects(false)
       }
@@ -621,7 +624,7 @@ export default function PastExamsPage() {
           setTemplateCounts(counts)
         }
       } catch (err) {
-        console.error('Failed to load counts:', err)
+        log.error({ detail: err }, 'Failed to load counts')
       }
     }
 
@@ -712,7 +715,7 @@ export default function PastExamsPage() {
 
       addToast('success', t('deleteSuccess'))
     } catch (err) {
-      console.error('Delete error:', err)
+      log.error({ detail: err }, 'Delete error')
       addToast('error', t('errors.deleteFailed'))
     } finally {
       setDeletingId(null)
@@ -736,7 +739,7 @@ export default function PastExamsPage() {
         await mutate(`${PAST_EXAMS_CACHE_KEY}?subjectId=${encodeURIComponent(selectedSubject)}`)
       }
     } catch (err) {
-      console.error('Analysis error:', err)
+      log.error({ detail: err }, 'Analysis error')
       await mutate(PAST_EXAMS_CACHE_KEY)
     } finally {
       setAnalyzingId(null)

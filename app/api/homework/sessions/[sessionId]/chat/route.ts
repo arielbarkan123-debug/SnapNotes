@@ -15,6 +15,9 @@ import { createErrorResponse, ErrorCodes, mapClaudeAPIError } from '@/lib/errors
 import { loadUserProfile } from '@/lib/user-profile'
 import { getStudentContext, generateDirectives } from '@/lib/student-context'
 import { recordHomeworkMisconception } from '@/lib/homework/misconception-recorder'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:homework-chat')
 
 // Allow 120 seconds — engine diagram generation can take 10-60s on top of AI response
 export const maxDuration = 120
@@ -210,7 +213,7 @@ export async function POST(
           tutorResponse.shouldEndSession = true
         }
       } catch (error) {
-        console.error('Solution check error:', error)
+        log.error({ err: error }, 'Solution check error')
       }
     }
 
@@ -277,7 +280,7 @@ export async function POST(
         breakthroughMoment: tutorResponse.celebrationMessage,
       })
     } catch (error) {
-      console.error('Progress update error:', error)
+      log.error({ err: error }, 'Progress update error')
     }
 
     // Step 7: If solved, mark session as completed
@@ -312,7 +315,7 @@ export async function POST(
       relatedVideos,
     })
   } catch (error) {
-    console.error('Chat error:', error)
+    log.error({ err: error }, 'Chat error')
     // Map Claude API errors (credits exhausted, rate limited, etc.) to specific codes
     // so the client shows a helpful message instead of a generic "chat failed"
     const mapped = mapClaudeAPIError(error)

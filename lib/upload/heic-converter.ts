@@ -10,6 +10,10 @@
  *   const jpegFile = await convertHeicToJpeg(heicFile)
  */
 
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('upload:heic-converter')
+
 /**
  * Check if file is HEIC/HEIF format
  */
@@ -40,7 +44,7 @@ async function isValidJpeg(file: File): Promise<boolean> {
  * Includes validation to ensure the converted file is a valid JPEG
  */
 export async function convertHeicToJpeg(file: File): Promise<File> {
-  console.log('[HEIC Converter] Converting HEIC to JPEG:', file.name, 'size:', file.size)
+  log.info({ fileName: file.name, size: file.size }, 'Converting HEIC to JPEG')
 
   try {
     // Dynamic import - heic2any is only loaded when this function is called
@@ -57,7 +61,7 @@ export async function convertHeicToJpeg(file: File): Promise<File> {
 
     // Validate the blob exists and has content
     if (!resultBlob || resultBlob.size === 0) {
-      console.error('[HEIC Converter] Conversion produced empty blob')
+      log.error('Conversion produced empty blob')
       throw new Error('HEIC conversion produced empty file')
     }
 
@@ -68,20 +72,20 @@ export async function convertHeicToJpeg(file: File): Promise<File> {
     // Validate the converted file is a proper JPEG (check magic bytes)
     const isValid = await isValidJpeg(convertedFile)
     if (!isValid) {
-      console.error('[HEIC Converter] Conversion produced invalid JPEG (bad magic bytes), size:', convertedFile.size)
+      log.error({ size: convertedFile.size }, 'Conversion produced invalid JPEG (bad magic bytes)')
       throw new Error('HEIC conversion produced corrupted file')
     }
 
     // Validate reasonable size (at least 1KB for a real image)
     if (convertedFile.size < 1024) {
-      console.error('[HEIC Converter] Conversion produced suspiciously small file:', convertedFile.size)
+      log.error({ size: convertedFile.size }, 'Conversion produced suspiciously small file')
       throw new Error('HEIC conversion produced invalid file (too small)')
     }
 
-    console.log('[HEIC Converter] Conversion successful:', newFileName, 'size:', convertedFile.size, 'valid JPEG: true')
+    log.info({ fileName: newFileName, size: convertedFile.size }, 'Conversion successful')
     return convertedFile
   } catch (error) {
-    console.error('[HEIC Converter] Conversion failed:', error)
+    log.error({ err: error }, 'Conversion failed')
 
     // Check if it's a SecurityError from Web Worker
     if (error instanceof Error && error.name === 'SecurityError') {

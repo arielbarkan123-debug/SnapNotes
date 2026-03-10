@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getStudentContext, generateDirectives } from '@/lib/student-context'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:dashboard-intelligence')
 
 /**
  * GET /api/dashboard/intelligence
@@ -42,7 +45,7 @@ export async function GET() {
       sessionsThisWeek: ctx.sessionsThisWeek,
     })
   } catch (error) {
-    console.error('[Dashboard Intelligence] Error:', error)
+    log.error({ err: error }, 'Error')
     return NextResponse.json({ error: 'Failed to load intelligence' }, { status: 500 })
   }
 }

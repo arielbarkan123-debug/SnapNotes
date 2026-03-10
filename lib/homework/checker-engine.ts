@@ -43,6 +43,9 @@ import {
 } from '@/lib/evaluation/answer-checker'
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
 import { smartExtractAndSolve } from './smart-solver'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('homework:checker')
 
 // ============================================================================
 // Error Codes for Homework Checker Engine
@@ -124,7 +127,7 @@ async function fetchImageAsBase64(url: string): Promise<FetchedImage> {
   const startTime = Date.now()
 
   try {
-    console.log('[Checker] Fetching image:', url.substring(0, 100) + '...')
+    log.info({ detail: [url.substring(0, 100) + '...'] }, 'Fetching image')
 
     const response = await fetch(url, {
       signal: controller.signal,
@@ -135,7 +138,7 @@ async function fetchImageAsBase64(url: string): Promise<FetchedImage> {
     })
 
     const fetchTime = Date.now() - startTime
-    console.log('[Checker] Fetch response received in', fetchTime, 'ms, status:', response.status)
+    log.info({ detail: response.status }, 'Fetch response received in', fetchTime, 'ms, status')
 
     if (!response.ok) {
       throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`)
@@ -152,7 +155,7 @@ async function fetchImageAsBase64(url: string): Promise<FetchedImage> {
     if (contentType.includes('heic') || contentType.includes('heif')) {
       // HEIC/HEIF not supported by Claude
       // Client-side conversion should have handled this, but if it got through:
-      console.error('[CheckerEngine/ImageFetch] HEIC/HEIF image received - client conversion may have failed')
+      log.error('HEIC/HEIF image received - client conversion may have failed')
       throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_IMG_005, 'This image format is not supported. Please try uploading again or use a JPEG/PNG image.', 'CheckerEngine/ImageFetch/HEIC'))
     } else if (contentType.includes('pdf')) {
       // PDF is supported by Claude Vision API
@@ -168,23 +171,24 @@ async function fetchImageAsBase64(url: string): Promise<FetchedImage> {
     const base64 = finalImageData.toString('base64')
     const totalTime = Date.now() - startTime
 
-    console.log('[Checker] Image processed:', {
+    log.info({
       size: finalImageData.byteLength,
       type: mediaType,
       fetchTime: fetchTime + 'ms',
       bufferTime: bufferTime + 'ms',
       totalTime: totalTime + 'ms',
-    })
+    }, 'Image processed')
 
     return { base64, mediaType }
   } catch (error) {
     const elapsed = Date.now() - startTime
-    console.error('[Checker] Image fetch failed after', elapsed, 'ms:', {
+    log.error({
+      elapsedMs: elapsed,
       url: url.substring(0, 100) + '...',
       error: error instanceof Error ? error.message : String(error),
       name: error instanceof Error ? error.name : 'Unknown',
       isAbort: error instanceof Error && error.name === 'AbortError',
-    })
+    }, 'Image fetch failed')
     throw error
   } finally {
     clearTimeout(timeout)
@@ -300,7 +304,7 @@ function ensureGradeConsistency(output: CheckerOutput): CheckerOutput {
   try {
     // Safety check - ensure we have valid output
     if (!output?.feedback) {
-      console.error('[Homework Checker] Invalid output in ensureGradeConsistency')
+      log.error('Invalid output in ensureGradeConsistency')
       return output
     }
 
@@ -314,19 +318,19 @@ function ensureGradeConsistency(output: CheckerOutput): CheckerOutput {
     )
 
     // Log for debugging
-    console.log('[Homework Checker] Grade consistency check:', {
+    log.info({
       declaredGrade,
       calculatedGrade,
       correctPoints: correctPoints.length,
       improvementPoints: improvementPoints.length,
       majorErrors: improvementPoints.filter(p => p.severity === 'major').length
-    })
+    }, 'Grade consistency check')
 
     // If the grades differ by more than 15 points, use the calculated grade
     // This catches cases where Claude says "60%" but all items are correct
     const discrepancy = Math.abs(declaredGrade - calculatedGrade)
     if (discrepancy > 15) {
-      console.log(`[Homework Checker] Grade discrepancy detected! Declared: ${declaredGrade}, Calculated: ${calculatedGrade}. Using calculated grade.`)
+      log.info(`Grade discrepancy detected! Declared: ${declaredGrade}, Calculated: ${calculatedGrade}. Using calculated grade.`)
       output.feedback.gradeEstimate = `${calculatedGrade}/100`
       output.feedback.gradeLevel = calculatedLevel
     }
@@ -337,7 +341,7 @@ function ensureGradeConsistency(output: CheckerOutput): CheckerOutput {
       const currentGrade = parseGradeToNumber(output.feedback.gradeEstimate)
       if (currentGrade < 75) {
         const adjustedGrade = Math.max(currentGrade, 80)
-        console.log(`[Homework Checker] No major errors but low grade. Adjusting ${currentGrade} -> ${adjustedGrade}`)
+        log.info(`No major errors but low grade. Adjusting ${currentGrade} -> ${adjustedGrade}`)
         output.feedback.gradeEstimate = `${adjustedGrade}/100`
         output.feedback.gradeLevel = 'good'
       }
@@ -347,7 +351,7 @@ function ensureGradeConsistency(output: CheckerOutput): CheckerOutput {
     if (correctPoints.length > 0 && improvementPoints.length === 0) {
       const currentGrade = parseGradeToNumber(output.feedback.gradeEstimate)
       if (currentGrade < 90) {
-        console.log(`[Homework Checker] All items correct but grade was ${currentGrade}. Setting to 95.`)
+        log.info(`All items correct but grade was ${currentGrade}. Setting to 95.`)
         output.feedback.gradeEstimate = '95/100'
         output.feedback.gradeLevel = 'excellent'
       }
@@ -356,7 +360,7 @@ function ensureGradeConsistency(output: CheckerOutput): CheckerOutput {
     return output
   } catch (error) {
     // If consistency check fails, return original output rather than crashing
-    console.error('[Homework Checker] Error in ensureGradeConsistency:', error)
+    log.error({ detail: error }, 'Error in ensureGradeConsistency')
     return output
   }
 }
@@ -606,7 +610,7 @@ Respond ONLY with valid JSON:
   try {
     parsed = JSON.parse(jsonStr)
   } catch {
-    console.error('[Checker] Failed to parse before-submit AI response:', jsonStr.substring(0, 200))
+    log.error({ detail: [jsonStr.substring(0, 200)] }, 'Failed to parse before-submit AI response')
     throw new Error('Failed to parse AI response for before-submit check. Please try again.')
   }
   const items: BeforeSubmitItem[] = (parsed.items || []).map((item: Record<string, unknown>, idx: number) => ({
@@ -696,7 +700,7 @@ Respond ONLY with valid JSON:
   try {
     parsedRubric = JSON.parse(rubricJson)
   } catch {
-    console.error('[Checker] Failed to parse rubric AI response:', rubricJson.substring(0, 200))
+    log.error({ detail: [rubricJson.substring(0, 200)] }, 'Failed to parse rubric AI response')
     throw new Error('Failed to parse AI response for rubric extraction. Please try again.')
   }
   const criteria: Array<{ criterion: string; maxPoints: number; description: string }> = parsedRubric.criteria || []
@@ -760,7 +764,7 @@ Respond ONLY with valid JSON:
   try {
     parsed = JSON.parse(gradingJson)
   } catch {
-    console.error('[Checker] Failed to parse rubric grading AI response:', gradingJson.substring(0, 200))
+    log.error({ detail: [gradingJson.substring(0, 200)] }, 'Failed to parse rubric grading AI response')
     throw new Error('Failed to parse AI response for rubric grading. Please try again.')
   }
   const breakdown: RubricCriterion[] = (parsed.breakdown || []).map((item: Record<string, unknown>) => ({
@@ -813,7 +817,7 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
     // TEXT MODE: Skip image fetching, use text directly
     // ============================================================================
     if (input.inputMode === 'text') {
-      console.log('[Checker] Text mode - skipping image fetch, analyzing text directly...')
+      log.info('Text mode - skipping image fetch, analyzing text directly...')
       return analyzeHomeworkText(client, input)
     }
 
@@ -823,7 +827,7 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
     const mode: CheckMode = input.mode || 'standard'
 
     if (mode === 'batch_worksheet') {
-      console.log('[Checker] Batch worksheet mode — analyzing full worksheet...')
+      log.info('Batch worksheet mode — analyzing full worksheet...')
       if (!input.taskImageUrl) {
         throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_IMG_004, 'Task image URL is required for batch worksheet mode'))
       }
@@ -906,7 +910,7 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
     // MODE ROUTING: Before-Submit
     // ============================================================================
     if (mode === 'before_submit') {
-      console.log('[Checker] Before-submit mode — checking without revealing answers...')
+      log.info('Before-submit mode — checking without revealing answers...')
 
       const textContent = input.taskText || input.taskDocumentText || null
       if (!input.taskImageUrl && !input.answerImageUrl && !textContent) {
@@ -977,7 +981,7 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
     // MODE ROUTING: Rubric
     // ============================================================================
     if (mode === 'rubric') {
-      console.log('[Checker] Rubric mode — two-phase rubric grading...')
+      log.info('Rubric mode — two-phase rubric grading...')
 
       if (!input.rubricImageUrls?.length) {
         throw new Error('Rubric images are required for rubric mode')
@@ -1071,21 +1075,21 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
     }
 
     try {
-      console.log('[Checker] Starting three-phase grading pipeline...')
+      log.info('Starting three-phase grading pipeline...')
       return await analyzeHomeworkThreePhase(client, input)
     } catch (pipelineError) {
       // Fallback: if the three-phase pipeline fails, use legacy single-pass
-      console.warn('[Checker] Three-phase pipeline failed, falling back to legacy single-pass:', pipelineError instanceof Error ? pipelineError.message : String(pipelineError))
+      log.warn({ detail: pipelineError instanceof Error ? pipelineError.message : String(pipelineError) }, 'Three-phase pipeline failed, falling back to legacy single-pass')
       return await analyzeHomeworkLegacy(client, input)
     }
   } catch (error) {
     // Detailed error logging for debugging mobile vs desktop issues
-    console.error('[Homework Checker] analyzeHomework error:', {
+    log.error({
       message: error instanceof Error ? error.message : String(error),
       name: error instanceof Error ? error.name : 'Unknown',
       stack: error instanceof Error ? error.stack : undefined,
       cause: error instanceof Error ? (error as Error & { cause?: unknown }).cause : undefined,
-    })
+    }, 'analyzeHomework error')
 
     const errorMessage = error instanceof Error ? error.message.toLowerCase() : ''
     const errorName = error instanceof Error ? error.name : ''
@@ -1111,7 +1115,7 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
 
 async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput): Promise<CheckerOutput> {
   const isSeparateImages = !!input.answerImageUrl
-  console.log(`[Checker/3Phase] Mode: ${isSeparateImages ? 'separate' : 'combined'} images`)
+  log.info(`Mode: ${isSeparateImages ? 'separate' : 'combined'} images`)
 
   // Fetch all images upfront
   const taskImage = await fetchImageAsBase64(input.taskImageUrl!)
@@ -1119,7 +1123,7 @@ async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput)
 
   // PDF documents can't go through the three-phase pipeline (need legacy)
   if (taskImage.mediaType === 'application/pdf' || input.taskDocumentText || input.answerDocumentText) {
-    console.log('[Checker/3Phase] PDF/DOCX detected, falling back to legacy pipeline')
+    log.info('PDF/DOCX detected, falling back to legacy pipeline')
     throw new Error('PDF/DOCX not supported in three-phase pipeline')
   }
 
@@ -1148,7 +1152,7 @@ async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput)
   const SMART_SOLVER_ENABLED = process.env.SMART_SOLVER_ENABLED === 'true'
   const phase1Fn = SMART_SOLVER_ENABLED ? smartExtractAndSolve : extractAndSolveProblems
   if (SMART_SOLVER_ENABLED) {
-    console.log('[Checker/3Phase] Smart Solver ENABLED — using decompose-solve-verify pipeline')
+    log.info('Smart Solver ENABLED — using decompose-solve-verify pipeline')
   }
 
   let solutionSet: SolutionSet
@@ -1156,7 +1160,7 @@ async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput)
 
   if (isSeparateImages && answerImage) {
     const answerMediaType = answerImage.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
-    console.log('[Checker/3Phase] Running Phase 1 + Phase 2 in parallel...')
+    log.info('Running Phase 1 + Phase 2 in parallel...')
 
     // Phase 1 and Phase 2 run truly in parallel — they look at different images.
     // Phase 2 runs without a problem list; it transcribes all answers in visual
@@ -1166,7 +1170,7 @@ async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput)
       // Smart solver with fallback to legacy on failure
       phase1Promise = phase1Fn(client, taskImage.base64, taskMediaType, false, referenceImages)
         .catch((err) => {
-          console.warn(`[Checker/3Phase] Smart solver failed, falling back to legacy: ${err instanceof Error ? err.message : err}`)
+          log.warn(`Smart solver failed, falling back to legacy: ${err instanceof Error ? err.message : err}`)
           return extractAndSolveProblems(client, taskImage.base64, taskMediaType, false, referenceImages)
         })
     } else {
@@ -1187,7 +1191,7 @@ async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput)
       const problemCount = solutionSet.problems.length
 
       if (answerCount !== problemCount) {
-        console.warn(`[Checker/3Phase] Phase 1/2 count mismatch: ${problemCount} problems vs ${answerCount} student answers`)
+        log.warn(`Phase 1/2 count mismatch: ${problemCount} problems vs ${answerCount} student answers`)
       }
 
       // Map by index up to the minimum of both arrays
@@ -1198,18 +1202,18 @@ async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput)
 
       // Drop excess answers that don't map to any problem (likely scratch work)
       if (answerCount > problemCount) {
-        console.warn(`[Checker/3Phase] Dropping ${answerCount - problemCount} excess student answers (no matching problems)`)
+        log.warn(`Dropping ${answerCount - problemCount} excess student answers (no matching problems)`)
         studentAnswerSet.answers = studentAnswerSet.answers.slice(0, problemCount)
       }
     }
   } else {
     // Combined image mode: Phase 1 extracts problems AND reads student answers
-    console.log('[Checker/3Phase] Running Phase 1 (combined mode — extract + solve + read)...')
+    log.info('Running Phase 1 (combined mode — extract + solve + read)...')
     if (SMART_SOLVER_ENABLED) {
       try {
         solutionSet = await phase1Fn(client, taskImage.base64, taskMediaType, true, referenceImages)
       } catch (err) {
-        console.warn(`[Checker/3Phase] Smart solver failed in combined mode, falling back: ${err instanceof Error ? err.message : err}`)
+        log.warn(`Smart solver failed in combined mode, falling back: ${err instanceof Error ? err.message : err}`)
         solutionSet = await extractAndSolveProblems(client, taskImage.base64, taskMediaType, true, referenceImages)
       }
     } else {
@@ -1220,7 +1224,7 @@ async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput)
   // ============================================================================
   // mathjs Verification + Retry on Disagreement
   // ============================================================================
-  console.log('[Checker/3Phase] Running mathjs verification...')
+  log.info('Running mathjs verification...')
   const disagreements: VerifiedProblem[] = []
 
   for (const problem of solutionSet.problems) {
@@ -1230,14 +1234,14 @@ async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput)
     problem.verificationStatus = verification.status
 
     if (verification.status === 'disagreement') {
-      console.warn(`[Checker/3Phase] mathjs disagrees on problem ${problem.id}: Claude="${problem.correctAnswer}", mathjs="${verification.result}"`)
+      log.warn(`mathjs disagrees on problem ${problem.id}: Claude="${problem.correctAnswer}", mathjs="${verification.result}"`)
       disagreements.push(problem)
     }
   }
 
   // Retry Phase 1 for disagreements
   if (disagreements.length > 0) {
-    console.log(`[Checker/3Phase] Retrying ${disagreements.length} problems with mathjs disagreement...`)
+    log.info(`Retrying ${disagreements.length} problems with mathjs disagreement...`)
     for (const problem of disagreements) {
       try {
         const corrected = await recheckProblem(client, problem)
@@ -1250,13 +1254,13 @@ async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput)
           problem.mathjsResult = recheck.result
           problem.verificationStatus = recheck.status
           if (recheck.status === 'disagreement') {
-            console.warn(`[Checker/3Phase] Problem ${problem.id} STILL disagrees after recheck: Claude="${corrected.correctAnswer}", mathjs="${recheck.result}". Using Claude's answer — mathjs may not handle this expression.`)
+            log.warn(`Problem ${problem.id} STILL disagrees after recheck: Claude="${corrected.correctAnswer}", mathjs="${recheck.result}". Using Claude's answer — mathjs may not handle this expression.`)
           } else {
-            console.log(`[Checker/3Phase] Problem ${problem.id} rechecked: status=${recheck.status}`)
+            log.info(`Problem ${problem.id} rechecked: status=${recheck.status}`)
           }
         }
       } catch (retryErr) {
-        console.warn(`[Checker/3Phase] Retry failed for problem ${problem.id}:`, retryErr instanceof Error ? retryErr.message : String(retryErr))
+        log.warn({ detail: retryErr instanceof Error ? retryErr.message : String(retryErr) }, `Retry failed for problem ${problem.id}`)
       }
     }
   }
@@ -1264,7 +1268,7 @@ async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput)
   // ============================================================================
   // Phase 3 — Compare & Generate Feedback
   // ============================================================================
-  console.log('[Checker/3Phase] Running Phase 3 (compare & generate feedback)...')
+  log.info('Running Phase 3 (compare & generate feedback)...')
   const result = await compareAndGenerateFeedback(
     client,
     solutionSet,
@@ -1277,14 +1281,14 @@ async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput)
   // ============================================================================
   // Feedback Quality Floor
   // ============================================================================
-  console.log('[Checker/3Phase] Checking feedback quality...')
+  log.info('Checking feedback quality...')
   const qualityResult = validateFeedbackQuality(
     result.feedback.correctPoints,
     result.feedback.improvementPoints
   )
 
   if (!qualityResult.passed) {
-    console.log('[Checker/3Phase] Feedback quality below floor, regenerating weak items...')
+    log.info('Feedback quality below floor, regenerating weak items...')
     const failingItems: { type: 'correct' | 'improvement'; index: number; point: FeedbackPoint }[] = []
     const contexts: { correctAnswer: string; studentAnswer: string; questionText: string }[] = []
 
@@ -1346,7 +1350,7 @@ async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput)
         result.feedback.improvementPoints
       )
       if (!recheck.passed) {
-        console.warn(`[Checker/3Phase] Feedback still below quality floor after regeneration (${recheck.reasons.length} issues remain). Accepting as-is.`)
+        log.warn(`Feedback still below quality floor after regeneration (${recheck.reasons.length} issues remain). Accepting as-is.`)
       }
     }
   }
@@ -1561,7 +1565,7 @@ function parseSolutionSetResponse(response: Anthropic.Message, includeStudentAns
     } : {}),
   }))
 
-  console.log(`[Checker/Phase1] Extracted ${problems.length} problems, language: ${detectedLanguage}`)
+  log.info(`Extracted ${problems.length} problems, language: ${detectedLanguage}`)
 
   return {
     problems,
@@ -1635,7 +1639,7 @@ async function compareAndGenerateFeedback(
     // Didn't match deterministically — need AI comparison
   }
 
-  console.log(`[Checker/Phase3] Deterministic matches: ${deterministicResults.size}/${solutionSet.problems.length}`)
+  log.info(`Deterministic matches: ${deterministicResults.size}/${solutionSet.problems.length}`)
 
   // ============================================================================
   // Layer 2 + 3: AI comparison + feedback generation
@@ -1789,18 +1793,18 @@ async function streamWithRetry(
       }
 
       response = await stream.finalMessage()
-      console.log(`[Checker] Response received (attempt ${attempt}), tokens:`, response.usage?.output_tokens)
+      log.info({ detail: response.usage?.output_tokens }, `Response received (attempt ${attempt}), tokens`)
       break
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
 
       if (!isRetryableError(error) || attempt === MAX_RETRIES) {
-        console.error(`[Checker] Attempt ${attempt}/${MAX_RETRIES} failed (not retrying):`, lastError.message)
+        log.error({ detail: lastError.message }, `Attempt ${attempt}/${MAX_RETRIES} failed (not retrying)`)
         throw error
       }
 
       const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1)
-      console.warn(`[Checker] Attempt ${attempt}/${MAX_RETRIES} failed: ${lastError.message}. Retrying in ${delay}ms...`)
+      log.warn(`Attempt ${attempt}/${MAX_RETRIES} failed: ${lastError.message}. Retrying in ${delay}ms...`)
       await new Promise(resolve => setTimeout(resolve, delay))
     }
   }
@@ -1817,7 +1821,7 @@ async function streamWithRetry(
 // ============================================================================
 
 async function analyzeHomeworkLegacy(client: Anthropic, input: CheckerInput): Promise<CheckerOutput> {
-  console.log('[Checker/Legacy] Running legacy single-pass analysis...')
+  log.info('Running legacy single-pass analysis...')
 
   // Fetch images
   const taskImage = await fetchImageAsBase64(input.taskImageUrl!)
@@ -2080,7 +2084,7 @@ Return your analysis as JSON in this exact format:
 □ If all answers are correct, is my grade 95-100%?
 `
 
-  console.log('[CheckerEngine/TextMode] Sending text-based request to Claude...')
+  log.info('Sending text-based request to Claude...')
 
   // Use text-only API (cheaper than Vision)
   let response: Anthropic.Message | null = null
@@ -2099,7 +2103,7 @@ Return your analysis as JSON in this exact format:
       }
 
       response = await stream.finalMessage()
-      console.log('[CheckerEngine/TextMode] Response received, tokens used:', response.usage?.output_tokens)
+      log.info({ detail: response.usage?.output_tokens }, 'Response received, tokens used')
       break
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
@@ -2117,12 +2121,12 @@ Return your analysis as JSON in this exact format:
       }
 
       if (!isRetryableError(error) || attempt === MAX_RETRIES) {
-        console.error(`[CheckerEngine/TextMode] Attempt ${attempt}/${MAX_RETRIES} failed (not retrying):`, lastError.message)
+        log.error({ detail: lastError.message }, `Attempt ${attempt}/${MAX_RETRIES} failed (not retrying)`)
         throw new Error(formatEngineError(ENGINE_ERROR_CODES.ENG_TXT_001, lastError.message, `CheckerEngine/TextMode/Attempt:${attempt}`))
       }
 
       const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1)
-      console.warn(`[CheckerEngine/TextMode] Attempt ${attempt}/${MAX_RETRIES} failed: ${lastError.message}. Retrying in ${delay}ms...`)
+      log.warn(`Attempt ${attempt}/${MAX_RETRIES} failed: ${lastError.message}. Retrying in ${delay}ms...`)
       await new Promise(resolve => setTimeout(resolve, delay))
     }
   }
@@ -2194,7 +2198,7 @@ function parseCheckerResponse(response: Anthropic.Message): CheckerOutput {
       }
     }
   } catch (error) {
-    console.error('Failed to parse checker response:', error)
+    log.error({ detail: error }, 'Failed to parse checker response')
   }
 
   return getDefaultOutput()

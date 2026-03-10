@@ -5,6 +5,9 @@ import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum
 import type { StudySystem } from '@/lib/curriculum/types'
 import type { GeneratedCourse } from '@/types'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:concepts-extract')
 
 // Allow 2 minutes for concept extraction (involves AI processing)
 export const maxDuration = 120
@@ -119,7 +122,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[Concept Extraction API] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.CONCEPT_EXTRACTION_FAILED)
   }
 }

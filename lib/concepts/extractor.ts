@@ -17,6 +17,9 @@ import type {
   ContentConceptInsert,
 } from './types'
 import type { GeneratedCourse, Lesson } from '@/types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('concepts:extractor')
 
 // =============================================================================
 // Anthropic Client
@@ -334,7 +337,7 @@ export async function storeConcepts(
       .single()
 
     if (error) {
-      console.error(`Failed to insert concept "${concept.name}":`, error)
+      log.error({ detail: error }, `Failed to insert concept "${concept.name}"`)
       continue
     }
 
@@ -417,7 +420,7 @@ export async function storeContentMappings(
     const { error } = await supabase.from('content_concepts').insert(insertData)
 
     if (error) {
-      console.error('Failed to insert content mappings:', error)
+      log.error({ detail: error }, 'Failed to insert content mappings')
     }
   }
 }
@@ -470,7 +473,7 @@ export async function getConceptsForCourse(courseId: string): Promise<Concept[]>
     .eq('course_id', courseId)
 
   if (error) {
-    console.error('Failed to get concepts for course:', error)
+    log.error({ detail: error }, 'Failed to get concepts for course')
     return []
   }
 
@@ -507,7 +510,7 @@ export async function getConceptsForLesson(
     .eq('lesson_index', lessonIndex)
 
   if (error) {
-    console.error('Failed to get concepts for lesson:', error)
+    log.error({ detail: error }, 'Failed to get concepts for lesson')
     return []
   }
 

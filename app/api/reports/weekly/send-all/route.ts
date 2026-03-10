@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { generateWeeklyReport } from '@/lib/email/report-generator'
 import { generateReportHtml } from '@/lib/email/templates/WeeklyProgressReport'
 import { sendEmail } from '@/lib/email/resend-client'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:reports-send-all')
 
 export const maxDuration = 300
 
@@ -35,7 +38,7 @@ export async function POST(request: NextRequest) {
       .not('parent_email', 'is', null)
 
     if (error) {
-      console.error('[CronReports] DB error:', error)
+      log.error({ err: error }, 'DB error')
       return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
     }
 
@@ -71,13 +74,13 @@ export async function POST(request: NextRequest) {
           }
         } else {
           failed++
-          console.error(`[CronReports] Failed for user ${user.user_id}: ${result.error}`)
+          log.error({ user_id: user.user_id, error: result.error }, 'Failed for user')
           errors.push(result.error || 'Send failed')
         }
       } catch (err) {
         failed++
         const errMsg = err instanceof Error ? err.message : 'Unknown error'
-        console.error(`[CronReports] Error for user ${user.user_id}: ${errMsg}`)
+        log.error({ user_id: user.user_id, errMsg: errMsg }, 'Error for user')
         errors.push(errMsg)
       }
 
@@ -85,7 +88,7 @@ export async function POST(request: NextRequest) {
       await new Promise(resolve => setTimeout(resolve, 100))
     }
 
-    console.log(`[CronReports] Complete: ${sent} sent, ${failed} failed of ${users.length} total`)
+    log.debug({ sent: sent, failed: failed, length: users.length }, 'Complete: sent, failed of total')
 
     return NextResponse.json({
       success: true,
@@ -95,7 +98,7 @@ export async function POST(request: NextRequest) {
       errors: errors.length > 0 ? errors.slice(0, 10) : undefined,
     })
   } catch (error) {
-    console.error('[CronReports] Error:', error)
+    log.error({ err: error }, 'Error')
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

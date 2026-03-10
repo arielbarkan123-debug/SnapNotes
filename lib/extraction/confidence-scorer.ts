@@ -6,6 +6,9 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('extraction:confidence-scorer')
 
 // =============================================================================
 // Types
@@ -391,7 +394,7 @@ export async function recordExtractionFeedback(
 
     return { success: true, feedbackId: data.id }
   } catch (error) {
-    console.error('Error recording extraction feedback:', error)
+    log.error({ err: error }, 'Error recording extraction feedback:')
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -438,7 +441,7 @@ export async function getExtractionFeedback(
       createdAt: new Date(row.created_at),
     }))
   } catch (error) {
-    console.error('Error fetching extraction feedback:', error)
+    log.error({ err: error }, 'Error fetching extraction feedback:')
     return []
   }
 }
@@ -465,7 +468,7 @@ export async function updateFeedbackStatus(
 
     return { success: true }
   } catch (error) {
-    console.error('Error updating feedback status:', error)
+    log.error({ err: error }, 'Error updating feedback status:')
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -545,7 +548,7 @@ export async function generateQualityReport(
       recommendations,
     }
   } catch (error) {
-    console.error('Error generating quality report:', error)
+    log.error({ err: error }, 'Error generating quality report:')
     return null
   }
 }

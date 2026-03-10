@@ -1,4 +1,7 @@
 import { Sandbox } from '@e2b/code-interpreter';
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:e2b-executor')
 
 export type RenderMode = 'latex' | 'matplotlib';
 
@@ -110,12 +113,12 @@ else:
 async function executeMatplotlib(code: string): Promise<ExecutionResult> {
   // Use custom template if available (has better fonts), otherwise default
   // 30s sandbox creation timeout — if it doesn't start in 30s, it won't start at all
-  console.log(`[E2B] Creating matplotlib sandbox (template: ${LATEX_TEMPLATE_ID || 'default'}, E2B_API_KEY set: ${!!process.env.E2B_API_KEY})`);
+  log.info(`Creating matplotlib sandbox (template: ${LATEX_TEMPLATE_ID || 'default'}, E2B_API_KEY set: ${!!process.env.E2B_API_KEY})`);
   const sandboxStart = Date.now();
   const sandbox = LATEX_TEMPLATE_ID
     ? await Sandbox.create(LATEX_TEMPLATE_ID, { timeoutMs: 30000 })
     : await Sandbox.create({ timeoutMs: 30000 });
-  console.log(`[E2B] Sandbox created in ${Date.now() - sandboxStart}ms`);
+  log.info(`Sandbox created in ${Date.now() - sandboxStart}ms`);
   try {
     // Write the script
     await sandbox.files.write('/tmp/diagram.py', code);

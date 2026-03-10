@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/api/errors'
 import { predictExamTopics, type ExamAnalysis } from '@/lib/exam-prediction/predictor'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:exam-prediction')
 
 export const maxDuration = 60
 
@@ -58,7 +61,7 @@ export async function POST(request: NextRequest) {
       prediction,
     })
   } catch (error) {
-    console.error('[ExamPrediction] Error:', error)
+    log.error({ err: error }, 'Error')
     const message = error instanceof Error ? error.message : 'Failed to generate prediction'
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, message)
   }

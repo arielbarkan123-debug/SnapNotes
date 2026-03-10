@@ -16,6 +16,9 @@ import {
   LIKERT_OPTIONS,
 } from '@/lib/metrics'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:metrics-self-efficacy')
 
 // =============================================================================
 // GET: Fetch self-efficacy data
@@ -70,7 +73,7 @@ export async function GET(request: NextRequest) {
         return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Invalid action')
     }
   } catch (error) {
-    console.error('Error in self-efficacy GET:', error)
+    log.error({ err: error }, 'Error in self-efficacy GET')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
@@ -146,7 +149,7 @@ export async function POST(request: NextRequest) {
       analysis,
     })
   } catch (error) {
-    console.error('Error in self-efficacy POST:', error)
+    log.error({ err: error }, 'Error in self-efficacy POST')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }

@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/api/errors'
 import { analyzeMistakePatterns } from '@/lib/insights/mistake-analyzer'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:insights-mistakes')
 
 export const maxDuration = 60
 
@@ -22,7 +25,7 @@ export async function GET() {
       ...result,
     })
   } catch (error) {
-    console.error('[MistakeInsights] GET error:', error)
+    log.error({ err: error }, 'GET error')
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to analyze mistakes')
   }
 }
@@ -44,7 +47,7 @@ export async function POST() {
       ...result,
     })
   } catch (error) {
-    console.error('[MistakeInsights] POST error:', error)
+    log.error({ err: error }, 'POST error')
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to regenerate analysis')
   }
 }

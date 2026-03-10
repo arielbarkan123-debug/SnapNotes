@@ -5,6 +5,9 @@ import { ErrorCodes, createErrorResponse } from '@/lib/api/errors'
 import { getFilteredDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-schemas'
 import { AI_MODEL } from '@/lib/ai/claude'
 import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:prepare-chat')
 
 export const maxDuration = 120
 const MAX_TOKENS = 4096
@@ -39,13 +42,13 @@ function sanitizeDiagram(raw: unknown): Record<string, unknown> | null {
 
   // Must have a string type
   if (typeof d.type !== 'string' || !d.type.trim()) {
-    console.warn('[PrepareChat] Diagram rejected: missing or invalid type', d)
+    log.warn({ d }, 'Diagram rejected: missing or invalid type')
     return null
   }
 
   // Must have a data object
   if (!d.data || typeof d.data !== 'object') {
-    console.warn('[PrepareChat] Diagram rejected: missing or invalid data', { type: d.type })
+    log.warn({ type: d.type }, 'Diagram rejected: missing or invalid data')
     return null
   }
 
@@ -68,7 +71,7 @@ function sanitizeDiagram(raw: unknown): Record<string, unknown> | null {
   // Check that the type is a known diagram type (warn but still allow)
   const knownType = d.type in DIAGRAM_SCHEMAS
   if (!knownType) {
-    console.warn(`[PrepareChat] Diagram type '${d.type}' not in known schemas, passing through`)
+    log.warn({ type: d.type }, 'Diagram type not in known schemas, passing through')
   }
 
   return d
@@ -217,7 +220,7 @@ export async function POST(
     const diagramPrompt = userMessage
     const enginePromise = enableDiagrams && shouldUseEngine(diagramPrompt)
       ? tryEngineDiagram(diagramPrompt).catch((err) => {
-          console.warn('[PrepareChat] Engine diagram failed:', err)
+          log.warn({ err }, 'Engine diagram failed')
           return undefined
         })
       : Promise.resolve(undefined)
@@ -294,7 +297,7 @@ export async function POST(
       },
     })
   } catch (error) {
-    console.error('[PrepareChat] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to generate response')
   }
 }

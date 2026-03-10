@@ -18,6 +18,9 @@ import { routeQuestion } from './router';
 import { preCompute } from './smart-pipeline';
 import type { Lesson } from '@/types';
 import type { StepImage } from '@/components/homework/diagram/types';
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:integration')
 
 export { shouldUseEngine, tieredRoute } from './tiered-router';
 
@@ -63,14 +66,14 @@ export async function tryEngineDiagram(
   forcePipeline?: Pipeline,
   options?: { skipStepCapture?: boolean; skipQA?: boolean },
 ): Promise<EngineDiagramResult | undefined> {
-  console.log(`[Engine] tryEngineDiagram called with: "${question.slice(0, 80)}..."`);
+  log.info({ question: question.slice(0, 80) }, 'tryEngineDiagram called');
 
   if (!forcePipeline && !shouldUseEngine(question)) {
-    console.log('[Engine] shouldUseEngine returned false, skipping');
+    log.info('shouldUseEngine returned false, skipping');
     return undefined;
   }
 
-  console.log('[Engine] Calling generateDiagram...');
+  log.info('Calling generateDiagram...');
 
   try {
     // Pre-compute values with SymPy BEFORE parallel generation, so both
@@ -95,20 +98,20 @@ export async function tryEngineDiagram(
     ]);
 
     if ('error' in result) {
-      console.error(`[Engine] Generation failed: ${result.error}`, { pipeline: result.pipeline });
+      log.error({ error: result.error, pipeline: result.pipeline }, 'Generation failed');
       return undefined;
     }
 
-    console.log(`[Engine] Success! Pipeline: ${result.pipeline}, URL length: ${result.imageUrl?.length}`);
+    log.info({ pipeline: result.pipeline, urlLength: result.imageUrl?.length }, 'Generation succeeded');
 
     // Only attach layered TikZ if the ACTUAL result pipeline is tikz.
     // If tikz failed and fell back to matplotlib, layeredSource would be stale.
     const validLayeredSource = (result.pipeline === 'tikz' && layeredSource) ? layeredSource : null;
 
     if (validLayeredSource) {
-      console.log(`[Engine] Layered TikZ: ${validLayeredSource.steps.length} layers`);
+      log.info({ layers: validLayeredSource.steps.length }, 'Layered TikZ ready');
     } else if (layeredSource && result.pipeline !== 'tikz') {
-      console.log(`[Engine] Discarding layered TikZ — actual pipeline is ${result.pipeline} (fallback occurred)`);
+      log.info({ pipeline: result.pipeline }, 'Discarding layered TikZ — fallback occurred');
     }
 
     return {
@@ -122,7 +125,7 @@ export async function tryEngineDiagram(
       stepImages: result.stepImages,
     };
   } catch (err) {
-    console.error('[Engine] Unexpected error:', err);
+    log.error({ err: err }, 'Unexpected error:');
     return undefined;
   }
 }
@@ -176,7 +179,7 @@ async function runWithConcurrency<T>(
  */
 export async function generateDiagramsForSteps(
   lessons: Lesson[],
-  logPrefix = '[DiagramBatch]',
+  _logPrefix = '[DiagramBatch]',
 ): Promise<{ generated: number; attempted: number }> {
   // Collect all diagram steps that need generation
   const tasks: DiagramTask[] = [];
@@ -195,7 +198,7 @@ export async function generateDiagramsForSteps(
     return { generated: 0, attempted: 0 };
   }
 
-  console.log(`${logPrefix} Generating ${tasks.length} engine diagrams (max ${MAX_CONCURRENT_DIAGRAMS} concurrent)`);
+  log.info({ taskCount: tasks.length, maxConcurrent: MAX_CONCURRENT_DIAGRAMS }, 'Generating engine diagrams');
 
   // Run with concurrency limit instead of unbounded Promise.allSettled
   const results = await runWithConcurrency(
@@ -219,10 +222,10 @@ export async function generateDiagramsForSteps(
       };
       generated++;
     } else if (result.status === 'rejected') {
-      console.error(`${logPrefix} Diagram ${i} rejected:`, result.reason);
+      log.error({ diagramIndex: i, err: result.reason }, 'Diagram rejected');
     }
   }
 
-  console.log(`${logPrefix} Generated ${generated}/${tasks.length} diagrams`);
+  log.info({ generated, total: tasks.length }, 'Diagram batch complete');
   return { generated, attempted: tasks.length };
 }

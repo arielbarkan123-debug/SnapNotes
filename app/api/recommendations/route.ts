@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getDailyRecommendation, getSessionSuggestion, getRecommendations } from '@/lib/profile/recommendations'
 import { type UserLearningProfile } from '@/lib/profile/analysis'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:recommendations')
 
 /**
  * GET /api/recommendations
@@ -110,7 +113,7 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
-    console.error('Recommendations error:', error)
+    log.error({ err: error }, 'Recommendations error')
     return NextResponse.json(
       { error: 'Failed to get recommendations' },
       { status: 500 }
@@ -143,7 +146,7 @@ async function trackRecommendation(
 
     if (error) {
       // Non-critical: don't block the recommendation response
-      console.warn('[Recommendations] Tracking insert error:', error.message)
+      log.warn({ err: error }, 'Tracking insert error')
       return null
     }
 

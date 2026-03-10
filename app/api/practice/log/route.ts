@@ -1,5 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:practice-log')
 
 interface RequestBody {
   card_id: string
@@ -44,13 +47,13 @@ export async function POST(request: NextRequest) {
     if (insertError) {
       // Don't log error if table doesn't exist - feature is optional
       if (insertError.code !== 'PGRST205') {
-        console.error('Failed to log practice:', insertError)
+        log.error({ err: insertError }, 'Failed to log practice')
       }
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error logging practice:', error)
+    log.error({ err: error }, 'Error logging practice')
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

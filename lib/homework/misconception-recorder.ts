@@ -4,6 +4,9 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('homework:misconception-recorder')
 
 interface MisconceptionRecord {
   userId: string
@@ -76,6 +79,6 @@ export async function recordHomeworkMisconception(
         })
     }
   } catch (err) {
-    console.error('[misconception-recorder] Failed to record:', err)
+    log.error({ err }, 'Failed to record misconception')
   }
 }

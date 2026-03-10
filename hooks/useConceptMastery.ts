@@ -24,6 +24,9 @@
  */
 
 import { useCallback, useState } from 'react'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('hook:useConceptMastery')
 
 interface ConceptPerformance {
   conceptId: string
@@ -90,7 +93,7 @@ export function useConceptMastery(): UseConceptMasteryReturn {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update mastery'
       setLastError(errorMessage)
-      console.error('Concept mastery update failed:', err)
+      log.error({ err }, 'Concept mastery update failed')
       return { success: false, updated: 0, error: errorMessage }
     } finally {
       setIsUpdating(false)

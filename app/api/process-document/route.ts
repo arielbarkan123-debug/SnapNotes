@@ -2,6 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { type NextRequest, NextResponse } from 'next/server'
 import { processDocument, type ExtractedDocument } from '@/lib/documents'
 import { ErrorCodes, createErrorResponse, logError } from '@/lib/api/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:process-document')
 
 // Allow 3 minutes for document processing (PPTX/DOCX extraction is CPU-intensive)
 // Increased to handle slower mobile network connections
@@ -80,10 +83,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // 4. SECURITY: Verify path belongs to this user
     // Path format: {userId}/{timestamp}-{random}-{filename}
     if (!storagePath.startsWith(`${user.id}/`)) {
-      console.error('[ProcessDocument] Access denied: path does not belong to user', {
+      log.error({
         userId: user.id,
         storagePath,
-      })
+      }, 'Access denied: path does not belong to user')
       return createErrorResponse(ErrorCodes.FORBIDDEN, 'Access denied')
     }
 
@@ -95,7 +98,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         .createSignedUrl(storagePath, 3600) // 1 hour
 
       if (signedUrlError || !signedUrlData?.signedUrl) {
-        console.error('[ProcessDocument] Failed to create signed URL:', signedUrlError)
+        log.error({ err: signedUrlError }, 'Failed to create signed URL')
         return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to access uploaded image')
       }
 
@@ -110,40 +113,40 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // 6. Download file from storage for document processing
-    console.log('[ProcessDocument] Downloading file from storage:', storagePath)
+    log.debug({ storagePath }, 'Downloading file from storage')
     const { data: fileData, error: downloadError } = await supabase.storage
       .from(bucket)
       .download(storagePath)
 
     if (downloadError || !fileData) {
-      console.error('[ProcessDocument] Download error:', downloadError)
+      log.error({ err: downloadError }, 'Download error')
       return createErrorResponse(ErrorCodes.NOT_FOUND, 'File not found in storage')
     }
 
     // 7. Convert Blob to Buffer for processing
     const buffer = Buffer.from(await fileData.arrayBuffer())
-    console.log('[ProcessDocument] File downloaded, size:', buffer.length)
+    log.debug({ size: buffer.length }, 'File downloaded')
 
     // 8. Process document (PPTX/DOCX)
     let extractedContent: ExtractedDocument
     try {
       const mimeType = FILE_TYPE_TO_MIME[fileType] || ''
-      console.log('[ProcessDocument] Processing document:', {
+      log.debug({
         fileName,
         fileType,
         mimeType,
         bufferSize: buffer.length,
-      })
+      }, 'Processing document')
 
       extractedContent = await processDocument(buffer, mimeType, fileName)
 
-      console.log('[ProcessDocument] Document processed successfully:', {
+      log.debug({
         title: extractedContent.title,
         sections: extractedContent.sections.length,
         pageCount: extractedContent.metadata.pageCount,
-      })
+      }, 'Document processed successfully')
     } catch (error) {
-      console.error('[ProcessDocument] Processing error:', error)
+      log.error({ err: error }, 'Processing error')
       if (error instanceof Error) {
         // Map common document errors
         const message = error.message.toLowerCase()
@@ -182,7 +185,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json(response)
   } catch (error) {
-    console.error('[ProcessDocument] Unhandled error:', error)
+    log.error({ err: error }, 'Unhandled error')
     logError('ProcessDocument:unhandled', error)
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'An unexpected error occurred')
   }

@@ -8,6 +8,9 @@ import type Anthropic from '@anthropic-ai/sdk'
 import type { GeneratedGuide } from '@/types/prepare'
 import type { UserLearningContext } from '@/lib/ai/prompts'
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('prepare:guide-generator')
 const MAX_TOKENS = 8000
 const MAX_RETRIES = 0
 const RETRY_DELAY_MS = 2000
@@ -290,7 +293,7 @@ function repairJSON(text: string): string {
   if (brackets > 0) json += ']'.repeat(brackets)
   if (braces > 0) json += '}'.repeat(braces)
 
-  console.log(`[GuideGen] Repaired truncated JSON (trimmed to ${json.length} chars, closed ${braces} braces, ${brackets} brackets)`)
+  log.info(`Repaired truncated JSON (trimmed to ${json.length} chars, closed ${braces} braces, ${brackets} brackets)`)
   return json
 }
 
@@ -398,7 +401,7 @@ export async function generateGuide(options: GuideGenerationOptions): Promise<Ge
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
       if (attempt > 0) {
-        console.log(`[GuideGen] Retry attempt ${attempt}/${MAX_RETRIES}`)
+        log.info(`Retry attempt ${attempt}/${MAX_RETRIES}`)
         await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt))
       }
 
@@ -423,12 +426,12 @@ export async function generateGuide(options: GuideGenerationOptions): Promise<Ge
         // Log progress every 15s
         const now = Date.now()
         if (now - lastLogTime > 15000) {
-          console.log(`[GuideGen] Streaming: ${rawText.length} chars`)
+          log.info(`Streaming: ${rawText.length} chars`)
           lastLogTime = now
         }
       }
 
-      console.log(`[GuideGen] Stream complete: ${rawText.length} chars, stop_reason: ${stopReason}`)
+      log.info(`Stream complete: ${rawText.length} chars, stop_reason: ${stopReason}`)
 
       if (!rawText) {
         throw new Error('No text response from AI')
@@ -436,7 +439,7 @@ export async function generateGuide(options: GuideGenerationOptions): Promise<Ge
 
       // If truncated by max_tokens, the JSON will be incomplete — repair will handle it
       if (stopReason === 'max_tokens') {
-        console.warn('[GuideGen] Response truncated by max_tokens — will attempt repair')
+        log.warn('Response truncated by max_tokens — will attempt repair')
       }
 
       // Extract JSON — try bare JSON first, then code-fenced
@@ -455,11 +458,11 @@ export async function generateGuide(options: GuideGenerationOptions): Promise<Ge
       try {
         parsed = JSON.parse(jsonText)
       } catch {
-        console.log('[GuideGen] JSON parse failed, attempting repair...')
+        log.info('JSON parse failed, attempting repair...')
         const repaired = repairJSON(jsonText)
         try {
           parsed = JSON.parse(repaired)
-          console.log('[GuideGen] JSON repair successful')
+          log.info('JSON repair successful')
         } catch (repairErr) {
           throw new Error(
             `Failed to parse guide JSON: ${repairErr instanceof Error ? repairErr.message : 'Unknown'}`
@@ -474,19 +477,19 @@ export async function generateGuide(options: GuideGenerationOptions): Promise<Ge
           (e) => e.includes('Missing or invalid topics') || e.includes('No topics')
         )
         if (isCritical && attempt < MAX_RETRIES) {
-          console.warn('[GuideGen] Critical validation errors, retrying:', validationErrors)
+          log.warn({ detail: validationErrors }, 'Critical validation errors, retrying')
           lastError = new Error(`Validation failed: ${validationErrors.join('; ')}`)
           continue
         }
         if (!isCritical) {
-          console.warn('[GuideGen] Non-critical validation warnings:', validationErrors)
+          log.warn({ detail: validationErrors }, 'Non-critical validation warnings')
         }
       }
 
       return normalizeGuide(parsed)
     } catch (err) {
       lastError = err instanceof Error ? err : new Error('Unknown generation error')
-      console.error(`[GuideGen] Attempt ${attempt + 1} failed:`, lastError.message)
+      log.error({ detail: lastError.message }, `Attempt ${attempt + 1} failed`)
 
       // Don't retry on auth errors
       if (lastError.message.includes('API key') || lastError.message.includes('authentication')) {

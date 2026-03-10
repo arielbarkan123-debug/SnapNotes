@@ -7,6 +7,7 @@ import { type Step, type HelpContext } from '@/types'
 import { generateHint, type HintContext as HintCtx, type Hint } from '@/lib/adaptive/hints'
 import HintBubble, { HintButton } from './HintBubble'
 import HelpModal from '@/components/help/HelpModal'
+import MathText from '@/components/ui/MathText'
 import { useConceptMastery, useAdaptiveDifficulty, useResponseTimer } from '@/hooks'
 
 // Lazy load PracticeMore since it's only shown after wrong answers
@@ -274,7 +275,7 @@ export default function QuestionStep({
           {t('question')}
         </span>
         <h2 className="text-lg xs:text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white leading-relaxed">
-          {question}
+          <MathText>{question}</MathText>
         </h2>
       </div>
 
@@ -371,7 +372,7 @@ export default function QuestionStep({
                     }
                   `}
                 >
-                  {option}
+                  <MathText>{option}</MathText>
                 </span>
 
                 {/* Selection indicator */}

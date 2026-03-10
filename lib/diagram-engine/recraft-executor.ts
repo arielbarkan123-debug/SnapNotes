@@ -2,6 +2,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import { AI_MODEL } from '@/lib/ai/claude';
 import { Sandbox } from '@e2b/code-interpreter';
 import { generateRecraftImage, type RecraftStyle } from './recraft-client';
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:recraft-executor')
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -146,12 +149,12 @@ Return ONLY a valid JSON array. No explanation, no markdown fences, no text befo
 export async function generateRecraftDiagram(
   question: string
 ): Promise<RecraftResult | RecraftError> {
-  console.log(`[Recraft] generateRecraftDiagram called with: "${question.slice(0, 80)}..."`);
+  log.info(`generateRecraftDiagram called with: "${question.slice(0, 80)}..."`);
 
   const { style, is3D } = classifyTopic(question);
   const rewriteTemplate = is3D ? REWRITE_PROMPT_3D : REWRITE_PROMPT_2D;
 
-  console.log(`[Recraft] Style: ${style}, 3D: ${is3D}`);
+  log.info(`Style: ${style}, 3D: ${is3D}`);
 
   // Step 1: Rewrite prompt for clean image generation
   let cleanPrompt: string;
@@ -175,7 +178,7 @@ export async function generateRecraftDiagram(
     cleanPrompt = buildFallbackPrompt(question, is3D);
   }
 
-  console.log(`[Recraft] Prompt: ${cleanPrompt.slice(0, 120)}...`);
+  log.info(`Prompt: ${cleanPrompt.slice(0, 120)}...`);
 
   // Step 2: Generate image with Recraft (no_text is ALWAYS enforced in the client)
   let imageUrl: string;
@@ -242,7 +245,7 @@ export async function generateRecraftDiagram(
       }
     }
   } catch (err) {
-    console.error('Vision labeling error:', err);
+    log.error({ detail: err }, 'Vision labeling error');
     // Still return the image without labels
   }
 
@@ -253,13 +256,13 @@ export async function generateRecraftDiagram(
 
   // Step 5: Composite labels using TikZ (text is ONLY added via TikZ, never by Recraft)
   if (labels && labels.length > 0) {
-    console.log(`[Recraft] Compositing ${labels.length} labels via TikZ...`);
+    log.info(`Compositing ${labels.length} labels via TikZ...`);
     const compositedUrl = await compositeWithTikzLabels(imageUrl, labels);
     if (compositedUrl) {
-      console.log('[Recraft] TikZ composite successful');
+      log.info('TikZ composite successful');
       return { imageUrl: compositedUrl };
     }
-    console.log('[Recraft] TikZ composite failed, returning base image without labels');
+    log.info('TikZ composite failed, returning base image without labels');
   }
 
   // Return base image if no labels or compositing failed
@@ -346,12 +349,12 @@ async function compositeWithTikzLabels(
   labels: OverlayLabel[]
 ): Promise<string | null> {
   if (!LATEX_TEMPLATE_ID) {
-    console.error('[TikZ Composite] E2B_LATEX_TEMPLATE_ID not set');
+    log.error('E2B_LATEX_TEMPLATE_ID not set');
     return null;
   }
 
   if (!labels || labels.length === 0) {
-    console.log('[TikZ Composite] No labels to add');
+    log.info('No labels to add');
     return null;
   }
 
@@ -379,7 +382,7 @@ except Exception as e:
 
     const downloadOutput = downloadResult.logs.stdout.join('');
     if (downloadOutput.includes('DOWNLOAD_ERROR')) {
-      console.error('[TikZ Composite] Failed to download Recraft image:', downloadOutput);
+      log.error({ detail: downloadOutput }, 'Failed to download Recraft image');
       return null;
     }
 
@@ -438,7 +441,7 @@ else:
 
     const compileOutput = compileResult.logs.stdout.join('');
     if (compileOutput.includes('LATEX_ERROR')) {
-      console.error('[TikZ Composite] LaTeX compilation failed:', compileOutput);
+      log.error({ detail: compileOutput }, 'LaTeX compilation failed');
       return null;
     }
 
@@ -466,7 +469,7 @@ else:
 
     const convertOutput = convertResult.logs.stdout.join('');
     if (convertOutput.includes('CONVERT_ERROR')) {
-      console.error('[TikZ Composite] PDF conversion failed:', convertOutput);
+      log.error({ detail: convertOutput }, 'PDF conversion failed');
       return null;
     }
 
@@ -478,7 +481,7 @@ else:
 
     return null;
   } catch (err) {
-    console.error('[TikZ Composite] Error:', err);
+    log.error({ detail: err }, 'Error');
     return null;
   } finally {
     await sandbox.kill();

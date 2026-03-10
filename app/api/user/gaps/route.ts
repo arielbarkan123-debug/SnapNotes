@@ -10,6 +10,9 @@ import {
 } from '@/lib/concepts'
 import type { UserGapsResponse } from '@/lib/concepts/types'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:user-gaps')
 
 /**
  * GET /api/user/gaps
@@ -108,7 +111,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response)
   } catch (error) {
-    console.error('[User Gaps API] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
@@ -151,7 +154,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result)
   } catch (error) {
-    console.error('[User Gaps API] Detection error:', error)
+    log.error({ err: error }, 'Detection error')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN, 'Gap detection failed')
   }
 }
@@ -193,7 +196,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('[User Gaps API] Resolve error:', error)
+    log.error({ err: error }, 'Resolve error')
     return createErrorResponse(ErrorCodes.UPDATE_FAILED, 'Failed to resolve gap')
   }
 }

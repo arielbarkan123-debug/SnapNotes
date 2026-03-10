@@ -8,6 +8,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { AI_MODEL } from '@/lib/ai/claude'
 import { createClient } from '@/lib/supabase/server'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('insights:mistake-analyzer')
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -97,7 +100,7 @@ async function fetchPracticeHistory(userId: string): Promise<{
     .limit(100)
 
   if (error) {
-    console.error('[MistakeAnalyzer] Failed to fetch practice logs:', error)
+    log.error({ err: error }, 'Failed to fetch practice logs:')
     // Fallback: try simpler query without join
     return await fetchSimplePracticeHistory(userId)
   }

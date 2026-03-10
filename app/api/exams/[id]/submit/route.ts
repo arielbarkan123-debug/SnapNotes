@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { type SubmitExamRequest, type MatchingPair, type SubQuestion } from '@/types'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import { evaluateAnswer } from '@/lib/evaluation/answer-checker'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:exams-submit')
 
 // Allow extra time for AI evaluation of open-ended questions
 export const maxDuration = 120
@@ -331,7 +334,7 @@ export async function POST(
           // Safety net: evaluateAnswer() internally catches AI failures and returns
           // fuzzy_fallback results, so this branch should rarely be reached. It exists
           // to handle unexpected errors (e.g., out-of-memory, unhandled rejection).
-          console.error('[Exam Submit] evaluateAnswer rejected unexpectedly:', pq.questionId, result.reason)
+          log.error({ questionId: pq.questionId, reason: result.reason }, 'evaluateAnswer rejected unexpectedly')
           isCorrect = checkTextAnswer(pq.userAnswer, pq.correctAnswer, pq.acceptableAnswers)
           pointsEarned = isCorrect ? pq.points : 0
         }
@@ -363,7 +366,7 @@ export async function POST(
     )
 
     if (failedUpdates.length > 0) {
-      console.error('[Submit API] Some question updates failed:', failedUpdates.length)
+      log.error({ failedCount: failedUpdates.length }, 'Some question updates failed')
       // Continue anyway - partial save is better than total loss
     }
 
@@ -383,7 +386,7 @@ export async function POST(
       .eq('id', id)
 
     if (examUpdateError) {
-      console.error('[Submit API] Exam update error:', examUpdateError)
+      log.error({ err: examUpdateError }, 'Exam update error')
       return createErrorResponse(ErrorCodes.SUBMIT_FAILED, 'Failed to save results')
     }
 
@@ -398,7 +401,7 @@ export async function POST(
     })
 
   } catch (error) {
-    console.error('[Submit API] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.SUBMIT_FAILED)
   }
 }

@@ -11,6 +11,9 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { StudentContext, CourseSnapshot } from './types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('student-context')
 
 // Re-export all types for convenience
 export * from './types'
@@ -338,11 +341,11 @@ function extractSettled<T>(
   result: PromiseSettledResult<{ data: T | null; error: unknown }>
 ): T | null {
   if (result.status === 'rejected') {
-    console.warn('[student-context] Query rejected:', result.reason)
+    log.warn('Query rejected:', result.reason)
     return null
   }
   if (result.value?.error) {
-    console.warn('[student-context] Supabase error:', result.value.error)
+    log.warn({ detail: result.value.error }, 'Supabase error')
   }
   if (result.value?.data) {
     return result.value.data
@@ -354,11 +357,11 @@ function extractSettledArray<T>(
   result: PromiseSettledResult<{ data: T[] | null; error: unknown }>
 ): T[] {
   if (result.status === 'rejected') {
-    console.warn('[student-context] Query rejected:', result.reason)
+    log.warn('Query rejected:', result.reason)
     return []
   }
   if (result.value?.error) {
-    console.warn('[student-context] Supabase error:', result.value.error)
+    log.warn({ detail: result.value.error }, 'Supabase error')
   }
   if (Array.isArray(result.value?.data)) {
     return result.value.data
@@ -370,11 +373,11 @@ function extractSettledCount(
   result: PromiseSettledResult<{ count: number | null; data: unknown; error: unknown }>
 ): number {
   if (result.status === 'rejected') {
-    console.warn('[student-context] Query rejected:', result.reason)
+    log.warn('Query rejected:', result.reason)
     return 0
   }
   if (result.value?.error) {
-    console.warn('[student-context] Supabase error:', result.value.error)
+    log.warn({ detail: result.value.error }, 'Supabase error')
   }
   if (result.value?.count != null) {
     return result.value.count

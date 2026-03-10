@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import { computeAccuracyIntervals, detectSessionFatigue } from '@/lib/student-context/fatigue-detector'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:study-sessions')
 
 export interface StartSessionRequest {
   sessionType: 'lesson' | 'practice' | 'review' | 'exam'
@@ -62,14 +65,14 @@ export async function POST(request: Request) {
     if (error) {
       // Don't log error if table doesn't exist - feature is optional
       if (error.code !== 'PGRST205') {
-        console.error('[Study Sessions API] Start error:', error)
+        log.error({ err: error }, 'Start error')
       }
       return createErrorResponse(ErrorCodes.ANLYT_SESSION_CREATE_FAILED)
     }
 
     return NextResponse.json({ success: true, session })
   } catch (error) {
-    console.error('[Study Sessions API] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
@@ -155,7 +158,7 @@ export async function PATCH(request: Request) {
         }
       } catch (fatigueErr) {
         // Non-critical: continue without fatigue data
-        console.warn('[Study Sessions API] Fatigue detection error:', fatigueErr)
+        log.warn({ fatigueErr }, 'Fatigue detection error')
       }
     }
 
@@ -186,14 +189,14 @@ export async function PATCH(request: Request) {
     if (error) {
       // Don't log error if table doesn't exist - feature is optional
       if (error.code !== 'PGRST205') {
-        console.error('[Study Sessions API] End error:', error)
+        log.error({ err: error }, 'End error')
       }
       return createErrorResponse(ErrorCodes.ANLYT_SESSION_END_FAILED)
     }
 
     return NextResponse.json({ success: true, session })
   } catch (error) {
-    console.error('[Study Sessions API] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
@@ -238,7 +241,7 @@ export async function GET(request: Request) {
     if (error) {
       // Don't log error if table doesn't exist - feature is optional
       if (error.code !== 'PGRST205') {
-        console.error('[Study Sessions API] Fetch error:', error)
+        log.error({ err: error }, 'Fetch error')
       }
       // Return empty stats if table doesn't exist
       return NextResponse.json({
@@ -277,7 +280,7 @@ export async function GET(request: Request) {
       recentSessions: sessions?.slice(0, 10) || [],
     })
   } catch (error) {
-    console.error('[Study Sessions API] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }

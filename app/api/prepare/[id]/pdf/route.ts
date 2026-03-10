@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ErrorCodes, createErrorResponse } from '@/lib/api/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:prepare-pdf')
 
 export async function GET(
   _request: NextRequest,
@@ -68,7 +71,7 @@ export async function GET(
       },
     })
   } catch (error) {
-    console.error('[PreparePDF] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to generate PDF')
   }
 }

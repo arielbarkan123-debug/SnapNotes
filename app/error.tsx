@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { ErrorFallback } from '@/components/ErrorBoundary'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('page:error')
 
 interface ErrorPageProps {
   error: Error & { digest?: string }
@@ -13,15 +16,15 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
 
   useEffect(() => {
     // Enhanced error logging
-    console.error('=== APP ERROR CAUGHT ===')
-    console.error('Error message:', error.message)
-    console.error('Error name:', error.name)
-    console.error('Error digest:', error.digest || 'none')
-    console.error('Stack trace:', error.stack)
-    console.error('Page URL:', typeof window !== 'undefined' ? window.location.href : 'SSR')
-    console.error('User Agent:', typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR')
-    console.error('Timestamp:', new Date().toISOString())
-    console.error('=== END ERROR ===')
+    log.error('APP ERROR CAUGHT')
+    log.error({ detail: error.message }, 'Error message')
+    log.error({ detail: error.name }, 'Error name')
+    log.error({ detail: error.digest || 'none' }, 'Error digest')
+    log.error({ detail: error.stack }, 'Stack trace')
+    log.error({ detail: typeof window !== 'undefined' ? window.location.href : 'SSR' }, 'Page URL')
+    log.error({ detail: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR' }, 'User Agent')
+    log.error({ detail: new Date().toISOString() }, 'Timestamp')
+    log.error('END ERROR')
   }, [error])
 
   // Copy error details to clipboard
@@ -40,11 +43,11 @@ Stack: ${error.stack || 'N/A'}
       navigator.clipboard.writeText(details).then(() => {
         alert('Error details copied to clipboard')
       }).catch(() => {
-        console.log('Failed to copy, details:', details)
+        log.info({ detail: details }, 'Failed to copy, details')
       })
     } else {
       // Fallback - just log to console
-      console.log('Clipboard not available. Error details:', details)
+      log.info({ detail: details }, 'Clipboard not available. Error details')
       alert('Could not copy to clipboard. Check console for error details.')
     }
   }

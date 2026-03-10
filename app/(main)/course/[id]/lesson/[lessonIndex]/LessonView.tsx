@@ -388,12 +388,25 @@ export default function LessonView({
 
     // Track answer for questions
     if (typeof wasCorrect === 'boolean') {
-      setAnswers(prev => [...prev, { stepIndex: currentStep, correct: wasCorrect }])
+      setAnswers(prev => {
+        // If this step was already answered (user went back), update the existing entry
+        const existingIdx = prev.findIndex(a => a.stepIndex === currentStep)
+        if (existingIdx >= 0) {
+          const updated = [...prev]
+          updated[existingIdx] = { stepIndex: currentStep, correct: wasCorrect }
+          return updated
+        }
+        return [...prev, { stepIndex: currentStep, correct: wasCorrect }]
+      })
 
-      // If wrong answer during main lesson, add to failed questions queue
+      // If wrong answer during main lesson, add to failed questions queue (avoid duplicates)
       if (!wasCorrect && !retryMode) {
-        setFailedQuestions(prev => [...prev, currentStep])
-        setRetryAttempts(prev => ({ ...prev, [currentStep]: 1 }))
+        setFailedQuestions(prev => prev.includes(currentStep) ? prev : [...prev, currentStep])
+        setRetryAttempts(prev => ({ ...prev, [currentStep]: (prev[currentStep] || 0) + 1 }))
+      }
+      // If correct on re-visit, remove from failed questions
+      if (wasCorrect && !retryMode) {
+        setFailedQuestions(prev => prev.filter(idx => idx !== currentStep))
       }
     }
 
@@ -500,6 +513,13 @@ export default function LessonView({
   const handleReviewComplete = useCallback(() => {
     setShowReviewPage(false)
   }, [])
+
+  // Handle going back to previous step
+  const handleBack = useCallback(() => {
+    if (currentStep > 0 && !retryMode) {
+      setCurrentStep(prev => prev - 1)
+    }
+  }, [currentStep, retryMode])
 
   // Handle exit
   const handleExit = useCallback(() => {
@@ -612,22 +632,48 @@ export default function LessonView({
       {/* Header */}
       <header className="sticky top-14 md:top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="container mx-auto px-4 py-3 max-w-4xl">
-          <div className="flex items-center gap-4 mb-3">
-            {/* Exit button */}
-            <button
-              onClick={handleExit}
-              className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-w-[44px] min-h-[44px]"
-              aria-label="Exit lesson"
-            >
-              <svg className="w-6 h-6 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+          <div className="flex items-center gap-2 sm:gap-4 mb-3">
+            {/* Back button - go to previous step */}
+            {currentStep > 0 && !retryMode ? (
+              <button
+                onClick={handleBack}
+                className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-w-[44px] min-h-[44px]"
+                aria-label={t('previousStep')}
+              >
+                <svg className="w-5 h-5 text-gray-500 dark:text-gray-400 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            ) : (
+              /* Exit button - shown when on first step or always as secondary action */
+              <button
+                onClick={handleExit}
+                className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-w-[44px] min-h-[44px]"
+                aria-label="Exit lesson"
+              >
+                <svg className="w-6 h-6 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
 
             {/* Progress bar */}
             <div className="flex-1">
-              <ProgressBar currentStep={currentStep} totalSteps={totalSteps} />
+              <ProgressBar currentStep={currentStep} totalSteps={totalSteps} onStepClick={!retryMode ? (step) => setCurrentStep(step) : undefined} />
             </div>
+
+            {/* Exit button - shown alongside back button when not on first step */}
+            {currentStep > 0 && !retryMode && (
+              <button
+                onClick={handleExit}
+                className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-w-[36px] min-h-[36px]"
+                aria-label="Exit lesson"
+              >
+                <svg className="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
 
           {/* Lesson title */}
@@ -699,33 +745,49 @@ export default function LessonView({
           className="sticky bottom-0 max-md:bottom-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom,0px))] bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg"
         >
           <div className="container mx-auto px-3 xs:px-4 py-3 xs:py-4 max-w-4xl">
-            <button
-              onClick={() => handleAdvance()}
-              disabled={isSaving}
-              className={`
-                w-full py-3 xs:py-4 rounded-xl font-semibold text-base xs:text-lg transition-all duration-200 min-h-[48px]
-                ${!isSaving
-                  ? isLastStep
-                    ? 'bg-green-600 hover:bg-green-700 active:bg-green-800 text-white'
-                    : 'bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white'
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                }
-              `}
-            >
-              {isSaving ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            <div className={`flex gap-3 ${currentStep > 0 ? '' : ''}`}>
+              {/* Back button in footer */}
+              {currentStep > 0 && (
+                <button
+                  onClick={handleBack}
+                  className="px-4 xs:px-5 py-3 xs:py-4 rounded-xl font-semibold text-base xs:text-lg transition-all duration-200 min-h-[48px] border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600 flex-shrink-0"
+                  aria-label={t('previousStep')}
+                >
+                  <svg className="w-5 h-5 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
-                  {t('saving')}
-                </span>
-              ) : isLastStep ? (
-                t('completeLesson')
-              ) : (
-                t('continue')
+                </button>
               )}
-            </button>
+
+              {/* Continue / Complete button */}
+              <button
+                onClick={() => handleAdvance()}
+                disabled={isSaving}
+                className={`
+                  flex-1 py-3 xs:py-4 rounded-xl font-semibold text-base xs:text-lg transition-all duration-200 min-h-[48px]
+                  ${!isSaving
+                    ? isLastStep
+                      ? 'bg-green-600 hover:bg-green-700 active:bg-green-800 text-white'
+                      : 'bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                  }
+                `}
+              >
+                {isSaving ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    {t('saving')}
+                  </span>
+                ) : isLastStep ? (
+                  t('completeLesson')
+                ) : (
+                  t('continue')
+                )}
+              </button>
+            </div>
 
             {/* Step navigation hint */}
             {!isLastStep && (

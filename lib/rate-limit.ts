@@ -5,6 +5,9 @@
  * For multi-instance/serverless, use Redis (e.g., Upstash) instead.
  */
 
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('lib:rate-limit')
 interface RateLimitEntry {
   count: number
   resetTime: number
@@ -111,7 +114,7 @@ function parseRateLimitEnv(envVar: string | undefined, defaultLimit: number, def
   const limit = parseInt(limitStr, 10)
   const windowMs = parseInt(windowMsStr, 10)
   if (isNaN(limit) || isNaN(windowMs) || limit <= 0 || windowMs <= 0) {
-    console.warn(`Invalid rate limit env format: ${envVar}, using defaults`)
+    log.warn(`Invalid rate limit env format: ${envVar}, using defaults`)
     return { limit: defaultLimit, windowMs: defaultWindowMs }
   }
   return { limit, windowMs }

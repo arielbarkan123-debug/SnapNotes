@@ -13,7 +13,10 @@ import { useXP } from '@/contexts/XPContext'
 import { useVisuals } from '@/contexts/VisualsContext'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import type { HomeworkCheck, HomeworkFeedback, GradeLevel, AnnotatedFeedbackPoint, FeedbackPoint, HomeworkSession, BatchWorksheetResult as BatchResult, BatchWorksheetItem, CheckMode, BeforeSubmitResult, RubricResult } from '@/lib/homework/types'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('page:homework-sessionId-pagex')
 // ============================================================================
 // Constants
 // ============================================================================
@@ -290,7 +293,7 @@ export default function HomeworkResultsPage() {
         trackFeature('homework_help_solved', { sessionId })
       }
     } catch (error) {
-      console.error('Chat error:', error)
+      log.error({ detail: error }, 'Chat error')
 
       // Remove optimistic update on error
       setHelpSession((prev) =>
@@ -307,7 +310,7 @@ export default function HomeworkResultsPage() {
       const isRetryable = (error as Error & { retryable?: boolean }).retryable !== false
       if (isAutoStart && isRetryable && autoStartRetries.current < MAX_AUTO_START_RETRIES) {
         autoStartRetries.current += 1
-        console.warn(`[AutoStart] Retry ${autoStartRetries.current}/${MAX_AUTO_START_RETRIES}`)
+        log.warn(`Retry ${autoStartRetries.current}/${MAX_AUTO_START_RETRIES}`)
         setIsChatLoading(false)
         // Reset hasAutoStarted so the useEffect re-triggers
         hasAutoStarted.current = false
@@ -367,7 +370,7 @@ export default function HomeworkResultsPage() {
         hintName: hintInfo?.name,
       })
     } catch (error) {
-      console.error('Hint error:', error)
+      log.error({ detail: error }, 'Hint error')
       toast.error('Failed to get hint. Please try again.')
     } finally {
       setIsChatLoading(false)
@@ -398,7 +401,7 @@ export default function HomeworkResultsPage() {
         throw new Error('Failed to complete session')
       }
     } catch (error) {
-      console.error('Complete error:', error)
+      log.error({ detail: error }, 'Complete error')
       toast.error('Failed to complete session. Please try again.')
     }
   }, [sessionId, helpSession?.hints_used, helpSession?.used_show_answer, toast, trackFeature, router])
@@ -463,7 +466,7 @@ export default function HomeworkResultsPage() {
           }
         })
       } else {
-        console.warn('[PracticeFromMistake] Failed to record practice link:', await practiceCompleteRes.text())
+        log.warn({ detail: await practiceCompleteRes.text() }, 'Failed to record practice link')
       }
 
       trackFeature('homework_practice_from_mistake', {
@@ -476,7 +479,7 @@ export default function HomeworkResultsPage() {
       // 4. Navigate to the practice session
       router.push(`/practice/${practiceSessionId}`)
     } catch (error) {
-      console.error('[PracticeFromMistake] Error:', error)
+      log.error({ detail: error }, 'Error')
       toast.error(error instanceof Error ? error.message : 'Failed to start practice')
     } finally {
       setPracticingIndex(null)
@@ -647,7 +650,7 @@ export default function HomeworkResultsPage() {
         {/* Walkthrough or Tutoring Chat */}
         <div className="flex-1">
           {showWalkthrough ? (
-            <div className="container mx-auto px-4 py-4 max-w-3xl">
+            <div className="container mx-auto px-4 py-4 max-w-3xl lg:max-w-5xl">
               <WalkthroughView
                 sessionId={sessionId}
                 onClose={() => setShowWalkthrough(false)}

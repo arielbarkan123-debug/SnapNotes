@@ -6,6 +6,9 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('profile:analysis')
 
 // =============================================================================
 // Types
@@ -246,7 +249,7 @@ export async function updateLearningProfile(userId: string): Promise<UserLearnin
       .single()
 
     if (error) {
-      console.error('Failed to update learning profile:', error)
+      log.error({ err: error }, 'Failed to update learning profile:')
       return null
     }
     return updated
@@ -258,7 +261,7 @@ export async function updateLearningProfile(userId: string): Promise<UserLearnin
       .single()
 
     if (error) {
-      console.error('Failed to create learning profile:', error)
+      log.error({ err: error }, 'Failed to create learning profile:')
       return null
     }
     return created

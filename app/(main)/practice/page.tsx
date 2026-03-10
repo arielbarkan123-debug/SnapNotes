@@ -47,7 +47,10 @@ const sliderStyles = `
   }
 `
 import { parseCardBack, isMultipleChoice, isTrueFalse, isFillBlank, isMatching, isSequence, isMultiSelect } from '@/types/srs'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('page:practice-pagex')
 // Lazy load practice components - only loaded when practice session starts
 const MultipleChoice = dynamic(() => import('@/components/practice/MultipleChoice'))
 const TrueFalse = dynamic(() => import('@/components/practice/TrueFalse'))
@@ -227,13 +230,11 @@ export default function PracticePage() {
   // ==========================================================================
 
   useEffect(() => {
-    console.time('practice-page-load')
   }, [])
 
   useEffect(() => {
     // Transition to setup once courses are loaded
     if (!coursesLoading && sessionState === 'loading') {
-      console.timeEnd('practice-page-load')
       if (coursesError) {
         setError(coursesError)
       }
@@ -296,7 +297,7 @@ export default function PracticePage() {
       })
       .catch((err) => {
         if (err.name !== 'AbortError') {
-          console.error('[Practice Diagram] fetch error:', err)
+          log.error('fetch error:', err)
         }
       })
       .finally(() => {
@@ -407,7 +408,7 @@ export default function PracticePage() {
       const sessionId = await startStudySession()
       sessionIdRef.current = sessionId
     } catch (err) {
-      console.error('[Practice] Failed to start:', err)
+      log.error({ detail: err }, 'Failed to start')
       setError(t('failedToStartPractice'))
     } finally {
       setIsGenerating(false)
@@ -438,7 +439,7 @@ export default function PracticePage() {
       const data = await res.json()
       router.push(`/practice/${data.sessionId}`)
     } catch (err) {
-      console.error('[Practice] Failed to start infinite:', err)
+      log.error({ detail: err }, 'Failed to start infinite')
       setError(t('failedToStartPractice'))
     } finally {
       setIsStartingInfinite(false)

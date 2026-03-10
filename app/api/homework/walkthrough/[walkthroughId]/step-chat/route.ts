@@ -13,6 +13,9 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
 import type { WalkthroughSolution } from '@/types/walkthrough'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:step-chat')
 
 export const maxDuration = 60
 
@@ -171,7 +174,7 @@ RULES:
     return NextResponse.json({ messages: allMessages || [] })
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : 'AI error'
-    console.error('[StepChat] Error:', errMsg)
+    log.error({ err: error }, 'Step chat error')
     return NextResponse.json({ error: errMsg }, { status: 500 })
   }
 }

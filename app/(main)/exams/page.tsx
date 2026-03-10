@@ -8,7 +8,10 @@ import { useExams, useCourses, EXAMS_CACHE_KEY } from '@/hooks'
 import { usePastExamTemplates } from '@/hooks/usePastExamTemplates'
 import { useSWRConfig } from 'swr'
 import { useFeatureTracker } from '@/lib/student-context/feature-tracker'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('page:exams-pagex')
 export default function ExamsPage() {
   // Track feature usage for implicit data collection
   useFeatureTracker('exams')
@@ -33,12 +36,10 @@ export default function ExamsPage() {
   // Log performance on initial load
   useEffect(() => {
     if (!examsLoading && !coursesLoading) {
-      console.timeEnd('exams-page-load')
     }
   }, [examsLoading, coursesLoading])
 
   useEffect(() => {
-    console.time('exams-page-load')
   }, [])
 
   const loading = examsLoading || coursesLoading
@@ -66,7 +67,7 @@ export default function ExamsPage() {
       // Check if response is JSON before parsing
       const contentType = res.headers.get('content-type')
       if (!contentType || !contentType.includes('application/json')) {
-        console.error('[ExamsPage] Non-JSON response:', res.status)
+        log.error({ detail: res.status }, 'Non-JSON response')
         if (res.status === 504 || res.status === 503 || res.status === 502) {
           throw new Error(t('serverTimeout'))
         }
@@ -77,7 +78,7 @@ export default function ExamsPage() {
       try {
         data = await res.json()
       } catch (parseError) {
-        console.error('[ExamsPage] JSON parse error:', parseError)
+        log.error({ detail: parseError }, 'JSON parse error')
         throw new Error(t('serverError'))
       }
 

@@ -9,6 +9,9 @@ import type {
 import { analyzeQuestion, analyzeQuestionText } from '@/lib/homework/question-analyzer'
 import { analyzeReferences } from '@/lib/homework/reference-analyzer'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:homework-sessions')
 
 // ============================================================================
 // Error Codes for Homework Sessions API
@@ -88,7 +91,7 @@ export async function POST(request: NextRequest) {
         questionAnalysis = await analyzeQuestion(body.questionImageUrl!)
       }
     } catch (error) {
-      console.error(`[API/HomeworkSessions/Analysis] Question analysis error (${inputMode} mode):`, error)
+      log.error({ err: error, inputMode }, 'Question analysis error')
       questionAnalysis = {
         questionText: inputMode === 'text' ? body.questionText! : 'Could not extract question text',
         subject: 'other',
@@ -111,7 +114,7 @@ export async function POST(request: NextRequest) {
           questionAnalysis
         )
       } catch (error) {
-        console.error('Reference analysis error:', error)
+        log.error({ err: error }, 'Reference analysis error')
       }
     }
 
@@ -147,7 +150,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      console.error(`[API/HomeworkSessions/DB] Insert error (${inputMode} mode):`, insertError)
+      log.error({ err: insertError, inputMode }, 'Insert error')
       // Return error with detailed code
       return NextResponse.json(
         { error: formatApiError(API_ERROR_CODES.API_SES_DB_001, 'Failed to create session', `API/HomeworkSessions/DB/Insert/${inputMode}Mode/Code:${insertError.code}`) },
@@ -166,7 +169,7 @@ export async function POST(request: NextRequest) {
       referenceAnalysis,
     })
   } catch (error) {
-    console.error('Homework session error:', error)
+    log.error({ err: error }, 'Homework session error')
     return createErrorResponse(ErrorCodes.HOMEWORK_UNKNOWN)
   }
 }
@@ -207,13 +210,13 @@ export async function GET(request: NextRequest) {
     const { data: sessions, error } = await query
 
     if (error) {
-      console.error('Fetch error:', error)
+      log.error({ err: error }, 'Fetch sessions error')
       return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch sessions')
     }
 
     return NextResponse.json({ sessions })
   } catch (error) {
-    console.error('Get sessions error:', error)
+    log.error({ err: error }, 'Get sessions error')
     return createErrorResponse(ErrorCodes.HOMEWORK_UNKNOWN)
   }
 }

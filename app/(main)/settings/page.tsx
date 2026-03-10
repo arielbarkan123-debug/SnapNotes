@@ -13,7 +13,10 @@ import { useVisuals, type VisualComplexity } from '@/contexts/VisualsContext'
 import { getDefaultGrade, hasCurriculumData } from '@/lib/curriculum/grades'
 import type { ExamFormat, StudySystem } from '@/lib/curriculum'
 import { locales, localeNames, type Locale } from '@/i18n/config'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('page:settings-pagex')
 // =============================================================================
 // Types
 // =============================================================================
@@ -339,7 +342,7 @@ export default function SettingsPage() {
         await saveVisualPreferences()
       } catch {
         // Visual preferences save failed, but continue
-        console.warn('Failed to save visual preferences to database')
+        log.warn('Failed to save visual preferences to database')
       }
 
       if (profileError) {

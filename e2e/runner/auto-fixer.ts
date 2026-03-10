@@ -18,7 +18,10 @@ import type {
   TestContext,
   StepResult,
 } from './types'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('e2e:runner:auto-fixer')
 // ============================================================================
 // Fix Strategy Definitions
 // ============================================================================
@@ -177,7 +180,7 @@ export class AutoFixer {
       const backoff = TEST_CONFIG.retry.backoffMs *
         Math.pow(TEST_CONFIG.retry.backoffMultiplier, attempt - 1)
 
-      console.log(`[AutoFixer] Retry attempt ${attempt}/${maxAttempts} after ${backoff}ms`)
+      log.info(`Retry attempt ${attempt}/${maxAttempts} after ${backoff}ms`)
 
       // Wait
       await this.wait(backoff)
@@ -218,7 +221,7 @@ export class AutoFixer {
   ): Promise<AppliedFix> {
     const waitMs = strategy.waitMs || 10000
 
-    console.log(`[AutoFixer] Rate limited - waiting ${waitMs}ms before retry`)
+    log.info(`Rate limited - waiting ${waitMs}ms before retry`)
 
     await this.wait(waitMs)
 

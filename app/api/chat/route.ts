@@ -8,6 +8,9 @@ import { getAnthropicApiKey } from '@/lib/env'
 import { createErrorResponse, ErrorCodes, mapClaudeAPIError } from '@/lib/api/errors'
 import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 import { getStudentContext, generateDirectives } from '@/lib/student-context'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:chat')
 
 // Allow 90 seconds for chat responses (Claude API can be slow with long context)
 export const maxDuration = 90
@@ -219,13 +222,13 @@ Remember: You're a tutor, not just an answer machine. Help them understand, don'
 
     // Extract response text with proper validation
     if (!response.content || response.content.length === 0) {
-      console.error('[Chat API] Empty response from AI')
+      log.error('Empty response from AI')
       return createErrorResponse(ErrorCodes.AI_PROCESSING_FAILED, 'No response generated')
     }
 
     const textBlock = response.content.find(block => block.type === 'text')
     if (!textBlock || textBlock.type !== 'text') {
-      console.error('[Chat API] No text block in response')
+      log.error('No text block in response')
       return createErrorResponse(ErrorCodes.AI_PROCESSING_FAILED, 'Unexpected response format')
     }
 
@@ -234,7 +237,7 @@ Remember: You're a tutor, not just an answer machine. Help them understand, don'
       message: textBlock.text,
     })
   } catch (error) {
-    console.error('[Chat API] Error:', error)
+    log.error({ err: error }, 'Error')
     const mappedError = mapClaudeAPIError(error)
     return createErrorResponse(mappedError.code, mappedError.message)
   }

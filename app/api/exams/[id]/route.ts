@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:exams-id')
 
 export async function GET(
   request: Request,
@@ -36,7 +39,7 @@ export async function GET(
       .order('question_index', { ascending: true })
 
     if (questionsError) {
-      console.error('[Exam API] Questions fetch error:', questionsError)
+      log.error({ err: questionsError }, 'Questions fetch error')
       return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to load questions')
     }
 
@@ -62,7 +65,7 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('[Exam API] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.EXAM_UNKNOWN)
   }
 }
@@ -121,7 +124,7 @@ export async function PATCH(
     return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Invalid action')
 
   } catch (error) {
-    console.error('[Exam API] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.EXAM_UNKNOWN)
   }
 }

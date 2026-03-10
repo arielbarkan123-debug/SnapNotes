@@ -1,4 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('upload:direct-upload')
 
 // HEIC conversion is loaded dynamically from a separate module to avoid
 // bundling heic2any (which uses Web Workers) into the main bundle.
@@ -52,10 +55,10 @@ async function validateImageMagicBytes(file: File): Promise<{ valid: boolean; fo
 
     // Unknown format - log the bytes for debugging
     const hexBytes = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' ')
-    console.warn(`[Upload] Unknown image format, first 12 bytes: ${hexBytes}`)
+    log.warn(`Unknown image format, first 12 bytes: ${hexBytes}`)
     return { valid: false, error: `Unknown image format. Please use JPEG, PNG, or convert from your current format.` }
   } catch (error) {
-    console.error('[Upload] Failed to read file magic bytes:', error)
+    log.error({ detail: error }, 'Failed to read file magic bytes')
     return { valid: false, error: 'Failed to read file. Please try again.' }
   }
 }
@@ -95,7 +98,7 @@ async function compressImageIfNeeded(file: File): Promise<File> {
     return file
   }
 
-  console.log(`[Upload] Compressing large image: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`)
+  log.info(`Compressing large image: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`)
 
   return new Promise((resolve) => {
     const img = new Image()
@@ -129,11 +132,11 @@ async function compressImageIfNeeded(file: File): Promise<File> {
               file.name.replace(/\.(png|PNG)$/, '.jpg'),
               { type: 'image/jpeg' }
             )
-            console.log(`[Upload] Compressed: ${(file.size / 1024 / 1024).toFixed(1)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(1)}MB`)
+            log.info(`Compressed: ${(file.size / 1024 / 1024).toFixed(1)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(1)}MB`)
             resolve(compressedFile)
           } else {
             // Compression didn't help, use original
-            console.log(`[Upload] Compression skipped (no size reduction)`)
+            log.info(`Compression skipped (no size reduction)`)
             resolve(file)
           }
         },
@@ -144,7 +147,7 @@ async function compressImageIfNeeded(file: File): Promise<File> {
 
     img.onerror = () => {
       // If image loading fails, return original
-      console.warn(`[Upload] Image load failed for compression, using original`)
+      log.warn(`Image load failed for compression, using original`)
       resolve(file)
     }
 
@@ -233,7 +236,7 @@ export async function uploadFileToStorage(
       return { storagePath, fileType: validation.fileType! }
     } catch (err) {
       lastError = err as Error
-      console.warn(`Upload attempt ${attempt} failed:`, err)
+      log.warn({ detail: err }, `Upload attempt ${attempt} failed`)
       if (attempt < 3) {
         // Exponential backoff: 1s, 2s
         await new Promise(r => setTimeout(r, 1000 * attempt))
@@ -252,7 +255,7 @@ export async function deleteFileFromStorage(storagePath: string): Promise<void> 
 
   const { error } = await supabase.storage.from('documents').remove([storagePath])
   if (error) {
-    console.warn('Failed to delete file from storage:', error)
+    log.warn({ detail: error }, 'Failed to delete file from storage')
   }
 }
 
@@ -344,15 +347,15 @@ export async function uploadImagesToStorage(
     const originalFilename = file.name
 
     // Log detailed file info for debugging Safari issues
-    console.log(`[Upload] Processing file ${i + 1}/${files.length}:`, {
+    log.info({
       name: originalFilename,
       type: file.type || 'empty',
       size: file.size,
-    })
+    }, `Processing file ${i + 1}/${files.length}`)
 
     // CRITICAL: Validate file is not empty (Safari mobile can sometimes pass empty files)
     if (file.size === 0) {
-      console.error(`[Upload] File is empty: ${originalFilename}`)
+      log.error(`File is empty: ${originalFilename}`)
       errors.push(`${originalFilename}: File is empty. Please try selecting the image again.`)
       continue
     }
@@ -361,11 +364,11 @@ export async function uploadImagesToStorage(
     // This catches corrupted files or files that aren't actually images
     const magicBytesValid = await validateImageMagicBytes(file)
     if (!magicBytesValid.valid) {
-      console.error(`[Upload] Invalid image format: ${originalFilename}`, magicBytesValid)
+      log.error({ detail: magicBytesValid }, `Invalid image format: ${originalFilename}`)
       errors.push(`${originalFilename}: ${magicBytesValid.error || 'Not a valid image file'}`)
       continue
     }
-    console.log(`[Upload] Magic bytes valid for ${originalFilename}:`, magicBytesValid.format)
+    log.info({ detail: magicBytesValid.format }, `Magic bytes valid for ${originalFilename}`)
 
     // Check for HEIC format - magic bytes validation already detected it
     const isHeic = magicBytesValid.format === 'heic'
@@ -373,16 +376,16 @@ export async function uploadImagesToStorage(
     // Try to convert HEIC to JPEG on client-side (faster if it works)
     // If conversion fails (common on Safari mobile), upload HEIC anyway - server will convert it
     if (isHeic) {
-      console.log(`[Upload] File ${originalFilename} is HEIC, attempting client-side conversion...`)
+      log.info(`File ${originalFilename} is HEIC, attempting client-side conversion...`)
       try {
         file = await convertHeicToJpeg(file)
-        console.log(`[Upload] HEIC conversion successful: ${originalFilename} -> ${file.name}`)
+        log.info(`HEIC conversion successful: ${originalFilename} -> ${file.name}`)
       } catch (conversionError) {
         // Client-side conversion failed - this is OK!
         // The server will detect HEIC by magic bytes and convert it automatically
         const errorMsg = conversionError instanceof Error ? conversionError.message : 'Unknown error'
-        console.log(`[Upload] Client-side HEIC conversion failed (expected on Safari): ${errorMsg}`)
-        console.log(`[Upload] Uploading raw HEIC - server will convert automatically`)
+        log.info(`Client-side HEIC conversion failed (expected on Safari): ${errorMsg}`)
+        log.info(`Uploading raw HEIC - server will convert automatically`)
         // Continue with original HEIC file - don't push to errors, don't skip
       }
     }
@@ -394,7 +397,7 @@ export async function uploadImagesToStorage(
         file = await compressImageIfNeeded(file)
       } catch (compressionError) {
         // Compression failed - continue with original file
-        console.warn(`[Upload] Compression failed for ${originalFilename}, using original:`, compressionError)
+        log.warn({ detail: compressionError }, `Compression failed for ${originalFilename}, using original`)
       }
     }
 
@@ -407,7 +410,7 @@ export async function uploadImagesToStorage(
 
     for (let uploadAttempt = 1; uploadAttempt <= 3; uploadAttempt++) {
       try {
-        console.log(`[Upload] Uploading ${file.name} attempt ${uploadAttempt}/3`)
+        log.info(`Uploading ${file.name} attempt ${uploadAttempt}/3`)
 
         const { error } = await supabase.storage
           .from(IMAGE_BUCKET)
@@ -419,7 +422,7 @@ export async function uploadImagesToStorage(
 
         if (error) {
           lastUploadError = error.message
-          console.warn(`[Upload] Attempt ${uploadAttempt} failed for ${file.name}:`, error.message)
+          log.warn({ detail: error.message }, `Attempt ${uploadAttempt} failed for ${file.name}`)
 
           // Don't retry on certain errors (duplicate, permission, etc.)
           if (error.message.includes('duplicate') || error.message.includes('permission') || error.message.includes('policy')) {
@@ -436,7 +439,7 @@ export async function uploadImagesToStorage(
         }
       } catch (err) {
         lastUploadError = err instanceof Error ? err.message : 'Upload failed'
-        console.warn(`[Upload] Attempt ${uploadAttempt} exception for ${file.name}:`, lastUploadError)
+        log.warn({ detail: lastUploadError }, `Attempt ${uploadAttempt} exception for ${file.name}`)
 
         if (uploadAttempt < 3) {
           await new Promise(r => setTimeout(r, 1000 * uploadAttempt))
@@ -479,7 +482,7 @@ export async function deleteImagesFromStorage(storagePaths: string[]): Promise<v
 
   const { error } = await supabase.storage.from(IMAGE_BUCKET).remove(storagePaths)
   if (error) {
-    console.warn('Failed to delete images from storage:', error)
+    log.warn({ detail: error }, 'Failed to delete images from storage')
   }
 }
 

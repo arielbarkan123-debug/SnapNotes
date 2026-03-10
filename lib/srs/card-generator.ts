@@ -44,6 +44,9 @@ import {
 } from '@/lib/ai/content-classifier'
 
 import { AI_MODEL } from '@/lib/ai/claude'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('srs:card-generator')
 
 // =============================================================================
 // Concept Mapping Types
@@ -98,6 +101,13 @@ export function isQuestionQualityAcceptable(question: string): boolean {
 
   // Question mark at start = RTL corruption or parse error
   if (trimmed.startsWith('?')) return false
+
+  // Math notation questions (digits + math operators) are valid even if short
+  // e.g. "3/4 + 1/2 = ?", "2x² - 5x + 3 = 0, x = ?", "588 ÷ 3 = ?"
+  const isMathNotation = /[\d]/.test(trimmed) && /[+\-×÷*/=²³√∫∑<>≤≥^]/.test(trimmed)
+  if (isMathNotation) {
+    return trimmed.length >= 5
+  }
 
   // Too short - allow fewer "words" for Hebrew since it's more compact
   // Hebrew uses spaces differently and words can be longer
@@ -179,7 +189,7 @@ async function generateQuestionsFromContentBatch(
 
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
-    console.warn('[CardGenerator] No ANTHROPIC_API_KEY, falling back to regex generation')
+    log.warn('No ANTHROPIC_API_KEY, falling back to regex generation')
     return result
   }
 
@@ -236,13 +246,15 @@ Generate ALL questions in Hebrew (עברית).
   let formatInstructions: string
   if (topicType === 'computational') {
     formatInstructions = language === 'he'
-      ? `צור בעיות חישוב אמיתיות, לא שאלות אוצר מילים.
-דוגמאות טובות: "פתור: מה הסכום של 3/4 + 1/2?", "חשב 25% מ-80", "המר 0.75 לשבר", "פשט: 12/18"
+      ? `צור בעיות חישוב. כשהחישוב עומד בפני עצמו → סימון בלבד, ללא מילים מיותרות.
+דוגמאות טובות: "3/4 + 1/2 = ?", "25% × 80 = ?", "0.75 = ?/?", "12/18 = ?"
+שאלות שצריכות הקשר → מילים בסדר: "בשקית 5 כדורים: 3 אדומים ו-2 כחולים. P(אדום) = ?"
 דוגמאות גרועות: "מה המשמעות של השוואה?", "הסבר את המושג שברים"
 כל שאלה צריכה לדרוש חישוב כדי לענות.`
-      : `Generate ACTUAL MATH PROBLEMS, not vocabulary questions.
-GOOD examples: "Solve: What is 3/4 + 1/2?", "Calculate 25% of 80", "Convert 0.75 to a fraction", "Simplify: 12/18"
-BAD examples: "What does comparing mean?", "Explain the concept of fractions", "What is a key point about percentages?"
+      : `Generate COMPUTATION questions. When the math stands alone → NOTATION ONLY, no unnecessary words.
+GOOD: "3/4 + 1/2 = ?", "25% × 80 = ?", "0.75 = ?/?", "12/18 = ?"
+Context-dependent → words are fine: "A bag has 5 balls: 3 red, 2 blue. P(red) = ?"
+BAD: "What does comparing mean?", "Explain the concept of fractions", "Solve: What is 3/4 + 1/2?"
 Each question should require COMPUTATION to answer.`
   } else if (topicType === 'conceptual') {
     formatInstructions = language === 'he'
@@ -251,18 +263,20 @@ Each question should require COMPUTATION to answer.`
 דוגמאות גרועות: "מה זה כשמשווים?", "מה נקודה מרכזית לגבי ביולוגיה?"
 כל שאלה צריכה לבדוק הבנה של המושג.`
       : `Generate understanding questions that test knowledge of concepts.
-GOOD examples: "What is the main function of mitochondria?", "Explain why warm fronts cause gradual weather changes", "How does natural selection drive evolution?"
-BAD examples: "What does when comparing do?", "What is a key point about biology?"
+GOOD: "What is the main function of mitochondria?", "Explain why warm fronts cause gradual weather changes"
+BAD: "What does when comparing do?", "What is a key point about biology?"
 Each question should test understanding of the concept.`
   } else {
     formatInstructions = language === 'he'
       ? `צור תערובת של בעיות חישוב (לפחות 50%) ושאלות הבנה.
-לתוכן מתמטי: "פתור: ...", "חשב: ...", "המר: ..."
-לתוכן מושגי: "הסבר ...", "מה הוא ...", "מדוע ..."
+חישוב עצמאי: "sin(30°) = ?", "3x + 7 = 22, x = ?" — סימון בלבד
+חישוב עם הקשר: "רכבת נוסעת 120 קמ״ש במשך 3 שעות. מרחק = ?" — מילים בסדר
+שאלות מושגיות: "הסבר ...", "מה הוא ...", "מדוע ..."
 לעולם אל תיצור שאלות מעורפלות כמו "מה נקודה מרכזית לגבי X?"`
       : `Generate a mix of computational problems (at least 50%) and understanding questions.
-For math/numeric content: "Solve: ...", "Calculate ...", "Convert ..."
-For conceptual content: "Explain ...", "What is ...", "Why does ..."
+Self-contained computation: "sin(30°) = ?", "3x + 7 = 22, x = ?" — notation only
+Context-dependent computation: "A train travels 120 km/h for 3 hours. Distance = ?" — words are fine
+Conceptual: "Explain ...", "What is ...", "Why does ..."
 NEVER generate vague questions like "What is a key point about X?"`
   }
 
@@ -307,7 +321,7 @@ Return JSON array like: [{"index": 0, "question": "..."}, {"index": 1, "question
       }
     }
   } catch (error) {
-    console.error('[CardGenerator] AI batch generation failed for batch, will use fallback:', error)
+    log.error({ err: error }, 'AI batch generation failed for batch, will use fallback')
   }
 
   return result
@@ -345,11 +359,11 @@ export async function regenerateCardQuestion(
     if (isHebrew) {
       languageInstruction = '\n\nIMPORTANT: Generate the question in Hebrew (עברית). Use proper Hebrew educational terminology.'
       style = topicType === 'computational'
-        ? 'בעיית חישוב אמיתית (למשל: "פתור: ...", "חשב: ...")'
+        ? 'בעיית חישוב — אם החישוב עומד בפני עצמו, השתמש בסימון בלבד (למשל: "3/4 + 1/2 = ?"). אם צריך הקשר, מילים בסדר.'
         : 'שאלת הבנה ברורה'
     } else {
       style = topicType === 'computational'
-        ? 'an actual math problem to solve (e.g., "Solve: ...", "Calculate: ...")'
+        ? 'a computation question — if self-contained, use notation only (e.g., "3/4 + 1/2 = ?"). If it needs context, words are fine.'
         : 'a clear understanding question'
     }
 
@@ -375,7 +389,7 @@ Return ONLY the new question text, nothing else.`,
     const newQuestion = text.text.trim()
     return isQuestionQualityAcceptable(newQuestion) ? newQuestion : null
   } catch (error) {
-    console.error('[CardGenerator] Single card regeneration failed:', error)
+    log.error({ err: error }, 'Single card regeneration failed')
     return null
   }
 }
@@ -429,7 +443,7 @@ export async function generateCardsFromCourse(
   const lessonsData = course.lessons || course.sections || []
 
   if (!lessonsData || lessonsData.length === 0) {
-    console.log('No lessons/sections found in course')
+    log.info('No lessons/sections found in course')
     return cards
   }
 

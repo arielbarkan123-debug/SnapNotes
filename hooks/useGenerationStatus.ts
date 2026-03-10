@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { GenerationStatus, Course } from '@/types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('hook:useGenerationStatus')
 
 interface UseGenerationStatusOptions {
   /** If true, automatically triggers background continuation when status is 'partial' */
@@ -194,12 +197,12 @@ export function useGenerationStatus(
           )
           .subscribe((subStatus) => {
             if (subStatus === 'CHANNEL_ERROR' || subStatus === 'TIMED_OUT') {
-              console.warn('[useGenerationStatus] Realtime failed, falling back to polling')
+              log.warn('Realtime failed, falling back to polling')
               startPolling()
             }
           })
       } catch (err) {
-        console.warn('[useGenerationStatus] WebSocket not available, falling back to polling:', err)
+        log.warn({ err }, 'WebSocket not available, falling back to polling')
         startPolling()
       }
     }
@@ -213,7 +216,7 @@ export function useGenerationStatus(
         .single()
 
       if (fetchError || cancelled) {
-        if (fetchError) console.error('[useGenerationStatus] Fetch error:', fetchError)
+        if (fetchError) log.error({ err: fetchError }, 'Fetch error')
         return
       }
 

@@ -1,45 +1,55 @@
 /**
  * Debug logging utilities
- * Only outputs in development environment to avoid production log pollution
+ *
+ * Delegates to the structured pino logger from @/lib/logger.
+ * Maintains backward compatibility with existing code that uses
+ * debug.log(), debug.error(), createDebugLogger(), etc.
+ *
+ * - In development: all levels logged
+ * - In production: only warn + error logged (pino handles level filtering)
  */
 
-const isDev = process.env.NODE_ENV === 'development'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('debug')
 
 /**
- * Debug logger that only logs in development mode
+ * Debug logger that delegates to structured pino logger
  */
 export const debug = {
   log: (...args: unknown[]) => {
-    if (isDev) {
-      console.log(...args)
-    }
+    log.debug({ args: args.length === 1 ? args[0] : args }, String(args[0]))
   },
   warn: (...args: unknown[]) => {
-    if (isDev) {
-      console.warn(...args)
-    }
+    log.warn({ args: args.length === 1 ? args[0] : args }, String(args[0]))
   },
   error: (...args: unknown[]) => {
-    // Errors are always logged (useful for production debugging)
-    console.error(...args)
+    log.error({ args: args.length === 1 ? args[0] : args }, String(args[0]))
   },
   info: (...args: unknown[]) => {
-    if (isDev) {
-      console.info(...args)
-    }
+    log.info({ args: args.length === 1 ? args[0] : args }, String(args[0]))
   },
 }
 
 /**
  * Create a namespaced debug logger
- * @param namespace - Prefix for all log messages (e.g., '[AuthCallback]')
+ * @param namespace - Namespace for the logger (e.g., 'AuthCallback', 'UploadHandler')
  */
 export function createDebugLogger(namespace: string) {
+  const nsLog = createLogger(namespace)
   return {
-    log: (...args: unknown[]) => debug.log(namespace, ...args),
-    warn: (...args: unknown[]) => debug.warn(namespace, ...args),
-    error: (...args: unknown[]) => debug.error(namespace, ...args),
-    info: (...args: unknown[]) => debug.info(namespace, ...args),
+    log: (...args: unknown[]) => {
+      nsLog.debug({ args: args.length === 1 ? args[0] : args }, String(args[0]))
+    },
+    warn: (...args: unknown[]) => {
+      nsLog.warn({ args: args.length === 1 ? args[0] : args }, String(args[0]))
+    },
+    error: (...args: unknown[]) => {
+      nsLog.error({ args: args.length === 1 ? args[0] : args }, String(args[0]))
+    },
+    info: (...args: unknown[]) => {
+      nsLog.info({ args: args.length === 1 ? args[0] : args }, String(args[0]))
+    },
   }
 }
 

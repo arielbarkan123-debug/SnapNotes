@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes, logError } from '@/lib/api/errors'
 import { generateCardsFromCourse } from '@/lib/srs'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:srs-generate-all')
 
 // =============================================================================
 // POST /api/srs/cards/generate-all - Generate cards for all courses
@@ -59,20 +62,21 @@ export async function POST(): Promise<NextResponse> {
 
       if (existingCount && existingCount > 0) {
         // Skip - cards already exist
-        console.log(`Skipping course ${course.id} - already has ${existingCount} cards`)
+        log.debug({ id: course.id, existingCount: existingCount }, 'Skipping course - already has cards')
         continue
       }
 
       // Debug: Log course structure
       const gc = course.generated_course
-      console.log(`Processing course ${course.id}:`, {
+      log.debug({
+        courseId: course.id,
         hasLessons: !!(gc?.lessons),
         hasSections: !!(gc?.sections),
         lessonsCount: gc?.lessons?.length || 0,
         sectionsCount: gc?.sections?.length || 0,
         firstSectionHasSteps: !!(gc?.sections?.[0]?.steps || gc?.lessons?.[0]?.steps),
         stepsCount: gc?.sections?.[0]?.steps?.length || gc?.lessons?.[0]?.steps?.length || 0,
-      })
+      }, 'Processing course')
 
       // Generate cards from course content
       const generatedCards = await generateCardsFromCourse(
@@ -81,7 +85,7 @@ export async function POST(): Promise<NextResponse> {
         { language }
       )
 
-      console.log(`Generated ${generatedCards.length} cards for course ${course.id}`)
+      log.debug({ count: generatedCards.length, courseId: course.id }, 'Generated cards for course')
 
       if (generatedCards.length === 0) {
         continue

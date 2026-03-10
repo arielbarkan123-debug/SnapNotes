@@ -29,6 +29,9 @@ import {
   getLockedAttributes,
 } from '@/lib/profile/profile-sync'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:profile-refinement')
 
 // =============================================================================
 // GET: Fetch refinement state and effective profile
@@ -82,7 +85,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Error fetching refinement state:', error)
+    log.error({ err: error }, 'Error fetching refinement state')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
@@ -166,7 +169,7 @@ export async function POST(request: NextRequest) {
         : null,
     })
   } catch (error) {
-    console.error('Error processing signal:', error)
+    log.error({ err: error }, 'Error processing signal')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
@@ -239,7 +242,7 @@ export async function PUT(request: NextRequest) {
         return createErrorResponse(ErrorCodes.FIELD_INVALID_FORMAT, 'Invalid action')
     }
   } catch (error) {
-    console.error('Error updating refinement settings:', error)
+    log.error({ err: error }, 'Error updating refinement settings')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }

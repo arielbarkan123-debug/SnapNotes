@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:analytics-session-end')
 
 // UUID v4 regex pattern
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -47,13 +50,13 @@ export async function POST(request: NextRequest) {
       .eq('id', sessionId)
 
     if (error) {
-      console.error('[Analytics] Failed to end session:', error)
+      log.error({ err: error }, 'Failed to end session')
       return createErrorResponse(ErrorCodes.UPDATE_FAILED, 'Failed to end session')
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('[Analytics] Session end error:', error)
+    log.error({ err: error }, 'Session end error')
     return createErrorResponse(ErrorCodes.ANALYTICS_UNKNOWN)
   }
 }

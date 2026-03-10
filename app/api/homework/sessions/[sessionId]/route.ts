@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:homework-session-id')
 
 // ============================================================================
 // GET - Get a single homework help session
@@ -34,13 +37,13 @@ export async function GET(
       if (error.code === 'PGRST116') {
         return createErrorResponse(ErrorCodes.HW_SESSION_NOT_FOUND)
       }
-      console.error('Fetch error:', error)
+      log.error({ err: error }, 'Fetch error')
       return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch session')
     }
 
     return NextResponse.json({ session })
   } catch (error) {
-    console.error('Get session error:', error)
+    log.error({ err: error }, 'Get session error')
     return createErrorResponse(ErrorCodes.HOMEWORK_UNKNOWN)
   }
 }
@@ -110,13 +113,13 @@ export async function PATCH(
       if (error.code === 'PGRST116') {
         return createErrorResponse(ErrorCodes.HW_SESSION_NOT_FOUND)
       }
-      console.error('Update error:', error)
+      log.error({ err: error }, 'Update error')
       return createErrorResponse(ErrorCodes.UPDATE_FAILED, 'Failed to update session')
     }
 
     return NextResponse.json({ session })
   } catch (error) {
-    console.error('Update session error:', error)
+    log.error({ err: error }, 'Update session error')
     return createErrorResponse(ErrorCodes.HOMEWORK_UNKNOWN)
   }
 }

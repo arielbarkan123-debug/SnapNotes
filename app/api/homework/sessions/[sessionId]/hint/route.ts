@@ -19,6 +19,9 @@ import { addMessage, updateProgress } from '@/lib/homework/session-manager'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import { classifyTopicType } from '@/lib/ai/content-classifier'
 import { loadUserProfile } from '@/lib/user-profile'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:homework-hint')
 
 // Allow 60 seconds for hint generation
 export const maxDuration = 60
@@ -107,7 +110,7 @@ export async function POST(
     try {
       hint = await generateHint(hintContext)
     } catch (error) {
-      console.error('Hint generation error:', error)
+      log.error({ err: error }, 'Hint generation error')
       // Fallback hint
       hint = {
         hintLevel,
@@ -196,7 +199,7 @@ export async function POST(
       hintsRemaining: Math.max(0, 4 - newHintsUsed),
     })
   } catch (error) {
-    console.error('Hint error:', error)
+    log.error({ err: error }, 'Hint error')
     return createErrorResponse(ErrorCodes.HINT_GENERATION_FAILED)
   }
 }

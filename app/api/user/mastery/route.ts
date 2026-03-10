@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { UserMasteryResponse } from '@/lib/concepts/types'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:user-mastery')
 
 /**
  * GET /api/user/mastery
@@ -81,7 +84,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
 
     if (error) {
-      console.error('[User Mastery API] Error:', error)
+      log.error({ err: error }, 'Error')
       return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch mastery data')
     }
 
@@ -132,7 +135,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response)
   } catch (error) {
-    console.error('[User Mastery API] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }
@@ -223,7 +226,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('[User Mastery API] Update error:', error)
+      log.error({ err: error }, 'Update error')
       return createErrorResponse(ErrorCodes.UPDATE_FAILED, 'Failed to update mastery')
     }
 
@@ -235,7 +238,7 @@ export async function POST(request: NextRequest) {
       nextReviewDate: nextReviewDate.toISOString(),
     })
   } catch (error) {
-    console.error('[User Mastery API] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }

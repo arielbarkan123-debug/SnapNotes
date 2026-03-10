@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:analytics-session')
 
 // UUID v4 regex pattern
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -57,13 +60,13 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) {
-      console.error('[Analytics] Failed to create session:', error)
+      log.error({ err: error }, 'Failed to create session')
       return createErrorResponse(ErrorCodes.INSERT_FAILED, 'Failed to create session')
     }
 
     return NextResponse.json({ success: true, sessionId })
   } catch (error) {
-    console.error('[Analytics] Session creation error:', error)
+    log.error({ err: error }, 'Session creation error')
     return createErrorResponse(ErrorCodes.ANALYTICS_UNKNOWN)
   }
 }

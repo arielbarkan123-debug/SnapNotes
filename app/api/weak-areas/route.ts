@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:weak-areas')
 
 interface WeakArea {
   courseId: string
@@ -60,7 +63,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       // Don't log error if table doesn't exist - feature is optional
       if (error.code !== 'PGRST205') {
-        console.error('Failed to fetch lesson progress:', error)
+        log.error({ err: error }, 'Failed to fetch lesson progress')
       }
       // Return empty data if table doesn't exist
       return NextResponse.json({ weakAreas: [], summary: null })
@@ -170,7 +173,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ weakAreas, summary })
   } catch (error) {
-    console.error('[Weak Areas API] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.DATABASE_UNKNOWN)
   }
 }

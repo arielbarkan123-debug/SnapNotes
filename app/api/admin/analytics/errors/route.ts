@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { checkAdminAccess, parseDateRange } from '@/lib/admin/utils'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:admin-analytics-errors')
 
 /**
  * DELETE /api/admin/analytics/errors
@@ -22,7 +25,7 @@ export async function DELETE() {
       .lt('occurred_at', '3000-01-01')
 
     if (deleteError) {
-      console.error('[Admin Analytics] Delete error details:', deleteError)
+      log.error({ err: deleteError }, 'Delete error details')
       throw deleteError
     }
 
@@ -32,7 +35,7 @@ export async function DELETE() {
       deleted: count || 0,
     })
   } catch (err) {
-    console.error('[Admin Analytics] Clear errors error:', err)
+    log.error({ err: err }, 'Clear errors error')
     return createErrorResponse(ErrorCodes.DELETE_FAILED, 'Failed to clear errors')
   }
 }
@@ -125,7 +128,7 @@ export async function GET(request: NextRequest) {
       errorsByPage,
     })
   } catch (error) {
-    console.error('[Admin Analytics] Errors error:', error)
+    log.error({ err: error }, 'Errors error')
     return createErrorResponse(ErrorCodes.ADMIN_ANALYTICS_FETCH_FAILED)
   }
 }

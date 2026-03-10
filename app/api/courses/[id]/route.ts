@@ -16,6 +16,9 @@ import type { ExtractedDocument } from '@/lib/documents'
 import type { GeneratedCourse, LessonIntensityMode } from '@/types'
 import { generateCardsFromCourse } from '@/lib/srs'
 import { checkRateLimit, RATE_LIMITS, getIdentifier } from '@/lib/rate-limit'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:courses-id')
 
 // ============================================================================
 // PATCH - Add new material to an existing course
@@ -282,7 +285,7 @@ export async function DELETE(
       } catch (err) {
         // Log in development to help diagnose unexpected errors
         if (process.env.NODE_ENV === 'development') {
-          console.debug(`[DeleteCourse] Optional table '${table}' delete failed:`, err)
+          log.debug({ table, err }, 'Optional table delete failed')
         }
       }
     }
@@ -315,7 +318,7 @@ export async function DELETE(
     if (deleteError) {
       logError('DeleteCourse:course', deleteError)
       // Log detailed error for debugging but don't expose to client
-      console.error('Delete course error details:', JSON.stringify(deleteError, null, 2))
+      log.error({ err: deleteError }, 'Delete course error details')
       return createErrorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to delete course. Please try again.')
     }
 

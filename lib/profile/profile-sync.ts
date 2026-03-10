@@ -8,6 +8,9 @@
 import { createClient } from '@/lib/supabase/client'
 import { type RefinementState, createProfileSnapshot } from './refinement-engine'
 import { getAgeGroupConfig, type AgeGroupConfig } from '@/lib/learning/age-config'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('profile:profile-sync')
 
 // =============================================================================
 // Types
@@ -430,7 +433,7 @@ export async function lockAttribute(
       .eq('user_id', userId)
 
     if (error) {
-      console.error('Failed to lock attribute:', error)
+      log.error({ err: error }, 'Failed to lock attribute:')
       return false
     }
   }
@@ -465,7 +468,7 @@ export async function unlockAttribute(
     .eq('user_id', userId)
 
   if (error) {
-    console.error('Failed to unlock attribute:', error)
+    log.error({ err: error }, 'Failed to unlock attribute:')
     return false
   }
 

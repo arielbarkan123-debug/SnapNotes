@@ -9,6 +9,9 @@
  */
 
 import type { GeneratedCourse, Lesson, Step } from '@/types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('ai:course-validator')
 
 // =============================================================================
 // Forbidden Content Patterns
@@ -184,7 +187,7 @@ function isStepForbidden(step: Step): boolean {
 function isLessonForbidden(lesson: Lesson): boolean {
   // Check title first
   if (isLessonTitleForbidden(lesson.title)) {
-    console.log(`[CourseValidator] Filtering lesson by title: "${lesson.title}"`)
+    log.debug({ title: lesson.title }, 'Filtering lesson by title')
     return true
   }
 
@@ -194,9 +197,7 @@ function isLessonForbidden(lesson: Lesson): boolean {
     const forbiddenRatio = forbiddenStepCount / lesson.steps.length
 
     if (forbiddenRatio > 0.7) {
-      console.log(
-        `[CourseValidator] Filtering lesson by content ratio: "${lesson.title}" (${forbiddenStepCount}/${lesson.steps.length} steps forbidden)`
-      )
+      log.debug({ title: lesson.title, forbiddenStepCount, totalSteps: lesson.steps.length }, 'Filtering lesson by content ratio')
       return true
     }
   }
@@ -237,9 +238,7 @@ export function filterForbiddenContent(course: GeneratedCourse): GeneratedCourse
       const filteredSteps = lesson.steps.filter((step) => {
         const isForbidden = isStepForbidden(step)
         if (isForbidden) {
-          console.log(
-            `[CourseValidator] Filtering step: "${step.content?.substring(0, 50)}..." (${step.type})`
-          )
+          log.debug({ content: step.content?.substring(0, 50), type: step.type }, 'Filtering step')
           filteredStepCount++
         }
         return !isForbidden
@@ -253,9 +252,7 @@ export function filterForbiddenContent(course: GeneratedCourse): GeneratedCourse
     // Step 3: Remove lessons that became empty after step filtering
     .filter((lesson) => {
       if (lesson.steps.length === 0) {
-        console.log(
-          `[CourseValidator] Removing empty lesson after step filtering: "${lesson.title}"`
-        )
+        log.debug({ title: lesson.title }, 'Removing empty lesson after step filtering')
         filteredLessonCount++
         return false
       }
@@ -264,19 +261,12 @@ export function filterForbiddenContent(course: GeneratedCourse): GeneratedCourse
 
   // Log summary
   if (filteredLessonCount > 0 || filteredStepCount > 0) {
-    console.log(
-      `[CourseValidator] Filtered ${filteredLessonCount} lessons and ${filteredStepCount} steps from course "${course.title}"`
-    )
-    console.log(
-      `[CourseValidator] Remaining: ${filteredLessons.length}/${originalLessonCount} lessons`
-    )
+    log.info({ filteredLessonCount, filteredStepCount, courseTitle: course.title, remaining: filteredLessons.length, original: originalLessonCount }, 'Filtered forbidden content from course')
   }
 
   // Ensure we still have content
   if (filteredLessons.length === 0) {
-    console.warn(
-      `[CourseValidator] WARNING: All lessons were filtered! Keeping original course.`
-    )
+    log.warn('All lessons were filtered! Keeping original course.')
     return course
   }
 

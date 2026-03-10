@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:practice-complete')
 
 // =============================================================================
 // POST - Record practice completion for a homework mistake
@@ -54,7 +57,7 @@ export async function POST(
       if (fetchError.code === 'PGRST116') {
         return createErrorResponse(ErrorCodes.CHECK_NOT_FOUND)
       }
-      console.error('[PracticeComplete] Fetch error:', fetchError)
+      log.error({ err: fetchError }, 'Fetch error')
       return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch homework check')
     }
 
@@ -84,7 +87,7 @@ export async function POST(
       .eq('user_id', user.id)
 
     if (updateError) {
-      console.error('[PracticeComplete] Update error:', updateError)
+      log.error({ err: updateError }, 'Update error')
       return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to update practiced items')
     }
 
@@ -93,7 +96,7 @@ export async function POST(
       practicedItems: updatedItems,
     })
   } catch (error) {
-    console.error('[PracticeComplete] Error:', error)
+    log.error({ err: error }, 'Practice complete error')
     return createErrorResponse(ErrorCodes.HOMEWORK_UNKNOWN)
   }
 }

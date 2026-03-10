@@ -14,6 +14,9 @@
 import type Anthropic from '@anthropic-ai/sdk'
 import type { StudentAnswerSet, StudentAnswer, VerifiedProblem } from './types'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('homework:student-work-reader')
 const MAX_TOKENS = 2048
 
 // ============================================================================
@@ -117,11 +120,11 @@ Respond with ONLY the JSON, no other text.`
     }
 
     const response = await stream.finalMessage()
-    console.log('[StudentWorkReader] Response received, tokens:', response.usage?.output_tokens)
+    log.info({ tokens: response.usage?.output_tokens }, 'Response received')
 
     return parseStudentWorkResponse(response, problems)
   } catch (error) {
-    console.error('[StudentWorkReader] Failed to read student work:', error)
+    log.error({ err: error }, 'Failed to read student work:')
     throw error
   }
 }
@@ -142,7 +145,7 @@ function parseStudentWorkResponse(
   try {
     const jsonMatch = textContent.text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
-      console.error('[StudentWorkReader] No JSON found in response')
+      log.error('No JSON found in response')
       return { answers: problems ? getDefaultAnswers(problems) : [] }
     }
 
@@ -183,7 +186,7 @@ function parseStudentWorkResponse(
 
     return { answers }
   } catch (error) {
-    console.error('[StudentWorkReader] Failed to parse response:', error)
+    log.error({ err: error }, 'Failed to parse response:')
     return { answers: problems ? getDefaultAnswers(problems) : [] }
   }
 }

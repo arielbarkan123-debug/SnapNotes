@@ -6,6 +6,9 @@
 // ============================================================================
 
 import { getDeviceInfo } from '@/lib/analytics/device'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('monitoring:error-reporter')
 
 // ============================================================================
 // Types
@@ -58,7 +61,7 @@ class ErrorReporter {
     // Set up global error handlers
     this.setupGlobalHandlers()
 
-    console.log('[ErrorReporter] Initialized')
+    log.info('Initialized')
   }
 
   /**
@@ -218,7 +221,7 @@ class ErrorReporter {
           // Exponential backoff
           await this.delay(1000 * Math.pow(2, this.retryCount))
         } else {
-          console.error('[ErrorReporter] Failed to send error after retries:', err)
+          log.error({ err: err }, 'Failed to send error after retries:')
           this.retryCount = 0
         }
       }

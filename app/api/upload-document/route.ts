@@ -8,6 +8,9 @@ import {
   type ExtractedDocument,
   type DocumentType,
 } from '@/lib/documents'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:upload-document')
 
 // ============================================================================
 // Types
@@ -157,21 +160,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // 7. Process document to extract content
     let extractedContent: ExtractedDocument
     try {
-      console.log('[UploadDocument] Processing document:', {
+      log.debug({
         name: file.name,
         type: file.type,
         size: file.size,
         detectedType: fileType,
-      })
+      }, 'Processing document')
       extractedContent = await processDocument(buffer, file.type, file.name)
-      console.log('[UploadDocument] Document processed successfully:', {
+      log.debug({
         title: extractedContent.title,
         sections: extractedContent.sections.length,
         pageCount: extractedContent.metadata.pageCount,
         imagesExtracted: extractedContent.images?.length || 0,
-      })
+      }, 'Document processed successfully')
     } catch (error) {
-      console.error('[UploadDocument] Document processing error:', error)
+      log.error({ err: error }, 'Document processing error')
       if (error instanceof Error) {
         const { code, message } = mapDocumentError(error)
         return createErrorResponse(ErrorCodes[code], message)
@@ -224,7 +227,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json(response)
   } catch (error) {
-    console.error('[UploadDocument] Unhandled error:', error)
+    log.error({ err: error }, 'Unhandled error')
     logError('UploadDocument:unhandled', error)
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'An unexpected error occurred. Please try again.')
   }

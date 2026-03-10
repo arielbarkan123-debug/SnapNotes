@@ -6,6 +6,9 @@ import ReactMarkdown from 'react-markdown'
 import { type HelpContext, type HelpRequestType, type HelpAPIResponse } from '@/types'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
 import { trapFocus } from '@/lib/utils/focus-trap'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('ui:help-modal')
 
 interface HelpModalProps {
   isOpen: boolean
@@ -70,7 +73,7 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
       // Check if response is JSON before parsing
       const contentType = res.headers.get('content-type')
       if (!contentType || !contentType.includes('application/json')) {
-        console.error('[HelpModal] Non-JSON response:', res.status)
+        log.error({ status: res.status }, 'Non-JSON response')
         if (res.status === 504 || res.status === 503 || res.status === 502) {
           throw new Error('Server is taking too long. Please try again.')
         }
@@ -81,7 +84,7 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
       try {
         data = await res.json()
       } catch (parseError) {
-        console.error('[HelpModal] JSON parse error:', parseError)
+        log.error({ err: parseError }, 'JSON parse error')
         throw new Error('Server error. Please try again.')
       }
 

@@ -13,6 +13,9 @@ import type { ComputedProblem, AnalysisResult, VerificationResult } from './type
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 });
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:verify')
 
 // ── Layer 1: Programmatic Sanity Checks ─────────────────────────────────────
 
@@ -253,7 +256,7 @@ Reply with ONLY valid JSON (no markdown fences):
       issue: typeof parsed.issue === 'string' ? parsed.issue : undefined,
     };
   } catch (err) {
-    console.warn('[SmartPipeline] Sonnet cross-check failed, passing by default:', err);
+    log.warn({ err: err }, 'Sonnet cross-check failed, passing by default:');
     return { correct: true }; // If cross-check itself fails, don't block
   }
 }

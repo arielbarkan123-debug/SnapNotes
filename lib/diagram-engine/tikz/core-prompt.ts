@@ -25,7 +25,7 @@ BANNED FEATURES (will crash QuickLaTeX):
 - ANY code over 2500 characters — will timeout
 
 SAFE ALTERNATIVES:
-- Instead of plot[domain]: use \\draw[smooth] plot coordinates {(x1,y1) (x2,y2) ...} with 6-10 pre-computed points
+- Instead of plot[domain]: use \\draw[smooth, tension=0.6] plot coordinates {(x1,y1) (x2,y2) ...} with 15-20 pre-computed points (every 0.25-0.5 x-units for smooth curves)
 - Instead of \\pgfmathsetmacro: calculate the number yourself and write it directly
 - Instead of \\definecolor{mycolor}{RGB}{...}: use red!70, blue!60, green!50!black etc.
 - Instead of complex \\foreach: write individual \\draw commands (it's fine to repeat 3-4 times)

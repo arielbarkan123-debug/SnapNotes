@@ -9,6 +9,9 @@
 import type Anthropic from '@anthropic-ai/sdk'
 import { AI_MODEL } from '@/lib/ai/claude'
 import type { SolvedDecomposedProblem, ComputeVerificationResult, RetryResult } from './types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('homework:retry')
 
 const MAX_TOKENS = 4096
 
@@ -87,11 +90,7 @@ Respond with ONLY valid JSON:
     const correctedAnswer = String(parsed.correctAnswer || '')
     if (!correctedAnswer) return null
 
-    console.log(
-      `[SmartSolver/Retry] Problem ${problem.id} (attempt ${attempt}): ` +
-      `error="${String(parsed.errorIdentified || '').slice(0, 80)}", ` +
-      `corrected="${correctedAnswer.slice(0, 50)}"`
-    )
+    log.info({ problemId: problem.id, attempt, errorIdentified: String(parsed.errorIdentified || '').slice(0, 80), correctedAnswer: correctedAnswer.slice(0, 50) }, 'Retry correction result')
 
     return {
       problemId: problem.id,
@@ -104,7 +103,7 @@ Respond with ONLY valid JSON:
       resolvedVia: 'ai_correction',
     }
   } catch (err) {
-    console.warn(`[SmartSolver/Retry] Retry failed for problem ${problem.id}:`, err)
+    log.warn({ err, problemId: problem.id }, 'Retry failed')
     return null
   }
 }

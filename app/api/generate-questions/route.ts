@@ -8,6 +8,9 @@ import { getAnthropicApiKey } from '@/lib/env'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import { classifyTopicType, inferDifficultyFromTopic, resolveEffectiveLanguageLevel } from '@/lib/ai/content-classifier'
 import { isQuestionQualityAcceptable } from '@/lib/srs'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:generate-questions')
 
 // Allow 90 seconds for question generation (Claude API with curriculum context)
 export const maxDuration = 90
@@ -143,19 +146,29 @@ Generate ALL content in Hebrew (עברית).
     // Build topic-type-specific instructions
     let topicTypeInstructions = ''
     if (topicType === 'computational') {
-      topicTypeInstructions = `
+      topicTypeInstructions = userLanguage === 'he' ? `
+## פורמט שאלות — קריטי
+- כאשר חישוב עומד בפני עצמו → סימון בלבד, ללא מילים מיותרות
+  - נכון: "3/4 + 1/2 = ?", "25% × 80 = ?", "2x + 5 = 13, x = ?"
+  - לא נכון: "פתור: מהו 25% מ-80?", "מה המשמעות של השוואה?"
+- שאלות שצריכות הקשר → מילים בסדר
+  - "בשקית 5 כדורים: 3 אדומים ו-2 כחולים. P(אדום) = ?"
+- תשובות: מספרים/ביטויים, לא תיאורים במילים
+` : `
 ## Question Format — CRITICAL
-GENERATE ACTUAL MATH PROBLEMS, NOT VOCABULARY QUESTIONS.
-GOOD: "Solve: What is 25% of 80?", "Convert 3/4 to a percentage", "Calculate: 2/3 + 5/6"
-BAD: "What does comparing mean?", "Explain the concept of fractions"
-Every question MUST require computation or problem-solving to answer.
+- Self-contained computations → NOTATION ONLY, no unnecessary words
+  - GOOD: "3/4 + 1/2 = ?", "25% × 80 = ?", "2x + 5 = 13, x = ?"
+  - BAD: "Solve: What is 25% of 80?", "What does comparing mean?"
+- Questions that genuinely need context → words are fine
+  - "A bag has 5 balls: 3 red, 2 blue. P(red) = ?"
+- Answer options: numbers/expressions, not word descriptions
 `
     } else if (topicType === 'mixed') {
       topicTypeInstructions = `
 ## Question Format
-Mix computational problems (at least 50%) with understanding questions.
-For math content: "Solve: ...", "Calculate: ...", "Convert: ..."
-For conceptual content: "Explain ...", "What is ...", "Why does ..."
+- Self-contained computations (50%+): notation only — "sin(30°) = ?" not "What is the sine of 30 degrees?"
+- Context-dependent problems: words + notation are fine
+- Conceptual questions: natural language — "Explain ...", "What is ...", "Why does ..."
 `
     }
 
@@ -224,7 +237,7 @@ Return JSON in this exact format:
     // Extract JSON from response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
-      console.error('No JSON found in response:', responseText)
+      log.error({ responseText }, 'No JSON found in response')
       return createErrorResponse(ErrorCodes.RESPONSE_PARSE_FAILED)
     }
 
@@ -232,7 +245,7 @@ Return JSON in this exact format:
     try {
       parsed = JSON.parse(jsonMatch[0])
     } catch (parseError) {
-      console.error('Failed to parse JSON:', parseError, jsonMatch[0])
+      log.error({ err: parseError, raw: jsonMatch[0] }, 'Failed to parse JSON')
       return createErrorResponse(ErrorCodes.RESPONSE_PARSE_FAILED)
     }
 
@@ -256,7 +269,7 @@ Return JSON in this exact format:
       count: validQuestions.length,
     })
   } catch (error) {
-    console.error('[Generate Questions API] Error:', error)
+    log.error({ err: error }, 'Error generating questions')
     return createErrorResponse(ErrorCodes.QUESTION_GENERATION_FAILED)
   }
 }

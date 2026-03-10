@@ -5,6 +5,9 @@ import {
   createErrorResponse,
   logError
 } from '@/lib/api/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:upload-images')
 
 // Allow 2 minutes for uploading multiple images (9 files can take time)
 export const maxDuration = 120
@@ -230,7 +233,7 @@ async function validateFile(file: File, index: number): Promise<UploadError | nu
 // ============================================================================
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  console.log(`[Upload API] Version: ${UPLOAD_API_VERSION}`)
+  log.debug({ UPLOAD_API_VERSION: UPLOAD_API_VERSION }, 'Version')
 
   try {
     // 0. Validate Content-Length to prevent DOS attacks
@@ -344,7 +347,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const contentType = file.type || `image/${extension}`
 
         // Debug logging for file info
-        console.log(`[Upload] Processing file: name=${file.name}, type=${file.type}, size=${file.size}, ext=${extension}`)
+        log.debug({ name: file.name, type: file.type, size: file.size, extension: extension }, 'Processing file: name=, type=, size=, ext=')
 
         // Generate storage path: notebook-images/{user_id}/{course_id}/page-{index}.{ext}
         const storagePath = `${user.id}/${courseId}/page-${index}.${extension}`

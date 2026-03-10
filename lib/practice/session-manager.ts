@@ -24,6 +24,9 @@ import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum
 import type { StudySystem } from '@/lib/curriculum/types'
 import { getStudentContext, generateDirectives } from '@/lib/student-context'
 import { bridgePracticeGapsToSRS } from './practice-to-srs'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('practice:session-manager')
 
 // -----------------------------------------------------------------------------
 // Deep Dive Analysis (Feature #5: "Why Was I Wrong?")
@@ -82,12 +85,12 @@ Respond in ${language === 'he' ? 'Hebrew' : 'English'}.`,
     const cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim()
     const parsed = JSON.parse(cleaned) as DeepDiveAnalysis
     if (!parsed.likelyReasoning || !parsed.whyWrong || !parsed.correctModel || !parsed.quickCheck?.question || !parsed.quickCheck?.answer) {
-      console.warn('[DeepDive] Incomplete response from AI:', parsed)
+      log.warn({ parsed }, 'Incomplete response from AI deep dive')
       return null
     }
     return parsed
   } catch (error) {
-    console.error('[DeepDive] Generation failed:', error)
+    log.error({ err: error }, 'Deep dive generation failed')
     return null
   }
 }
@@ -111,7 +114,7 @@ export async function createPracticeSession(
       practiceDirectives = generateDirectives(studentCtx).practice
     }
   } catch (err) {
-    console.warn('[SessionManager] Failed to load student context, continuing with defaults:', err)
+    log.warn({ err }, 'Failed to load student context, continuing with defaults')
   }
 
   // Determine target concepts based on session type
@@ -169,9 +172,7 @@ export async function createPracticeSession(
   // If not enough questions exist, auto-generate via AI
   if (questionIds.length < questionCount && request.courseId) {
     const shortfall = questionCount - questionIds.length
-    console.log(
-      `[SessionManager] Only ${questionIds.length}/${questionCount} questions available, generating ${shortfall} more`
-    )
+    log.info({ available: questionIds.length, needed: questionCount, shortfall }, 'Not enough questions available, generating more')
     try {
       const { questionIds: newIds } = await generateAndStoreQuestions({
         courseId: request.courseId,
@@ -179,7 +180,7 @@ export async function createPracticeSession(
       })
       questionIds = [...questionIds, ...newIds]
     } catch (err) {
-      console.error('[SessionManager] Auto-generation failed:', err)
+      log.error({ err }, 'Auto-generation failed')
       // Continue with whatever we have
     }
   }
@@ -208,7 +209,7 @@ export async function createPracticeSession(
     .single()
 
   if (error) {
-    console.error('Error creating practice session:', error)
+    log.error({ err: error }, 'Error creating practice session')
     throw new Error('Failed to create practice session')
   }
 
@@ -232,7 +233,7 @@ export async function getSession(sessionId: string): Promise<PracticeSession | n
     .single()
 
   if (error) {
-    console.error('Error fetching session:', error)
+    log.error({ err: error }, 'Error fetching session')
     return null
   }
 
@@ -282,7 +283,7 @@ export async function getCurrentQuestion(
     .single()
 
   if (error) {
-    console.error('Error fetching question:', error)
+    log.error({ err: error }, 'Error fetching question')
     return null
   }
 
@@ -303,7 +304,7 @@ export async function getSessionQuestions(
     .in('id', session.question_order)
 
   if (error) {
-    console.error('Error fetching session questions:', error)
+    log.error({ err: error }, 'Error fetching session questions')
     return []
   }
 
@@ -500,7 +501,7 @@ export async function recordAnswer(
     )
 
   if (answerError) {
-    console.error('Error recording answer:', answerError)
+    log.error({ err: answerError }, 'Error recording answer')
     throw new Error('Failed to record answer')
   }
 
@@ -519,7 +520,7 @@ export async function recordAnswer(
     .single()
 
   if (updateError) {
-    console.error('Error updating session:', updateError)
+    log.error({ err: updateError }, 'Error updating session')
   }
 
   // Update question stats
@@ -813,7 +814,7 @@ export async function getActiveSessions(userId: string): Promise<PracticeSession
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.error('Error fetching active sessions:', error)
+    log.error({ err: error }, 'Error fetching active sessions')
     return []
   }
 
@@ -834,7 +835,7 @@ export async function getRecentSessions(
     .limit(limit)
 
   if (error) {
-    console.error('Error fetching recent sessions:', error)
+    log.error({ err: error }, 'Error fetching recent sessions')
     return []
   }
 

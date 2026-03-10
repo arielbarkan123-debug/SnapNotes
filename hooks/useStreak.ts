@@ -9,7 +9,7 @@
  * const { streak, streakExtended, streakBroken } = useStreak()
  *
  * if (streak?.isAtRisk) {
- *   console.log(`Streak at risk! ${streak.hoursRemaining}h remaining`)
+ *   log.info(`Streak at risk! ${streak.hoursRemaining}h remaining`)
  * }
  * ```
  */
@@ -18,6 +18,9 @@
 
 import { useCallback } from 'react'
 import useSWR from 'swr'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('hook:useStreak')
 
 // ============================================================================
 // Types

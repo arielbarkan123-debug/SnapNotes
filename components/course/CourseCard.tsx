@@ -2,6 +2,9 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('ui:course-card')
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
@@ -64,7 +67,7 @@ function detectSubject(title: string | null | undefined): { gradient: string } {
     ]
     return { gradient: defaultGradients[hash % defaultGradients.length] }
   } catch (error) {
-    console.error('[CourseCard] Error in detectSubject:', error)
+    log.error({ err: error }, 'Error in detectSubject')
     return { gradient: DEFAULT_GRADIENT }
   }
 }
@@ -166,7 +169,7 @@ function estimateDifficulty(generatedCourse: GeneratedCourse | null | undefined)
     }
   } catch (error) {
     // Log error but don't crash - return default
-    console.error('[CourseCard] Error in estimateDifficulty:', error)
+    log.error({ err: error }, 'Error in estimateDifficulty')
     return DEFAULT_DIFFICULTY
   }
 }
@@ -183,7 +186,7 @@ function formatDate(dateString: string | null | undefined, locale: string): stri
       year: 'numeric',
     })
   } catch (error) {
-    console.error('[CourseCard] Error in formatDate:', error)
+    log.error({ err: error }, 'Error in formatDate')
     return ''
   }
 }
@@ -194,7 +197,7 @@ function truncateText(text: string | null | undefined, maxLength: number): strin
     if (text.length <= maxLength) return text
     return text.slice(0, maxLength).trim() + '...'
   } catch (error) {
-    console.error('[CourseCard] Error in truncateText:', error)
+    log.error({ err: error }, 'Error in truncateText')
     return ''
   }
 }

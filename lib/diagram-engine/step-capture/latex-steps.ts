@@ -7,6 +7,9 @@
  */
 
 import { Sandbox } from '@e2b/code-interpreter'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:latex-steps')
 
 const STEP_REGEX = /^%\s*===\s*STEP\s+(\d+)\s*:\s*(.+?)\s*===\s*$/
 const LATEX_TEMPLATE_ID = process.env.E2B_LATEX_TEMPLATE_ID || undefined
@@ -95,7 +98,7 @@ export async function captureLatexSteps(
   }
 
   if (!LATEX_TEMPLATE_ID) {
-    console.warn('[LatexSteps] E2B_LATEX_TEMPLATE_ID not set')
+    log.warn('E2B_LATEX_TEMPLATE_ID not set')
     return { buffers: markers.map(() => null), markers }
   }
 
@@ -133,7 +136,7 @@ else:
 
         const compileOutput = compileResult.logs.stdout.join('')
         if (compileOutput.includes('LATEX_ERROR:')) {
-          console.warn(`[LatexSteps] Step ${markers[i].step} compile failed`)
+          log.warn(`Step ${markers[i].step} compile failed`)
           buffers.push(null)
           continue
         }
@@ -166,16 +169,16 @@ else:
         }
 
         if (!captured) {
-          console.warn(`[LatexSteps] Step ${markers[i].step} no PNG captured`)
+          log.warn(`Step ${markers[i].step} no PNG captured`)
           buffers.push(null)
         }
       } catch (err) {
-        console.error(`[LatexSteps] Step ${markers[i].step} error:`, err)
+        log.error({ detail: err }, `Step ${markers[i].step} error`)
         buffers.push(null)
       }
     }
 
-    console.log(`[LatexSteps] Captured ${buffers.filter(Boolean).length}/${markers.length} steps`)
+    log.info(`Captured ${buffers.filter(Boolean).length}/${markers.length} steps`)
     return { buffers, markers }
   } finally {
     await sandbox.kill()

@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/api/errors'
 import { solveFormula } from '@/lib/formula-scanner/solver'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:formula-solve')
 
 export const maxDuration = 60
 
@@ -46,7 +49,7 @@ export async function POST(request: NextRequest) {
       solution,
     })
   } catch (error) {
-    console.error('[FormulaSolver] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to solve formula. Please try again.')
   }
 }

@@ -19,6 +19,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import type { DetectedGap, GapDetectionResult } from '@/lib/concepts/types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('hook:usePrerequisiteCheck')
 
 interface UsePrerequisiteCheckOptions {
   courseId: string
@@ -88,7 +91,7 @@ export function usePrerequisiteCheck({
         )
       )
     } catch (err) {
-      console.error('Prerequisite check failed:', err)
+      log.error({ err }, 'Prerequisite check failed')
       setError(err instanceof Error ? err.message : 'Failed to check prerequisites')
       // Don't block lesson on error - let them continue
       setGaps([])

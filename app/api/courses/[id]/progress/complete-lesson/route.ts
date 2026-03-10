@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { type GeneratedCourse } from '@/types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:courses-complete-lesson')
 
 interface RouteParams {
   params: {
@@ -105,7 +108,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         .single()
 
       if (error) {
-        console.error('Error updating progress:', error)
+        log.error({ err: error }, 'Error updating progress')
         return NextResponse.json(
           { error: 'Failed to update progress' },
           { status: 500 }
@@ -128,7 +131,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         .single()
 
       if (error) {
-        console.error('Error creating progress:', error)
+        log.error({ err: error }, 'Error creating progress')
         return NextResponse.json(
           { error: 'Failed to create progress' },
           { status: 500 }
@@ -156,7 +159,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     })
 
   } catch (error) {
-    console.error('Complete lesson error:', error)
+    log.error({ err: error }, 'Complete lesson error')
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -7,6 +7,9 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzeExamImage, getMediaTypeFromExtension } from '@/lib/past-exams'
 import type { PastExamTemplate, PastExamAnalyzeResponse } from '@/types/past-exam'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:past-exams-analyze')
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -130,7 +133,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         .single()
 
       if (updateError) {
-        console.error('Error updating template with analysis:', updateError)
+        log.error({ err: updateError }, 'Error updating template with analysis')
         throw new Error('Failed to save analysis results')
       }
 
@@ -155,14 +158,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         })
         .eq('id', id)
 
-      console.error('Analysis error:', analysisError)
+      log.error({ err: analysisError }, 'Analysis error')
       return NextResponse.json(
         { success: false, error: errorMessage },
         { status: 500 }
       )
     }
   } catch (error) {
-    console.error('Error in POST /api/past-exams/[id]/analyze:', error)
+    log.error({ err: error }, 'Error in POST /api/past-exams/[id]/analyze')
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

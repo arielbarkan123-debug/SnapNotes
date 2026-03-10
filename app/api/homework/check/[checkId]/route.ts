@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:homework-check-id')
 
 // ============================================================================
 // GET - Get a specific homework check
@@ -34,13 +37,13 @@ export async function GET(
       if (error.code === 'PGRST116') {
         return createErrorResponse(ErrorCodes.CHECK_NOT_FOUND)
       }
-      console.error('Fetch error:', error)
+      log.error({ err: error }, 'Fetch error')
       return createErrorResponse(ErrorCodes.QUERY_FAILED, 'Failed to fetch homework check')
     }
 
     return NextResponse.json({ check })
   } catch (error) {
-    console.error('Get check error:', error)
+    log.error({ err: error }, 'Get check error')
     return createErrorResponse(ErrorCodes.HOMEWORK_UNKNOWN)
   }
 }
@@ -73,13 +76,13 @@ export async function DELETE(
       .eq('user_id', user.id)
 
     if (error) {
-      console.error('Delete error:', error)
+      log.error({ err: error }, 'Delete error')
       return createErrorResponse(ErrorCodes.DELETE_FAILED, 'Failed to delete homework check')
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Delete check error:', error)
+    log.error({ err: error }, 'Delete check error')
     return createErrorResponse(ErrorCodes.HOMEWORK_UNKNOWN)
   }
 }

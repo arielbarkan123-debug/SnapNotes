@@ -19,6 +19,9 @@ import type {
   QuestionSource,
 } from './types'
 import { processLearningSignal, type QuestionSignal } from '@/lib/profile'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('adaptive:realtime-adjuster')
 
 // =============================================================================
 // Configuration
@@ -132,7 +135,7 @@ export async function recordAnswer(record: AnswerRecord): Promise<PerformanceUpd
   // Emit signal to profile refinement engine (RLPA-style dynamic profiling)
   // This runs asynchronously and doesn't block the response
   emitProfileRefinementSignal(record).catch((err) => {
-    console.error('Failed to emit profile refinement signal:', err)
+    log.error({ err: err }, 'Failed to emit profile refinement signal:')
   })
 
   // Generate feedback

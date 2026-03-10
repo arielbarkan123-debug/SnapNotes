@@ -6,7 +6,10 @@ import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import FormInput from '@/components/ui/FormInput'
 import { mapSupabaseAuthError } from '@/lib/api/errors'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('page:signup-pagex')
 interface FormData {
   name: string
   email: string
@@ -128,9 +131,9 @@ export default function SignupPage() {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
       const redirectUrl = `${appUrl}/auth/callback`
 
-      console.log('[Signup] Attempting signup for:', formData.email)
-      console.log('[Signup] Redirect URL:', redirectUrl)
-      console.log('[Signup] App URL source:', process.env.NEXT_PUBLIC_APP_URL ? 'env' : 'origin')
+      log.info({ detail: formData.email }, 'Attempting signup for')
+      log.info({ detail: redirectUrl }, 'Redirect URL')
+      log.info({ detail: process.env.NEXT_PUBLIC_APP_URL ? 'env' : 'origin' }, 'App URL source')
 
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
@@ -144,14 +147,14 @@ export default function SignupPage() {
       })
 
       if (error) {
-        console.error('[Signup] Error:', error.message, error.code)
+        log.error({ detail: [error.message, error.code] }, 'Error')
         // Map Supabase auth errors to user-friendly messages
         const { message } = mapSupabaseAuthError(error.message)
         setServerError(message)
       } else {
-        console.log('[Signup] Success, user data:', data?.user?.id ? 'User created' : 'No user')
-        console.log('[Signup] Confirmation sent to:', data?.user?.email)
-        console.log('[Signup] Email confirmation status:', data?.user?.identities?.length === 0 ? 'User already exists' : 'New user')
+        log.info({ detail: data?.user?.id ? 'User created' : 'No user' }, 'Success, user data')
+        log.info({ detail: data?.user?.email }, 'Confirmation sent to')
+        log.info({ detail: data?.user?.identities?.length === 0 ? 'User already exists' : 'New user' }, 'Email confirmation status')
 
         // Store the email for resend functionality
         setRegisteredEmail(formData.email)
@@ -168,7 +171,7 @@ export default function SignupPage() {
         })
       }
     } catch (err) {
-      console.error('[Signup] Unexpected error:', err)
+      log.error({ detail: err }, 'Unexpected error')
       setServerError(t('signup.unexpectedError'))
     } finally {
       setIsLoading(false)
@@ -176,19 +179,19 @@ export default function SignupPage() {
   }
 
   const handleResendVerification = useCallback(async () => {
-    console.log('[Signup] ========== RESEND START ==========')
-    console.log('[Signup] Registered email:', registeredEmail)
-    console.log('[Signup] Cooldown remaining:', resendCooldown)
+    log.info('Resend OTP start')
+    log.info({ detail: registeredEmail }, 'Registered email')
+    log.info({ detail: resendCooldown }, 'Cooldown remaining')
 
     if (!registeredEmail) {
-      console.error('[Signup] No email to resend to')
+      log.error('No email to resend to')
       setServerError(t('signup.noEmailToResend'))
       return
     }
 
     // Don't allow resend if cooldown is active
     if (resendCooldown > 0) {
-      console.log('[Signup] Cooldown active, skipping resend')
+      log.info('Cooldown active, skipping resend')
       return
     }
 
@@ -201,11 +204,11 @@ export default function SignupPage() {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
       const redirectUrl = `${appUrl}/auth/callback`
 
-      console.log('[Signup] Resending verification email...')
-      console.log('[Signup] Target email:', registeredEmail)
-      console.log('[Signup] Redirect URL:', redirectUrl)
-      console.log('[Signup] App URL source:', process.env.NEXT_PUBLIC_APP_URL ? 'env' : 'origin')
-      console.log('[Signup] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+      log.info('Resending verification email...')
+      log.info({ detail: registeredEmail }, 'Target email')
+      log.info({ detail: redirectUrl }, 'Redirect URL')
+      log.info({ detail: process.env.NEXT_PUBLIC_APP_URL ? 'env' : 'origin' }, 'App URL source')
+      log.info({ detail: process.env.NEXT_PUBLIC_SUPABASE_URL }, 'Supabase URL')
 
       const { data, error } = await supabase.auth.resend({
         type: 'signup',
@@ -215,46 +218,46 @@ export default function SignupPage() {
         },
       })
 
-      console.log('[Signup] Resend response data:', data)
+      log.info({ detail: data }, 'Resend response data')
 
       if (error) {
-        console.error('[Signup] Resend error:', error.message)
-        console.error('[Signup] Resend error code:', error.code)
-        console.error('[Signup] Resend error status:', error.status)
-        console.error('[Signup] Full error object:', JSON.stringify(error, null, 2))
+        log.error({ detail: error.message }, 'Resend error')
+        log.error({ detail: error.code }, 'Resend error code')
+        log.error({ detail: error.status }, 'Resend error status')
+        log.error({ detail: [JSON.stringify(error, null, 2)] }, 'Full error object')
 
         // Handle rate limiting gracefully
         if (error.message.toLowerCase().includes('rate limit') ||
             error.message.toLowerCase().includes('too many') ||
             error.message.toLowerCase().includes('email rate limit') ||
             error.code === 'over_email_send_rate_limit') {
-          console.log('[Signup] Rate limit detected')
+          log.info('Rate limit detected')
           setServerError(t('signup.resendRateLimited'))
           // Set a longer cooldown on rate limit
           setResendCooldown(300) // 5 minutes
         } else if (error.message.toLowerCase().includes('user not found') ||
                    error.code === 'user_not_found') {
-          console.log('[Signup] User not found - may need to sign up again')
+          log.info('User not found - may need to sign up again')
           setServerError(t('signup.accountNotFound'))
         } else {
           const { message } = mapSupabaseAuthError(error.message)
           setServerError(message)
         }
       } else {
-        console.log('[Signup] Verification email resent successfully!')
-        console.log('[Signup] ========== RESEND SUCCESS ==========')
+        log.info('Verification email resent successfully!')
+        log.info('Resend OTP success')
         setSuccessMessage(t('signup.verificationResent'))
         // Reset cooldown after successful resend
         setResendCooldown(RESEND_COOLDOWN_SECONDS)
       }
     } catch (err) {
-      console.error('[Signup] Resend unexpected error:', err)
-      console.error('[Signup] Error type:', typeof err)
-      console.error('[Signup] Error details:', err instanceof Error ? err.message : String(err))
+      log.error({ detail: err }, 'Resend unexpected error')
+      log.error({ detail: typeof err }, 'Error type')
+      log.error({ detail: err instanceof Error ? err.message : String(err) }, 'Error details')
       setServerError(t('signup.unexpectedError'))
     } finally {
       setIsResending(false)
-      console.log('[Signup] ========== RESEND END ==========')
+      log.info('Resend OTP end')
     }
   }, [registeredEmail, resendCooldown, t])
 

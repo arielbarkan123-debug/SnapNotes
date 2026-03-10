@@ -5,9 +5,10 @@ import { useTranslations } from 'next-intl'
 interface ProgressBarProps {
   currentStep: number
   totalSteps: number
+  onStepClick?: (stepIndex: number) => void
 }
 
-export default function ProgressBar({ currentStep, totalSteps }: ProgressBarProps) {
+export default function ProgressBar({ currentStep, totalSteps, onStepClick }: ProgressBarProps) {
   const t = useTranslations('lesson')
   const progressPercentage = totalSteps > 0 ? ((currentStep + 1) / totalSteps) * 100 : 0
 
@@ -31,22 +32,35 @@ export default function ProgressBar({ currentStep, totalSteps }: ProgressBarProp
         />
       </div>
 
-      {/* Step dots */}
+      {/* Step dots - visited steps are clickable */}
       <div className="flex items-center justify-center gap-1.5 mt-3">
-        {Array.from({ length: totalSteps }).map((_, index) => (
-          <div
-            key={index}
-            className={`
-              w-2 h-2 rounded-full transition-all duration-200
-              ${index < currentStep
-                ? 'bg-violet-500'
-                : index === currentStep
-                  ? 'bg-violet-500 scale-125'
-                  : 'bg-gray-300 dark:bg-gray-600'
-              }
-            `}
-          />
-        ))}
+        {Array.from({ length: totalSteps }).map((_, index) => {
+          const isVisited = index < currentStep
+          const isCurrent = index === currentStep
+          const isClickable = isVisited && onStepClick
+
+          return isClickable ? (
+            <button
+              key={index}
+              onClick={() => onStepClick(index)}
+              className="w-2.5 h-2.5 rounded-full bg-violet-500 hover:bg-violet-400 hover:scale-150 transition-all duration-200 cursor-pointer"
+              aria-label={t('stepProgress', { current: index + 1, total: totalSteps })}
+            />
+          ) : (
+            <div
+              key={index}
+              className={`
+                w-2 h-2 rounded-full transition-all duration-200
+                ${isVisited
+                  ? 'bg-violet-500'
+                  : isCurrent
+                    ? 'bg-violet-500 scale-125'
+                    : 'bg-gray-300 dark:bg-gray-600'
+                }
+              `}
+            />
+          )
+        })}
       </div>
     </div>
   )

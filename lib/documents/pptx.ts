@@ -16,6 +16,9 @@
 
 import JSZip from 'jszip'
 import type { ExtractedDocument, ExtractedImage } from './types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('documents:pptx')
 
 // Re-export types for backward compatibility
 export type { ExtractedDocument, ExtractedImage } from './types'
@@ -333,7 +336,7 @@ export async function processPPTX(buffer: Buffer): Promise<ExtractedDocument> {
       slides.push(slideContent)
     } catch {
       // Skip slides that fail to parse
-      console.warn(`Failed to parse slide ${slideFile.number}`)
+      log.warn(`Failed to parse slide ${slideFile.number}`)
     }
   }
 
@@ -386,7 +389,7 @@ export async function processPPTX(buffer: Buffer): Promise<ExtractedDocument> {
       })
     } catch {
       // Skip images that fail to extract
-      console.warn(`Failed to extract image: ${mediaFile.filename}`)
+      log.warn(`Failed to extract image: ${mediaFile.filename}`)
     }
   }
 

@@ -24,6 +24,9 @@ import {
 } from '@/lib/ai/content-classifier'
 import { isQuestionQualityAcceptable } from '@/lib/srs'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('practice:question-generator')
 
 // -----------------------------------------------------------------------------
 // Constants
@@ -131,19 +134,30 @@ ${languageLevel.sentenceComplexity}`
   // Add topic-type-specific question format instructions
   if (topicType === 'computational') {
     instructions += `
-## Question Format: COMPUTATIONAL
-- Generate problems to solve, not definitions to recall
-- Include numeric computation in every question
-- For elementary: small numbers, one operation (e.g., "What is 3/4 + 1/2?")
-- For middle school: multi-step, mixed operations (e.g., "Convert 0.375 to a fraction and simplify")
-- For high school: algebraic expressions, equations (e.g., "Solve: 2x² - 5x + 3 = 0")
+## Question Format: COMPUTATIONAL - NOTATION FIRST
+- If the computation stands alone (expression/equation) → use PURE NOTATION, no words
+  - "588 ÷ 3 = ?", "2x² - 5x + 3 = 0, x = ?", "d/dx(x³ + 2x) = ?"
+- If the question genuinely needs context → words are fine
+  - "A bag has 5 balls: 3 red and 2 blue. P(red) = ?"
+  - "A car travels 60 km/h for 2.5 hours. Distance = ?"
+- NEVER add unnecessary words around a self-contained computation
+  - BAD: "A student solves 588 ÷ 3..." → GOOD: "588 ÷ 3 = ?"
+  - BAD: "Solve the following equation: 3x + 7 = 22" → GOOD: "3x + 7 = 22, x = ?"
+- Elementary: "24 × 3 = ?", "3/4 + 1/2 = ?", "15 - 8 = ?"
+- Middle school: "0.375 = ?/?", "3x + 7 = 22, x = ?", "|-5| + |3| = ?"
+- High school: "∫₀¹ x²dx = ?", "lim(x→0) sin(x)/x = ?", "d/dx(x³ + 2x) = ?"
+- Options for multiple choice: numbers/expressions, not word descriptions
 - NEVER ask "What does X mean?" for math topics`
   } else if (topicType === 'mixed') {
     instructions += `
 ## Question Format: MIXED
-- Mix computational problems (50%+) with understanding questions
-- Include actual calculations and problem-solving
-- Balance "Solve: ..." questions with "Explain why ..." questions`
+- Self-contained computations (50%+): use notation only
+  - "sin(30°) = ?" NOT "What is the sine of 30 degrees?"
+- Context-dependent computations: words + notation
+  - "A bag has 5 balls: 3 red, 2 blue. P(red) = ?"
+- Understanding/conceptual questions: natural language
+  - "What happens to the period of a pendulum when length doubles?"
+- Balance notation computation with conceptual questions`
   }
 
   return instructions
@@ -359,6 +373,24 @@ Return a JSON array of questions:
     "cognitive_level": "remember",
     "concept_name": "Cell Biology",
     "tags": ["biology", "cell-organelles"]
+  },
+  {
+    "question_type": "multiple_choice",
+    "question_text": "3/4 + 1/2 = ?",
+    "options": {
+      "choices": [
+        {"label": "A", "value": "5/4"},
+        {"label": "B", "value": "4/6"},
+        {"label": "C", "value": "3/8"},
+        {"label": "D", "value": "2/3"}
+      ]
+    },
+    "correct_answer": "A",
+    "explanation": "3/4 + 1/2 = 3/4 + 2/4 = 5/4",
+    "difficulty_level": 2,
+    "cognitive_level": "apply",
+    "concept_name": "Fraction Addition",
+    "tags": ["math", "fractions", "addition"]
   }
 ]
 
@@ -470,7 +502,7 @@ async function fetchConcepts(
   const { data, error } = await query.limit(20)
 
   if (error) {
-    console.error('Error fetching concepts:', error)
+    log.error({ err: error }, 'Error fetching concepts')
     return []
   }
 
@@ -531,7 +563,7 @@ export async function generatePracticeQuestions(
         tags: q.tags || [],
       }))
   } catch (error) {
-    console.error('Failed to parse generated questions:', error)
+    log.error({ err: error }, 'Failed to parse generated questions')
     throw new Error('Failed to generate valid questions')
   }
 }
@@ -597,7 +629,7 @@ export async function storePracticeQuestions(
     .select('id')
 
   if (error) {
-    console.error('Error storing practice questions:', error)
+    log.error({ err: error }, 'Error storing practice questions')
     throw new Error('Failed to store practice questions')
   }
 
@@ -682,7 +714,7 @@ export async function selectExistingQuestions(
   const { data, error } = await query
 
   if (error) {
-    console.error('Error selecting questions:', error)
+    log.error({ err: error }, 'Error selecting questions')
     return []
   }
 

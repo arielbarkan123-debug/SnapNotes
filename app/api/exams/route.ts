@@ -11,6 +11,9 @@ import type { PastExamTemplate, ImageAnalysis } from '@/types/past-exam'
 import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 import { AI_MODEL } from '@/lib/ai/claude'
 import { getStudentContext, generateDirectives } from '@/lib/student-context'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:exams')
 
 // Type for AI-generated exam questions
 interface GeneratedQuestion {
@@ -62,14 +65,14 @@ export async function GET(request: Request) {
     const { data: exams, error } = await query
 
     if (error) {
-      console.error('[Exams API] Fetch error:', error)
+      log.error({ err: error }, 'Fetch error')
       return createErrorResponse(ErrorCodes.EXAM_FETCH_FAILED)
     }
 
     return NextResponse.json({ success: true, exams })
 
   } catch (error) {
-    console.error('[Exams API] Error:', error)
+    log.error({ err: error }, 'Error')
     return createErrorResponse(ErrorCodes.EXAM_UNKNOWN)
   }
 }
@@ -485,7 +488,7 @@ ${includeImageQuestions ? `
 ` : ''}
 DO NOT include any text outside the JSON. Only output valid JSON.`
 
-    console.log('[Exams API] Generating questions for:', course.title)
+    log.info({ courseTitle: course.title }, 'Generating questions')
 
     const message = await anthropic.messages.create({
       model: AI_MODEL,
@@ -503,7 +506,7 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
       const jsonText = textBlock.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
       questionsData = JSON.parse(jsonText)
     } catch (e) {
-      console.error('[Exams API] JSON parse error:', e)
+      log.error({ err: e }, 'JSON parse error')
       return createErrorResponse(ErrorCodes.RESPONSE_PARSE_FAILED, 'Failed to generate questions')
     }
 
@@ -604,27 +607,27 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
 
       // Check for bad patterns
       if (isQuestionTooVague(questionText)) {
-        console.log('[Exams API] Rejected vague question:', questionText.substring(0, 50))
+        log.debug({ question: questionText.substring(0, 50) }, 'Rejected vague question')
         return false
       }
 
       // Check if it's just the lesson title
       if (isQuestionJustTitle(questionText, lessonTitle)) {
-        console.log('[Exams API] Rejected title-only question:', questionText.substring(0, 50))
+        log.debug({ question: questionText.substring(0, 50) }, 'Rejected title-only question')
         return false
       }
 
       // Also check against all lesson titles
       for (const title of lessonTitles) {
         if (isQuestionJustTitle(questionText, title)) {
-          console.log('[Exams API] Rejected question matching lesson title:', questionText.substring(0, 50))
+          log.debug({ question: questionText.substring(0, 50) }, 'Rejected question matching lesson title')
           return false
         }
       }
 
       // Check if auto-gradable
       if (!isQuestionAutoGradable(q)) {
-        console.log('[Exams API] Rejected non-gradable question:', questionText.substring(0, 50))
+        log.debug({ question: questionText.substring(0, 50) }, 'Rejected non-gradable question')
         return false
       }
 
@@ -634,7 +637,7 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
     // Log validation results
     const rejectedCount = questionsData.questions.length - validatedQuestions.length
     if (rejectedCount > 0) {
-      console.log(`[Exams API] Rejected ${rejectedCount} bad questions, keeping ${validatedQuestions.length}`)
+      log.info({ rejectedCount, keepCount: validatedQuestions.length }, 'Question validation complete')
     }
 
     // Use validated questions
@@ -642,7 +645,7 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
 
     // Check if we have enough questions after validation
     if (validatedQuestions.length < Math.ceil(questionCount * 0.5)) {
-      console.error('[Exams API] Too many questions rejected, only', validatedQuestions.length, 'remain')
+      log.error({ remainingCount: validatedQuestions.length }, 'Too many questions rejected')
       return createErrorResponse(ErrorCodes.EXAM_TOO_FEW_QUESTIONS, 'Failed to generate enough quality questions. Please try again.')
     }
 
@@ -662,14 +665,14 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
               q.image_label_data.image_source = 'web'
               q.image_label_data.image_credit = image.credit
               q.image_label_data.image_credit_url = image.creditUrl
-              console.log('[Exams API] Found image for:', searchQuery)
+              log.debug({ searchQuery }, 'Found image')
             } else {
               // If no image found, remove this question or keep placeholder
-              console.log('[Exams API] No image found for:', searchQuery)
+              log.debug({ searchQuery }, 'No image found')
               q.image_label_data.image_url = '' // Will be filtered out
             }
           } catch (error) {
-            console.error('[Exams API] Image search error:', error)
+            log.error({ err: error }, 'Image search error')
             q.image_label_data.image_url = ''
           }
         }
@@ -726,7 +729,7 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
       .single()
 
     if (examError || !exam) {
-      console.error('[Exams API] Exam insert error:', examError)
+      log.error({ err: examError }, 'Exam insert error')
       return createErrorResponse(ErrorCodes.EXAM_CREATE_FAILED)
     }
 
@@ -756,7 +759,7 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
       .insert(questionsToInsert)
 
     if (questionsError) {
-      console.error('[Exams API] Questions insert error:', questionsError)
+      log.error({ err: questionsError }, 'Questions insert error')
       await supabase.from('exams').delete().eq('id', exam.id)
       return createErrorResponse(ErrorCodes.INSERT_FAILED, 'Failed to save questions')
     }
@@ -768,7 +771,7 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
     })
 
   } catch (error) {
-    console.error('[Exams API] Error:', error)
+    log.error({ err: error }, 'Exam creation error')
     return createErrorResponse(ErrorCodes.EXAM_CREATE_FAILED)
   }
 }

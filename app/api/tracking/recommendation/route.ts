@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:tracking-recommendation')
 
 /**
  * POST /api/tracking/recommendation
@@ -57,7 +60,7 @@ export async function POST(request: Request) {
         .eq('user_id', user.id)
 
       if (error) {
-        console.warn('[Recommendation Tracking] Update error:', error.message)
+        log.warn({ err: error }, 'Update error')
         return NextResponse.json({ success: false }, { status: 200 })
       }
 
@@ -87,13 +90,13 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      console.warn('[Recommendation Tracking] Insert error:', error.message)
+      log.warn({ err: error }, 'Insert error')
       return NextResponse.json({ success: false }, { status: 200 })
     }
 
     return NextResponse.json({ success: true, id: data?.id })
   } catch (error) {
-    console.warn('[Recommendation Tracking] Error:', error)
+    log.warn({ error }, 'Error')
     return NextResponse.json({ success: false }, { status: 200 })
   }
 }

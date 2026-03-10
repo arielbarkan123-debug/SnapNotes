@@ -8,6 +8,9 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('profile:refinement-engine')
 
 // =============================================================================
 // Types
@@ -425,7 +428,7 @@ export async function processLearningSignal(
         .eq('user_id', userId)
 
       if (error) {
-        console.error('Failed to update refinement state:', error)
+        log.error({ err: error }, 'Failed to update refinement state:')
         throw error
       }
 
@@ -446,7 +449,7 @@ export async function processLearningSignal(
 
     return updates
   } catch (error) {
-    console.error('Error processing learning signal:', error)
+    log.error({ err: error }, 'Error processing learning signal:')
     return []
   }
 }
@@ -511,7 +514,7 @@ export async function initializeRefinementState(userId: string): Promise<void> {
     .single()
 
   if (error && !error.message.includes('duplicate')) {
-    console.error('Failed to initialize refinement state:', error)
+    log.error({ err: error }, 'Failed to initialize refinement state:')
     throw error
   }
 }
@@ -564,7 +567,7 @@ export async function rollbackProfile(
     .single()
 
   if (snapshotError || !snapshot) {
-    console.error('Snapshot not found:', snapshotError)
+    log.error({ err: snapshotError }, 'Snapshot not found:')
     return false
   }
 
@@ -579,7 +582,7 @@ export async function rollbackProfile(
       .eq('user_id', userId)
 
     if (profileError) {
-      console.error('Failed to restore profile:', profileError)
+      log.error({ err: profileError }, 'Failed to restore profile:')
       return false
     }
   }
@@ -592,7 +595,7 @@ export async function rollbackProfile(
       .eq('user_id', userId)
 
     if (stateError) {
-      console.error('Failed to restore refinement state:', stateError)
+      log.error({ err: stateError }, 'Failed to restore refinement state:')
       return false
     }
   }

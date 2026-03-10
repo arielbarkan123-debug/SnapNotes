@@ -8,6 +8,9 @@
  */
 
 import { Sandbox } from '@e2b/code-interpreter'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('diagram:matplotlib-steps')
 
 const LATEX_TEMPLATE_ID = process.env.E2B_LATEX_TEMPLATE_ID || undefined
 
@@ -118,13 +121,13 @@ else:
     )
 
     if (execution.error) {
-      console.warn('[MatplotlibSteps] Execution error:', execution.error.value)
+      log.warn({ detail: execution.error.value }, 'Execution error')
       return { buffers: markers.map(() => null) }
     }
 
     const stdout = execution.logs.stdout.join('')
     if (stdout.includes('SCRIPT_ERROR:')) {
-      console.warn('[MatplotlibSteps] Script error:', stdout.split('SCRIPT_ERROR:')[1]?.trim().slice(0, 200))
+      log.warn({ detail: [stdout.split('SCRIPT_ERROR:')[1]?.trim().slice(0, 200)] }, 'Script error')
       return { buffers: markers.map(() => null) }
     }
 
@@ -139,19 +142,19 @@ else:
             : Buffer.from(fileContent)
           buffers.push(buffer)
         } else {
-          console.warn(`[MatplotlibSteps] Step ${marker.step} PNG empty`)
+          log.warn(`Step ${marker.step} PNG empty`)
           buffers.push(null)
         }
       } catch {
-        console.warn(`[MatplotlibSteps] Step ${marker.step} PNG not found`)
+        log.warn(`Step ${marker.step} PNG not found`)
         buffers.push(null)
       }
     }
 
-    console.log(`[MatplotlibSteps] Captured ${buffers.filter(Boolean).length}/${markers.length} steps`)
+    log.info(`Captured ${buffers.filter(Boolean).length}/${markers.length} steps`)
     return { buffers }
   } catch (err) {
-    console.error('[MatplotlibSteps] Fatal error:', err)
+    log.error({ detail: err }, 'Fatal error')
     return { buffers: markers.map(() => null) }
   } finally {
     await sandbox.kill()

@@ -7,6 +7,7 @@ import WalkthroughDiagramPanel from './WalkthroughDiagramPanel'
 import WalkthroughStepPanel from './WalkthroughStepPanel'
 import WalkthroughNavigation from './WalkthroughNavigation'
 import WalkthroughStepChat from './WalkthroughStepChat'
+import WalkthroughFeedback from './WalkthroughFeedback'
 import WalkthroughSkeleton from './WalkthroughSkeleton'
 
 interface WalkthroughViewProps {
@@ -44,6 +45,7 @@ export default function WalkthroughView({
     restart,
     toggleAutoPlay,
     startWalkthrough,
+    retryStep,
   } = useWalkthrough()
 
   // Start walkthrough on mount
@@ -86,7 +88,7 @@ export default function WalkthroughView({
     return (
       <div
         dir={isHe ? 'rtl' : 'ltr'}
-        className="w-full max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-lg p-8 text-center"
+        className="w-full max-w-3xl lg:max-w-5xl mx-auto bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-lg p-8 text-center"
       >
         <div className="text-red-500 dark:text-red-400 mb-4">
           <svg className="w-12 h-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -113,11 +115,12 @@ export default function WalkthroughView({
   const step = solution!.steps[currentStep]
   const isCompiling = state === 'compiling'
   const isLast = currentStep === totalSteps - 1
+  const hasDiagram = stepImages.some(Boolean) || isCompiling
 
   return (
     <div
       dir={isHe ? 'rtl' : 'ltr'}
-      className="w-full max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-lg"
+      className="w-full max-w-3xl lg:max-w-5xl mx-auto bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-lg"
       role="region"
       aria-label={isHe ? 'הדרכה צעד אחר צעד' : 'Step-by-step walkthrough'}
     >
@@ -146,36 +149,53 @@ export default function WalkthroughView({
 
       {/* Main content: diagram + step explanation */}
       <div
-        className="flex flex-col"
+        className="flex flex-col lg:flex-row lg:min-h-[400px]"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Diagram panel */}
-        <WalkthroughDiagramPanel
-          currentStep={currentStep}
-          stepImages={stepImages}
-          isCompiling={isCompiling}
-          stepDescription={step ? (isHe ? step.titleHe : step.title) : undefined}
-        />
-
-        {/* Step explanation */}
-        {step && (
-          <WalkthroughStepPanel
-            step={step}
-            currentStep={currentStep}
-            isLast={isLast}
-            isHe={isHe}
-          />
+        {/* Diagram panel — hidden for text-only walkthroughs */}
+        {hasDiagram && (
+          <div className="lg:w-[55%] lg:border-e lg:border-gray-100 dark:lg:border-gray-700/40">
+            <WalkthroughDiagramPanel
+              currentStep={currentStep}
+              stepImages={stepImages}
+              isCompiling={isCompiling}
+              stepDescription={step ? (isHe ? step.titleHe : step.title) : undefined}
+              onRetry={retryStep}
+            />
+          </div>
         )}
 
-        {/* Per-step chat */}
-        {walkthroughId && (
-          <WalkthroughStepChat
-            walkthroughId={walkthroughId}
-            stepIndex={currentStep}
-            isHe={isHe}
-          />
-        )}
+        {/* Step explanation + chat + feedback */}
+        <div className={hasDiagram ? 'lg:w-[45%] lg:overflow-y-auto lg:max-h-[600px]' : 'w-full'}>
+          {/* Step explanation */}
+          {step && (
+            <WalkthroughStepPanel
+              step={step}
+              currentStep={currentStep}
+              isLast={isLast}
+              isHe={isHe}
+            />
+          )}
+
+          {/* Per-step chat */}
+          {walkthroughId && (
+            <WalkthroughStepChat
+              walkthroughId={walkthroughId}
+              stepIndex={currentStep}
+              isHe={isHe}
+            />
+          )}
+
+          {/* Feedback widget — shown on last step when walkthrough is ready */}
+          {isLast && state === 'ready' && walkthroughId && (
+            <WalkthroughFeedback
+              sessionId={sessionId}
+              walkthroughId={walkthroughId}
+              isHe={isHe}
+            />
+          )}
+        </div>
       </div>
 
       {/* Compilation progress indicator */}

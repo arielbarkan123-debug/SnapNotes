@@ -5,6 +5,9 @@ import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from 
 import { processReview } from '@/lib/srs'
 import { getUserFSRSParams } from '@/lib/srs/fsrs-optimizer'
 import type { Rating, ReviewCard, SubmitReviewResponse } from '@/types'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:srs-review')
 
 // =============================================================================
 // Types
@@ -85,7 +88,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         })
 
       if (reviewLogError) {
-        console.error('SRS:review:log', reviewLogError)
+        log.error({ err: reviewLogError }, 'SRS:review:log')
       }
 
       // Adjust difficulty based on user feedback
@@ -197,7 +200,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (reviewLogError) {
       // Log but don't fail - the card update was successful
-      console.error('SRS:review:log', reviewLogError)
+      log.error({ err: reviewLogError }, 'SRS:review:log')
     }
 
     // Adjust difficulty based on user feedback
@@ -363,11 +366,11 @@ async function updateConceptMastery(
       }
 
       if (!success) {
-        console.error(`Failed to update concept mastery after ${MAX_RETRIES} retries:`, conceptId)
+        log.error({ conceptId, maxRetries: MAX_RETRIES }, 'Failed to update concept mastery after retries')
       }
     }
   } catch (error) {
     // Log but don't fail the review
-    console.error('Failed to update concept mastery:', error)
+    log.error({ err: error }, 'Failed to update concept mastery')
   }
 }

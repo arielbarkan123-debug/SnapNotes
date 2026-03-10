@@ -5,6 +5,9 @@ import { isQuestionQualityAcceptable, regenerateCardQuestion } from '@/lib/srs'
 import { getUserFSRSParams } from '@/lib/srs/fsrs-optimizer'
 import type { ReviewCard, ReviewSession } from '@/types'
 import { getStudentContext } from '@/lib/student-context'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:srs-due')
 
 // =============================================================================
 // GET /api/srs/due - Get cards due for review today
@@ -46,7 +49,7 @@ export async function GET(): Promise<NextResponse> {
       }
     } catch (err) {
       // Non-critical: continue with defaults
-      console.warn('[SRS:due] Failed to load student context:', err)
+      log.warn({ err }, 'Failed to load student context')
     }
 
     const now = new Date().toISOString()
@@ -154,13 +157,13 @@ export async function GET(): Promise<NextResponse> {
                   .eq('user_id', userId)
               }
             } catch (err) {
-              console.error('[SRS:due] Background regeneration failed for card', card.id, err)
+              log.error({ err, cardId: card.id }, 'Background regeneration failed for card')
             }
           })
 
           await Promise.allSettled(regenerationPromises)
         } catch (err) {
-          console.error('[SRS:due] Background regeneration setup failed:', err)
+          log.error({ err: err }, 'Background regeneration setup failed')
         }
       })()
     }

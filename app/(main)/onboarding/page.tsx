@@ -9,7 +9,10 @@ import { GradeSelector, SubjectPicker, type SelectedSubject } from '@/components
 import { getDefaultGrade, hasCurriculumData } from '@/lib/curriculum/grades'
 import type { StudySystem } from '@/lib/curriculum/types'
 import { useToast } from '@/contexts/ToastContext'
+import { createLogger } from '@/lib/logger'
 
+
+const log = createLogger('page:onboarding-pagex')
 // =============================================================================
 // Types
 // =============================================================================
@@ -419,7 +422,7 @@ export default function OnboardingPage() {
         .insert(profileData)
 
       if (error) {
-        console.error('[Onboarding] Failed to create learning profile:', error.message)
+        log.error({ detail: error.message }, 'Failed to create learning profile')
         showError(t('ui.failedToSave'))
         setSaveError('learning_profile')
         setIsSaving(false)
@@ -440,7 +443,7 @@ export default function OnboardingPage() {
 
       if (profileUpdateError) {
         // Profile update is non-critical - log but continue
-        console.error('[Onboarding] Failed to update profiles table:', profileUpdateError.message)
+        log.error({ detail: profileUpdateError.message }, 'Failed to update profiles table')
       }
 
       // Initialize gamification stats
@@ -459,7 +462,7 @@ export default function OnboardingPage() {
 
       if (gamError) {
         // Gamification init is non-critical - log but continue
-        console.error('[Onboarding] Failed to init gamification:', gamError.message)
+        log.error({ detail: gamError.message }, 'Failed to init gamification')
       }
 
       // Clear localStorage since onboarding completed successfully
@@ -471,7 +474,7 @@ export default function OnboardingPage() {
         router.push('/dashboard?welcome=true')
       }, 2000)
     } catch (err) {
-      console.error('[Onboarding] Unexpected error:', err)
+      log.error({ detail: err }, 'Unexpected error')
       showError(t('ui.somethingWentWrong'))
       setSaveError('unknown')
       setIsSaving(false)

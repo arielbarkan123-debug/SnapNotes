@@ -1,3 +1,7 @@
+
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('api:safe-fetch')
 /**
  * Safe fetch utility that prevents common errors:
  * 1. Checks Content-Type before parsing JSON
@@ -58,7 +62,7 @@ export async function safeFetch<T = unknown>(
     // Check if response is JSON before parsing
     const contentType = response.headers.get('content-type')
     if (!contentType || !contentType.includes('application/json')) {
-      console.error(`[safeFetch] Non-JSON response from ${url}:`, response.status, contentType)
+      log.error({ detail: [response.status, contentType] }, `Non-JSON response from ${url}`)
 
       // Detect timeout errors (Vercel returns HTML for these)
       if (response.status === 504 || response.status === 503 || response.status === 502) {
@@ -83,7 +87,7 @@ export async function safeFetch<T = unknown>(
     try {
       data = await response.json()
     } catch (parseError) {
-      console.error(`[safeFetch] JSON parse error from ${url}:`, parseError)
+      log.error({ detail: parseError }, `JSON parse error from ${url}`)
       return {
         ok: false,
         status: response.status,
@@ -113,7 +117,7 @@ export async function safeFetch<T = unknown>(
       error: null,
     }
   } catch (networkError) {
-    console.error(`[safeFetch] Network error for ${url}:`, networkError)
+    log.error({ detail: networkError }, `Network error for ${url}`)
     return {
       ok: false,
       status: 0,
@@ -150,7 +154,7 @@ export async function safeFetchFormData<T = unknown>(
     // Check if response is JSON before parsing
     const contentType = response.headers.get('content-type')
     if (!contentType || !contentType.includes('application/json')) {
-      console.error(`[safeFetchFormData] Non-JSON response from ${url}:`, response.status, contentType)
+      log.error({ detail: [response.status, contentType] }, `Non-JSON response from ${url}`)
 
       if (response.status === 504 || response.status === 503 || response.status === 502) {
         return {
@@ -173,7 +177,7 @@ export async function safeFetchFormData<T = unknown>(
     try {
       data = await response.json()
     } catch (parseError) {
-      console.error(`[safeFetchFormData] JSON parse error from ${url}:`, parseError)
+      log.error({ detail: parseError }, `JSON parse error from ${url}`)
       return {
         ok: false,
         status: response.status,
@@ -202,7 +206,7 @@ export async function safeFetchFormData<T = unknown>(
       error: null,
     }
   } catch (networkError) {
-    console.error(`[safeFetchFormData] Network error for ${url}:`, networkError)
+    log.error({ detail: networkError }, `Network error for ${url}`)
     return {
       ok: false,
       status: 0,
