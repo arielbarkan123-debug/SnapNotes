@@ -374,6 +374,8 @@ function DiagramStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, i
                 visibleStep: diagramData.visibleStep || 0,
                 totalSteps: diagramData.totalSteps,
                 stepConfig: diagramData.stepConfig,
+                stepByStepSource: diagramData.stepByStepSource,
+                stepImages: diagramData.stepImages,
               } as DiagramState}
               currentStep={currentStep}
               onStepAdvance={() => setCurrentStep(prev => Math.min(prev + 1, (diagramData.totalSteps || 1) - 1))}
