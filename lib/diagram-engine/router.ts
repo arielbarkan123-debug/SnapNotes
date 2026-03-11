@@ -4,6 +4,8 @@ import { createLogger } from '@/lib/logger';
 
 const log = createLogger('diagram:router');
 
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+
 export type Pipeline = 'e2b-latex' | 'e2b-matplotlib' | 'tikz' | 'recraft';
 
 // New hybrid pipelines for client-side rendering (no server image generation needed)
@@ -274,7 +276,6 @@ Return ONLY the pipeline name, nothing else.`;
  */
 export async function routeQuestionWithAI(question: string): Promise<Pipeline> {
   try {
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
     const msg = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 20,

@@ -14,7 +14,7 @@
 import { generateDiagram, type Pipeline } from './index';
 import { shouldUseEngine } from './tiered-router';
 import { generateLayeredTikz } from './layered-tikz-generator';
-import { routeQuestion, routeQuestionWithAI } from './router';
+import { routeQuestionWithAI } from './router';
 import { preCompute } from './smart-pipeline';
 import type { Lesson } from '@/types';
 import type { StepImage } from '@/components/homework/diagram/types';

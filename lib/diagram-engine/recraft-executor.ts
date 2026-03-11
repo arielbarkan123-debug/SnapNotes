@@ -290,8 +290,15 @@ Return ONLY a valid JSON array, no other text:
       if (arrayMatch) jsonStr = arrayMatch[0];
       const parsed = JSON.parse(jsonStr) as RecraftStepMeta[];
       if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].label) {
-        stepMetadata = parsed;
-        log.info(`Generated ${parsed.length} step explanations for recraft diagram`);
+        // Ensure all required fields exist (AI may omit Hebrew translations)
+        stepMetadata = parsed.map((s, i) => ({
+          step: s.step ?? i + 1,
+          label: s.label || `Step ${i + 1}`,
+          labelHe: s.labelHe || s.label || `שלב ${i + 1}`,
+          explanation: s.explanation || '',
+          explanationHe: s.explanationHe || s.explanation || '',
+        }));
+        log.info(`Generated ${stepMetadata.length} step explanations for recraft diagram`);
       }
     }
   } catch (err) {
