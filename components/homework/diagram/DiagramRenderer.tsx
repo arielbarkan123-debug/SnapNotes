@@ -155,6 +155,14 @@ export default function DiagramRenderer({
     // Legacy path: on-demand rendering via API (backward compatibility)
     if (!stepByStepSource) return
 
+    // Text-only path: recraft diagrams have step explanations but no TikZ code.
+    // Go straight to the text fallback UI — no API call needed.
+    if (!stepByStepSource.tikzCode) {
+      setStepsMeta(stepByStepSource.steps)
+      setWalkthroughMode('fallback')
+      return
+    }
+
     setWalkthroughMode('loading')
 
     try {
