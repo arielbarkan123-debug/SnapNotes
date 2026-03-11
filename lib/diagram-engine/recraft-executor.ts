@@ -21,9 +21,19 @@ export interface OverlayLabel {
   targetY: number;
 }
 
+export interface RecraftStepMeta {
+  step: number;
+  label: string;
+  labelHe: string;
+  explanation: string;
+  explanationHe: string;
+}
+
 export interface RecraftResult {
   imageUrl: string;
   // Note: overlay is no longer returned - labels are composited via TikZ
+  /** Step-by-step teaching explanations for text-based walkthrough */
+  stepMetadata?: RecraftStepMeta[];
 }
 
 export interface RecraftError {
@@ -254,19 +264,53 @@ export async function generateRecraftDiagram(
     labels = fixLabelCollisions(labels);
   }
 
-  // Step 5: Composite labels using TikZ (text is ONLY added via TikZ, never by Recraft)
+  // Step 5: Generate step-by-step teaching explanations (for text-based walkthrough)
+  let stepMetadata: RecraftStepMeta[] | undefined;
+  try {
+    const stepsMsg = await anthropic.messages.create({
+      model: AI_MODEL,
+      max_tokens: 1500,
+      messages: [{
+        role: 'user',
+        content: `Break this educational diagram topic into 3-6 teaching steps, in the order a teacher would explain it on a whiteboard. Each step should explain one component or concept visible in the diagram.
+
+Topic: "${question}"
+
+Return ONLY a valid JSON array, no other text:
+[{"step":1,"label":"English label","labelHe":"תווית בעברית","explanation":"English explanation with $LaTeX$ math if relevant","explanationHe":"הסבר בעברית עם $LaTeX$ אם רלוונטי"}]`,
+      }],
+    });
+
+    const stepsText = stepsMsg.content.find(b => b.type === 'text');
+    if (stepsText && stepsText.type === 'text') {
+      let jsonStr = stepsText.text.trim();
+      const jsonMatch = jsonStr.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
+      if (jsonMatch) jsonStr = jsonMatch[1].trim();
+      const arrayMatch = jsonStr.match(/\[[\s\S]*\]/);
+      if (arrayMatch) jsonStr = arrayMatch[0];
+      const parsed = JSON.parse(jsonStr) as RecraftStepMeta[];
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].label) {
+        stepMetadata = parsed;
+        log.info(`Generated ${parsed.length} step explanations for recraft diagram`);
+      }
+    }
+  } catch (err) {
+    log.warn({ err }, 'Step metadata generation failed (non-blocking)');
+  }
+
+  // Step 6: Composite labels using TikZ (text is ONLY added via TikZ, never by Recraft)
   if (labels && labels.length > 0) {
     log.info(`Compositing ${labels.length} labels via TikZ...`);
     const compositedUrl = await compositeWithTikzLabels(imageUrl, labels);
     if (compositedUrl) {
       log.info('TikZ composite successful');
-      return { imageUrl: compositedUrl };
+      return { imageUrl: compositedUrl, stepMetadata };
     }
     log.info('TikZ composite failed, returning base image without labels');
   }
 
   // Return base image if no labels or compositing failed
-  return { imageUrl };
+  return { imageUrl, stepMetadata };
 }
 
 /**

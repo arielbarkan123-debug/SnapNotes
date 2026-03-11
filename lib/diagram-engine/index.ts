@@ -2,8 +2,8 @@ import { SYSTEM_PROMPT } from './system-prompt';
 import { executeCode, detectMode, type RenderMode } from './e2b-executor';
 import { generateTikzDiagram } from './tikz-executor';
 import { generateRecraftDiagram } from './recraft-executor';
-import type { OverlayLabel } from './recraft-executor';
-import { routeQuestion, getFallbackPipeline, type Pipeline } from './router';
+import type { OverlayLabel, RecraftStepMeta } from './recraft-executor';
+import { routeQuestion, routeQuestionWithAI, getFallbackPipeline, type Pipeline } from './router';
 import { postProcessDiagram } from './post-process';
 import { getQAPrompt } from './qa-prompts';
 import { trackDiagramEvent } from './telemetry';
@@ -33,6 +33,8 @@ export interface DiagramResult {
   smartPipeline?: { computeUsed: boolean; computeTimeMs?: number; attempts?: number };
   /** Pre-rendered step images from step-capture pipeline */
   stepImages?: StepImage[];
+  /** Step-by-step teaching explanations (used for recraft text-based walkthroughs) */
+  stepMetadata?: RecraftStepMeta[];
   /** Full unprocessed AI response text — used by step-capture to extract metadata JSON */
   fullResponseText?: string;
 }
@@ -334,7 +336,7 @@ export async function generateDiagram(
   forcePipeline?: Pipeline,
   options?: { skipStepCapture?: boolean; skipQA?: boolean }
 ): Promise<DiagramResult | DiagramError> {
-  const pipeline = forcePipeline || routeQuestion(question);
+  const pipeline = forcePipeline || await routeQuestionWithAI(question);
   log.info(`Question: "${question.slice(0, 80)}..." → Pipeline: ${pipeline}`);
 
   // ── Cache check: return immediately if we have a cached result ──
@@ -605,6 +607,7 @@ async function generateRecraftWithQA(
       attempts: qaRound + 1,
       // Note: Labels are now composited via TikZ, not returned as overlay
       qaVerdict: qaRound > 0 ? 'pass-after-retry' : 'pass',
+      stepMetadata: recraftResult.stepMetadata,
     };
   }
 

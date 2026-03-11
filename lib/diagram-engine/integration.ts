@@ -14,7 +14,7 @@
 import { generateDiagram, type Pipeline } from './index';
 import { shouldUseEngine } from './tiered-router';
 import { generateLayeredTikz } from './layered-tikz-generator';
-import { routeQuestion } from './router';
+import { routeQuestion, routeQuestionWithAI } from './router';
 import { preCompute } from './smart-pipeline';
 import type { Lesson } from '@/types';
 import type { StepImage } from '@/components/homework/diagram/types';
@@ -83,7 +83,8 @@ export async function tryEngineDiagram(
     // Speculatively start layered TikZ generation if routing predicts tikz.
     // We check result.pipeline AFTER generation to ensure no mismatch when
     // a fallback occurs (e.g., tikz → matplotlib or matplotlib → tikz).
-    const predictedPipeline = forcePipeline || routeQuestion(question);
+    // Use AI-powered router for intelligent language-agnostic pipeline selection.
+    const predictedPipeline = forcePipeline || await routeQuestionWithAI(question);
     const mayBeTikz = predictedPipeline === 'tikz';
 
     // Generate diagram and layered TikZ in parallel (for TikZ pipeline).
@@ -93,7 +94,7 @@ export async function tryEngineDiagram(
     // Skipping saves an AI API call (runs in parallel, but reduces load/cost).
     const shouldGenerateLayered = mayBeTikz && !options?.skipStepCapture;
     const [result, layeredSource] = await Promise.all([
-      generateDiagram(enrichedQuestion, forcePipeline, options),
+      generateDiagram(enrichedQuestion, predictedPipeline, options),
       shouldGenerateLayered ? generateLayeredTikz(enrichedQuestion) : Promise.resolve(null),
     ]);
 
@@ -103,6 +104,11 @@ export async function tryEngineDiagram(
     }
 
     log.info({ pipeline: result.pipeline, urlLength: result.imageUrl?.length }, 'Generation succeeded');
+
+    // Log when AI router prediction differs from actual pipeline (fallback occurred)
+    if (predictedPipeline !== result.pipeline) {
+      log.warn({ predicted: predictedPipeline, actual: result.pipeline }, 'Pipeline fallback occurred');
+    }
 
     // Only attach layered TikZ if the ACTUAL result pipeline is tikz.
     // If tikz failed and fell back to matplotlib, layeredSource would be stale.
@@ -114,6 +120,25 @@ export async function tryEngineDiagram(
       log.info({ pipeline: result.pipeline }, 'Discarding layered TikZ — fallback occurred');
     }
 
+    // For recraft diagrams: construct stepByStepSource from AI-generated step metadata
+    // This enables the text-based StepByStepFallback walkthrough (no visual layers, just explanations)
+    const recraftStepSource = (result.pipeline === 'recraft' && result.stepMetadata)
+      ? {
+          tikzCode: '', // No TikZ code for recraft — just text explanations
+          steps: result.stepMetadata.map((s, i) => ({
+            layer: i + 1,
+            label: s.label,
+            labelHe: s.labelHe,
+            explanation: s.explanation,
+            explanationHe: s.explanationHe,
+          })),
+        }
+      : undefined;
+
+    if (recraftStepSource) {
+      log.info({ steps: recraftStepSource.steps.length }, 'Recraft step explanations ready');
+    }
+
     return {
       type: 'engine_diagram',
       imageUrl: result.imageUrl,
@@ -121,7 +146,7 @@ export async function tryEngineDiagram(
       attempts: result.attempts,
       qaVerdict: result.qaVerdict,
       overlay: result.overlay,
-      stepByStepSource: validLayeredSource || undefined,
+      stepByStepSource: validLayeredSource || recraftStepSource || undefined,
       stepImages: result.stepImages,
     };
   } catch (err) {
@@ -222,6 +247,7 @@ export async function generateDiagramsForSteps(
         stepByStepSource: result.value.stepByStepSource,
         stepImages: result.value.stepImages,
       };
+      log.info({ pipeline: result.value.pipeline, step: tasks[i].description.slice(0, 60) }, 'Diagram pipeline used');
       generated++;
     } else if (result.status === 'rejected') {
       log.error({ diagramIndex: i, err: result.reason }, 'Diagram rejected');

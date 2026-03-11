@@ -1,4 +1,8 @@
 import { detectTopic } from './tikz';
+import Anthropic from '@anthropic-ai/sdk';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('diagram:router');
 
 export type Pipeline = 'e2b-latex' | 'e2b-matplotlib' | 'tikz' | 'recraft';
 
@@ -244,6 +248,57 @@ export function routeQuestion(question: string): Pipeline {
   if (scores[0].score === 0) return 'tikz';
 
   return scores[0].pipeline;
+}
+
+// ─── AI-Powered Pipeline Router ──────────────────────────────────────────────
+
+const AI_ROUTER_PROMPT = `You are a diagram pipeline router. Given a student's diagram request (in ANY language), pick the BEST rendering pipeline.
+
+PIPELINES:
+- "recraft": Realistic illustrations, photorealistic images. Use for: anatomy (eye, heart, brain, lungs, ear, skin), biology (cells, organelles, DNA, bacteria, viruses, fungi), organisms, flowers, plants, geological structures (volcanoes, earth layers, tectonic plates), any diagram that needs to LOOK realistic or show what something actually looks like. These produce AI-generated images, not code.
+- "tikz": Clean geometric schematics. Use for: geometry (triangles, circles, angles, polygons), physics (free body diagrams, circuits, inclined planes, pulleys), cycles (water cycle, carbon cycle, nitrogen cycle), flow diagrams, Punnett squares, pedigrees, food chains, solar system orbits, Venn diagrams, coordinate planes, elementary math visuals (ten frames, fraction bars, tape diagrams), classification trees.
+- "e2b-matplotlib": Data visualization and graphs. Use for: function graphs (y=x², sin(x)), scatter plots, histograms, bar charts, box plots, pie charts, statistical distributions, projectile trajectories, supply/demand curves, unit circles, normal distributions.
+- "e2b-latex": Math typesetting. Use for: long division, multiplication layout, equation solving steps, matrices, determinants, truth tables, polynomial division, chemical equation balancing, fraction simplification.
+
+DECISION RULES:
+1. If the subject needs to look REALISTIC (organs, cells, organisms, body parts, geological cross-sections, real-world objects) → "recraft"
+2. If the subject is GEOMETRIC or SCHEMATIC (shapes, circuits, cycles, flowcharts, labeled diagrams) → "tikz"
+3. If the subject is a GRAPH, CHART, or PLOT with data/axes → "e2b-matplotlib"
+4. If the subject is MATH TYPESETTING (arithmetic layout, step-by-step algebra) → "e2b-latex"
+
+Return ONLY the pipeline name, nothing else.`;
+
+/**
+ * Route a diagram question using AI (Sonnet) — handles ANY language and context.
+ * Falls back to sync regex router if AI call fails.
+ */
+export async function routeQuestionWithAI(question: string): Promise<Pipeline> {
+  try {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+    const msg = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 20,
+      messages: [{
+        role: 'user',
+        content: `${AI_ROUTER_PROMPT}\n\nStudent request: "${question.slice(0, 500)}"`,
+      }],
+    });
+
+    const text = msg.content[0]?.type === 'text' ? msg.content[0].text.trim().toLowerCase() : '';
+    const valid: Pipeline[] = ['recraft', 'tikz', 'e2b-matplotlib', 'e2b-latex'];
+    const matched = valid.find(p => text.includes(p));
+
+    if (matched) {
+      log.info({ question: question.slice(0, 80), pipeline: matched }, 'AI router decided');
+      return matched;
+    }
+
+    log.warn({ question: question.slice(0, 80), response: text }, 'AI router returned invalid pipeline, falling back to sync router');
+    return routeQuestion(question);
+  } catch (err) {
+    log.warn({ err, question: question.slice(0, 80) }, 'AI router failed, falling back to sync router');
+    return routeQuestion(question);
+  }
 }
 
 // ─── Cross-Pipeline Fallback Map ─────────────────────────────────────────────
