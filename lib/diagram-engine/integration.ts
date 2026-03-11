@@ -216,6 +216,8 @@ export async function generateDiagramsForSteps(
         data: {
           imageUrl: result.value.imageUrl,
           pipeline: result.value.pipeline,
+          overlay: result.value.overlay,
+          qaVerdict: result.value.qaVerdict,
         },
         stepByStepSource: result.value.stepByStepSource,
         stepImages: result.value.stepImages,

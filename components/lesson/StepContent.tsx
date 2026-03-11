@@ -6,7 +6,7 @@ import { createLogger } from '@/lib/logger'
 
 const log = createLogger('ui:step-content')
 import { useState, useCallback } from 'react'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import type { DiagramState } from '@/components/homework/diagram/types'
@@ -322,6 +322,7 @@ interface DiagramStepProps extends ImageStepProps {
 }
 
 function DiagramStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl, diagramData, t }: DiagramStepProps) {
+  const locale = useLocale()
   const [currentStep, setCurrentStep] = useState(0)
   const [diagramError, setDiagramError] = useState<string | null>(null)
 
@@ -381,6 +382,7 @@ function DiagramStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, i
               onStepAdvance={() => setCurrentStep(prev => Math.min(prev + 1, (diagramData.totalSteps || 1) - 1))}
               showControls={true}
               animate={true}
+              language={locale === 'he' ? 'he' : 'en'}
               onRenderError={handleDiagramError}
             />
             {/* Step controls */}

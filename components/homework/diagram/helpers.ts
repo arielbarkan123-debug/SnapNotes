@@ -16,6 +16,7 @@ export function convertToDiagramState(tutorDiagram: TutorDiagramState): DiagramS
     totalSteps: tutorDiagram.totalSteps,
     stepConfig: tutorDiagram.stepConfig,
     stepByStepSource: tutorDiagram.stepByStepSource,
+    stepImages: tutorDiagram.stepImages,
   }
 }
 
