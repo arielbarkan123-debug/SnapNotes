@@ -1,10 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import Anthropic from '@anthropic-ai/sdk'
-import { AI_MODEL } from '@/lib/ai/claude'
+import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
 import { buildChatContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
-import { getAnthropicApiKey } from '@/lib/env'
 import { createErrorResponse, ErrorCodes, mapClaudeAPIError } from '@/lib/api/errors'
 import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 import { getStudentContext, generateDirectives } from '@/lib/student-context'
@@ -14,11 +12,6 @@ const log = createLogger('api:chat')
 
 // Allow 90 seconds for chat responses (Claude API can be slow with long context)
 export const maxDuration = 90
-
-// Initialize Anthropic client with validated API key
-const anthropic = new Anthropic({
-  apiKey: getAnthropicApiKey(),
-})
 
 const MAX_MESSAGE_LENGTH = 4000
 const MAX_HISTORY_LENGTH = 10
@@ -210,7 +203,7 @@ ${curriculumSection ? '9. When relevant, mention how topics connect to exam expe
 Remember: You're a tutor, not just an answer machine. Help them understand, don't just give answers.`
 
     // Call Claude API
-    const response = await anthropic.messages.create({
+    const response = await getAnthropicClient().messages.create({
       model: AI_MODEL,
       max_tokens: 1024,
       system: systemPrompt,

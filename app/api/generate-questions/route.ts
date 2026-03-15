@@ -1,10 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import Anthropic from '@anthropic-ai/sdk'
-import { AI_MODEL } from '@/lib/ai/claude'
+import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
 import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
-import { getAnthropicApiKey } from '@/lib/env'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import { classifyTopicType, inferDifficultyFromTopic, resolveEffectiveLanguageLevel } from '@/lib/ai/content-classifier'
 import { isQuestionQualityAcceptable } from '@/lib/srs'
@@ -14,11 +12,6 @@ const log = createLogger('api:generate-questions')
 
 // Allow 90 seconds for question generation (Claude API with curriculum context)
 export const maxDuration = 90
-
-// Initialize Anthropic client with validated API key
-const anthropic = new Anthropic({
-  apiKey: getAnthropicApiKey(),
-})
 
 const MAX_QUESTIONS = 10
 const MIN_QUESTIONS = 1
@@ -224,7 +217,7 @@ Return JSON in this exact format:
         ? `Generate ${validCount} practice questions about: ${topic}`
         : `Generate ${validCount} practice questions based on the lesson content.`
 
-    const response = await anthropic.messages.create({
+    const response = await getAnthropicClient().messages.create({
       model: AI_MODEL,
       max_tokens: 2048,
       system: systemPrompt,

@@ -93,5 +93,13 @@ next-env.d.ts
 .tmp
 .auto-claude/
 
+# Playwright MCP (test screenshots)
+.playwright-mcp/
+
+# Temporary screenshots in project root
+gpai-*.png
+production-*.png
+gpai-*.png
+
 # Worktrees
 .worktrees/
