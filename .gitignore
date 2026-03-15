@@ -99,7 +99,6 @@ next-env.d.ts
 # Temporary screenshots in project root
 gpai-*.png
 production-*.png
-gpai-*.png
 
 # Worktrees
 .worktrees/
