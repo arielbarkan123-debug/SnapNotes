@@ -317,7 +317,7 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCodes.STREAM_TIMEOUT]: 'Streaming connection timed out. Please try again.',
 
   // Usage errors
-  [ErrorCodes.USAGE_LIMIT_EXCEEDED]: 'You have reached your usage limit. Please try again later or upgrade your plan.',
+  [ErrorCodes.USAGE_LIMIT_EXCEEDED]: 'Our AI service is temporarily at capacity. Please try again in a few minutes.',
   [ErrorCodes.DAILY_LIMIT_EXCEEDED]: 'You have reached your daily limit. Please try again tomorrow.',
 
   // Content filter errors

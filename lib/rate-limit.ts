@@ -53,11 +53,24 @@ export interface RateLimitResult {
 
 /**
  * Check rate limit for a given identifier (usually user ID or IP)
+ *
+ * Rate limiting is currently disabled (RATE_LIMIT_DISABLED=true).
+ * To re-enable, remove the env var or set it to false.
  */
 export function checkRateLimit(
   identifier: string,
   config: RateLimitConfig
 ): RateLimitResult {
+  // Rate limiting disabled — allow all requests
+  if (process.env.RATE_LIMIT_DISABLED === 'true') {
+    return {
+      allowed: true,
+      remaining: config.limit,
+      resetIn: config.windowMs,
+      limit: config.limit,
+    }
+  }
+
   cleanup()
 
   const now = Date.now()

@@ -418,7 +418,7 @@ export class ClaudeAPIError extends Error {
             errorMessageLower.includes('usage limit') ||
             errorMessageLower.includes('you have reached your')) {
           return new ClaudeAPIError(
-            'API usage limit reached. Please try again later or contact support.',
+            'Our AI service is temporarily at capacity. Please try again in a few minutes.',
             'RATE_LIMIT',
             400
           )
