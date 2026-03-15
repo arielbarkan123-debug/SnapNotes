@@ -354,17 +354,23 @@ describe('Homework Sessions API', () => {
         const filteredSessions = [{ id: 'session-1', status: 'active' }]
 
         mockSupabase.from.mockImplementation((table: string) => {
-          const builder = {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            range: jest.fn().mockReturnThis(),
+          const builder: any = {
+            select: jest.fn(),
+            eq: jest.fn(),
+            order: jest.fn(),
+            range: jest.fn(),
           }
 
           if (table === 'homework_sessions') {
-            // When status filter is applied, eq is called twice (user_id + status)
-            // The final terminal call is range
-            builder.range.mockResolvedValue({ data: filteredSessions, error: null })
+            // Route chain: .select().eq('user_id').order().range().eq('status')
+            // Make all methods return builder except the last .eq('status') which is terminal
+            builder.select.mockReturnValue(builder)
+            builder.order.mockReturnValue(builder)
+            builder.range.mockReturnValue(builder)
+            // .eq() is called twice: first for user_id (return builder), then for status (resolve)
+            builder.eq
+              .mockReturnValueOnce(builder)  // first call: .eq('user_id', ...)
+              .mockResolvedValueOnce({ data: filteredSessions, error: null })  // second call: .eq('status', ...)
           }
 
           return builder

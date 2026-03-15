@@ -478,22 +478,35 @@ describe('Courses [id] API', () => {
           },
         })
 
+        const { generateCardsFromCourse } = require('@/lib/srs')
+        generateCardsFromCourse.mockResolvedValue([])
+
+        // Track which call to 'courses' table we're on
+        let coursesCallCount = 0
+
         // Mock the full flow: fetch course, fetch profile, update course
         mockSupabase.from.mockImplementation((table: string) => {
-          const builder = {
+          const builder: any = {
             select: jest.fn().mockReturnThis(),
-            insert: jest.fn().mockReturnThis(),
+            insert: jest.fn().mockResolvedValue({ error: null }),
             update: jest.fn().mockReturnThis(),
             eq: jest.fn().mockReturnThis(),
             maybeSingle: jest.fn(),
           }
 
           if (table === 'courses') {
-            builder.maybeSingle.mockResolvedValue({ data: mockCourse, error: null })
-            // For the update call, eq returns resolved value
-            builder.eq.mockResolvedValue({ data: null, error: null })
+            coursesCallCount++
+            if (coursesCallCount <= 1) {
+              // First call: SELECT for ownership check → .maybeSingle() is terminal
+              builder.maybeSingle.mockResolvedValue({ data: mockCourse, error: null })
+            } else {
+              // Second call: UPDATE → .update({}).eq() is terminal
+              builder.eq.mockResolvedValue({ error: null })
+            }
           } else if (table === 'user_learning_profile') {
             builder.maybeSingle.mockResolvedValue({ data: null, error: null })
+          } else if (table === 'review_cards') {
+            builder.insert.mockResolvedValue({ error: null })
           }
 
           return builder

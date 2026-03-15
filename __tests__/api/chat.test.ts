@@ -12,14 +12,16 @@ jest.mock('@/lib/supabase/server', () => ({
 }))
 
 const mockCreate = jest.fn()
+
 jest.mock('@anthropic-ai/sdk', () => {
-  return jest.fn(() => ({
-    messages: { create: mockCreate },
-  }))
+  return jest.fn(() => ({}))
 })
 
 jest.mock('@/lib/ai/claude', () => ({
   AI_MODEL: 'claude-3-haiku-20240307',
+  getAnthropicClient: () => ({
+    messages: { create: mockCreate },
+  }),
 }))
 
 jest.mock('@/lib/env', () => ({
@@ -86,6 +88,10 @@ describe('Chat API', () => {
 
     // Set ANTHROPIC_API_KEY for the route's internal check
     process.env.ANTHROPIC_API_KEY = 'test-api-key'
+
+    // Reset rate limiter to allow requests (clearAllMocks doesn't reset mockReturnValue)
+    const { checkRateLimit } = require('@/lib/rate-limit')
+    checkRateLimit.mockReturnValue({ allowed: true, remaining: 10, resetAt: Date.now() + 60000 })
 
     mockSupabase = {
       auth: {

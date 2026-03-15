@@ -148,13 +148,13 @@ describe('Courses API', () => {
             select: jest.fn().mockReturnThis(),
             eq: jest.fn().mockReturnThis(),
             order: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockReturnThis(),
+            limit: jest.fn().mockReturnThis(),  // returns builder so .lt() can chain after
             lt: jest.fn().mockReturnThis(),
           }
 
           if (table === 'courses') {
+            // When cursor is provided, .lt() is the terminal call after .limit()
             builder.lt.mockResolvedValue({ data: olderCourses, error: null })
-            builder.limit.mockResolvedValue({ data: olderCourses, error: null })
           }
 
           return builder
@@ -223,6 +223,18 @@ describe('Courses API', () => {
       })
 
       it('uses cursor to filter older courses', async () => {
+        // Override mock so .limit() returns builder (not Promise) since .lt() chains after it
+        mockSupabase.from.mockImplementation((table: string) => {
+          const builder = {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            order: jest.fn().mockReturnThis(),
+            limit: jest.fn().mockReturnThis(),
+            lt: jest.fn().mockResolvedValue({ data: [], error: null }),
+          }
+          return builder
+        })
+
         const request = new NextRequest('http://localhost/api/courses?cursor=2026-01-02T00:00:00Z&limit=10')
 
         const response = await GET(request)

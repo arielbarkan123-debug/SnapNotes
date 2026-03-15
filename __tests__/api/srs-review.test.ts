@@ -94,6 +94,10 @@ describe('SRS Review API', () => {
   beforeEach(() => {
     jest.clearAllMocks()
 
+    // Reset rate limiter to allow requests (clearAllMocks doesn't reset mockReturnValue)
+    const { checkRateLimit } = require('@/lib/rate-limit')
+    checkRateLimit.mockReturnValue({ allowed: true, remaining: 10, resetAt: Date.now() + 60000 })
+
     mockSupabase = {
       auth: {
         getUser: jest.fn().mockResolvedValue({
