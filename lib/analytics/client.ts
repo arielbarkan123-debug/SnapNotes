@@ -206,7 +206,7 @@ class AnalyticsClient {
         }),
       })
     } catch (error) {
-      log.error({ err: error }, 'Failed to create session:')
+      log.debug({ err: error }, 'Failed to create session (expected when not authenticated)')
     }
   }
 
@@ -502,7 +502,7 @@ class AnalyticsClient {
       })
 
       if (!response.ok) {
-        log.error({ err: response.statusText }, 'Failed to send batch:')
+        log.debug({ err: response.statusText }, 'Failed to send analytics batch (expected when not authenticated)')
         // Re-queue on failure (with limit to prevent memory issues)
         if (this.eventQueue.length < 100) {
           this.eventQueue.push(...batch.events)
@@ -512,7 +512,7 @@ class AnalyticsClient {
         }
       }
     } catch (error) {
-      log.error({ err: error }, 'Failed to send batch:')
+      log.debug({ err: error }, 'Failed to send analytics batch (expected when not authenticated)')
     }
   }
 
