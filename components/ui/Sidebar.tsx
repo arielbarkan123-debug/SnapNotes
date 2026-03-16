@@ -8,6 +8,7 @@ import { useTranslations, useLocale } from 'next-intl'
 import { useTheme } from 'next-themes'
 import { Search, PanelLeftClose, Menu } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { toggleLanguage as syncLanguage } from '@/lib/i18n/toggle-language'
 
 const GlobalSearch = dynamic(() => import('@/components/search/GlobalSearch'), { ssr: false })
 
@@ -106,7 +107,7 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
 
   const toggleLanguage = () => {
     const newLocale = currentLocale === 'en' ? 'he' : 'en'
-    document.cookie = `NEXT_LOCALE=${newLocale};path=/;max-age=31536000;samesite=lax`
+    syncLanguage(newLocale)
     router.refresh()
   }
 

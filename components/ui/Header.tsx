@@ -7,6 +7,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
 import { Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { toggleLanguage as syncLanguage } from '@/lib/i18n/toggle-language'
 
 const GlobalSearch = dynamic(() => import('@/components/search/GlobalSearch'), { ssr: false })
 
@@ -78,8 +79,7 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
 
   const toggleLanguage = () => {
     const newLocale = currentLocale === 'en' ? 'he' : 'en'
-    document.cookie = `NEXT_LOCALE=${newLocale};path=/;max-age=31536000;samesite=lax`
-    // Use router navigation instead of hard reload for better UX
+    syncLanguage(newLocale)
     router.refresh()
   }
 
