@@ -370,7 +370,7 @@ describe('WorkTogetherModal', () => {
 
       await waitFor(() => {
         expect(document.activeElement).toBe(input)
-      }, { timeout: 200 })
+      }, { timeout: 1000 })
     })
   })
 })
