@@ -506,14 +506,21 @@ export async function recordAnswer(
     throw new Error('Failed to record answer')
   }
 
-  // Update session progress
+  // Update session progress — first read current values, then increment
+  const { data: currentSession } = await supabase
+    .from('practice_sessions')
+    .select('questions_answered, questions_correct, question_count')
+    .eq('id', sessionId)
+    .single()
+
+  const currentAnswered = currentSession?.questions_answered ?? 0
+  const currentCorrect = currentSession?.questions_correct ?? 0
+
   const { data: updatedSession, error: updateError } = await supabase
     .from('practice_sessions')
     .update({
-      questions_answered: supabase.rpc('increment', { x: 1 }),
-      questions_correct: isCorrect
-        ? supabase.rpc('increment', { x: 1 })
-        : undefined,
+      questions_answered: currentAnswered + 1,
+      questions_correct: isCorrect ? currentCorrect + 1 : currentCorrect,
       current_question_index: questionIndex + 1,
     })
     .eq('id', sessionId)
@@ -581,10 +588,35 @@ export async function recordAnswer(
 }
 
 /**
- * Simple exact-match checker for multiple_choice, true_false, matching, sequence.
+ * Checker for multiple_choice, true_false, matching, sequence, multi_select.
  * For short_answer and fill_blank, use evaluateAnswer() from the shared utility.
  */
 function checkAnswer(question: PracticeQuestion, userAnswer: string): boolean {
+  // Matching: compare user's pairs against the correct pairs
+  if (question.question_type === 'matching' && question.options?.pairs) {
+    try {
+      const userPairs = JSON.parse(userAnswer) as Record<string, string>
+      return question.options.pairs.every(
+        pair => userPairs[pair.left]?.toLowerCase().trim() === pair.right.toLowerCase().trim()
+      )
+    } catch {
+      return false
+    }
+  }
+
+  // Sequence: compare user's ordering against the correct item order
+  if (question.question_type === 'sequence' && question.options?.items) {
+    try {
+      const userOrder = JSON.parse(userAnswer) as string[]
+      return question.options.items.every(
+        (item, i) => userOrder[i]?.toLowerCase().trim() === item.toLowerCase().trim()
+      )
+    } catch {
+      return false
+    }
+  }
+
+  // Default: exact match on correct_answer
   const correctAnswer = question.correct_answer.toLowerCase().trim()
   const answer = userAnswer.toLowerCase().trim()
   return answer === correctAnswer

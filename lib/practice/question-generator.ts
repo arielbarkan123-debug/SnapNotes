@@ -400,10 +400,10 @@ async function fetchCourseContent(courseId: string): Promise<{
 }> {
   const supabase = await createClient()
 
-  // Get course details
+  // Get course details — content lives in generated_course JSONB
   const { data: course, error: courseError } = await supabase
     .from('courses')
-    .select('title, description, key_concepts, sections, lessons')
+    .select('title, generated_course, extracted_content')
     .eq('id', courseId)
     .single()
 
@@ -411,51 +411,34 @@ async function fetchCourseContent(courseId: string): Promise<{
     throw new Error(`Course not found: ${courseId}`)
   }
 
-  // Build content string from course data
+  // Build content string from generated course data
   let content = `# ${course.title}\n\n`
 
-  if (course.description) {
-    content += `## Overview\n${course.description}\n\n`
+  const generatedCourse = course.generated_course as { title?: string; overview?: string; lessons?: Array<{ title?: string; steps?: Array<{ type?: string; content?: string }> }> } | null
+
+  if (generatedCourse?.overview) {
+    content += `## Overview\n${generatedCourse.overview}\n\n`
   }
 
-  if (course.key_concepts) {
-    content += `## Key Concepts\n${course.key_concepts.join(', ')}\n\n`
-  }
+  // Extract content from lessons in the generated_course JSONB
+  const contentStepTypes = new Set(['explanation', 'key_point', 'example', 'summary', 'formula', 'worked_example'])
 
-  // Add section/lesson content
-  type LessonStep = { type?: string; content?: string }
-  type Lesson = { title?: string; steps?: LessonStep[] }
-  type Section = { title?: string; lessons?: Lesson[] }
-  const sections = course.sections as Section[] | null
-  const lessons = course.lessons as Lesson[] | null
-
-  if (sections) {
-    for (const section of sections) {
-      content += `## ${section.title}\n`
-      if (section.lessons) {
-        for (const lesson of section.lessons) {
-          content += `### ${lesson.title}\n`
-          if (lesson.steps) {
-            for (const step of lesson.steps) {
-              if (step.type === 'content' && step.content) {
-                content += `${step.content}\n\n`
-              }
-            }
-          }
-        }
-      }
-    }
-  } else if (lessons) {
-    for (const lesson of lessons) {
+  if (generatedCourse?.lessons) {
+    for (const lesson of generatedCourse.lessons) {
       content += `## ${lesson.title}\n`
       if (lesson.steps) {
         for (const step of lesson.steps) {
-          if (step.type === 'content' && step.content) {
+          if (step.type && contentStepTypes.has(step.type) && step.content) {
             content += `${step.content}\n\n`
           }
         }
       }
     }
+  }
+
+  // Fallback: if generated_course had no content, use extracted_content
+  if (content.length < 100 && course.extracted_content) {
+    content += `\n${course.extracted_content.slice(0, 10000)}\n`
   }
 
   // Extract subject/topic from course title or use defaults

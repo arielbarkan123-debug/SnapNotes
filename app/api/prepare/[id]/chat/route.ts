@@ -275,7 +275,7 @@ export async function POST(
     }
 
     // Save both messages to DB
-    await supabase.from('prepare_chat_messages').insert([
+    const { error: insertError } = await supabase.from('prepare_chat_messages').insert([
       {
         guide_id: guideId,
         user_id: user.id,
@@ -292,6 +292,10 @@ export async function POST(
         diagram,
       },
     ])
+
+    if (insertError) {
+      log.error({ err: insertError }, 'Failed to save chat messages')
+    }
 
     return NextResponse.json({
       success: true,

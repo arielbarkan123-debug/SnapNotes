@@ -167,7 +167,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       .from('review_cards')
       .select('id, course_id, lesson_index, step_index, card_type, front, back')
       .eq('user_id', user.id)
-      .or(`front.ilike.%${query.replace(/[%_\\]/g, '\\$&')}%,back.ilike.%${query.replace(/[%_\\]/g, '\\$&')}%`)
+      .or(`front.ilike.%${query}%,back.ilike.%${query}%`)
       .limit(limit)
 
     cards?.forEach(card => {

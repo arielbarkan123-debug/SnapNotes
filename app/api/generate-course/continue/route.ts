@@ -116,7 +116,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const currentLessons: Lesson[] = (course.generated_course as GeneratedCourse)?.lessons || []
     const lessonOutline: LessonOutline[] = course.lesson_outline as LessonOutline[]
     const startIndex = currentLessons.length
-    const endIndex = Math.min(startIndex + 2, course.total_lessons)
+    const endIndex = Math.min(startIndex + 2, course.total_lessons ?? 0)
 
     // Generate indices for next batch (0-indexed)
     const targetIndices = Array.from(

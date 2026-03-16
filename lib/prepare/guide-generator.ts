@@ -13,10 +13,10 @@ import { createLogger } from '@/lib/logger'
 
 const log = createLogger('prepare:guide-generator')
 const MAX_TOKENS = 8000
-const MAX_RETRIES = 0
+const MAX_RETRIES = 1
 const RETRY_DELAY_MS = 2000
 // Guide generation can take longer than the default 180s client timeout
-const GUIDE_TIMEOUT_MS = 600000
+const GUIDE_TIMEOUT_MS = 230000
 
 function buildLearningContextInstruction(context?: UserLearningContext): string {
   if (!context) return ''

@@ -12,6 +12,8 @@ import { getContentLanguage } from '@/lib/ai/language'
 
 const log = createLogger('api:past-exams-analyze')
 
+export const maxDuration = 120
+
 interface RouteParams {
   params: Promise<{ id: string }>
 }

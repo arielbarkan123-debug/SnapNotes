@@ -371,6 +371,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       sendMessage({ type: 'progress', stage: 'Generating course with AI', percent: 25 })
 
       // 6. Generate course using AI service
+      const extractionStartTime = Date.now()
       let extractedContent: string
       let generatedCourse
       // Image URLs are embedded in the course steps via normalizeGeneratedCourse
@@ -532,13 +533,12 @@ export async function POST(request: NextRequest): Promise<Response> {
       // 6b. Score extraction confidence
       const hasFormulas = /\$.*\$|\\[.*\\]|\d+\s*[+\-*/÷×=]\s*\d+/i.test(extractedContent)
       const hasDiagrams = /diagram|figure|chart|graph|image|\[.*\]/i.test(extractedContent)
-      const extractionStartTime = Date.now()
 
       const extractionConfidence: ExtractionConfidence = scoreExtraction(extractedContent, {
         hasFormulas,
         hasDiagrams,
         extractionMethod: documentContent ? 'pdf_parse' : sourceType === 'text' ? 'ocr' : 'vision',
-        processingTimeMs: extractionStartTime - Date.now(),
+        processingTimeMs: Date.now() - extractionStartTime,
         pageCount: documentContent?.metadata?.pageCount,
       })
 

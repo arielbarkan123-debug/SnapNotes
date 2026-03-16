@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
         let learningContext = undefined
         try {
           const { data: profile } = await supabase
-            .from('user_profiles')
+            .from('user_learning_profile')
             .select(
               'education_level, study_system, study_goal, learning_styles, subjects, subject_levels'
             )

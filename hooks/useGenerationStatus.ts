@@ -52,17 +52,26 @@ export function useGenerationStatus(
   // Track whether we've already fired onComplete to prevent duplicate calls
   const hasCompletedRef = useRef(false)
 
-  // Reset hasCompleted when courseId changes
+  // Reset hasCompleted and continuation count when courseId changes
   useEffect(() => {
     hasCompletedRef.current = false
+    continuationCountRef.current = 0
   }, [courseId])
 
   // Ref-based guard for isContinuing to avoid stale closures in recursive setTimeout
   const isContinuingRef = useRef(false)
+  const continuationCountRef = useRef(0)
+  const MAX_CONTINUATION_ATTEMPTS = 60
 
   // Trigger background continuation
   const triggerContinuation = useCallback(async () => {
     if (!courseId || isContinuingRef.current) return
+
+    if (continuationCountRef.current >= MAX_CONTINUATION_ATTEMPTS) {
+      setError('Generation is taking too long. Please refresh and try again.')
+      return
+    }
+    continuationCountRef.current += 1
 
     isContinuingRef.current = true
     setIsContinuing(true)

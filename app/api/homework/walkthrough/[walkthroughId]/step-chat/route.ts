@@ -97,7 +97,7 @@ export async function POST(
   }
 
   // Save student message
-  await serviceClient
+  const { error: studentMsgError } = await serviceClient
     .from('walkthrough_step_chats')
     .insert({
       walkthrough_id: walkthroughId,
@@ -106,6 +106,10 @@ export async function POST(
       role: 'student',
       content: message.trim(),
     })
+
+  if (studentMsgError) {
+    log.error({ err: studentMsgError }, 'Failed to save student message')
+  }
 
   // Fetch conversation history for this step
   const { data: history } = await serviceClient
