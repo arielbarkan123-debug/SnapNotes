@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import { analyzeExamImage, getMediaTypeFromExtension } from '@/lib/past-exams'
 import type { PastExamTemplate, PastExamAnalyzeResponse } from '@/types/past-exam'
 import { createLogger } from '@/lib/logger'
+import { getContentLanguage } from '@/lib/ai/language'
 
 const log = createLogger('api:past-exams-analyze')
 
@@ -39,6 +40,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { status: 401 }
       )
     }
+
+    const language = await getContentLanguage(supabase, user.id)
 
     // Fetch template
     const { data: template, error: fetchError } = await supabase
@@ -90,7 +93,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         const extension = template.original_filename.split('.').pop() || 'jpg'
         const mediaType = getMediaTypeFromExtension(extension)
 
-        analysisPromise = analyzeExamImage(base64, mediaType)
+        analysisPromise = analyzeExamImage(base64, mediaType, language)
       } else {
         // For documents, we need to extract text first
         // For now, use vision API on PDFs or extracted text
@@ -108,7 +111,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           const base64 = Buffer.from(buffer).toString('base64')
 
           // Use vision API with PDF (Claude can read PDFs)
-          analysisPromise = analyzeExamImage(base64, 'image/jpeg') // Claude handles various formats
+          analysisPromise = analyzeExamImage(base64, 'image/jpeg', language) // Claude handles various formats
         } else {
           // For PPTX/DOCX, would need document extraction
           // For now, return a placeholder message

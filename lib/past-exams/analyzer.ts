@@ -6,6 +6,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { ExamAnalysis, ImageAnalysis, DiagramType, LabelingStyle } from '@/types/past-exam'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 
 function getAnalyzerClient(): Anthropic {
   const apiKey = process.env.ANTHROPIC_API_KEY
@@ -160,11 +161,13 @@ function extractJSON(text: string): string {
  */
 export async function analyzeExamImage(
   imageBase64: string,
-  mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
+  mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif',
+  language: ContentLanguage = 'en'
 ): Promise<ExamAnalysis> {
   const response = await getAnalyzerClient().messages.create({
     model: AI_MODEL,
     max_tokens: 4000,
+    system: buildLanguageInstruction(language),
     messages: [
       {
         role: 'user',
@@ -201,11 +204,13 @@ export async function analyzeExamImage(
  * Analyze a past exam from extracted text content
  */
 export async function analyzeExamText(
-  extractedText: string
+  extractedText: string,
+  language: ContentLanguage = 'en'
 ): Promise<ExamAnalysis> {
   const response = await getAnalyzerClient().messages.create({
     model: AI_MODEL,
     max_tokens: 4000,
+    system: buildLanguageInstruction(language),
     messages: [
       {
         role: 'user',
