@@ -37,8 +37,9 @@ export async function GET(request: Request): Promise<NextResponse> {
       return NextResponse.json({ results: [], total: 0, query: query || '' })
     }
 
-    // Sanitize search query: escape SQL wildcards and limit length
+    // Sanitize search query: escape SQL wildcards and PostgREST comma delimiter, limit length
     query = query.replace(/[%_]/g, '\\$&')
+    query = query.replace(/,/g, ' ')
     query = query.slice(0, 200)
 
     const results: SearchResult[] = []

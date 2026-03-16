@@ -516,11 +516,21 @@ export async function recordAnswer(
   const currentAnswered = currentSession?.questions_answered ?? 0
   const currentCorrect = currentSession?.questions_correct ?? 0
 
+  // Only increment questions_answered on first answer, not revisions
+  // For revisions, only adjust questions_correct if correctness changed
+  const isRevision = !!existingAnswer
+  const previouslyCorrect = existingAnswer?.is_correct === true
+
+  const newAnswered = isRevision ? currentAnswered : currentAnswered + 1
+  const correctDelta = isRevision
+    ? (isCorrect && !previouslyCorrect ? 1 : !isCorrect && previouslyCorrect ? -1 : 0)
+    : (isCorrect ? 1 : 0)
+
   const { data: updatedSession, error: updateError } = await supabase
     .from('practice_sessions')
     .update({
-      questions_answered: currentAnswered + 1,
-      questions_correct: isCorrect ? currentCorrect + 1 : currentCorrect,
+      questions_answered: newAnswered,
+      questions_correct: currentCorrect + correctDelta,
       current_question_index: questionIndex + 1,
     })
     .eq('id', sessionId)

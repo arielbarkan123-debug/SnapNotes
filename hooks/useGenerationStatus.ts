@@ -68,6 +68,7 @@ export function useGenerationStatus(
     if (!courseId || isContinuingRef.current) return
 
     if (continuationCountRef.current >= MAX_CONTINUATION_ATTEMPTS) {
+      setStatus('failed')
       setError('Generation is taking too long. Please refresh and try again.')
       return
     }
