@@ -7,6 +7,7 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -106,6 +107,7 @@ Rules:
  */
 export async function predictExamTopics(
   analyses: ExamAnalysis[],
+  language: ContentLanguage = 'en',
 ): Promise<ExamPrediction> {
   if (analyses.length < MIN_PAPERS) {
     throw new Error(`Need at least ${MIN_PAPERS} past papers for prediction. Got ${analyses.length}.`)
@@ -130,7 +132,7 @@ Paper ${i + 1}: "${a.title}"
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: 3000,
-    system: PREDICTION_PROMPT,
+    system: buildLanguageInstruction(language) + PREDICTION_PROMPT,
     messages: [{
       role: 'user',
       content: `Analyze these ${analyses.length} past exam papers and predict the next exam:\n\n${papersText}`,

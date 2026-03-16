@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/api/errors'
 import { predictExamTopics, type ExamAnalysis } from '@/lib/exam-prediction/predictor'
 import { createLogger } from '@/lib/logger'
+import { getContentLanguage } from '@/lib/ai/language'
 
 const log = createLogger('api:exam-prediction')
 
@@ -17,6 +18,8 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
+
+    const language = await getContentLanguage(supabase, user.id)
 
     const body = await request.json()
     const { examTemplateIds } = body as { examTemplateIds?: string[] }
@@ -54,7 +57,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const prediction = await predictExamTopics(analyses)
+    const prediction = await predictExamTopics(analyses, language)
 
     return NextResponse.json({
       success: true,
