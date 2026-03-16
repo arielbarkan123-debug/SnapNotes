@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { type CreateExamRequest } from '@/types'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import Anthropic from '@anthropic-ai/sdk'
+import { getContentLanguage, buildLanguageInstruction } from '@/lib/ai/language'
 import { buildExamContext, formatContextForPrompt } from '@/lib/curriculum'
 import type { StudySystem, ExamFormat } from '@/lib/curriculum'
 import { buildExamStyleGuide, pastExamsHaveImages, getAggregatedImageAnalysis } from '@/lib/past-exams'
@@ -142,9 +143,13 @@ export async function POST(request: NextRequest) {
     // Fetch user learning profile for curriculum context (may not exist for new users)
     const { data: userProfile } = await supabase
       .from('user_learning_profile')
-      .select('study_system, grade, subjects, subject_levels, exam_format')
+      .select('study_system, grade, subjects, subject_levels, exam_format, language')
       .eq('user_id', user.id)
       .maybeSingle()
+
+    // Resolve content language
+    const language = await getContentLanguage(supabase, user.id)
+    const langInstruction = buildLanguageInstruction(language)
 
     const studySystem = (userProfile?.study_system || 'general') as StudySystem
     const subjects = (userProfile?.subjects || []) as string[]
@@ -290,7 +295,6 @@ Use question styles inspired by the curriculum but with flexible structure.
 Focus on testing understanding rather than matching exact exam format.`
 
     const prompt = `Generate exactly ${questionCount} exam questions based on this course content.
-
 COURSE: ${course.title}
 ${curriculumSection ? `\n${curriculumSection}` : ''}
 ${examFormatInstruction}
@@ -493,6 +497,7 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
     const message = await anthropic.messages.create({
       model: AI_MODEL,
       max_tokens: 8000,
+      system: langInstruction,
       messages: [{ role: 'user', content: prompt }],
     })
 

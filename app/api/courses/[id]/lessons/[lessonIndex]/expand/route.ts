@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes, logError } from '@/lib/api/errors'
 import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 import Anthropic from '@anthropic-ai/sdk'
+import { getContentLanguage, buildLanguageInstruction } from '@/lib/ai/language'
+import { AI_MODEL } from '@/lib/ai/claude'
 
 // Allow 60 seconds for AI generation
 export const maxDuration = 60
@@ -108,18 +110,22 @@ export async function POST(
       } satisfies ExpandResponse)
     }
 
+    // Resolve content language
+    const language = await getContentLanguage(supabase, user.id)
+    const langInstruction = buildLanguageInstruction(language)
+
     // Generate sub-steps via Claude
     const anthropic = new Anthropic()
     const subject = generatedCourse?.subject || course.title || 'General'
     const gradeLevel = generatedCourse?.gradeLevel || 'Not specified'
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: AI_MODEL,
       max_tokens: 1500,
+      system: langInstruction,
       messages: [{
         role: 'user',
         content: `The student wants deeper explanation of this lesson step.
-
 Step content: ${step.content}
 Subject: ${subject}
 Grade level: ${gradeLevel}
