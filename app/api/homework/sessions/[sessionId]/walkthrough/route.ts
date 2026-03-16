@@ -14,6 +14,13 @@ import { type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { generateWalkthroughSolution } from '@/lib/homework/walkthrough-generator'
+import {
+  getContentLanguage,
+  detectSourceLanguage,
+  resolveOutputLanguage,
+  getExplicitToggleFlag,
+  clearExplicitToggleFlag,
+} from '@/lib/ai/language'
 import { renderWalkthroughSteps } from '@/lib/diagram-engine/step-renderer'
 import { parseTikzLayers, validateLayerStepAlignment, estimateCumulativeSize } from '@/lib/diagram-engine/tikz-layer-parser'
 import type { WalkthroughStreamEvent, WalkthroughGenerationStatus } from '@/types/walkthrough'
@@ -104,9 +111,21 @@ export async function POST(
         // ─── Step 1: Generate solution via Claude ─────────────────────
         log.info({ sessionId }, 'Generating solution')
 
+        // Resolve language for the walkthrough content
+        const userLanguage = await getContentLanguage(supabase, user.id)
+
+        // Detect source material language and resolve output language
+        const sourceLanguage = detectSourceLanguage(session.question_text || '')
+        const wasExplicit = await getExplicitToggleFlag()
+        const language = resolveOutputLanguage(userLanguage, sourceLanguage, wasExplicit)
+        if (sourceLanguage) {
+          await clearExplicitToggleFlag()
+        }
+
         const { solution, topicClassified, validationErrors } = await generateWalkthroughSolution(
           session.question_text || '',
           session.question_image_url ? [session.question_image_url] : undefined,
+          language,
         )
 
         log.info({ steps: solution.steps.length, mode: solution.mode || 'diagram', topic: topicClassified }, 'Solution generated')

@@ -22,6 +22,13 @@ import {
   getUserFriendlyError,
 } from '@/lib/ai'
 import type { UserLearningContext } from '@/lib/ai'
+import {
+  getContentLanguage,
+  detectSourceLanguage,
+  resolveOutputLanguage,
+  getExplicitToggleFlag,
+  clearExplicitToggleFlag,
+} from '@/lib/ai/language'
 import type { ExtractedDocument } from '@/lib/documents'
 import {
   ErrorCodes,
@@ -216,6 +223,19 @@ export async function POST(request: NextRequest): Promise<Response> {
         // Continue without personalization if profile fetch fails
       }
 
+      // If no profile exists (new user), still resolve language so content
+      // generation always has an explicit language instruction.
+      if (!userContext) {
+        const resolvedLang = await getContentLanguage(supabase, user.id)
+        userContext = {
+          educationLevel: 'high_school',
+          studySystem: 'general',
+          studyGoal: 'general_learning',
+          learningStyles: ['practice'],
+          language: resolvedLang,
+        }
+      }
+
       // 1.7. Load student intelligence for adaptive lesson pacing
       try {
         const studentCtx = await getStudentContext(supabase, user.id)
@@ -283,6 +303,25 @@ export async function POST(request: NextRequest): Promise<Response> {
           closeStream()
           return
         }
+      }
+
+      // Detect source material language from available text content
+      // (textContent for text mode, documentContent for doc mode — images detected post-extraction)
+      const preExtractionText = textContent || documentContent?.content || ''
+      const sourceLanguage = detectSourceLanguage(preExtractionText)
+      const wasExplicit = await getExplicitToggleFlag()
+      const outputLanguage = resolveOutputLanguage(
+        (userContext?.language || 'en') as 'en' | 'he',
+        sourceLanguage,
+        wasExplicit,
+      )
+      if (sourceLanguage) {
+        await clearExplicitToggleFlag()
+      }
+
+      // Apply resolved language to userContext for AI generation
+      if (userContext) {
+        userContext.language = outputLanguage
       }
 
       sendMessage({ type: 'progress', stage: 'Validating input', percent: 15 })
@@ -462,6 +501,20 @@ export async function POST(request: NextRequest): Promise<Response> {
 
       sendMessage({ type: 'progress', stage: 'Processing results', percent: 75 })
 
+      // For image-based courses, re-detect source language from extracted content
+      // (OCR text wasn't available before AI generation)
+      if (!sourceLanguage && extractedContent) {
+        const postExtractionLang = detectSourceLanguage(extractedContent)
+        if (postExtractionLang && userContext) {
+          const postOutputLang = resolveOutputLanguage(
+            (userContext.language || 'en') as 'en' | 'he',
+            postExtractionLang,
+            wasExplicit,
+          )
+          userContext.language = postOutputLang
+        }
+      }
+
       // 6a. Parse and validate learning objectives from AI response
       let learningObjectives: LearningObjective[] = []
       if (generatedCourse.learningObjectives && Array.isArray(generatedCourse.learningObjectives)) {
@@ -517,6 +570,8 @@ export async function POST(request: NextRequest): Promise<Response> {
         extracted_content: extractedContent,
         generated_course: generatedCourse,
         source_type: sourceType,
+        // Language the content was generated in (resolved from user pref + source detection)
+        content_language: (userContext?.language || 'en') as 'en' | 'he',
         // Intensity mode for lesson structure
         intensity_mode: intensityMode || 'standard',
         // Progressive generation fields

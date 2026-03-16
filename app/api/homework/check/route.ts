@@ -3,6 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { analyzeHomework } from '@/lib/homework/checker-engine'
 import type { CreateCheckRequest } from '@/lib/homework/types'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
+import {
+  getContentLanguage,
+  detectSourceLanguage,
+  resolveOutputLanguage,
+  getExplicitToggleFlag,
+  clearExplicitToggleFlag,
+} from '@/lib/ai/language'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('api:homework-check')
@@ -193,6 +200,18 @@ export async function POST(request: NextRequest) {
         // Send initial status with check ID
         send({ type: 'status', status: 'created', checkId: check.id })
 
+        // Resolve user's preferred content language
+        const userLanguage = await getContentLanguage(supabase, user.id)
+
+        // Detect source material language and resolve output language
+        const sourceText = body.taskText || body.taskDocumentText || ''
+        const sourceLanguage = detectSourceLanguage(sourceText)
+        const wasExplicit = await getExplicitToggleFlag()
+        const outputLanguage = resolveOutputLanguage(userLanguage, sourceLanguage, wasExplicit)
+        if (sourceLanguage) {
+          await clearExplicitToggleFlag()
+        }
+
         // Analyze the homework
         log.info({ checkId: check.id }, 'Starting analysis')
 
@@ -215,6 +234,8 @@ export async function POST(request: NextRequest) {
             mode,
             additionalImageUrls: body.additionalImageUrls,
             rubricImageUrls: body.rubricImageUrls,
+            // Language preference (resolved from user pref + source detection)
+            language: outputLanguage,
           })
           log.info({ grade: result.feedback?.gradeEstimate }, 'Analysis completed')
         } catch (analysisError) {
