@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { type CreateExamRequest } from '@/types'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import Anthropic from '@anthropic-ai/sdk'
-import { getContentLanguage, buildLanguageInstruction } from '@/lib/ai/language'
+import { getContentLanguage, buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 import { buildExamContext, formatContextForPrompt } from '@/lib/curriculum'
 import type { StudySystem, ExamFormat } from '@/lib/curriculum'
 import { buildExamStyleGuide, pastExamsHaveImages, getAggregatedImageAnalysis } from '@/lib/past-exams'
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     const { data: course, error: courseError } = await supabase
       .from('courses')
-      .select('id, title, generated_course, user_id')
+      .select('id, title, generated_course, user_id, content_language')
       .eq('id', courseId)
       .single()
 
@@ -147,8 +147,11 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    // Resolve content language
-    const language = await getContentLanguage(supabase, user.id)
+    // Resolve content language — prefer the course's own language so a Hebrew
+    // course stays Hebrew even if the user later switches to English
+    const language: ContentLanguage = (course.content_language === 'en' || course.content_language === 'he')
+      ? course.content_language
+      : await getContentLanguage(supabase, user.id)
     const langInstruction = buildLanguageInstruction(language)
 
     const studySystem = (userProfile?.study_system || 'general') as StudySystem

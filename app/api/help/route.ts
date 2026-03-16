@@ -4,6 +4,7 @@ import { type HelpAPIRequest, type HelpRequestType } from '@/types'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import Anthropic from '@anthropic-ai/sdk'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { getContentLanguage, buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('api:help')
@@ -49,7 +50,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const { data: course, error: courseError } = await supabase
       .from('courses')
-      .select('id, title, generated_course, user_id')
+      .select('id, title, generated_course, user_id, content_language')
       .eq('id', context.courseId)
       .single()
 
@@ -60,6 +61,13 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (course.user_id !== user.id) {
       return createErrorResponse(ErrorCodes.FORBIDDEN)
     }
+
+    // Resolve content language — prefer the course's own language so a Hebrew
+    // course stays Hebrew even if the user later switches to English
+    const language: ContentLanguage = (course.content_language === 'en' || course.content_language === 'he')
+      ? course.content_language
+      : await getContentLanguage(supabase, user.id)
+    const langInstruction = buildLanguageInstruction(language)
 
     const generatedCourse = course.generated_course as {
       lessons?: Array<{ title?: string; steps?: Array<{ type?: string; content?: string; question?: string; explanation?: string }> }>;
@@ -101,6 +109,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     switch (questionType) {
       case 'explain':
         systemPrompt = `You are a helpful, accurate tutor.
+${langInstruction}
 RULES:
 - ONLY use information from the COURSE CONTENT provided below
 - If the topic isn't in the course content, say "This isn't covered in your notes."
@@ -112,6 +121,7 @@ RULES:
         break
       case 'example':
         systemPrompt = `You are a helpful tutor providing real-world examples.
+${langInstruction}
 RULES:
 - ONLY use examples that relate to the COURSE CONTENT provided
 - Examples must be accurate and age-appropriate
@@ -122,6 +132,7 @@ RULES:
         break
       case 'hint':
         systemPrompt = `You are a Socratic tutor giving hints WITHOUT revealing answers.
+${langInstruction}
 RULES:
 - NEVER give the answer directly
 - Give a hint that guides thinking in the RIGHT direction
@@ -133,6 +144,7 @@ RULES:
         break
       case 'custom':
         systemPrompt = `You are a helpful, accurate tutor answering student questions.
+${langInstruction}
 RULES:
 - ONLY use information from the COURSE CONTENT provided
 - If the question isn't covered in the content, honestly say so

@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes, logError } from '@/lib/api/errors'
 import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 import Anthropic from '@anthropic-ai/sdk'
-import { getContentLanguage, buildLanguageInstruction } from '@/lib/ai/language'
+import { getContentLanguage, buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 import { AI_MODEL } from '@/lib/ai/claude'
 
 export const maxDuration = 60
@@ -72,7 +72,7 @@ export async function POST(
     // Get course for subject/grade context
     const { data: course } = await supabase
       .from('courses')
-      .select('title, generated_course')
+      .select('title, generated_course, content_language')
       .eq('id', courseId)
       .eq('user_id', user.id)
       .maybeSingle()
@@ -81,8 +81,11 @@ export async function POST(
     const subject = generatedCourse?.subject || course?.title || 'General'
     const gradeLevel = generatedCourse?.gradeLevel || 'Not specified'
 
-    // Resolve content language
-    const language = await getContentLanguage(supabase, user.id)
+    // Resolve content language — prefer the course's own language so a Hebrew
+    // course stays Hebrew even if the user later switches to English
+    const language: ContentLanguage = (course?.content_language === 'en' || course?.content_language === 'he')
+      ? course.content_language
+      : await getContentLanguage(supabase, user.id)
     const langInstruction = buildLanguageInstruction(language)
 
     const anthropic = new Anthropic()

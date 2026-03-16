@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes, logError } from '@/lib/api/errors'
 import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 import Anthropic from '@anthropic-ai/sdk'
-import { getContentLanguage, buildLanguageInstruction } from '@/lib/ai/language'
+import { getContentLanguage, buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 import { AI_MODEL } from '@/lib/ai/claude'
 
 // Allow 60 seconds for AI generation
@@ -79,7 +79,7 @@ export async function POST(
     // Fetch course
     const { data: course, error: fetchError } = await supabase
       .from('courses')
-      .select('id, user_id, generated_course, title')
+      .select('id, user_id, generated_course, title, content_language')
       .eq('id', courseId)
       .eq('user_id', user.id)
       .maybeSingle()
@@ -110,8 +110,11 @@ export async function POST(
       } satisfies ExpandResponse)
     }
 
-    // Resolve content language
-    const language = await getContentLanguage(supabase, user.id)
+    // Resolve content language — prefer the course's own language so a Hebrew
+    // course stays Hebrew even if the user later switches to English
+    const language: ContentLanguage = (course.content_language === 'en' || course.content_language === 'he')
+      ? course.content_language
+      : await getContentLanguage(supabase, user.id)
     const langInstruction = buildLanguageInstruction(language)
 
     // Generate sub-steps via Claude

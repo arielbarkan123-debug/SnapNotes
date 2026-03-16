@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes, logError } from '@/lib/api/errors'
 import { generateCardsFromCourse } from '@/lib/srs'
 import { createLogger } from '@/lib/logger'
-import { getContentLanguage } from '@/lib/ai/language'
+import { getContentLanguage, type ContentLanguage } from '@/lib/ai/language'
 
 const log = createLogger('api:srs-generate-all')
 
@@ -24,7 +24,7 @@ export async function POST(): Promise<NextResponse> {
     // Get all courses for the user
     const { data: courses, error: coursesError } = await supabase
       .from('courses')
-      .select('id, generated_course')
+      .select('id, generated_course, content_language')
       .eq('user_id', user.id)
 
     if (coursesError) {
@@ -41,8 +41,9 @@ export async function POST(): Promise<NextResponse> {
       })
     }
 
-    // Get user's language preference for card generation
-    const language = await getContentLanguage(supabase, user.id)
+    // Get user's language preference — used as fallback when a course has no
+    // recorded content_language
+    const userLanguage = await getContentLanguage(supabase, user.id)
 
     let totalCreated = 0
     let coursesProcessed = 0
@@ -72,6 +73,12 @@ export async function POST(): Promise<NextResponse> {
         firstSectionHasSteps: !!(gc?.sections?.[0]?.steps || gc?.lessons?.[0]?.steps),
         stepsCount: gc?.sections?.[0]?.steps?.length || gc?.lessons?.[0]?.steps?.length || 0,
       }, 'Processing course')
+
+      // Resolve content language — prefer the course's own language so a Hebrew
+      // course stays Hebrew even if the user later switches to English
+      const language: ContentLanguage = (course.content_language === 'en' || course.content_language === 'he')
+        ? course.content_language
+        : userLanguage
 
       // Generate cards from course content
       const generatedCards = await generateCardsFromCourse(
