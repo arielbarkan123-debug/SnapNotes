@@ -1,5 +1,7 @@
 import {
   getContentLanguage,
+  getExplicitToggleFlag,
+  clearExplicitToggleFlag,
   resolveOutputLanguage,
   detectSourceLanguage,
   buildLanguageInstruction,
@@ -50,11 +52,19 @@ function makeMockSupabase(profileLanguage: string | null | undefined, shouldThro
   }
 }
 
-function setupCookie(value: string | undefined) {
+const mockSet = jest.fn()
+
+function setupCookie(value: string | undefined, extras?: Record<string, string>) {
+  const cookieMap: Record<string, string> = { ...extras }
+  if (value !== undefined) {
+    cookieMap['NEXT_LOCALE'] = value
+  }
+
   mockCookies.mockResolvedValue({
     get: jest.fn((name: string) =>
-      name === 'NEXT_LOCALE' && value !== undefined ? { name, value } : undefined
+      name in cookieMap ? { name, value: cookieMap[name] } : undefined
     ),
+    set: mockSet,
   } as never)
 }
 
@@ -143,6 +153,57 @@ describe('getContentLanguage', () => {
     const result = await getContentLanguage(supabase, 'user-1')
 
     expect(result).toBe('en')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// getExplicitToggleFlag
+// ---------------------------------------------------------------------------
+
+describe('getExplicitToggleFlag', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('returns true when LANG_EXPLICIT cookie is "1"', async () => {
+    setupCookie(undefined, { LANG_EXPLICIT: '1' })
+    expect(await getExplicitToggleFlag()).toBe(true)
+  })
+
+  it('returns false when LANG_EXPLICIT cookie is absent', async () => {
+    setupCookie(undefined)
+    expect(await getExplicitToggleFlag()).toBe(false)
+  })
+
+  it('returns false when LANG_EXPLICIT cookie has unexpected value', async () => {
+    setupCookie(undefined, { LANG_EXPLICIT: 'yes' })
+    expect(await getExplicitToggleFlag()).toBe(false)
+  })
+
+  it('returns false when cookies() throws', async () => {
+    setupCookieThrows()
+    expect(await getExplicitToggleFlag()).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// clearExplicitToggleFlag
+// ---------------------------------------------------------------------------
+
+describe('clearExplicitToggleFlag', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('sets LANG_EXPLICIT cookie with maxAge 0', async () => {
+    setupCookie(undefined, { LANG_EXPLICIT: '1' })
+    await clearExplicitToggleFlag()
+    expect(mockSet).toHaveBeenCalledWith('LANG_EXPLICIT', '', { maxAge: 0, path: '/' })
+  })
+
+  it('does not throw when cookies() throws', async () => {
+    setupCookieThrows()
+    await expect(clearExplicitToggleFlag()).resolves.toBeUndefined()
   })
 })
 

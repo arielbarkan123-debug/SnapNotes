@@ -60,6 +60,39 @@ export async function getContentLanguage(
 }
 
 /**
+ * Read the LANG_EXPLICIT cookie to determine if the user explicitly toggled
+ * their language via the Sidebar. Returns true when the cookie value is '1'.
+ *
+ * Called by content-receiving routes (homework check, generate-course,
+ * walkthrough) before calling resolveOutputLanguage(). Not called inside
+ * getContentLanguage() because that runs in ALL routes.
+ */
+export async function getExplicitToggleFlag(): Promise<boolean> {
+  try {
+    const cookieStore = await cookies()
+    return cookieStore.get('LANG_EXPLICIT')?.value === '1'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Clear the LANG_EXPLICIT cookie by setting it with max-age=0.
+ *
+ * Called after resolveOutputLanguage() consumes the flag so subsequent
+ * requests (that didn't originate from a language toggle) don't inherit
+ * the explicit override.
+ */
+export async function clearExplicitToggleFlag(): Promise<void> {
+  try {
+    const cookieStore = await cookies()
+    cookieStore.set('LANG_EXPLICIT', '', { maxAge: 0, path: '/' })
+  } catch {
+    // cookies() may fail in some contexts — that's ok
+  }
+}
+
+/**
  * Resolve the output language considering user preference, source material,
  * and whether the user explicitly toggled their language.
  *
