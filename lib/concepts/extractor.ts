@@ -8,6 +8,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { AI_MODEL } from '@/lib/ai/claude'
 import { createClient } from '@/lib/supabase/server'
+import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 import type {
   Concept,
   ConceptInsert,
@@ -216,7 +217,8 @@ function detectTopic(courseTitle: string, lessons: Lesson[], subject: string): s
  */
 export async function extractConceptsFromCourse(
   course: GeneratedCourse & { id: string; title: string },
-  curriculumContext?: string
+  curriculumContext?: string,
+  language: ContentLanguage = 'en'
 ): Promise<ConceptExtractionResult> {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error('ANTHROPIC_API_KEY is not configured')
@@ -241,6 +243,7 @@ export async function extractConceptsFromCourse(
   const response = await anthropic.messages.create({
     model: AI_MODEL,
     max_tokens: 4000,
+    system: buildLanguageInstruction(language),
     messages: [{ role: 'user', content: prompt }],
   })
 
@@ -435,10 +438,11 @@ export async function storeContentMappings(
 export async function extractAndStoreConcepts(
   course: GeneratedCourse & { id: string; title: string },
   curriculumContext?: string,
-  studySystem?: string
+  studySystem?: string,
+  language: ContentLanguage = 'en'
 ): Promise<ConceptExtractionResult> {
   // 1. Extract concepts using AI
-  const result = await extractConceptsFromCourse(course, curriculumContext)
+  const result = await extractConceptsFromCourse(course, curriculumContext, language)
 
   // 2. Store concepts in database
   const conceptNameToId = await storeConcepts(result.concepts, studySystem)

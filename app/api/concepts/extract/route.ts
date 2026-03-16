@@ -6,6 +6,7 @@ import type { StudySystem } from '@/lib/curriculum/types'
 import type { GeneratedCourse } from '@/types'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import { createLogger } from '@/lib/logger'
+import { getContentLanguage } from '@/lib/ai/language'
 
 const log = createLogger('api:concepts-extract')
 
@@ -28,6 +29,8 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
+
+    const language = await getContentLanguage(supabase, user.id)
 
     let courseId: string
     try {
@@ -104,7 +107,8 @@ export async function POST(request: NextRequest) {
         title: course.title,
       },
       curriculumContext,
-      studySystem
+      studySystem,
+      language
     )
 
     return NextResponse.json({
