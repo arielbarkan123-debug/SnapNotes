@@ -5,6 +5,7 @@ import type { StudySystem } from '@/lib/curriculum/types'
 import { evaluateAnswer } from '@/lib/evaluation/answer-checker'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import { createLogger } from '@/lib/logger'
+import { getContentLanguage } from '@/lib/ai/language'
 
 const log = createLogger('api:evaluate-answer')
 
@@ -66,18 +67,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const userId = user.id
-    let userLanguage = 'en'
+    const userLanguage = await getContentLanguage(supabase, user.id)
     let curriculumContextString = ''
 
     // OPTIONAL: Fetch curriculum context (graceful failure)
     try {
       const { data: userProfile } = await supabase
         .from('user_learning_profile')
-        .select('study_system, grade, subjects, subject_levels, exam_format, language')
+        .select('study_system, grade, subjects, subject_levels, exam_format')
         .eq('user_id', user.id)
         .single()
-
-      userLanguage = userProfile?.language || 'en'
 
       if (userProfile?.study_system && userProfile.study_system !== 'general' && userProfile.study_system !== 'other') {
         const curriculumContext = await buildCurriculumContext({

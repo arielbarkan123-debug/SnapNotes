@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes, logError } from '@/lib/api/errors'
 import { generateCardsFromCourse } from '@/lib/srs'
 import type { ReviewCardInsert } from '@/types'
+import { getContentLanguage } from '@/lib/ai/language'
 
 // =============================================================================
 // Types
@@ -77,13 +78,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Get user's language preference for card generation
-    const { data: userProfile } = await supabase
-      .from('user_learning_profile')
-      .select('language')
-      .eq('user_id', user.id)
-      .single()
-
-    const language = (userProfile?.language === 'he' ? 'he' : 'en') as 'en' | 'he'
+    const language = await getContentLanguage(supabase, user.id)
 
     // Generate cards from course content (async — uses AI batch generation)
     const generatedCards = await generateCardsFromCourse(

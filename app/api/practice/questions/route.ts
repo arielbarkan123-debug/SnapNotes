@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes, logError } from '@/lib/api/errors'
 import { generateAndStoreQuestions } from '@/lib/practice'
 import type { GenerateQuestionsRequest } from '@/lib/practice/types'
-import { loadUserProfile } from '@/lib/user-profile'
+import { getContentLanguage } from '@/lib/ai/language'
 
 // =============================================================================
 // GET /api/practice/questions - Get available practice questions
@@ -115,9 +115,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return createErrorResponse(ErrorCodes.FORBIDDEN, 'Access denied')
     }
 
-    // Load user profile for language preference
-    const userProfile = await loadUserProfile(supabase, user.id)
-    const userLanguage = (userProfile?.language === 'he' ? 'he' : 'en') as 'en' | 'he'
+    // Load user language preference
+    const userLanguage = await getContentLanguage(supabase, user.id)
 
     // Generate questions
     const result = await generateAndStoreQuestions({

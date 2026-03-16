@@ -4,6 +4,7 @@ import { type SubmitExamRequest, type MatchingPair, type SubQuestion } from '@/t
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import { evaluateAnswer } from '@/lib/evaluation/answer-checker'
 import { createLogger } from '@/lib/logger'
+import { getContentLanguage } from '@/lib/ai/language'
 
 const log = createLogger('api:exams-submit')
 
@@ -168,17 +169,7 @@ export async function POST(
     }
 
     // Fetch user language for AI evaluation
-    let userLanguage = 'en'
-    try {
-      const { data: profile } = await supabase
-        .from('user_learning_profile')
-        .select('language')
-        .eq('user_id', user.id)
-        .single()
-      userLanguage = profile?.language || 'en'
-    } catch {
-      // Continue with default
-    }
+    const userLanguage = await getContentLanguage(supabase, user.id)
 
     let score = 0
     // Calculate total points from all questions
