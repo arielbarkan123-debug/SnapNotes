@@ -10,6 +10,7 @@ import RichTextInput from '@/components/ui/RichTextInput'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import { useVisuals } from '@/contexts/VisualsContext'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
+import { uploadImagesToStorage, deleteImagesFromStorage, generateCourseId } from '@/lib/upload/direct-upload'
 
 import type { InputMode } from '@/lib/homework/types'
 import { createLogger } from '@/lib/logger'
@@ -429,25 +430,47 @@ export default function HomeworkHelpPage() {
       // ============================================================================
       // IMAGE MODE: Upload images first, then create session
       // ============================================================================
-      // Step 1: Upload images
-      const formData = new FormData()
-      formData.append('files', questionImage!.file)
-      referenceImages.forEach((img) => {
-        formData.append('files', img.file)
-      })
+      // Step 1: Upload images directly to Supabase Storage (bypasses Vercel 4.5MB limit)
+      const allFiles: File[] = [questionImage!.file, ...referenceImages.map(img => img.file)]
 
-      const uploadRes = await fetch('/api/upload-images', {
-        method: 'POST',
-        body: formData,
-      })
+      // Get user ID for storage path
+      const authRes = await fetch('/api/auth/me')
+      if (!authRes.ok) {
+        throw new Error(formatError(ERROR_CODES.HH_UPL_001, 'Please sign in to upload files.', 'HomeworkHelper/Upload/Auth'))
+      }
+      const { userId } = await authRes.json()
+      const batchId = generateCourseId()
 
-      const uploadData = await uploadRes.json()
+      // Upload directly to Supabase Storage
+      const uploadResults = await uploadImagesToStorage(allFiles, userId, batchId)
 
-      if (!uploadRes.ok) {
-        throw new Error(formatError(ERROR_CODES.HH_UPL_001, uploadData.error || 'Failed to upload images', `HomeworkHelper/ImageMode/Upload/Status:${uploadRes.status}`))
+      if (uploadResults.length === 0) {
+        throw new Error(formatError(ERROR_CODES.HH_UPL_001, 'Failed to upload images. Please try again.', 'HomeworkHelper/Upload/NoFiles'))
       }
 
-      const { images } = uploadData
+      // All files must upload successfully — positional mapping requires 1:1 correspondence
+      if (uploadResults.length !== allFiles.length) {
+        await deleteImagesFromStorage(uploadResults.map(r => r.storagePath)).catch(() => {})
+        throw new Error(formatError(ERROR_CODES.HH_UPL_001, `Only ${uploadResults.length} of ${allFiles.length} files uploaded. Please try again.`, 'HomeworkHelper/Upload/PartialFailure'))
+      }
+
+      // Get signed URLs for uploaded files
+      const signRes = await fetch('/api/sign-image-urls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storagePaths: uploadResults.map(r => r.storagePath),
+          courseId: batchId,
+        }),
+      })
+
+      if (!signRes.ok) {
+        await deleteImagesFromStorage(uploadResults.map(r => r.storagePath)).catch(() => {})
+        throw new Error(formatError(ERROR_CODES.HH_UPL_001, 'Failed to process uploaded images. Please try again.', 'HomeworkHelper/Upload/SignUrls'))
+      }
+
+      const signData = await signRes.json()
+      const images = signData.images as Array<{ url: string }>
       const questionImageUrl = images[0].url
       const referenceImageUrls = images.slice(1).map((img: { url: string }) => img.url)
 

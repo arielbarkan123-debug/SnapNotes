@@ -10,6 +10,7 @@ import RichTextInput from '@/components/ui/RichTextInput'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
 import { createLogger } from '@/lib/logger'
+import { uploadImagesToStorage, deleteImagesFromStorage, generateCourseId } from '@/lib/upload/direct-upload'
 
 const log = createLogger('ui:homework-check')
 
@@ -982,42 +983,49 @@ export default function HomeworkCheckPage() {
         allFiles.push(...rubricImages.map(img => img.file))
       }
 
-      // Upload all files to storage
+      // Upload all files directly to Supabase Storage (bypasses Vercel 4.5MB limit)
       setSubmissionStatus(t('check.uploadingFiles'))
 
-      const formData = new FormData()
-      allFiles.forEach((file) => {
-        formData.append('files', file)
+      // Get user ID for storage path
+      const authRes = await fetch('/api/auth/me')
+      if (!authRes.ok) {
+        throw new Error(formatError(ERROR_CODES.HC_UPL_004, 'Please sign in to upload files.', 'HomeworkChecker/Upload/Auth'))
+      }
+      const { userId } = await authRes.json()
+      const batchId = generateCourseId()
+
+      // Upload directly to Supabase Storage
+      const uploadResults = await uploadImagesToStorage(allFiles, userId, batchId, (current, total) => {
+        setSubmissionStatus(t('check.uploadingFiles') + ` (${current}/${total})`)
       })
 
-      const uploadResponse = await fetch('/api/upload-images', {
+      if (uploadResults.length === 0) {
+        throw new Error(formatError(ERROR_CODES.HC_UPL_005, 'No files were uploaded successfully. Please try again.', 'HomeworkChecker/Upload/NoFiles'))
+      }
+
+      // All files must upload successfully — positional mapping requires 1:1 correspondence
+      if (uploadResults.length !== allFiles.length) {
+        await deleteImagesFromStorage(uploadResults.map(r => r.storagePath)).catch(() => {})
+        throw new Error(formatError(ERROR_CODES.HC_UPL_004, `Only ${uploadResults.length} of ${allFiles.length} files uploaded. Please try again.`, 'HomeworkChecker/Upload/PartialFailure'))
+      }
+
+      // Get signed URLs for uploaded files
+      const signRes = await fetch('/api/sign-image-urls', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storagePaths: uploadResults.map(r => r.storagePath),
+          courseId: batchId,
+        }),
       })
 
-      // Check if response is JSON before parsing
-      const uploadContentType = uploadResponse.headers.get('content-type')
-      if (!uploadContentType || !uploadContentType.includes('application/json')) {
-        log.error({ status: uploadResponse.status }, 'Non-JSON upload response')
-        if (uploadResponse.status === 504 || uploadResponse.status === 503 || uploadResponse.status === 502) {
-          throw new Error(formatError(ERROR_CODES.HC_UPL_001, 'Upload timeout. Please try again with fewer or smaller files.', `HomeworkChecker/Upload/Status:${uploadResponse.status}`))
-        }
-        throw new Error(formatError(ERROR_CODES.HC_UPL_002, 'Server error uploading files. Please try again.', `HomeworkChecker/Upload/NonJSON/Status:${uploadResponse.status}`))
+      if (!signRes.ok) {
+        await deleteImagesFromStorage(uploadResults.map(r => r.storagePath)).catch(() => {})
+        throw new Error(formatError(ERROR_CODES.HC_UPL_004, 'Failed to process uploaded images. Please try again.', 'HomeworkChecker/Upload/SignUrls'))
       }
 
-      let uploadData
-      try {
-        uploadData = await uploadResponse.json()
-      } catch (parseError) {
-        log.error({ err: parseError }, 'Upload JSON parse error')
-        throw new Error(formatError(ERROR_CODES.HC_UPL_003, 'Server error parsing response. Please try again.', 'HomeworkChecker/Upload/JSONParse'))
-      }
-
-      if (!uploadResponse.ok) {
-        throw new Error(formatError(ERROR_CODES.HC_UPL_004, uploadData.error || 'Failed to upload files', `HomeworkChecker/Upload/Failed/Status:${uploadResponse.status}`))
-      }
-
-      const uploadedFiles = uploadData.images
+      const signData = await signRes.json()
+      const uploadedFiles = signData.images as Array<{ url: string; storagePath: string; index: number; filename: string }>
 
       // Map uploaded URLs back to their types based on what was uploaded
       let idx = 0

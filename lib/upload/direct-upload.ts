@@ -277,6 +277,22 @@ const ALLOWED_IMAGE_TYPES: Record<string, boolean> = {
   'image/gif': true,
 }
 
+// Document types accepted by homework checker (PDF, DOCX)
+const ALLOWED_DOCUMENT_TYPES: Record<string, boolean> = {
+  'application/pdf': true,
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': true,
+  'application/msword': true,
+}
+
+/**
+ * Check if a file is a document type (PDF/DOCX) rather than an image
+ */
+function isDocumentType(file: File): boolean {
+  if (ALLOWED_DOCUMENT_TYPES[file.type]) return true
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  return ['pdf', 'docx', 'doc'].includes(ext || '')
+}
+
 export interface ImageUploadResult {
   storagePath: string
   index: number
@@ -293,8 +309,13 @@ export function validateImageFile(file: File): ImageValidationResult {
     return { valid: false, error: `File too large. Maximum size is 10MB.` }
   }
 
-  // Check MIME type
+  // Check MIME type - images
   if (ALLOWED_IMAGE_TYPES[file.type]) {
+    return { valid: true }
+  }
+
+  // Check MIME type - documents (PDF/DOCX used by homework checker)
+  if (ALLOWED_DOCUMENT_TYPES[file.type]) {
     return { valid: true }
   }
 
@@ -303,8 +324,11 @@ export function validateImageFile(file: File): ImageValidationResult {
   if (['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif', 'gif'].includes(ext || '')) {
     return { valid: true }
   }
+  if (['pdf', 'docx', 'doc'].includes(ext || '')) {
+    return { valid: true }
+  }
 
-  return { valid: false, error: 'Invalid file type. Use JPG, PNG, WebP, HEIC, or GIF.' }
+  return { valid: false, error: 'Invalid file type. Use JPG, PNG, WebP, HEIC, GIF, PDF, or DOCX.' }
 }
 
 /**
@@ -360,45 +384,53 @@ export async function uploadImagesToStorage(
       continue
     }
 
-    // CRITICAL: Validate file has valid image magic bytes before upload
-    // This catches corrupted files or files that aren't actually images
-    const magicBytesValid = await validateImageMagicBytes(file)
-    if (!magicBytesValid.valid) {
-      log.error({ detail: magicBytesValid }, `Invalid image format: ${originalFilename}`)
-      errors.push(`${originalFilename}: ${magicBytesValid.error || 'Not a valid image file'}`)
-      continue
-    }
-    log.info({ detail: magicBytesValid.format }, `Magic bytes valid for ${originalFilename}`)
+    // Document files (PDF/DOCX) skip image-specific processing
+    // (magic bytes validation, HEIC conversion, compression)
+    const isDocument = isDocumentType(file)
 
-    // Check for HEIC format - magic bytes validation already detected it
-    const isHeic = magicBytesValid.format === 'heic'
-
-    // Try to convert HEIC to JPEG on client-side (faster if it works)
-    // If conversion fails (common on Safari mobile), upload HEIC anyway - server will convert it
-    if (isHeic) {
-      log.info(`File ${originalFilename} is HEIC, attempting client-side conversion...`)
-      try {
-        file = await convertHeicToJpeg(file)
-        log.info(`HEIC conversion successful: ${originalFilename} -> ${file.name}`)
-      } catch (conversionError) {
-        // Client-side conversion failed - this is OK!
-        // The server will detect HEIC by magic bytes and convert it automatically
-        const errorMsg = conversionError instanceof Error ? conversionError.message : 'Unknown error'
-        log.info(`Client-side HEIC conversion failed (expected on Safari): ${errorMsg}`)
-        log.info(`Uploading raw HEIC - server will convert automatically`)
-        // Continue with original HEIC file - don't push to errors, don't skip
+    if (!isDocument) {
+      // CRITICAL: Validate file has valid image magic bytes before upload
+      // This catches corrupted files or files that aren't actually images
+      const magicBytesValid = await validateImageMagicBytes(file)
+      if (!magicBytesValid.valid) {
+        log.error({ detail: magicBytesValid }, `Invalid image format: ${originalFilename}`)
+        errors.push(`${originalFilename}: ${magicBytesValid.error || 'Not a valid image file'}`)
+        continue
       }
-    }
+      log.info({ detail: magicBytesValid.format }, `Magic bytes valid for ${originalFilename}`)
 
-    // Compress large images to prevent upload timeouts and improve processing speed
-    // Only applies to JPEG/PNG (HEIC is handled by conversion above or server-side)
-    if (!isHeic && file.size > COMPRESSION_THRESHOLD_BYTES) {
-      try {
-        file = await compressImageIfNeeded(file)
-      } catch (compressionError) {
-        // Compression failed - continue with original file
-        log.warn({ detail: compressionError }, `Compression failed for ${originalFilename}, using original`)
+      // Check for HEIC format - magic bytes validation already detected it
+      const isHeic = magicBytesValid.format === 'heic'
+
+      // Try to convert HEIC to JPEG on client-side (faster if it works)
+      // If conversion fails (common on Safari mobile), upload HEIC anyway - server will convert it
+      if (isHeic) {
+        log.info(`File ${originalFilename} is HEIC, attempting client-side conversion...`)
+        try {
+          file = await convertHeicToJpeg(file)
+          log.info(`HEIC conversion successful: ${originalFilename} -> ${file.name}`)
+        } catch (conversionError) {
+          // Client-side conversion failed - this is OK!
+          // The server will detect HEIC by magic bytes and convert it automatically
+          const errorMsg = conversionError instanceof Error ? conversionError.message : 'Unknown error'
+          log.info(`Client-side HEIC conversion failed (expected on Safari): ${errorMsg}`)
+          log.info(`Uploading raw HEIC - server will convert automatically`)
+          // Continue with original HEIC file - don't push to errors, don't skip
+        }
       }
+
+      // Compress large images to prevent upload timeouts and improve processing speed
+      // Only applies to JPEG/PNG (HEIC is handled by conversion above or server-side)
+      if (!isHeic && file.size > COMPRESSION_THRESHOLD_BYTES) {
+        try {
+          file = await compressImageIfNeeded(file)
+        } catch (compressionError) {
+          // Compression failed - continue with original file
+          log.warn({ detail: compressionError }, `Compression failed for ${originalFilename}, using original`)
+        }
+      }
+    } else {
+      log.info(`Document file ${originalFilename}, skipping image processing`)
     }
 
     const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
