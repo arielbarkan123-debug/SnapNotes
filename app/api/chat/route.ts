@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
+import { getContentLanguage, buildLanguageInstruction } from '@/lib/ai/language'
 import { buildChatContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
 import { createErrorResponse, ErrorCodes, mapClaudeAPIError } from '@/lib/api/errors'
@@ -101,8 +102,8 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    // Get user's language preference
-    const userLanguage = userProfile?.language || 'en'
+    // Get user's language preference (centralized: cookie → DB → 'en')
+    const userLanguage = await getContentLanguage(supabase, user.id)
 
     if (userProfile?.study_system && userProfile.study_system !== 'general' && userProfile.study_system !== 'other') {
       const curriculumContext = await buildChatContext(
@@ -139,15 +140,8 @@ export async function POST(request: NextRequest) {
       professional: 'Focus on practical applications and efficiency.',
     }
 
-    // Build Hebrew language instruction if needed
-    const hebrewInstruction = userLanguage === 'he' ? `
-## Language Requirement - CRITICAL
-Generate ALL responses in Hebrew (עברית).
-- All explanations and feedback must be in Hebrew
-- Use proper Hebrew educational terminology
-- Keep mathematical notation standard (numbers, symbols)
-- Maintain a supportive, encouraging tone in Hebrew
-` : ''
+    // Build language instruction (centralized — explicit for BOTH English and Hebrew)
+    const langInstruction = buildLanguageInstruction(userLanguage)
 
     // Load student intelligence from Learning Intelligence Engine
     let studentIntelligenceSection = ''
@@ -170,8 +164,8 @@ ${hw.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${hw.knownPrerequisit
     }
 
     // Create system prompt with curriculum awareness
-    const systemPrompt = `You are a helpful AI tutor for NoteSnap, a study app. You're helping a student understand their study material.
-${hebrewInstruction}
+    const systemPrompt = `${langInstruction}You are a helpful AI tutor for NoteSnap, a study app. You're helping a student understand their study material.
+
 ${curriculumSection ? `## Student's Curriculum
 ${curriculumSection}
 

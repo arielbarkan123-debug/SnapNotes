@@ -6,7 +6,13 @@ export async function PATCH(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { language } = await request.json()
+  let language: string
+  try {
+    const body = await request.json()
+    language = body.language
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+  }
   if (language !== 'en' && language !== 'he') {
     return NextResponse.json({ error: 'Invalid language' }, { status: 400 })
   }

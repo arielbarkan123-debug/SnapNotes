@@ -50,6 +50,16 @@ jest.mock('@/lib/env', () => ({
   getAnthropicApiKey: jest.fn().mockReturnValue('test-api-key'),
 }))
 
+const mockGetContentLanguage = jest.fn().mockResolvedValue('en')
+jest.mock('@/lib/ai/language', () => ({
+  getContentLanguage: (...args: unknown[]) => mockGetContentLanguage(...args),
+  buildLanguageInstruction: jest.fn().mockImplementation((lang: string) =>
+    lang === 'he'
+      ? '\n## Language Requirement - CRITICAL\nGenerate ALL content in Hebrew (עברית). This is mandatory.\n'
+      : '\n## Language Requirement - CRITICAL\nGenerate ALL content in English. This is mandatory.\n'
+  ),
+}))
+
 // Set env variable for tests
 process.env.ANTHROPIC_API_KEY = 'test-api-key'
 
@@ -327,6 +337,7 @@ describe('Generate Questions API - POST', () => {
 
   describe('Hebrew Language Support', () => {
     it('includes Hebrew instruction when language is he', async () => {
+      mockGetContentLanguage.mockResolvedValueOnce('he')
       mockSupabase.from.mockImplementation((table: string) => {
         const builder = {
           select: jest.fn().mockReturnThis(),

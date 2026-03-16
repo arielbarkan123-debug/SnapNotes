@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
+import { getContentLanguage, buildLanguageInstruction } from '@/lib/ai/language'
 import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
@@ -85,8 +86,8 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id)
       .single()
 
-    // Get user's language preference
-    const userLanguage = userProfile?.language || 'en'
+    // Get user's language preference (centralized: cookie → DB → 'en')
+    const userLanguage = await getContentLanguage(supabase, user.id)
 
     if (userProfile?.study_system && userProfile.study_system !== 'general' && userProfile.study_system !== 'other') {
       const curriculumContext = await buildCurriculumContext({
@@ -103,16 +104,8 @@ export async function POST(request: NextRequest) {
       curriculumSection = formatContextForPrompt(curriculumContext)
     }
 
-    // Build Hebrew language instruction if needed
-    const hebrewInstruction = userLanguage === 'he' ? `
-## Language Requirement - CRITICAL
-Generate ALL content in Hebrew (עברית).
-- All questions must be in Hebrew
-- All answer options must be in Hebrew
-- All explanations must be in Hebrew
-- Keep mathematical notation standard (numbers, symbols)
-- Use proper Hebrew educational terminology
-` : ''
+    // Build language instruction (centralized — explicit for BOTH English and Hebrew)
+    const langInstruction = buildLanguageInstruction(userLanguage)
 
     // Classify topic type and language level for content-appropriate questions
     const topicContent = topic || lessonContent || courseContext || ''
@@ -173,8 +166,8 @@ ${languageLevel.vocabularyInstructions}
 `
 
     // Build prompt for question generation with curriculum awareness
-    const systemPrompt = `You are an educational AI that generates practice questions. Generate questions that test understanding, not just memorization.
-${hebrewInstruction}
+    const systemPrompt = `${langInstruction}You are an educational AI that generates practice questions. Generate questions that test understanding, not just memorization.
+
 ${topicTypeInstructions}
 ${languageLevelInstruction}
 ${curriculumSection ? `## Curriculum Context
