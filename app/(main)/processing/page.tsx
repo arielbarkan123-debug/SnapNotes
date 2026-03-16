@@ -9,8 +9,6 @@ import Link from 'next/link'
 import { useXP } from '@/contexts/XPContext'
 import { useFunnelTracking } from '@/lib/analytics'
 import { useVisuals } from '@/contexts/VisualsContext'
-// Error code utilities available if needed:
-// import { getDisplayErrorCode, parseAPIError } from '@/lib/errors/client'
 import { ErrorCodes } from '@/lib/errors'
 // Import types from the dedicated types file to avoid bundling mammoth/jszip
 import type { ExtractedDocument } from '@/lib/documents/types'

@@ -4,6 +4,8 @@
 
 NoteSnap is a web application that transforms photos of notebook pages into structured, interactive study materials using Claude AI. Upload a photo of your notes, and get back a beautifully organized course with explanations, key concepts, and summaries.
 
+> **New developer?** Start with the comprehensive [Developer Onboarding Guide](docs/ONBOARDING.md) for setup instructions, architecture overview, and common tasks.
+
 ## Features
 
 - **AI-Powered Analysis**: Claude AI reads and understands handwritten notes, diagrams, and formulas

@@ -10,6 +10,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "type-check": "tsc --noEmit",
     "v1": "git checkout v1 && npm run dev",
     "v2": "git checkout v2 && npm run dev",
     "latest": "git checkout main && npm run dev"
