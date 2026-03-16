@@ -44,6 +44,7 @@ import {
 } from '@/lib/ai/content-classifier'
 
 import { AI_MODEL } from '@/lib/ai/claude'
+import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('srs:card-generator')
@@ -231,16 +232,8 @@ async function generateSingleBatch(
 ): Promise<Map<number, string>> {
   const result = new Map<number, string>()
 
-  // Build Hebrew language instruction if needed
-  const hebrewInstruction = language === 'he' ? `
-## Language Requirement - CRITICAL
-Generate ALL questions in Hebrew (עברית).
-- Every question must be written in Hebrew
-- Keep mathematical notation standard (numbers, symbols, formulas)
-- Use proper Hebrew educational terminology
-- For math: "חשב:", "פתור:", "המר:", "פשט:"
-- For concepts: "מה הוא...", "הסבר מדוע...", "כיצד..."
-` : ''
+  // Build language instruction (explicit for BOTH Hebrew AND English)
+  const langInstruction = buildLanguageInstruction(language)
 
   // Build the AI prompt based on topic type
   let formatInstructions: string
@@ -285,7 +278,7 @@ NEVER generate vague questions like "What is a key point about X?"`
   ).join('\n\n')
 
   const prompt = `You are generating flashcard questions for a course titled "${courseTitle}".
-${hebrewInstruction}
+${langInstruction}
 
 ${formatInstructions}
 
@@ -348,24 +341,21 @@ export async function regenerateCardQuestion(
 
     const topicType = classifyTopicType(back, courseTitle)
 
-    // Auto-detect Hebrew if not specified (check if content contains Hebrew characters)
-    const isHebrew = language === 'he' || (
-      !language && /[\u0590-\u05FF]/.test(back)
-    )
+    // Determine language: explicit param > auto-detect from content > default 'en'
+    const resolvedLang: ContentLanguage = language === 'he' ? 'he'
+      : language === 'en' ? 'en'
+      : /[\u0590-\u05FF]/.test(back) ? 'he' : 'en'
 
-    let style: string
-    let languageInstruction = ''
+    const langInstr = buildLanguageInstruction(resolvedLang)
+    const isHebrew = resolvedLang === 'he'
 
-    if (isHebrew) {
-      languageInstruction = '\n\nIMPORTANT: Generate the question in Hebrew (עברית). Use proper Hebrew educational terminology.'
-      style = topicType === 'computational'
+    const style = isHebrew
+      ? (topicType === 'computational'
         ? 'בעיית חישוב — אם החישוב עומד בפני עצמו, השתמש בסימון בלבד (למשל: "3/4 + 1/2 = ?"). אם צריך הקשר, מילים בסדר.'
-        : 'שאלת הבנה ברורה'
-    } else {
-      style = topicType === 'computational'
+        : 'שאלת הבנה ברורה')
+      : (topicType === 'computational'
         ? 'a computation question — if self-contained, use notation only (e.g., "3/4 + 1/2 = ?"). If it needs context, words are fine.'
-        : 'a clear understanding question'
-    }
+        : 'a clear understanding question')
 
     const client = new Anthropic({ apiKey })
     const response = await client.messages.create({
@@ -373,8 +363,8 @@ export async function regenerateCardQuestion(
       max_tokens: 200,
       messages: [{
         role: 'user',
-        content: `The following flashcard has a bad question. Generate ${style} for this answer content.${languageInstruction}
-
+        content: `The following flashcard has a bad question. Generate ${style} for this answer content.
+${langInstr}
 Course: "${courseTitle}"
 Current bad question: "${front}"
 Answer/content: "${back.slice(0, 500)}"

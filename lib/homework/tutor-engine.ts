@@ -14,7 +14,7 @@ import type {
   TutorDiagramState,
   VisualUpdate,
 } from './types'
-// Old diagram-generator imports removed — engine is now the only diagram source
+// Diagram generation uses a hybrid pipeline: visual-learning validation + engine routing + adapter layer
 import { validateSchema, autoCorrectDiagram, type DiagramType as VisualDiagramType, type StructuredDiagram, SCHEMA_VERSION } from '@/lib/visual-learning'
 import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
 import { generateStepSequence, isMultiStepProblem } from '@/lib/diagram-engine/step-sequence'
@@ -25,6 +25,7 @@ import { adaptToGeoGebraProps } from '@/lib/diagram-engine/geogebra-adapter'
 import { classifyTopicType, inferDifficultyFromTopic, resolveEffectiveLanguageLevel, type TopicType } from '@/lib/ai/content-classifier'
 
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
+import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('homework:tutor')
@@ -92,23 +93,6 @@ function stripAsciiDiagrams(text: string): string {
 // ============================================================================
 // System Prompts
 // ============================================================================
-
-/**
- * Build language-specific instruction for Hebrew support
- */
-function buildLanguageInstruction(language?: 'en' | 'he'): string {
-  if (language === 'he') {
-    return `
-## Language Requirement - CRITICAL
-Respond ONLY in Hebrew (עברית).
-- All messages, questions, and feedback must be in Hebrew
-- Keep mathematical notation standard (numbers, symbols, formulas)
-- Use proper Hebrew educational terminology
-- Maintain a warm, supportive tone in Hebrew
-`
-  }
-  return ''
-}
 
 const SOCRATIC_TUTOR_SYSTEM_BASE = `You are a warm, supportive Socratic tutor helping a student with their homework.
 
@@ -503,7 +487,7 @@ IMPORTANT: Long division must show EVERY step including when the divisor doesn't
  * Build the complete system prompt with optional language and grade context
  */
 function buildSocraticTutorSystem(language?: 'en' | 'he', grade?: string, studySystem?: string, contentDifficulty?: number, topicType?: TopicType): string {
-  const languageInstruction = buildLanguageInstruction(language)
+  const languageInstruction = buildLanguageInstruction((language || 'en') as ContentLanguage)
 
   let gradeInstruction = ''
   if (grade || studySystem) {

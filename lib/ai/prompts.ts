@@ -20,6 +20,7 @@ import type { LessonIntensityMode } from '@/types'
 import { getIntensityConfig } from '@/lib/learning/intensity-config'
 import { detectMathTopic, getMathMethodsPromptInstructions, ALL_MATH_METHODS } from './math-methods'
 import { getVisualGuidanceForPrompt, getFullVisualGuidance, ERROR_VISUAL_GUIDANCE } from './visual-guidance'
+import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 
 const log = createLogger('ai:prompts')
 
@@ -81,9 +82,7 @@ function getBagrutContext(): string {
   return `The student is preparing for Israeli Bagrut (בגרות) exams.
 
 **DO:** Focus on problem-solving techniques, step-by-step solutions, worked examples.
-**DON'T:** Include exam logistics, point values, time limits, admin info.
-
-Use Hebrew math terms alongside English where appropriate.`
+**DON'T:** Include exam logistics, point values, time limits, admin info.`
 }
 
 // Helper function to get study goal context for prompts
@@ -204,36 +203,6 @@ function getEnhancedEducationDescription(
   return baseDescriptions[level]
 }
 
-// Helper function to build Hebrew language instruction for content generation
-function buildLanguageInstruction(language?: 'en' | 'he'): string {
-  if (language === 'he') {
-    return `
-
-## Language Requirement - CRITICAL
-Generate ALL content in Hebrew (עברית). This is mandatory.
-
-### Hebrew Content Guidelines:
-- ALL course titles, section titles, and lesson titles in Hebrew
-- ALL explanations, key points, and summaries in Hebrew
-- ALL questions, answer options, and feedback in Hebrew
-- ALL overview, connections, and furtherStudy content in Hebrew
-- Use proper Hebrew educational terminology
-- Use right-to-left text flow naturally
-- For mathematical formulas: keep standard notation (e.g., E=mc²) but explain in Hebrew
-- For scientific terms: use Hebrew translations where commonly used, or transliterate technical terms
-- For code or technical content: keep code in English, explain in Hebrew
-- Maintain a natural, educational Hebrew writing style appropriate for the student's level
-
-### Hebrew Writing Quality:
-- Use formal but accessible Hebrew (לשון פורמלית אך נגישה)
-- Avoid awkward translations - write naturally in Hebrew
-- Use common Hebrew educational phrases
-- Match the complexity of Hebrew to the student's education level
-`
-  }
-  return ''
-}
-
 // Build personalization section for prompts
 function buildPersonalizationSection(
   userContext?: UserLearningContext,
@@ -247,7 +216,7 @@ function buildPersonalizationSection(
   const ageConfig = getAgeGroupConfig(userContext.educationLevel)
 
   // Add Hebrew language instruction if applicable (at the top for priority)
-  const languageInstruction = buildLanguageInstruction(userContext.language)
+  const languageInstruction = buildLanguageInstruction((userContext.language || 'en') as ContentLanguage)
   if (languageInstruction) {
     parts.push(languageInstruction)
   }
@@ -2299,8 +2268,8 @@ The lesson should be:
 
 ## Language
 
-Match the language of the exam. If the exam is in Hebrew, create the course in Hebrew.
-If mixed, prefer Hebrew for Israeli Bagrut exams.`
+Follow the Language Requirement section above — use the student's preferred language.
+For mathematical notation, keep standard symbols regardless of language.`
 
 /**
  * Builds the user prompt for exam-based course generation
