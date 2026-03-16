@@ -11,6 +11,15 @@ jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(),
 }))
 
+jest.mock('@/lib/ai/language', () => ({
+  getContentLanguage: jest.fn().mockResolvedValue('en'),
+  buildLanguageInstruction: jest.fn().mockReturnValue(''),
+  detectSourceLanguage: jest.fn().mockReturnValue(undefined),
+  resolveOutputLanguage: jest.fn().mockReturnValue('en'),
+  getExplicitToggleFlag: jest.fn().mockResolvedValue(false),
+  clearExplicitToggleFlag: jest.fn().mockResolvedValue(undefined),
+}))
+
 jest.mock('@/lib/exam-prediction/predictor', () => ({
   predictExamTopics: jest.fn(),
 }))
@@ -153,7 +162,8 @@ describe('Exam Prediction API - POST /api/exam-prediction', () => {
       expect(predictExamTopics).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({ id: 'tpl-1', title: 'Midterm 2025' }),
-        ])
+        ]),
+        'en'
       )
     })
   })

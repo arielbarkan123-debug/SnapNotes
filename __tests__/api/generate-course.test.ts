@@ -112,6 +112,18 @@ jest.mock('@/lib/diagram-engine/integration', () => ({
   generateDiagramsForSteps: jest.fn().mockResolvedValue({ generated: 0, attempted: 0 }),
 }))
 
+jest.mock('@/lib/ai/language', () => ({
+  getContentLanguage: jest.fn().mockResolvedValue('en'),
+  buildLanguageInstruction: jest.fn().mockReturnValue(''),
+  detectSourceLanguage: jest.fn().mockReturnValue(undefined),
+  // Pass through: when no source language is detected, return the user's preference
+  resolveOutputLanguage: jest.fn().mockImplementation(
+    (userLanguage: string, _sourceLanguage?: string, _wasExplicit?: boolean) => userLanguage
+  ),
+  getExplicitToggleFlag: jest.fn().mockResolvedValue(false),
+  clearExplicitToggleFlag: jest.fn().mockResolvedValue(undefined),
+}))
+
 // ============================================================================
 // Stream Helper
 // ============================================================================
@@ -352,10 +364,17 @@ describe('Course Generation API - POST', () => {
 
       const messages = await drainStream(await POST(request))
 
-      // Should continue without personalization — look for success message
+      // Should continue with default context — look for success message
       const successMsg = messages.find((m) => m.type === 'success')
       expect(successMsg).toBeDefined()
-      expect(capturedUserContext).toBeUndefined()
+      // When profile fetch throws, route now builds a default context with resolved language
+      expect(capturedUserContext).toEqual({
+        educationLevel: 'high_school',
+        studySystem: 'general',
+        studyGoal: 'general_learning',
+        learningStyles: ['practice'],
+        language: 'en',
+      })
     })
 
     it('uses default values when profile fields are null', async () => {

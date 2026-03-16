@@ -11,6 +11,15 @@ jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(),
 }))
 
+jest.mock('@/lib/ai/language', () => ({
+  getContentLanguage: jest.fn().mockResolvedValue('en'),
+  buildLanguageInstruction: jest.fn().mockReturnValue(''),
+  detectSourceLanguage: jest.fn().mockReturnValue(undefined),
+  resolveOutputLanguage: jest.fn().mockReturnValue('en'),
+  getExplicitToggleFlag: jest.fn().mockResolvedValue(false),
+  clearExplicitToggleFlag: jest.fn().mockResolvedValue(undefined),
+}))
+
 jest.mock('@/lib/evaluation/answer-checker', () => ({
   evaluateAnswer: jest.fn(),
 }))
@@ -247,6 +256,9 @@ describe('Evaluate Answer API', () => {
           userAnswer: 'DNA stands for deoxyribonucleic acid',
         }),
       })
+
+      const { getContentLanguage } = require('@/lib/ai/language')
+      getContentLanguage.mockResolvedValueOnce('he')
 
       const response = await POST(request)
       const data = await response.json()

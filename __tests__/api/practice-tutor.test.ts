@@ -34,6 +34,20 @@ jest.mock('@/lib/diagram-engine/integration', () => ({
   tieredRoute: jest.fn().mockResolvedValue(null),
 }))
 
+jest.mock('@/lib/ai/language', () => ({
+  getContentLanguage: jest.fn().mockResolvedValue('en'),
+  buildLanguageInstruction: jest.fn().mockImplementation((lang: string) => {
+    if (lang === 'he') {
+      return '\n## Language Requirement - CRITICAL\nGenerate ALL content in Hebrew (עברית). This is mandatory.\n'
+    }
+    return '\n## Language Requirement - CRITICAL\nGenerate ALL content in English. This is mandatory.\n'
+  }),
+  detectSourceLanguage: jest.fn().mockReturnValue(undefined),
+  resolveOutputLanguage: jest.fn().mockReturnValue('en'),
+  getExplicitToggleFlag: jest.fn().mockResolvedValue(false),
+  clearExplicitToggleFlag: jest.fn().mockResolvedValue(undefined),
+}))
+
 describe('POST /api/practice/tutor', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -247,7 +261,7 @@ describe('POST /api/practice/tutor', () => {
 
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          system: expect.not.stringContaining('Hebrew'),
+          system: expect.not.stringContaining('Generate ALL content in Hebrew'),
         })
       )
     })

@@ -19,6 +19,15 @@ jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(),
 }))
 
+jest.mock('@/lib/ai/language', () => ({
+  getContentLanguage: jest.fn().mockResolvedValue('en'),
+  buildLanguageInstruction: jest.fn().mockReturnValue(''),
+  detectSourceLanguage: jest.fn().mockReturnValue(undefined),
+  resolveOutputLanguage: jest.fn().mockReturnValue('en'),
+  getExplicitToggleFlag: jest.fn().mockResolvedValue(false),
+  clearExplicitToggleFlag: jest.fn().mockResolvedValue(undefined),
+}))
+
 jest.mock('@/lib/youtube/transcript', () => ({
   extractYouTubeTranscript: jest.fn(),
   parseVideoId: jest.fn(),
@@ -210,6 +219,7 @@ describe('YouTube Course API - POST /api/courses/from-youtube', () => {
         mockTranscript.transcript,
         mockTranscript.title,
         mockTranscript.duration,
+        'en',
       )
     })
 
