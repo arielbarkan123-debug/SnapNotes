@@ -4,6 +4,7 @@ import { createErrorResponse, ErrorCodes } from '@/lib/api/errors'
 import { extractYouTubeTranscript, parseVideoId, YouTubeBotDetectionError } from '@/lib/youtube/transcript'
 import { generateCourseFromVideo } from '@/lib/youtube/course-from-video'
 import { createLogger } from '@/lib/logger'
+import { getContentLanguage } from '@/lib/ai/language'
 
 const log = createLogger('api:courses-from-youtube')
 
@@ -23,6 +24,8 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return createErrorResponse(ErrorCodes.UNAUTHORIZED)
     }
+
+    const language = await getContentLanguage(supabase, user.id)
 
     const body = await request.json()
     const { youtubeUrl } = body as { youtubeUrl?: string }
@@ -62,6 +65,7 @@ export async function POST(request: NextRequest) {
             transcript.transcript,
             transcript.title,
             transcript.duration,
+            language,
           )
 
           send('progress', { step: 'saving', message: 'Saving course...' })

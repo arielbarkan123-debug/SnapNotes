@@ -7,6 +7,7 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -88,6 +89,7 @@ export async function generateCourseFromVideo(
   transcript: string,
   videoTitle: string,
   videoDuration: number,
+  language: ContentLanguage = 'en',
 ): Promise<GeneratedCourseFromVideo> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set')
@@ -101,7 +103,7 @@ export async function generateCourseFromVideo(
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: 8000,
-    system: COURSE_GENERATION_PROMPT,
+    system: buildLanguageInstruction(language) + COURSE_GENERATION_PROMPT,
     messages: [{
       role: 'user',
       content: `Video Title: "${videoTitle}"
