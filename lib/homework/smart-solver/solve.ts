@@ -8,6 +8,7 @@
 
 import type Anthropic from '@anthropic-ai/sdk'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 import type {
   DecomposedProblem,
   SolvedDecomposedProblem,
@@ -31,9 +32,7 @@ export async function solveDecomposedProblem(
   problem: DecomposedProblem,
   detectedLanguage: string
 ): Promise<SolvedDecomposedProblem> {
-  const langInstruction = detectedLanguage === 'he'
-    ? 'Respond in Hebrew where the question is in Hebrew. Math expressions should remain in LTR format.'
-    : ''
+  const langInstruction = buildLanguageInstruction((detectedLanguage === 'he' ? 'he' : 'en') as ContentLanguage)
 
   const subProblemList = problem.subProblems
     .sort((a, b) => a.order - b.order)

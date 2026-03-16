@@ -7,6 +7,7 @@
 import type Anthropic from '@anthropic-ai/sdk'
 import type { HintResponse, HintContext, HintLevel } from './types'
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
+import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 
 // ============================================================================
 // Configuration
@@ -14,28 +15,6 @@ import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
 const MAX_TOKENS = 1500
 
 // Anthropic client singleton from @/lib/ai/claude (180s default timeout)
-
-// ============================================================================
-// Language Support
-// ============================================================================
-
-/**
- * Build language-specific instruction for Hebrew support
- */
-function buildLanguageInstruction(language?: 'en' | 'he'): string {
-  if (language === 'he') {
-    return `
-CRITICAL LANGUAGE REQUIREMENT:
-Generate ALL content in Hebrew (עברית).
-- All hints must be in Hebrew
-- All explanations must be in Hebrew
-- All worked examples must be in Hebrew
-- Keep mathematical notation standard (numbers, symbols, formulas)
-- Use proper Hebrew educational terminology
-`
-  }
-  return ''
-}
 
 // ============================================================================
 // Hint Level Definitions
@@ -104,7 +83,7 @@ export async function generateHint(context: HintContext): Promise<HintResponse> 
   const client = getAnthropicClient()
 
   const levelConfig = HINT_LEVELS[requestedLevel]
-  const languageInstruction = buildLanguageInstruction(language)
+  const languageInstruction = buildLanguageInstruction((language || 'en') as ContentLanguage)
 
   // Build topic-type instruction
   let topicTypeInstruction = ''

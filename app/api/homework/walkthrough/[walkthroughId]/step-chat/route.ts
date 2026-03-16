@@ -12,6 +12,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
+import { getContentLanguage, buildLanguageInstruction } from '@/lib/ai/language'
 import type { WalkthroughSolution } from '@/types/walkthrough'
 import { createLogger } from '@/lib/logger'
 
@@ -114,11 +115,15 @@ export async function POST(
     .eq('step_index', stepIndex)
     .order('created_at', { ascending: true })
 
+  // Resolve content language
+  const language = await getContentLanguage(supabase, user.id)
+  const langInstruction = buildLanguageInstruction(language)
+
   // Generate AI response with step-specific context
   const anthropic = getAnthropicClient()
 
   const systemPrompt = `You are a helpful math and science tutor. The student is working through a step-by-step solution and has a question about a specific step.
-
+${langInstruction}
 PROBLEM: ${walkthrough.question_text}
 
 CURRENT STEP (Step ${stepIndex + 1}): ${step.title}

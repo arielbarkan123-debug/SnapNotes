@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { getContentLanguage, buildLanguageInstruction as buildLangInstruction } from '@/lib/ai/language'
 import { ErrorCodes, createErrorResponse } from '@/lib/api/errors'
 import { getFilteredDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-schemas'
 import { AI_MODEL } from '@/lib/ai/claude'
@@ -78,9 +79,7 @@ function sanitizeDiagram(raw: unknown): Record<string, unknown> | null {
 }
 
 function buildSystemPrompt(guideContent: string, language: 'en' | 'he', action?: string, subject?: string): string {
-  const langInstruction = language === 'he'
-    ? `\n## Language: Respond ONLY in Hebrew (עברית). Keep math notation standard.\n`
-    : ''
+  const langInstruction = buildLangInstruction(language)
 
   return `${langInstruction}You are a warm, supportive Socratic study tutor helping a student with their study guide.
 
@@ -138,7 +137,12 @@ export async function POST(
       return createErrorResponse(ErrorCodes.VALIDATION_ERROR, 'Invalid request body')
     }
 
-    const { message, sectionRef, action, language = 'en', enableDiagrams = true } = body
+    const { message, sectionRef, action, language: bodyLanguage, enableDiagrams = true } = body
+
+    // Resolve language: prefer explicit body param, then DB profile, then cookie
+    const language = (bodyLanguage === 'en' || bodyLanguage === 'he')
+      ? bodyLanguage
+      : await getContentLanguage(supabase, user.id)
 
     if (!message && !action) {
       return createErrorResponse(ErrorCodes.MISSING_FIELD, 'Message or action is required')

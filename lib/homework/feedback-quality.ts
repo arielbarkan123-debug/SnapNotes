@@ -13,6 +13,7 @@
 import type Anthropic from '@anthropic-ai/sdk'
 import type { FeedbackPoint, FeedbackQualityResult } from './types'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('homework:feedback-quality')
@@ -149,7 +150,7 @@ export async function regenerateWeakFeedback(
 ): Promise<FeedbackPoint[]> {
   if (failingItems.length === 0) return []
 
-  const isHebrew = language === 'he'
+  const langInstruction = buildLanguageInstruction((language === 'he' ? 'he' : 'en') as ContentLanguage)
   const itemDescriptions = failingItems.map((item, i) => {
     const ctx = context[i] || { correctAnswer: 'unknown', studentAnswer: 'unknown', questionText: 'unknown' }
     return `Item ${i + 1} (${item.type}):
@@ -161,7 +162,7 @@ export async function regenerateWeakFeedback(
 
   const prompt = `The following homework feedback items are too generic or incomplete. Rewrite each one to meet quality standards.
 
-${isHebrew ? 'Write ALL feedback in Hebrew (עברית).' : ''}
+${langInstruction}
 
 ## Quality requirements:
 - For WRONG answers: explain what the correct answer is, what the student wrote, why it's wrong, and show the correct solution step-by-step. Minimum 20 words.

@@ -10,6 +10,7 @@
 
 import type Anthropic from '@anthropic-ai/sdk'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 import { getVerificationStrategy } from './subject-utils'
 import type { DecompositionResult, DecomposedProblem, SubProblem, SubjectCategory } from './types'
 import { createLogger } from '@/lib/logger'
@@ -29,7 +30,8 @@ export async function decomposeProblems(
   imageBase64: string,
   mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
   includeStudentAnswers: boolean,
-  referenceImages: Array<{ base64: string; mediaType: string }> = []
+  referenceImages: Array<{ base64: string; mediaType: string }> = [],
+  language?: ContentLanguage
 ): Promise<DecompositionResult> {
   const studentAnswerInstruction = includeStudentAnswers
     ? `
@@ -45,14 +47,16 @@ export async function decomposeProblems(
       "studentAnswerConfidence": "high" | "medium" | "low"`
     : ''
 
+  const langInstruction = buildLanguageInstruction(language || 'en')
+
   const prompt = `You are an expert problem analyzer. Your job is to:
 1. READ all problems/questions from this image
 2. CLASSIFY each problem by its exact subject type
 3. DECOMPOSE each problem into atomic sub-problems that can be solved one at a time
 4. Each sub-problem should be so simple that solving it is trivially correct
 5. Be especially careful with Hebrew content: read Hebrew labels RTL, math expressions LTR
-6. Detect the language used in the homework (Hebrew or English)
 ${studentAnswerInstruction}
+${langInstruction}
 
 ## SUBJECT CATEGORIES (choose the most specific one):
 - math_arithmetic: basic operations (addition, subtraction, multiplication, division)

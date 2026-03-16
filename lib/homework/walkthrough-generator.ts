@@ -10,6 +10,7 @@
  */
 
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
+import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 import { getAdvancedGuidance } from '@/lib/diagram-engine/tikz/advanced-fallback'
 import { parseTikzLayers } from '@/lib/diagram-engine/tikz-layer-parser'
 import { estimateCumulativeSize } from '@/lib/diagram-engine/tikz-layer-parser'
@@ -570,7 +571,7 @@ STEP GUIDELINES:
 async function generateWalkthroughSolutionOnce(
   questionText: string,
   imageUrls?: string[],
-  options?: { simplify?: boolean; previousMaxSize?: number; validationFixes?: string },
+  options?: { simplify?: boolean; previousMaxSize?: number; validationFixes?: string; language?: ContentLanguage },
 ): Promise<WalkthroughSolution> {
   const anthropic = getAnthropicClient()
 
@@ -608,7 +609,8 @@ async function generateWalkthroughSolutionOnce(
   })
 
   // Build system prompt dynamically with topic-specific guidance
-  const systemPrompt = buildWalkthroughSystemPrompt(questionText, topic)
+  const langInstruction = options?.language ? buildLanguageInstruction(options.language) : ''
+  const systemPrompt = langInstruction + buildWalkthroughSystemPrompt(questionText, topic)
 
   const message = await anthropic.messages.create({
     model: AI_MODEL,
@@ -701,11 +703,12 @@ export interface WalkthroughGenerationResult {
 export async function generateWalkthroughSolution(
   questionText: string,
   imageUrls?: string[],
+  language?: ContentLanguage,
 ): Promise<WalkthroughGenerationResult> {
   const topicClassified = classifyWalkthroughTopic(questionText)
 
   // First attempt
-  let solution = await generateWalkthroughSolutionOnce(questionText, imageUrls)
+  let solution = await generateWalkthroughSolutionOnce(questionText, imageUrls, { language })
 
   // For text-only mode, no TikZ validation needed
   if (solution.mode === 'text-only' || !solution.tikzCode) {
@@ -736,6 +739,7 @@ export async function generateWalkthroughSolution(
     try {
       const retrySolution = await generateWalkthroughSolutionOnce(questionText, imageUrls, {
         validationFixes: retryPrompt,
+        language,
       })
 
       // Validate the retry too (but only apply auto-fixes, don't retry again)
@@ -766,6 +770,7 @@ export async function generateWalkthroughSolution(
         const simplified = await generateWalkthroughSolutionOnce(questionText, imageUrls, {
           simplify: true,
           previousMaxSize: maxSize,
+          language,
         })
 
         // Auto-fix the simplified version too

@@ -24,6 +24,7 @@ import {
 } from '@/lib/ai/content-classifier'
 import { isQuestionQualityAcceptable } from '@/lib/srs'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('practice:question-generator')
@@ -272,19 +273,10 @@ function buildGenerationPrompt(
   )
   const bloomWeights = getBloomWeights(request.educationLevel)
 
-  // Build Hebrew language instruction if needed
-  const hebrewInstruction = request.language === 'he' ? `
+  // Build language instruction (explicit for BOTH Hebrew AND English)
+  const langInstruction = buildLanguageInstruction((request.language || 'en') as ContentLanguage)
 
-## Language Requirement - CRITICAL
-Generate ALL content in Hebrew (עברית).
-- All questions must be in Hebrew
-- All answer options must be in Hebrew
-- All explanations must be in Hebrew
-- Keep mathematical notation standard (numbers, symbols)
-- Use proper Hebrew educational terminology
-` : ''
-
-  return `You are an expert educational content creator. Generate ${request.count} practice questions based on the following course content.${hebrewInstruction}${ageInstructions}
+  return `You are an expert educational content creator. Generate ${request.count} practice questions based on the following course content.${langInstruction}${ageInstructions}
 
 ## Question Types to Generate:
 ${typeDescriptions}

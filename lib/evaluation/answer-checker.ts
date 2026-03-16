@@ -7,6 +7,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { classifyTopicType } from '@/lib/ai/content-classifier'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { buildLanguageInstruction as buildLangInstruction, type ContentLanguage } from '@/lib/ai/language'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('evaluation:answer-checker')
@@ -433,9 +434,7 @@ Use the curriculum context above to:
 `
     : ''
 
-  const hebrewInstruction = language === 'he'
-    ? '\nCRITICAL: Write ALL feedback in Hebrew (עברית). The feedback field must be in Hebrew.'
-    : ''
+  const langInstruction = buildLangInstruction((language === 'he' ? 'he' : 'en') as ContentLanguage)
 
   let gradingRubric = ''
   if (isExplanation || topicType === 'conceptual') {
@@ -475,7 +474,8 @@ Grading Rubric (General):
 - Do NOT penalize for missing numerical components unless the question explicitly asks for calculations`
   }
 
-  const prompt = `You are grading a student's answer.${curriculumContext ? ' Apply curriculum-specific grading criteria.' : ''}${hebrewInstruction}
+  const prompt = `You are grading a student's answer.${curriculumContext ? ' Apply curriculum-specific grading criteria.' : ''}
+${langInstruction}
 ${curriculumInstructions}${gradingRubric}
 
 Question: ${question}
@@ -495,7 +495,7 @@ A short answer that shows understanding can still be correct.`
 ${curriculumContext ? '- Apply curriculum command terms and assessment objectives' : ''}
 
 Respond with ONLY valid JSON (no markdown):
-{"correct":true/false,"score":0-100,"feedback":"${isExplanation ? '1-2 sentences: what was right and what could be improved' : 'one brief sentence'}${language === 'he' ? ' in Hebrew' : ''}"}`
+{"correct":true/false,"score":0-100,"feedback":"${isExplanation ? '1-2 sentences: what was right and what could be improved' : 'one brief sentence'} in ${language === 'he' ? 'Hebrew' : 'English'}"}`
 
   // More tokens for explanation questions to allow detailed feedback
   const maxTokens = isExplanation || topicType === 'conceptual' ? 400 : 200

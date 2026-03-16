@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
+import { getContentLanguage } from '@/lib/ai/language'
 import {
   generateMixedPractice,
   generateSpacedInterleaving,
@@ -278,13 +279,12 @@ export async function POST(request: NextRequest) {
 
     const educationLevel = profile?.education_level || 'high_school'
 
-    // Determine language: prefer explicit body param, then Accept-Language header, then default
+    // Determine language: prefer explicit body param, then DB profile, then cookie, then default
     let language: 'en' | 'he' = 'en'
     if (bodyLanguage === 'en' || bodyLanguage === 'he') {
       language = bodyLanguage
     } else {
-      const acceptLang = request.headers.get('accept-language') || ''
-      if (acceptLang.includes('he')) language = 'he'
+      language = await getContentLanguage(supabase, user.id)
     }
 
     // Distribute questions across courses (don't over-generate)

@@ -175,6 +175,8 @@ export interface Course {
   lesson_outline?: LessonOutline[] | null
   /** User-selected lesson intensity mode (quick, standard, deep_practice) */
   intensity_mode?: LessonIntensityMode
+  /** Language the course content was generated in */
+  content_language?: 'en' | 'he'
   /** Timestamp when the course was created */
   created_at: string
   /** Timestamp when the course was last updated */
@@ -255,6 +257,8 @@ export interface CourseInsert {
   lesson_outline?: LessonOutline[] | null
   /** User-selected lesson intensity mode (quick, standard, deep_practice) */
   intensity_mode?: LessonIntensityMode
+  /** Language the course content was generated in */
+  content_language?: 'en' | 'he'
 }
 
 // ============================================

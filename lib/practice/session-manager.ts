@@ -5,6 +5,7 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 import { createClient } from '@/lib/supabase/server'
 import type {
   PracticeSession,
@@ -78,7 +79,7 @@ IMPORTANT: likelyReasoning MUST be specific to "${safeStudentAnswer}", not gener
 Return ONLY valid JSON:
 { "likelyReasoning": "...", "whyWrong": "...", "correctModel": "...", "quickCheck": { "question": "...", "answer": "..." } }
 
-Respond in ${language === 'he' ? 'Hebrew' : 'English'}.`,
+${buildLanguageInstruction((language === 'he' ? 'he' : 'en') as ContentLanguage)}`,
       }],
     })
     const text = response.content[0].type === 'text' ? response.content[0].text : ''

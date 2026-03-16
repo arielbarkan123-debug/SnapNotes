@@ -10,6 +10,7 @@
  */
 
 import type Anthropic from '@anthropic-ai/sdk'
+import type { ContentLanguage } from '@/lib/ai/language'
 import type { SolutionSet, VerifiedProblem } from '@/lib/homework/types'
 import { decomposeProblems } from './decompose'
 import { solveDecomposedProblem } from './solve'
@@ -36,7 +37,8 @@ export async function smartExtractAndSolve(
   imageBase64: string,
   mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
   includeStudentAnswers: boolean,
-  referenceImages: Array<{ base64: string; mediaType: string }> = []
+  referenceImages: Array<{ base64: string; mediaType: string }> = [],
+  language?: ContentLanguage
 ): Promise<SolutionSet> {
   const startTime = performance.now()
   const metadata: SmartSolverMetadata = {
@@ -50,7 +52,7 @@ export async function smartExtractAndSolve(
   try {
     // Wrap entire pipeline in a timeout
     const result = await Promise.race([
-      runSmartPipeline(client, imageBase64, mediaType, includeStudentAnswers, referenceImages, metadata),
+      runSmartPipeline(client, imageBase64, mediaType, includeStudentAnswers, referenceImages, metadata, language),
       timeoutPromise(PIPELINE_TIMEOUT_MS),
     ])
 
@@ -78,12 +80,13 @@ async function runSmartPipeline(
   mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
   includeStudentAnswers: boolean,
   referenceImages: Array<{ base64: string; mediaType: string }>,
-  metadata: SmartSolverMetadata
+  metadata: SmartSolverMetadata,
+  language?: ContentLanguage
 ): Promise<SolutionSet> {
   // ── Step 1: Classify & Decompose ──────────────────────────────────────────
   log.info('Step 1: Classify & Decompose...')
   const decomposition = await decomposeProblems(
-    client, imageBase64, mediaType, includeStudentAnswers, referenceImages
+    client, imageBase64, mediaType, includeStudentAnswers, referenceImages, language
   )
   metadata.totalAICalls++
 

@@ -42,6 +42,7 @@ import {
   similarityRatio,
 } from '@/lib/evaluation/answer-checker'
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
+import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 import { smartExtractAndSolve } from './smart-solver'
 import { createLogger } from '@/lib/logger'
 
@@ -393,6 +394,9 @@ export interface CheckerInput {
   mode?: CheckMode
   additionalImageUrls?: string[]
   rubricImageUrls?: string[]
+
+  // User's preferred content language (resolved by caller via getContentLanguage)
+  language?: ContentLanguage
 }
 
 export type CheckerOutput = ExtendedCheckerOutput
@@ -408,14 +412,17 @@ export type CheckerOutput = ExtendedCheckerOutput
 async function analyzeWorksheetBatch(
   client: Anthropic,
   imageContents: Array<{ type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'; data: string } }>,
-  referenceContent: string | null
+  referenceContent: string | null,
+  language?: ContentLanguage
 ): Promise<{ worksheetResult: BatchWorksheetResult; subject: string; topic: string; taskText: string }> {
   const referenceBlock = referenceContent
     ? `\n\nREFERENCE MATERIAL:\n${referenceContent}`
     : ''
 
-  const systemPrompt = `You are a meticulous homework grader. You will receive 1-4 photos of a student's worksheet.
+  const langInstruction = buildLanguageInstruction(language || 'en')
 
+  const systemPrompt = `You are a meticulous homework grader. You will receive 1-4 photos of a student's worksheet.
+${langInstruction}
 TASK: Identify EVERY problem on the worksheet pages. For each problem, extract:
 1. The problem number/label
 2. The problem text (the question being asked)
@@ -430,8 +437,7 @@ RULES:
 - Be thorough — do NOT skip any problems
 - If a student's handwriting is unreadable, mark isCorrect as null
 - Solve each problem independently to verify correctness
-- Identify the topic for each problem (e.g., "fractions", "linear equations", "area")
-- Detect the language of the worksheet and respond in that language${referenceBlock}
+- Identify the topic for each problem (e.g., "fractions", "linear equations", "area")${referenceBlock}
 
 Respond ONLY with valid JSON matching this exact schema:
 {
@@ -542,7 +548,8 @@ async function analyzeBeforeSubmit(
   client: Anthropic,
   imageContents: Array<{ type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'; data: string } }>,
   textContent: string | null,
-  referenceContent: string | null
+  referenceContent: string | null,
+  language?: ContentLanguage
 ): Promise<{ beforeSubmitResult: BeforeSubmitResult; subject: string; topic: string; taskText: string }> {
   const contentBlock = textContent
     ? `\n\nSTUDENT TEXT:\n${textContent}`
@@ -551,8 +558,10 @@ async function analyzeBeforeSubmit(
     ? `\n\nREFERENCE MATERIAL:\n${referenceContent}`
     : ''
 
-  const systemPrompt = `You are a helpful homework reviewer doing a BEFORE-SUBMIT check.
+  const langInstruction = buildLanguageInstruction(language || 'en')
 
+  const systemPrompt = `You are a helpful homework reviewer doing a BEFORE-SUBMIT check.
+${langInstruction}
 CRITICAL RULE: You must NOT reveal the correct answers. The student hasn't submitted yet.
 
 TASK: For each problem/answer on the page, assess:
@@ -567,8 +576,7 @@ For problems that aren't "correct", provide THREE escalating hints:
 - Hint 3: A strong hint that nearly gives the approach (but NOT the answer)
 
 For "correct" problems, provide three confirmatory hints explaining WHY it looks right.
-
-Detect the language of the homework and respond in that language.${contentBlock}${referenceBlock}
+${contentBlock}${referenceBlock}
 
 Respond ONLY with valid JSON:
 {
@@ -662,7 +670,8 @@ async function analyzeWithRubric(
   client: Anthropic,
   homeworkImages: Array<{ type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'; data: string } }>,
   rubricImages: Array<{ type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'; data: string } }>,
-  textContent: string | null
+  textContent: string | null,
+  language?: ContentLanguage
 ): Promise<{ rubricResult: RubricResult; subject: string; topic: string; taskText: string }> {
   // ---- PHASE A: Parse rubric ----
   const rubricParsePrompt = `You are analyzing a grading rubric. Extract ALL criteria with their point values.
@@ -710,8 +719,10 @@ Respond ONLY with valid JSON:
   const criteriaList = criteria.map((c, i) => `${i + 1}. ${c.criterion} (${c.maxPoints} pts): ${c.description}`).join('\n')
   const textBlock = textContent ? `\n\nSTUDENT TEXT:\n${textContent}` : ''
 
-  const gradingPrompt = `You are grading homework against a specific rubric.
+  const langInstruction = buildLanguageInstruction(language || 'en')
 
+  const gradingPrompt = `You are grading homework against a specific rubric.
+${langInstruction}
 RUBRIC CRITERIA:
 ${criteriaList}
 
@@ -719,8 +730,7 @@ TOTAL POSSIBLE POINTS: ${totalPossible}
 
 For each criterion, assign points (0 to maxPoints) and explain your reasoning.
 Also provide a specific improvement suggestion for each criterion.
-
-Detect the language of the homework and respond in that language.${textBlock}
+${textBlock}
 
 Respond ONLY with valid JSON:
 {
@@ -857,7 +867,8 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
       const { worksheetResult, subject, topic, taskText } = await analyzeWorksheetBatch(
         client,
         imageContents,
-        referenceContent
+        referenceContent,
+        input.language
       )
 
       // Build a minimal HomeworkFeedback for backward compatibility
@@ -950,7 +961,8 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
         client,
         imageContents,
         textContent,
-        referenceContent
+        referenceContent,
+        input.language
       )
 
       // Build minimal HomeworkFeedback for backward compatibility
@@ -1031,7 +1043,8 @@ export async function analyzeHomework(input: CheckerInput): Promise<CheckerOutpu
         client,
         homeworkImages,
         rubricImages,
-        textContent
+        textContent,
+        input.language
       )
 
       // Build HomeworkFeedback for backward compatibility
@@ -1168,13 +1181,13 @@ async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput)
     let phase1Promise: Promise<SolutionSet>
     if (SMART_SOLVER_ENABLED) {
       // Smart solver with fallback to legacy on failure
-      phase1Promise = phase1Fn(client, taskImage.base64, taskMediaType, false, referenceImages)
+      phase1Promise = phase1Fn(client, taskImage.base64, taskMediaType, false, referenceImages, input.language)
         .catch((err) => {
           log.warn(`Smart solver failed, falling back to legacy: ${err instanceof Error ? err.message : err}`)
-          return extractAndSolveProblems(client, taskImage.base64, taskMediaType, false, referenceImages)
+          return extractAndSolveProblems(client, taskImage.base64, taskMediaType, false, referenceImages, input.language)
         })
     } else {
-      phase1Promise = phase1Fn(client, taskImage.base64, taskMediaType, false, referenceImages)
+      phase1Promise = phase1Fn(client, taskImage.base64, taskMediaType, false, referenceImages, input.language)
     }
 
     const [phase1Result, phase2Result] = await Promise.all([
@@ -1211,13 +1224,13 @@ async function analyzeHomeworkThreePhase(client: Anthropic, input: CheckerInput)
     log.info('Running Phase 1 (combined mode — extract + solve + read)...')
     if (SMART_SOLVER_ENABLED) {
       try {
-        solutionSet = await phase1Fn(client, taskImage.base64, taskMediaType, true, referenceImages)
+        solutionSet = await phase1Fn(client, taskImage.base64, taskMediaType, true, referenceImages, input.language)
       } catch (err) {
         log.warn(`Smart solver failed in combined mode, falling back: ${err instanceof Error ? err.message : err}`)
-        solutionSet = await extractAndSolveProblems(client, taskImage.base64, taskMediaType, true, referenceImages)
+        solutionSet = await extractAndSolveProblems(client, taskImage.base64, taskMediaType, true, referenceImages, input.language)
       }
     } else {
-      solutionSet = await extractAndSolveProblems(client, taskImage.base64, taskMediaType, true, referenceImages)
+      solutionSet = await extractAndSolveProblems(client, taskImage.base64, taskMediaType, true, referenceImages, input.language)
     }
   }
 
@@ -1448,7 +1461,8 @@ async function extractAndSolveProblems(
   imageBase64: string,
   mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
   includeStudentAnswers: boolean,
-  referenceImages: FetchedImage[] = []
+  referenceImages: FetchedImage[] = [],
+  language?: ContentLanguage
 ): Promise<SolutionSet> {
   const studentAnswerInstruction = includeStudentAnswers
     ? `
@@ -1465,6 +1479,8 @@ async function extractAndSolveProblems(
       "studentAnswerConfidence": "high" | "medium" | "low"`
     : ''
 
+  const langInstruction = buildLanguageInstruction(language || 'en')
+
   const prompt = `You are a problem-solving specialist. Your job is to:
 1. READ all problems/questions from this image
 2. SOLVE each one step-by-step showing your work
@@ -1472,13 +1488,12 @@ async function extractAndSolveProblems(
 4. Identify the subject area for each problem
 5. Be especially careful with Hebrew content: read Hebrew labels RTL, math expressions LTR
 ${studentAnswerInstruction}
-
+${langInstruction}
 ## IMPORTANT RULES:
 - SHOW YOUR WORK for every calculation
 - For multi-line solutions in the image, read ALL lines as ONE solution
 - For Hebrew+math: Hebrew labels are RTL, equations are LTR
 - Double-check every calculation before finalizing
-- Detect the language used in the homework (Hebrew or English)
 
 ## Response format (JSON only):
 {
@@ -2007,9 +2022,10 @@ Return analysis as JSON:
 async function analyzeHomeworkText(client: Anthropic, input: CheckerInput): Promise<CheckerOutput> {
   const taskText = input.taskText || ''
   const answerText = input.answerText || ''
+  const langInstruction = buildLanguageInstruction(input.language || 'en')
 
   // Build the prompt for text-based analysis
-  const promptContent = `
+  const promptContent = `${langInstruction}
 ## HOMEWORK TASK:
 ${taskText}
 

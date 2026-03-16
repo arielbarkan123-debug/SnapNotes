@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { useFunnelTracking, useEventTracking } from '@/lib/analytics'
 import { GradeSelector, SubjectPicker, type SelectedSubject } from '@/components/curriculum'
@@ -108,6 +108,7 @@ const LEARNING_STYLE_ICONS: Record<string, string> = {
 export default function OnboardingPage() {
   const router = useRouter()
   const t = useTranslations('onboarding')
+  const locale = useLocale()
   const { error: showError } = useToast()
   const [currentStep, setCurrentStep] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
@@ -398,6 +399,10 @@ export default function OnboardingPage() {
       }, {})
 
       // Create learning profile
+      // Derive content language from the current UI locale so Hebrew users
+      // get Hebrew content from the very first course, without visiting Settings.
+      const contentLanguage = locale === 'he' ? 'he' : 'en'
+
       const profileData = {
         user_id: user.id,
         education_level: 'high_school', // Legacy field, keep for backward compat
@@ -415,6 +420,8 @@ export default function OnboardingPage() {
         subjects: subjectIds,
         subject_levels: subjectLevels,
         exam_format: 'match_real',
+        // Language: sync from UI locale so content generation matches the UI
+        language: contentLanguage,
       }
 
       const { error } = await supabase

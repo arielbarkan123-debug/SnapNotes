@@ -7,6 +7,7 @@ import { getFilteredDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-s
 import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
 import { getExplanationStyle } from '@/lib/homework/explanation-styles'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { getContentLanguage, buildLanguageInstruction as buildLangInstruction } from '@/lib/ai/language'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('api:practice-tutor')
@@ -64,16 +65,7 @@ interface TutorResponseData {
 // ============================================================================
 
 function buildSystemPrompt(language: 'en' | 'he', subject?: string, grade?: number): string {
-  const languageInstruction = language === 'he'
-    ? `
-## Language Requirement - CRITICAL
-Respond ONLY in Hebrew (עברית).
-- All messages, questions, and feedback must be in Hebrew
-- Keep mathematical notation standard (numbers, symbols, formulas)
-- Use proper Hebrew educational terminology
-- Maintain a warm, supportive tone in Hebrew
-`
-    : ''
+  const languageInstruction = buildLangInstruction(language)
 
   return `${languageInstruction}You are a warm, supportive Socratic tutor helping a student understand a practice question they got wrong or need help with.
 
@@ -163,11 +155,16 @@ export async function POST(request: NextRequest) {
       userAnswer,
       wasCorrect,
       conversation,
-      language = 'en',
+      language: bodyLanguage,
       subject,
       grade,
       enableDiagrams = true,
     } = body
+
+    // Resolve language: prefer explicit body param, then DB profile, then cookie
+    const language = (bodyLanguage === 'en' || bodyLanguage === 'he')
+      ? bodyLanguage
+      : await getContentLanguage(supabase, user.id)
 
     if (!question || !correctAnswer) {
       return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Question and correct answer are required')

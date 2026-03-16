@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import Anthropic from '@anthropic-ai/sdk'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { getContentLanguage } from '@/lib/ai/language'
 
 export const maxDuration = 30
 
@@ -200,7 +201,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     // =========================================================================
     if (limitedResults.length < 3 && process.env.ANTHROPIC_API_KEY) {
       try {
-        const aiResults = await semanticSearch(supabase, user.id, query, limit)
+        const userLanguage = await getContentLanguage(supabase, user.id)
+        const aiResults = await semanticSearch(supabase, user.id, query, limit, userLanguage)
         // Add AI results that are not already in the results
         const existingIds = new Set(limitedResults.map(r => r.courseId || r.cardId))
         for (const aiResult of aiResults) {
@@ -235,7 +237,8 @@ async function semanticSearch(
   supabase: any,
   userId: string,
   query: string,
-  limit: number
+  limit: number,
+  language: 'en' | 'he' = 'en'
 ): Promise<SearchResult[]> {
   // Fetch user's course titles and lesson titles for context
   const { data: courses } = await supabase
@@ -259,7 +262,7 @@ async function semanticSearch(
     max_tokens: 500,
     messages: [{
       role: 'user',
-      content: `Given the user's search query "${query}", find the most relevant items from this content index. Return ONLY a JSON array of objects with fields: courseId, lessonIndex (optional), title, snippet, matchScore (0-1).
+      content: `Given the user's search query "${query}", find the most relevant items from this content index. The user's language is ${language === 'he' ? 'Hebrew' : 'English'} — the query and content may be in either language, match across languages. Return ONLY a JSON array of objects with fields: courseId, lessonIndex (optional), title, snippet, matchScore (0-1).
 
 Content index:
 ${contentIndex}

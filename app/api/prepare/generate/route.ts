@@ -1,5 +1,6 @@
 import { type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getContentLanguage } from '@/lib/ai/language'
 import { generateGuide } from '@/lib/prepare/guide-generator'
 import { searchMultipleQueries } from '@/lib/prepare/youtube-search'
 import type { PrepareGuideInsert, GuideYouTubeVideo } from '@/types/prepare'
@@ -79,7 +80,12 @@ export async function POST(request: NextRequest) {
           return
         }
 
-        const { content, sourceType, imageUrls, documentUrl, language } = body
+        const { content, sourceType, imageUrls, documentUrl, language: bodyLanguage } = body
+
+        // Resolve language: prefer explicit body param, then DB profile, then cookie
+        const language = (bodyLanguage === 'en' || bodyLanguage === 'he')
+          ? bodyLanguage
+          : await getContentLanguage(supabase, user.id)
 
         // For image-based generation, content can be minimal
         if (!imageUrls?.length && (!content || content.trim().length < 20)) {

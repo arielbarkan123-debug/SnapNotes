@@ -8,6 +8,7 @@ import type Anthropic from '@anthropic-ai/sdk'
 import type { GeneratedGuide } from '@/types/prepare'
 import type { UserLearningContext } from '@/lib/ai/prompts'
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
+import { buildLanguageInstruction } from '@/lib/ai/language'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('prepare:guide-generator')
@@ -16,18 +17,6 @@ const MAX_RETRIES = 0
 const RETRY_DELAY_MS = 2000
 // Guide generation can take longer than the default 180s client timeout
 const GUIDE_TIMEOUT_MS = 600000
-
-function buildLanguageInstruction(language?: 'en' | 'he'): string {
-  if (language === 'he') {
-    return `\n## Language Requirement - CRITICAL
-Respond ONLY in Hebrew (עברית).
-- All content, definitions, explanations, and examples must be in Hebrew
-- Keep mathematical notation, formulas, and chemical symbols standard
-- Use proper Hebrew academic terminology
-- Section type identifiers (overview, definitions, theory, etc.) must remain in English for parsing\n`
-  }
-  return ''
-}
 
 function buildLearningContextInstruction(context?: UserLearningContext): string {
   if (!context) return ''
@@ -371,7 +360,7 @@ export async function generateGuide(options: GuideGenerationOptions): Promise<Ge
   const { content, imageUrls, learningContext, language } = options
   const client = getAnthropicClient()
 
-  const languageInstruction = buildLanguageInstruction(language)
+  const languageInstruction = buildLanguageInstruction(language || 'en')
   const contextInstruction = buildLearningContextInstruction(learningContext)
   const systemPrompt = GUIDE_GENERATION_SYSTEM + languageInstruction + contextInstruction
 
