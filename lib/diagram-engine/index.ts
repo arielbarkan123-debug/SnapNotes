@@ -367,10 +367,11 @@ export async function generateDiagram(
   }
 
   // ── Per-pipeline timeout for quick mode (skipQA) ──
-  // Quick mode skips QA but lets AI router pick any pipeline (including Recraft).
-  // Recraft needs ~30-40s (prompt rewrite + API + Vision labeling + TikZ compositing).
-  // TikZ needs ~10-15s. 40s accommodates all pipelines with room for fallback.
-  const PIPELINE_TIMEOUT_MS = options?.skipQA ? 40_000 : undefined;
+  // When forced pipeline (quick mode = TikZ): single pipeline, 40s budget.
+  // When no forced pipeline (accurate mode): AI router picks, no timeout needed.
+  const PIPELINE_TIMEOUT_MS = options?.skipQA
+    ? (forcePipeline ? 40_000 : 20_000)
+    : undefined;
 
   let result: DiagramResult | DiagramError;
 

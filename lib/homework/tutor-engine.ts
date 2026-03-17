@@ -733,10 +733,11 @@ export async function generateInitialGreeting(context: TutorContext, enableDiagr
   log.info(`generateInitialGreeting called with: "${questionText.slice(0, 80)}...", pipelineMode=${pipelineMode}`)
   log.info(`shouldUseEngine result: ${shouldUseEngine(questionText)}`)
 
-  // Pipeline selection: quick skips QA + step capture for speed, but lets AI router pick pipeline.
-  // This means anatomy → Recraft, physics → TikZ, graphs → Matplotlib even in quick mode.
+  // Pipeline selection: quick forces TikZ (fast HTTP API, ~8s). Accurate uses AI router
+  // (Recraft/Matplotlib/LaTeX, but can take 30-50s — too slow for greeting).
+  // Recraft quality is available via walkthrough (240s budget) or "Detailed diagram" mode.
   const isQuickMode = pipelineMode === 'quick'
-  const forcePipeline = undefined  // Always let AI router pick the best pipeline
+  const forcePipeline = isQuickMode ? 'tikz' as const : undefined
   const skipQA = isQuickMode
   const skipStepCapture = isQuickMode
 
@@ -955,11 +956,11 @@ export async function generateTutorResponse(
   const shouldFireEngine = engineConditions.enabledOrRequested && engineConditions.noPreviousOrRequested && engineConditions.engineSupported
   log.info(`Engine conditions: ${JSON.stringify(engineConditions)} → fire=${shouldFireEngine}, pipelineMode=${pipelineMode}`)
 
-  // Pipeline selection: quick skips QA + step capture for speed, but lets AI router pick pipeline.
-  // This means anatomy → Recraft, physics → TikZ, graphs → Matplotlib even in quick mode.
-  // Accurate runs full QA loop + step capture. Off is handled by shouldFireEngine = false.
+  // Pipeline selection: quick forces TikZ (fast HTTP API, ~8s). Accurate uses AI router
+  // (Recraft/Matplotlib/LaTeX, but can take 30-50s — too slow for chat responses).
+  // Recraft quality is available via walkthrough (240s budget) or "Detailed diagram" mode.
   const isQuickMode = pipelineMode === 'quick'
-  const forcePipeline = undefined  // Always let AI router pick the best pipeline
+  const forcePipeline = isQuickMode ? 'tikz' as const : undefined
   const skipQA = isQuickMode
   const skipStepCapture = isQuickMode
 
