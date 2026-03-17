@@ -367,12 +367,10 @@ export async function generateDiagram(
   }
 
   // ── Per-pipeline timeout for quick mode (skipQA) ──
-  // When NO forced pipeline: E2B sandbox can hang 30s+, so 20s primary + 20s fallback = 40s total.
-  // When forced pipeline (e.g. 'tikz'): no fallback runs, so give the single pipeline 40s.
-  // TikZ pipeline = Claude API (~10-15s) + QuickLaTeX compile (~5-10s) = 15-25s typical.
-  const PIPELINE_TIMEOUT_MS = options?.skipQA
-    ? (forcePipeline ? 40_000 : 20_000)
-    : undefined;
+  // Quick mode skips QA but lets AI router pick any pipeline (including Recraft).
+  // Recraft needs ~30-40s (prompt rewrite + API + Vision labeling + TikZ compositing).
+  // TikZ needs ~10-15s. 40s accommodates all pipelines with room for fallback.
+  const PIPELINE_TIMEOUT_MS = options?.skipQA ? 40_000 : undefined;
 
   let result: DiagramResult | DiagramError;
 
