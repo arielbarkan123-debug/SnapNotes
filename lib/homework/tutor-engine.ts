@@ -733,9 +733,10 @@ export async function generateInitialGreeting(context: TutorContext, enableDiagr
   log.info(`generateInitialGreeting called with: "${questionText.slice(0, 80)}...", pipelineMode=${pipelineMode}`)
   log.info(`shouldUseEngine result: ${shouldUseEngine(questionText)}`)
 
-  // Pipeline selection based on diagram pipeline mode (quick = TikZ only, accurate = full routing)
+  // Pipeline selection: quick skips QA + step capture for speed, but lets AI router pick pipeline.
+  // This means anatomy → Recraft, physics → TikZ, graphs → Matplotlib even in quick mode.
   const isQuickMode = pipelineMode === 'quick'
-  const forcePipeline = isQuickMode ? 'tikz' as const : undefined
+  const forcePipeline = undefined  // Always let AI router pick the best pipeline
   const skipQA = isQuickMode
   const skipStepCapture = isQuickMode
 
@@ -954,17 +955,13 @@ export async function generateTutorResponse(
   const shouldFireEngine = engineConditions.enabledOrRequested && engineConditions.noPreviousOrRequested && engineConditions.engineSupported
   log.info(`Engine conditions: ${JSON.stringify(engineConditions)} → fire=${shouldFireEngine}, pipelineMode=${pipelineMode}`)
 
-  // Pipeline selection based on diagram pipeline mode:
-  // - 'quick': force TikZ pipeline (QuickLaTeX HTTP API, ~8s, no sandbox)
-  // - 'accurate': full routing via routeQuestion() with QA and step capture
-  // - 'off': no engine diagram (handled by shouldFireEngine = false)
+  // Pipeline selection: quick skips QA + step capture for speed, but lets AI router pick pipeline.
+  // This means anatomy → Recraft, physics → TikZ, graphs → Matplotlib even in quick mode.
+  // Accurate runs full QA loop + step capture. Off is handled by shouldFireEngine = false.
   const isQuickMode = pipelineMode === 'quick'
-  const forcePipeline = isQuickMode ? 'tikz' as const : undefined
+  const forcePipeline = undefined  // Always let AI router pick the best pipeline
   const skipQA = isQuickMode
   const skipStepCapture = isQuickMode
-  if (forcePipeline) {
-    log.info(`Quick mode: forcing tikz pipeline (bypasses E2B sandbox)`)
-  }
 
   const enginePromise = shouldFireEngine
     ? tryEngineDiagram(diagramTopic, forcePipeline, { skipStepCapture, skipQA }).catch((err) => {

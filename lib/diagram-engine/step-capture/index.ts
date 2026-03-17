@@ -80,8 +80,11 @@ export async function captureSteps(
         buffers = result.buffers
         break
       }
+      case 'recraft':
+        // Recraft step capture is handled separately in diagram engine index.ts
+        // (needs baseImageUrl + labels, not code)
+        return { stepImages: [], captureTimeMs: Date.now() - startTime }
       default:
-        // Recraft and other pipelines don't support step capture
         return { stepImages: [], captureTimeMs: Date.now() - startTime }
     }
 

@@ -44,7 +44,7 @@ export function classifyWalkthroughTopic(questionText: string): WalkthroughTopic
   const lower = questionText.toLowerCase()
 
   // Projectile motion / kinematics
-  if (/projectile|trajectory|launch|thrown|throw.*angle|range.*height|building.*ball|cliff.*throw|ball.*m\/s.*angle|angle.*velocity.*height/.test(lower)) {
+  if (/projectile|trajectory|launch(?:ed)?|thrown|throw.*angle|range.*height|building.*ball|cliff.*throw|ball.*m\/s.*angle|angle.*velocity.*height|kick(?:ed)?.*(?:m\/s|m per s|degrees|angle)|(?:m\/s|m per s).*(?:degrees|angle)|ball.*(?:thrown|kicked|hit|fired|launched).*(?:\d+\s*(?:m\/s|m per s|degrees|°))|(?:thrown|kicked|hit|fired|launched).*(?:\d+\s*(?:m\/s|m per s)).*(?:\d+\s*(?:degrees|°))/.test(lower)) {
     return 'projectile'
   }
 
@@ -90,7 +90,7 @@ export function classifyWalkthroughTopic(questionText: string): WalkthroughTopic
 
   // Default: if the question likely needs a visual, default to generic diagram mode
   // Uses the GENERIC_LAYERED_TEMPLATE + domain-specific guidance from getAdvancedGuidance()
-  if (/diagram|draw|sketch|illustrate|vector|force|angle|height|distance|velocity|acceleration|spring|pulley|ramp|slope|incline|energy|momentum|torque|pressure|temperature/.test(lower)) {
+  if (/diagram|draw|sketch|illustrate|vector|force|angle|height|distance|velocity|acceleration|spring|pulley|ramp|slope|incline|energy|momentum|torque|pressure|temperature|degrees|°|m\/s|m per s|km\/h|ball|object|block|car|projectile|motion|thrown|kicked|fired|launched|dropped|falls|falling/.test(lower)) {
     return 'generic'
   }
 
@@ -571,13 +571,13 @@ STEP GUIDELINES:
 async function generateWalkthroughSolutionOnce(
   questionText: string,
   imageUrls?: string[],
-  options?: { simplify?: boolean; previousMaxSize?: number; validationFixes?: string; language?: ContentLanguage },
+  options?: { simplify?: boolean; previousMaxSize?: number; validationFixes?: string; language?: ContentLanguage; forceTextOnly?: boolean },
 ): Promise<WalkthroughSolution> {
   const anthropic = getAnthropicClient()
 
-  // Classify topic
-  const topic = classifyWalkthroughTopic(questionText)
-  log.info({ topic }, 'Topic classified')
+  // Classify topic — forceTextOnly means the diagram engine handles visuals
+  const topic = options?.forceTextOnly ? 'text-only' as const : classifyWalkthroughTopic(questionText)
+  log.info({ topic, forceTextOnly: !!options?.forceTextOnly }, 'Topic classified')
 
   // Build user message with optional images
   const userContent: Array<{ type: 'text'; text: string } | { type: 'image'; source: { type: 'url'; url: string } }> = []
@@ -609,8 +609,9 @@ async function generateWalkthroughSolutionOnce(
   })
 
   // Build system prompt dynamically with topic-specific guidance
+  // Language instruction goes AFTER the main prompt to avoid interfering with the TikZ expert persona
   const langInstruction = options?.language ? buildLanguageInstruction(options.language) : ''
-  const systemPrompt = langInstruction + buildWalkthroughSystemPrompt(questionText, topic)
+  const systemPrompt = buildWalkthroughSystemPrompt(questionText, topic) + (langInstruction ? '\n\n' + langInstruction : '')
 
   const message = await anthropic.messages.create({
     model: AI_MODEL,
@@ -704,11 +705,14 @@ export async function generateWalkthroughSolution(
   questionText: string,
   imageUrls?: string[],
   language?: ContentLanguage,
+  options?: { forceTextOnly?: boolean },
 ): Promise<WalkthroughGenerationResult> {
+  // Always classify for telemetry. When forceTextOnly, the visual comes from the diagram engine,
+  // but we still want accurate topic data in the DB for analytics.
   const topicClassified = classifyWalkthroughTopic(questionText)
 
   // First attempt
-  let solution = await generateWalkthroughSolutionOnce(questionText, imageUrls, { language })
+  let solution = await generateWalkthroughSolutionOnce(questionText, imageUrls, { language, forceTextOnly: options?.forceTextOnly })
 
   // For text-only mode, no TikZ validation needed
   if (solution.mode === 'text-only' || !solution.tikzCode) {
