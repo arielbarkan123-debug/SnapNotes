@@ -37,6 +37,10 @@ export interface DiagramResult {
   stepMetadata?: RecraftStepMeta[];
   /** Full unprocessed AI response text — used by step-capture to extract metadata JSON */
   fullResponseText?: string;
+  /** Original Recraft image URL before label compositing (for progressive step capture) */
+  baseImageUrl?: string;
+  /** Labels from Recraft Vision labeling (for progressive step capture) */
+  labels?: OverlayLabel[];
 }
 
 export interface DiagramError {
@@ -481,6 +485,47 @@ export async function generateDiagram(
       }
     }
 
+    // ── Recraft step capture: progressive label overlays (best-effort) ──
+    // For Recraft diagrams, create step images by progressively revealing labels
+    // on the base image. Uses a single E2B sandbox session for efficiency.
+    if (result.pipeline === 'recraft' && !options?.skipStepCapture && result.baseImageUrl && result.labels && result.labels.length > 0 && !result.stepImages?.length) {
+      try {
+        const { createClient: createSC } = await import('@/lib/supabase/server');
+        const supabase = await createSC();
+        const { data: { user } } = await supabase.auth.getUser();
+        const userId = user?.id;
+
+        if (userId) {
+          const { captureRecraftSteps } = await import('./step-capture/recraft-steps');
+          const RECRAFT_STEP_CAPTURE_TIMEOUT_MS = 25_000;
+          const capturePromise = captureRecraftSteps(
+            result.baseImageUrl,
+            result.labels,
+            result.stepMetadata || [],
+            userId,
+            question,
+          );
+          const timeoutPromise = new Promise<null>((resolve) =>
+            setTimeout(() => resolve(null), RECRAFT_STEP_CAPTURE_TIMEOUT_MS)
+          );
+
+          const captureResult = await Promise.race([capturePromise, timeoutPromise]);
+
+          if (captureResult && captureResult.stepImages.length > 0) {
+            result.stepImages = captureResult.stepImages;
+            log.info(`Recraft step capture: ${captureResult.stepImages.length} steps in ${captureResult.captureTimeMs}ms`);
+          } else if (!captureResult) {
+            log.warn(`Recraft step capture timed out after ${RECRAFT_STEP_CAPTURE_TIMEOUT_MS}ms`);
+            capturePromise.catch((err) => {
+              log.warn('Background recraft step capture failed:', err);
+            });
+          }
+        }
+      } catch (err) {
+        log.warn({ err }, 'Recraft step capture failed (non-blocking)');
+      }
+    }
+
     trackDiagramEvent({
       type: 'generation_success',
       pipeline,
@@ -605,9 +650,10 @@ async function generateRecraftWithQA(
       imageUrl: await postProcessDiagram(recraftResult.imageUrl, 'recraft'),
       pipeline: 'recraft',
       attempts: qaRound + 1,
-      // Note: Labels are now composited via TikZ, not returned as overlay
       qaVerdict: qaRound > 0 ? 'pass-after-retry' : 'pass',
       stepMetadata: recraftResult.stepMetadata,
+      baseImageUrl: recraftResult.baseImageUrl,
+      labels: recraftResult.labels,
     };
   }
 

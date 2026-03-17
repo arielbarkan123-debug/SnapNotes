@@ -31,7 +31,10 @@ export interface RecraftStepMeta {
 
 export interface RecraftResult {
   imageUrl: string;
-  // Note: overlay is no longer returned - labels are composited via TikZ
+  /** Original Recraft image URL before label compositing (for progressive step capture) */
+  baseImageUrl?: string;
+  /** Labels used in compositing (for progressive step capture) */
+  labels?: OverlayLabel[];
   /** Step-by-step teaching explanations for text-based walkthrough */
   stepMetadata?: RecraftStepMeta[];
 }
@@ -311,13 +314,13 @@ Return ONLY a valid JSON array, no other text:
     const compositedUrl = await compositeWithTikzLabels(imageUrl, labels);
     if (compositedUrl) {
       log.info('TikZ composite successful');
-      return { imageUrl: compositedUrl, stepMetadata };
+      return { imageUrl: compositedUrl, baseImageUrl: imageUrl, labels, stepMetadata };
     }
     log.info('TikZ composite failed, returning base image without labels');
   }
 
   // Return base image if no labels or compositing failed
-  return { imageUrl, stepMetadata };
+  return { imageUrl, baseImageUrl: imageUrl, labels, stepMetadata };
 }
 
 /**
