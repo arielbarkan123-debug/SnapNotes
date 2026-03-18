@@ -4,6 +4,7 @@
  */
 
 import type { StepByStepSource, StepImage } from '@/components/homework/diagram/types'
+import type { DiagramStatus } from '@/types'
 
 // ============================================================================
 // Core Types
@@ -441,6 +442,8 @@ export interface TutorResponse {
   diagram?: TutorDiagramState
   /** Visual update for the persistent VisualSolvingPanel */
   visualUpdate?: VisualUpdate
+  /** Status of diagram generation for the current response */
+  diagramStatus?: DiagramStatus
 }
 
 /**
