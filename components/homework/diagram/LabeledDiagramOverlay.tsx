@@ -31,6 +31,7 @@ export default function LabeledDiagramOverlay({
   onLabelClick,
 }: LabeledDiagramOverlayProps) {
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [imageError, setImageError] = useState(false)
 
   /** Filter labels based on `found` and `step` */
   const visibleLabels = useMemo(() => {
@@ -67,20 +68,30 @@ export default function LabeledDiagramOverlay({
       style={{ aspectRatio: '1 / 1' }}
     >
       {/* Skeleton pulse placeholder while image loads */}
-      {!imageLoaded && (
+      {!imageLoaded && !imageError && (
         <div className="absolute inset-0 rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse" />
+      )}
+
+      {/* Fallback when image fails to load */}
+      {imageError && (
+        <div className="absolute inset-0 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Diagram image could not be loaded</p>
+        </div>
       )}
 
       {/* Layer 1: Base image */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={imageUrl}
-        alt=""
-        role="presentation"
-        data-testid="diagram-image"
-        className="absolute inset-0 w-full h-full rounded-lg object-cover"
-        onLoad={() => setImageLoaded(true)}
-      />
+      {!imageError && (
+        <img
+          src={imageUrl}
+          alt=""
+          role="presentation"
+          data-testid="diagram-image"
+          className="absolute inset-0 w-full h-full rounded-lg object-cover"
+          onLoad={() => setImageLoaded(true)}
+          onError={() => setImageError(true)}
+        />
+      )}
 
       {/* Layers 2+3 are hidden until the image fires onLoad */}
       {imageLoaded && (

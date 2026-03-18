@@ -748,7 +748,7 @@ export async function generateInitialGreeting(context: TutorContext, enableDiagr
 
   // Fire engine diagram in parallel with AI call (if topic needs it)
   const enginePromise: Promise<EngineResult | undefined> = enableDiagrams && shouldUseEngine(questionText)
-    ? tryEngineDiagram(questionText, forcePipeline, { skipStepCapture, skipQA, skipVerification }).catch((err): EngineResult => {
+    ? tryEngineDiagram(questionText, forcePipeline, { skipStepCapture, skipQA, skipVerification, userId: context.session.user_id }).catch((err): EngineResult => {
         log.warn('Engine diagram failed for greeting:', err)
         return { diagramStatus: { status: 'failed', reason: String(err) } }
       })
@@ -976,7 +976,7 @@ export async function generateTutorResponse(
   const skipStepCapture = isQuickMode
 
   const enginePromise: Promise<EngineResult | undefined> = shouldFireEngine
-    ? tryEngineDiagram(diagramTopic, forcePipeline, { skipStepCapture, skipQA, skipVerification }).catch((err): EngineResult => {
+    ? tryEngineDiagram(diagramTopic, forcePipeline, { skipStepCapture, skipQA, skipVerification, userId: context.session.user_id }).catch((err): EngineResult => {
         log.warn('Engine diagram failed for chat:', err)
         return { diagramStatus: { status: 'failed', reason: String(err) } }
       })

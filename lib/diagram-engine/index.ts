@@ -657,6 +657,7 @@ async function generateRecraftWithQA(
       stepMetadata: recraftResult.stepMetadata,
       baseImageUrl: recraftResult.baseImageUrl,
       labels: recraftResult.labels,
+      overlay: recraftResult.labels,
     };
   }
 

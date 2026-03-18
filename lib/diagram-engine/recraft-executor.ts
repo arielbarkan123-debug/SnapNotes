@@ -190,7 +190,8 @@ export async function generateRecraftDiagram(
       rewriteText && rewriteText.type === 'text'
         ? rewriteText.text.trim().slice(0, 950)
         : buildFallbackPrompt(question, is3D);
-  } catch {
+  } catch (err) {
+    log.warn({ detail: err }, 'v1 prompt rewrite failed, using fallback');
     cleanPrompt = buildFallbackPrompt(question, is3D);
   }
 
@@ -376,7 +377,8 @@ async function generateRecraftDiagramV2(
       rewriteText && rewriteText.type === 'text'
         ? rewriteText.text.trim().slice(0, 950)
         : buildFallbackPrompt(question, is3D);
-  } catch {
+  } catch (err) {
+    log.warn({ detail: err }, 'v2 prompt rewrite failed, using fallback');
     cleanPrompt = buildFallbackPrompt(question, is3D);
   }
 

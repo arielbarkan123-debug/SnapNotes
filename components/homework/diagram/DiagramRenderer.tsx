@@ -2,6 +2,7 @@
 
 import { Component, type ReactNode, lazy, Suspense, useState, useCallback } from 'react'
 import { type DiagramState, getDiagramTypeName } from './types'
+import type { OverlayLabel } from '@/types'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('ui:diagram-renderer')
@@ -281,7 +282,7 @@ export default function DiagramRenderer({
     const engineData = diagram.data as {
       imageUrl?: string
       pipeline?: string
-      overlay?: Array<{ text: string; x: number; y: number; targetX: number; targetY: number }>
+      overlay?: OverlayLabel[]
       qaVerdict?: string
     } | undefined
 

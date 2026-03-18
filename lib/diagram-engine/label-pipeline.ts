@@ -95,7 +95,11 @@ export async function generateLabelContent(
     log.info(`Generated ${parsed.length} label content items`)
     return parsed
   } catch (err) {
-    log.error({ detail: err }, 'generateLabelContent failed')
+    if (err instanceof SyntaxError) {
+      log.warn({ detail: err }, 'generateLabelContent JSON parse failed')
+    } else {
+      log.error({ detail: err }, 'generateLabelContent failed')
+    }
     return []
   }
 }
@@ -112,7 +116,7 @@ export async function uploadBaseImage(
   diagramHash: string,
 ): Promise<string | null> {
   try {
-    const response = await fetch(imageUrl)
+    const response = await fetch(imageUrl, { signal: AbortSignal.timeout(15000) })
     if (!response.ok) {
       log.warn(`Failed to download image: HTTP ${response.status}`)
       return null
@@ -216,7 +220,11 @@ export async function mapLabelsToImage(
     log.info(`Vision mapped ${parsed.filter(p => p.found).length}/${parsed.length} labels`)
     return parsed
   } catch (err) {
-    log.error({ detail: err }, 'mapLabelsToImage failed')
+    if (err instanceof SyntaxError) {
+      log.warn({ detail: err }, 'mapLabelsToImage JSON parse failed')
+    } else {
+      log.error({ detail: err }, 'mapLabelsToImage failed')
+    }
     return []
   }
 }
@@ -312,7 +320,11 @@ export async function verifyLabelPlacement(
       return label
     })
   } catch (err) {
-    log.warn({ detail: err }, 'verifyLabelPlacement failed — returning originals')
+    if (err instanceof SyntaxError) {
+      log.warn({ detail: err }, 'verifyLabelPlacement JSON parse failed — returning originals')
+    } else {
+      log.error({ detail: err }, 'verifyLabelPlacement failed — returning originals')
+    }
     return labels
   }
 }
@@ -420,6 +432,7 @@ export function computeLabelPositions(
       y: a.y,
       targetX: a.targetX,
       targetY: a.targetY,
+      found: true,
     }
     if (content) {
       label.textHe = content.textHe
