@@ -440,26 +440,13 @@ async function generateRecraftDiagramV2(
   // Generate step metadata (shared with v1)
   const stepMetadata = await generateStepMetadata(question);
 
-  // Composite labels using TikZ (same as v1)
-  if (overlayLabels.length > 0) {
-    log.info(`[v2] Compositing ${overlayLabels.length} labels via TikZ...`);
-    const compositedUrl = await compositeWithTikzLabels(recraftImageUrl, overlayLabels);
-    if (compositedUrl) {
-      log.info('[v2] TikZ composite successful');
-      return {
-        imageUrl: compositedUrl,
-        baseImageUrl: recraftImageUrl,
-        labels: overlayLabels,
-        stepMetadata,
-      };
-    }
-    log.info('[v2] TikZ composite failed, returning base image with label data');
-  }
+  // v2: NO TikZ compositing. Return base image + label data.
+  // The frontend LabeledDiagramOverlay renders labels as SVG+HTML overlay.
+  log.info({ labelCount: overlayLabels.length }, '[v2] Pipeline complete — returning labels for client-side rendering');
 
-  // Return base image with label data even if compositing failed
   return {
-    imageUrl: recraftImageUrl,
-    baseImageUrl: recraftImageUrl,
+    imageUrl: baseImageUrl,
+    baseImageUrl,
     labels: overlayLabels.length > 0 ? overlayLabels : undefined,
     stepMetadata,
   };
