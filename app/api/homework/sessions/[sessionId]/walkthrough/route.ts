@@ -13,7 +13,7 @@
 import { type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { generateWalkthroughSolution } from '@/lib/homework/walkthrough-generator'
+import { generateWalkthroughSolution, classifyWalkthroughTopic } from '@/lib/homework/walkthrough-generator'
 import {
   getContentLanguage,
   detectSourceLanguage,
@@ -132,15 +132,28 @@ export async function POST(
       try {
         // ─── Step 1: Route question to best pipeline ─────────────────
         const questionText = session.question_text || ''
-        log.info({ sessionId }, 'Routing question to best pipeline')
+
+        // The walkthrough has its own TikZ compilation pipeline with layered
+        // step rendering. Use the walkthrough's topic classifier to decide:
+        // topics that benefit from diagrams (projectile, FBD, geometry, graph,
+        // circuit, generic) use TikZ; only 'text-only' topics skip it.
+        // The AI router is designed for inline chat diagrams (Recraft, etc.)
+        // and shouldn't override the walkthrough's purpose-built TikZ path.
+        const walkthroughTopic = classifyWalkthroughTopic(questionText)
         let pipeline: Pipeline
-        try {
-          pipeline = await routeQuestionWithAI(questionText)
-        } catch {
-          pipeline = 'tikz' // Fallback to TikZ if AI router fails
+        if (walkthroughTopic === 'text-only') {
+          // Text-only topics: use AI router to pick the best non-TikZ pipeline
+          try {
+            pipeline = await routeQuestionWithAI(questionText)
+          } catch {
+            pipeline = 'tikz'
+          }
+        } else {
+          // Diagram-worthy topics: force TikZ for the walkthrough's own pipeline
+          pipeline = 'tikz'
         }
         const isTikzPipeline = pipeline === 'tikz'
-        log.info({ pipeline, isTikzPipeline }, 'Pipeline selected')
+        log.info({ pipeline, isTikzPipeline, walkthroughTopic }, 'Pipeline selected')
 
         // Resolve language for the walkthrough content
         const userLanguage = await getContentLanguage(supabase, user.id)
