@@ -69,7 +69,7 @@ export async function generateRecraftImage(
 
   const body: Record<string, unknown> = {
     prompt: params.prompt,
-    model: 'recraftv3',
+    model: 'recraftv4',
     style: effectiveStyle,
     response_format: 'url',
     // ALWAYS enforce no text generation
