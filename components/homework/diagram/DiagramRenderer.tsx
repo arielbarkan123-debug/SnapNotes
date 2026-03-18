@@ -7,6 +7,7 @@ import { createLogger } from '@/lib/logger'
 const log = createLogger('ui:diagram-renderer')
 import type { StepLayerMeta } from './types'
 import EngineDiagramImage from './EngineDiagramImage'
+import LabeledDiagramOverlay from './LabeledDiagramOverlay'
 
 const StepSequencePlayer = lazy(() => import('./StepSequencePlayer'))
 const StepByStepWalkthrough = lazy(() => import('./StepByStepWalkthrough'))
@@ -329,6 +330,20 @@ export default function DiagramRenderer({
       }
 
       // Default: show static diagram with optional Step by Step button
+      // For Recraft images with labels, use LabeledDiagramOverlay instead
+      if (engineData.pipeline === 'recraft' && engineData.overlay && engineData.overlay.length > 0) {
+        return (
+          <DiagramErrorBoundary diagramType={diagramType} diagramData={engineData} onError={onRenderError}>
+            <LabeledDiagramOverlay
+              imageUrl={engineData.imageUrl}
+              labels={engineData.overlay}
+              locale={language ?? 'en'}
+              step={null}
+            />
+          </DiagramErrorBoundary>
+        )
+      }
+
       return (
         <DiagramErrorBoundary diagramType={diagramType} diagramData={engineData} onError={onRenderError}>
           <EngineDiagramImage

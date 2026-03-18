@@ -59,6 +59,9 @@ const TOPIC_RULES: TopicRule[] = [
   { pattern: /\b(volcano|layers of earth|earth.?s layers|tectonic plate)\b/i, pipeline: 'recraft' },
   // Explicit illustration request
   { pattern: /\b(realistic|illustration of|photograph|3d model)\b/i, pipeline: 'recraft' },
+  // Labeled anatomy (both word orders)
+  { pattern: /\blabeled?\b.*\b(brain|heart|eye|lung|ear|skin|cell|kidney|liver|stomach)/i, pipeline: 'recraft' },
+  { pattern: /\b(brain|heart|eye|lung|ear|skin|cell|kidney|liver|stomach)\b.*\blabeled?\b/i, pipeline: 'recraft' },
 
   // ── TIKZ: clean schematic/geometric diagrams ──
   // Atoms — Bohr model is concentric circles with dots, perfect for TikZ
@@ -111,6 +114,12 @@ const TOPIC_RULES: TopicRule[] = [
   { pattern: /\b(projectile|trajectory|wave diagram|standing wave)\b/i, pipeline: 'e2b-matplotlib' },
   // Economics
   { pattern: /\b(supply and demand|economics curve|production possibility)\b/i, pipeline: 'e2b-matplotlib' },
+
+  // ── Physics motion (natural language word problems) ──
+  // These must come before e2b-latex because "ball kicked at 30 m/s" contains "/" which matches the division pattern
+  { pattern: /\b(ball|object|rock|stone)\b.*\b(kick|throw|launch|fire|shoot|toss|drop)/i, pipeline: 'e2b-matplotlib' },
+  { pattern: /\b(slide|roll|push|pull)\b.*\b(ramp|incline|slope|hill)/i, pipeline: 'e2b-matplotlib' },
+  { pattern: /\bhow far\b.*\b(travel|land|go|reach)/i, pipeline: 'e2b-matplotlib' },
 
   // ── E2B LATEX: structured math typesetting ──
   // Division expressions: "765/5", "765 / 5", "765÷5", "765 divided by 5", "long division"
@@ -267,6 +276,8 @@ DECISION RULES:
 2. If the subject is GEOMETRIC or SCHEMATIC (shapes, circuits, cycles, flowcharts, labeled diagrams) → "tikz"
 3. If the subject is a GRAPH, CHART, or PLOT with data/axes → "e2b-matplotlib"
 4. If the subject is MATH TYPESETTING (arithmetic layout, step-by-step algebra) → "e2b-latex"
+5. Physics word problems describing motion (ball kicked, object thrown, box sliding, projectile, how far does it land) → "e2b-matplotlib"
+6. Any request containing "labeled" with a body part or organism → "recraft"
 
 Return ONLY the pipeline name, nothing else.`;
 
