@@ -23,8 +23,6 @@ import {
 } from '@/lib/ai/language'
 import { renderWalkthroughSteps } from '@/lib/diagram-engine/step-renderer'
 import { parseTikzLayers, validateLayerStepAlignment, estimateCumulativeSize } from '@/lib/diagram-engine/tikz-layer-parser'
-import { routeQuestionWithAI, type Pipeline } from '@/lib/diagram-engine/router'
-import { tryEngineDiagram } from '@/lib/diagram-engine/integration'
 import type { WalkthroughStreamEvent, WalkthroughGenerationStatus } from '@/types/walkthrough'
 import { createLogger } from '@/lib/logger'
 
@@ -133,27 +131,11 @@ export async function POST(
         // ─── Step 1: Route question to best pipeline ─────────────────
         const questionText = session.question_text || ''
 
-        // The walkthrough has its own TikZ compilation pipeline with layered
-        // step rendering. Use the walkthrough's topic classifier to decide:
-        // topics that benefit from diagrams (projectile, FBD, geometry, graph,
-        // circuit, generic) use TikZ; only 'text-only' topics skip it.
-        // The AI router is designed for inline chat diagrams (Recraft, etc.)
-        // and shouldn't override the walkthrough's purpose-built TikZ path.
+        // The walkthrough always uses TikZ for its layered step-by-step diagrams.
+        // The AI router is for inline chat diagrams (Recraft "Detailed diagram" mode).
+        // Only 'text-only' topics (pure algebra, proofs) skip diagrams entirely.
         const walkthroughTopic = classifyWalkthroughTopic(questionText)
-        let pipeline: Pipeline
-        if (walkthroughTopic === 'text-only') {
-          // Text-only topics: use AI router to pick the best non-TikZ pipeline
-          try {
-            pipeline = await routeQuestionWithAI(questionText)
-          } catch {
-            pipeline = 'tikz'
-          }
-        } else {
-          // Diagram-worthy topics: force TikZ for the walkthrough's own pipeline
-          pipeline = 'tikz'
-        }
-        const isTikzPipeline = pipeline === 'tikz'
-        log.info({ pipeline, isTikzPipeline, walkthroughTopic }, 'Pipeline selected')
+        log.info({ walkthroughTopic }, 'Walkthrough topic classified (always uses TikZ)')
 
         // Resolve language for the walkthrough content
         const userLanguage = await getContentLanguage(supabase, user.id)
@@ -164,49 +146,16 @@ export async function POST(
           await clearExplicitToggleFlag()
         }
 
-        // ─── Step 2: Generate solution + visual in parallel ──────────
-        // TikZ: solution includes aligned TikZ code (current behavior)
-        // Non-TikZ: solution is text-only, visual comes from diagram engine
-        const solutionPromise = generateWalkthroughSolution(
+        // ─── Step 2: Generate solution with TikZ ──────────
+        const { solution, topicClassified, validationErrors } = await generateWalkthroughSolution(
           questionText,
           session.question_image_url ? [session.question_image_url] : undefined,
           language,
-          isTikzPipeline ? undefined : { forceTextOnly: true },
         )
-
-        // Start diagram engine for non-TikZ pipelines (runs in parallel with solution).
-        // Skip step capture + QA: the walkthrough has its own step distribution logic,
-        // and QA retries add ~15-25s of latency for marginal quality gain here.
-        // 60s timeout ensures a hanging engine doesn't block the walkthrough indefinitely.
-        const ENGINE_TIMEOUT_MS = 60_000
-        const enginePromise = !isTikzPipeline
-          ? Promise.race([
-              tryEngineDiagram(questionText, pipeline, { skipStepCapture: true, skipQA: true }).catch((err) => {
-                log.warn({ err }, 'Engine diagram failed for walkthrough')
-                return undefined
-              }),
-              new Promise<undefined>(resolve => setTimeout(() => {
-                log.warn('Engine diagram timed out for walkthrough')
-                resolve(undefined)
-              }, ENGINE_TIMEOUT_MS)),
-            ])
-          : Promise.resolve(undefined)
-
-        const { solution, topicClassified, validationErrors } = await solutionPromise
-        log.info({ steps: solution.steps.length, mode: solution.mode || 'diagram', topic: topicClassified, pipeline }, 'Solution generated')
-
-        // For non-TikZ pipelines: override mode to 'diagram' so the frontend
-        // enters 'compiling' state and shows the spinner until engine images arrive.
-        // Without this, the frontend sees mode='text-only' and immediately hides the
-        // diagram panel, causing the user to never see the engine-generated visual.
-        if (!isTikzPipeline && solution.mode === 'text-only') {
-          solution.mode = 'diagram'
-        }
+        log.info({ steps: solution.steps.length, mode: solution.mode || 'diagram', topic: topicClassified }, 'Solution generated')
 
         // ─── Step 3: Create walkthrough session in DB ─────────────────
-        const isTextOnly = isTikzPipeline
-          ? (solution.mode === 'text-only' || !solution.tikzCode || !solution.tikzCode.includes('\\begin{tikzpicture}'))
-          : false // Non-TikZ solutions always expect engine visuals (mode overridden above)
+        const isTextOnly = solution.mode === 'text-only' || !solution.tikzCode || !solution.tikzCode.includes('\\begin{tikzpicture}')
 
         const { data: wSession, error: insertError } = await serviceClient
           .from('walkthrough_sessions')
@@ -215,9 +164,9 @@ export async function POST(
             user_id: user.id,
             question_text: questionText,
             solution,
-            generation_status: (isTextOnly && isTikzPipeline ? 'complete' : 'compiling') as WalkthroughGenerationStatus,
+            generation_status: (isTextOnly ? 'complete' : 'compiling') as WalkthroughGenerationStatus,
             total_steps: solution.steps.length,
-            steps_rendered: isTextOnly && isTikzPipeline ? solution.steps.length : 0,
+            steps_rendered: isTextOnly ? solution.steps.length : 0,
             step_images: [],
             topic_classified: topicClassified,
             validation_errors: validationErrors,
@@ -233,9 +182,8 @@ export async function POST(
         send({ type: 'session_created', walkthroughId: walkthroughId! })
         send({ type: 'solution_ready', solution, totalSteps: solution.steps.length })
 
-        // ─── Step 4: Generate step images ────────────────────────────
-        if (isTikzPipeline && !isTextOnly) {
-          // TikZ path: compile layered TikZ code (current behavior)
+        // ─── Step 4: Compile TikZ step images ────────────────────────
+        if (!isTextOnly) {
           log.info({ steps: solution.steps.length }, 'Compiling TikZ step images')
 
           const parsed = parseTikzLayers(solution.tikzCode)
@@ -297,56 +245,6 @@ export async function POST(
           })
 
           log.info({ rendered: finalRendered, total: solution.steps.length }, 'TikZ walkthrough complete')
-
-        } else {
-          // Non-TikZ path (or text-only TikZ): use diagram engine result
-          const engineResult = await enginePromise
-          const stepImages: string[] = new Array(solution.steps.length).fill('')
-
-          if (engineResult) {
-            log.info({ pipeline: engineResult.pipeline, hasStepImages: !!engineResult.stepImages?.length }, 'Engine result received')
-
-            if (engineResult.stepImages && engineResult.stepImages.length > 0 && solution.steps.length > 0) {
-              // Engine produced step images — distribute across walkthrough steps
-              const eSteps = engineResult.stepImages
-              for (let i = 0; i < solution.steps.length; i++) {
-                const eIdx = Math.min(Math.floor((i / solution.steps.length) * eSteps.length), eSteps.length - 1)
-                stepImages[i] = eSteps[eIdx].url
-                send({ type: 'step_image', stepIndex: i, imageUrl: stepImages[i] })
-              }
-            } else if (engineResult.imageUrl) {
-              // Engine produced only a static image — show for all steps
-              for (let i = 0; i < solution.steps.length; i++) {
-                stepImages[i] = engineResult.imageUrl
-                send({ type: 'step_image', stepIndex: i, imageUrl: engineResult.imageUrl })
-              }
-            }
-
-            send({ type: 'compilation_progress', stepsRendered: solution.steps.length, totalSteps: solution.steps.length })
-          } else {
-            log.warn('No engine result — walkthrough will be text-only')
-          }
-
-          const finalRendered = stepImages.filter(Boolean).length
-
-          await serviceClient
-            .from('walkthrough_sessions')
-            .update({
-              generation_status: 'complete' as WalkthroughGenerationStatus,
-              step_images: stepImages,
-              steps_rendered: finalRendered,
-              compilation_failures: 0,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', walkthroughId)
-
-          send({
-            type: 'complete',
-            stepsRendered: finalRendered,
-            totalSteps: solution.steps.length,
-          })
-
-          log.info({ rendered: finalRendered, total: solution.steps.length, pipeline: engineResult?.pipeline || 'none' }, 'Engine walkthrough complete')
         }
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : 'Unknown error'
