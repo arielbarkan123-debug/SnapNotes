@@ -69,7 +69,7 @@ Added to negative_prompt:
 
 This ensures the SVG overlay is the ONLY labeling layer — no double-dots from Recraft's own rendering.
 
-The base image is uploaded to Supabase storage before Phase 2 (Recraft CDN URLs expire). Vision receives the permanent Supabase URL, not the ephemeral Recraft CDN URL. Upload path: `diagrams/{userId}/{hash}.png` in the existing `diagram-steps` bucket. This uses `uploadStepImages()` from the existing step-capture code (retained for this purpose).
+The base image is uploaded to Supabase storage before Phase 2 (Recraft CDN URLs expire). Vision receives the permanent Supabase URL, not the ephemeral Recraft CDN URL. Upload path: `{userId}/{hash}/base.png` in the existing `diagram-steps` bucket (matches existing RLS policy pattern `{userId}/*`). `uploadBaseImage()` is a new function (~30 LOC) that calls the Supabase storage client directly — it does NOT reuse `uploadStepImages()` which expects a `Buffer[]` batch.
 
 ### Phase 2: Focused Vision Positioning
 
@@ -174,6 +174,8 @@ interface OverlayLabel {
 ```
 
 All existing imports of `OverlayLabel` from `recraft-executor.ts` or local redeclarations are updated to import from `@/types`.
+
+`RecraftStepMeta` also moves to `types/index.ts` alongside `OverlayLabel`, since it's used in the `DiagramStatus` success variant and in `TutorResponse`.
 
 ## Error Surfacing
 
