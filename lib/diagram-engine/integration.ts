@@ -16,7 +16,7 @@ import { shouldUseEngine } from './tiered-router';
 import { generateLayeredTikz } from './layered-tikz-generator';
 import { routeQuestionWithAI } from './router';
 import { preCompute } from './smart-pipeline';
-import type { Lesson } from '@/types';
+import type { Lesson, OverlayLabel } from '@/types';
 import type { StepImage } from '@/components/homework/diagram/types';
 import { createLogger } from '@/lib/logger'
 
@@ -34,13 +34,7 @@ export interface EngineDiagramResult {
   pipeline: Pipeline;
   attempts: number;
   qaVerdict?: string;
-  overlay?: Array<{
-    text: string;
-    x: number;
-    y: number;
-    targetX: number;
-    targetY: number;
-  }>;
+  overlay?: OverlayLabel[];
   /** @deprecated Use stepImages instead — kept for backward compat during migration */
   stepByStepSource?: {
     tikzCode: string;

@@ -2,7 +2,7 @@ import { SYSTEM_PROMPT } from './system-prompt';
 import { executeCode, detectMode, type RenderMode } from './e2b-executor';
 import { generateTikzDiagram } from './tikz-executor';
 import { generateRecraftDiagram } from './recraft-executor';
-import type { OverlayLabel, RecraftStepMeta } from './recraft-executor';
+import type { OverlayLabel, RecraftStepMeta } from '@/types';
 import { routeQuestionWithAI, getFallbackPipeline, type Pipeline } from './router';
 import { postProcessDiagram } from './post-process';
 import { getQAPrompt } from './qa-prompts';

@@ -13,7 +13,7 @@
  */
 
 import { Sandbox } from '@e2b/code-interpreter'
-import type { OverlayLabel, RecraftStepMeta } from '../recraft-executor'
+import type { OverlayLabel, RecraftStepMeta } from '@/types'
 import type { StepImage } from '@/components/homework/diagram/types'
 import { uploadStepImages, generateDiagramHash } from './upload-steps'
 import { createLogger } from '@/lib/logger'

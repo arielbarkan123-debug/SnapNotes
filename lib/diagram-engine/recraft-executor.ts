@@ -13,21 +13,8 @@ const anthropic = new Anthropic({
 // Custom E2B template ID with texlive-full pre-installed
 const LATEX_TEMPLATE_ID = process.env.E2B_LATEX_TEMPLATE_ID || undefined;
 
-export interface OverlayLabel {
-  text: string;
-  x: number;
-  y: number;
-  targetX: number;
-  targetY: number;
-}
-
-export interface RecraftStepMeta {
-  step: number;
-  label: string;
-  labelHe: string;
-  explanation: string;
-  explanationHe: string;
-}
+import type { OverlayLabel, RecraftStepMeta } from '@/types'
+export type { OverlayLabel, RecraftStepMeta }
 
 export interface RecraftResult {
   imageUrl: string;
