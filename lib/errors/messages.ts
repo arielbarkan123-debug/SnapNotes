@@ -317,8 +317,8 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCodes.STREAM_TIMEOUT]: 'Streaming connection timed out. Please try again.',
 
   // Usage errors
-  [ErrorCodes.USAGE_LIMIT_EXCEEDED]: 'Our AI service is temporarily at capacity. Please try again in a few minutes.',
-  [ErrorCodes.DAILY_LIMIT_EXCEEDED]: 'You have reached your daily limit. Please try again tomorrow.',
+  [ErrorCodes.USAGE_LIMIT_EXCEEDED]: 'AI credit limit reached. The API key needs more credits to continue. Please add credits at console.anthropic.com/settings/billing.',
+  [ErrorCodes.DAILY_LIMIT_EXCEEDED]: 'Daily AI credit limit reached. Please add more credits or try again tomorrow.',
 
   // Content filter errors
   [ErrorCodes.CONTENT_FILTERED]: 'This content could not be processed. Please try different content.',
