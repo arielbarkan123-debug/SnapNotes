@@ -104,12 +104,12 @@ export async function POST(
     const homeworkSession = session as HomeworkSession
 
     // Derive diagram mode: 'off' | 'quick' | 'accurate'
-    // For auto-start: use session's enable_diagrams preference (backward compat → 'quick')
-    // For follow-up messages: use client-sent diagramMode (falls back to enableDiagrams boolean)
+    // For auto-start: use session's stored diagram_mode (backward compat: enable_diagrams → 'quick')
+    // For follow-up messages: use client-sent diagramMode (falls back to session's stored mode)
     type DiagramMode = 'off' | 'quick' | 'accurate'
     const diagramMode: DiagramMode = isAutoStart
-      ? (homeworkSession.enable_diagrams !== false ? 'quick' : 'off')
-      : ((body.diagramMode as DiagramMode) || (body.enableDiagrams !== false ? 'quick' : 'off'))
+      ? ((homeworkSession.diagram_mode as DiagramMode) || (homeworkSession.enable_diagrams !== false ? 'quick' : 'off'))
+      : ((body.diagramMode as DiagramMode) || (homeworkSession.diagram_mode as DiagramMode) || (body.enableDiagrams !== false ? 'quick' : 'off'))
     const enableDiagrams = diagramMode !== 'off'
 
     // Step 1: Add student message to conversation (skip for auto-start sentinel)

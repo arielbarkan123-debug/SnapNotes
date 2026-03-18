@@ -145,6 +145,7 @@ export async function POST(request: NextRequest) {
         used_show_answer: false,
         solution_reached: false,
         enable_diagrams: body.enableDiagrams ?? true,
+        diagram_mode: body.diagramMode || 'quick',
       })
       .select()
       .single()
