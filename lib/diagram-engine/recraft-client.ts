@@ -105,7 +105,7 @@ export async function generateRecraftImage(
       try {
         const parsed: RecraftErrorResponse = JSON.parse(errorText)
         if (parsed.code === 'not_enough_credits') {
-          message = 'Recraft API credits exhausted. Add credits at recraft.ai'
+          message = '[RECRAFT] Out of credits. The Recraft image generation budget has run out. The app cannot generate diagrams until credits are added at recraft.ai.'
         } else {
           message =
             parsed.error?.message || parsed.message || parsed.code || message

@@ -418,7 +418,7 @@ export class ClaudeAPIError extends Error {
             errorMessageLower.includes('usage limit') ||
             errorMessageLower.includes('you have reached your')) {
           return new ClaudeAPIError(
-            'AI credit limit reached. The API key needs more credits to continue. Please add credits at console.anthropic.com/settings/billing.',
+            '[CLAUDE] Out of credits. The Claude AI budget has run out. The app cannot function until credits are added at console.anthropic.com/settings/billing.',
             'RATE_LIMIT',
             400
           )
