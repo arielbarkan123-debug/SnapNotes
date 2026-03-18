@@ -37,7 +37,7 @@ export interface TikzValidationWarning {
 
 // ─── Constants ───────────────────────────────────────────────────────
 
-const MAX_CODE_SIZE = 3500
+const MAX_CODE_SIZE = 2800
 const MAX_FOREACH_ITERATIONS = 8
 
 // ─── Foreach Iteration Counter ───────────────────────────────────────

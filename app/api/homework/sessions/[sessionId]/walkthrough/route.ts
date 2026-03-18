@@ -83,10 +83,12 @@ export async function POST(
     const hasImages = Array.isArray(existing.step_images) && existing.step_images.some((img: string) => !!img)
     const isTextOnly = existing.solution?.mode === 'text-only'
 
-    if (!hasImages && !isTextOnly && !hasTikz) {
-      // Cached text-only result for a question that might deserve diagrams.
-      // Delete the stale record and let it regenerate with the updated classifier.
-      log.info({ walkthroughId: existing.id }, 'Deleting stale text-only walkthrough to allow regeneration')
+    if (!hasImages && !isTextOnly) {
+      // Cached walkthrough with no rendered images — either:
+      // 1. TikZ compilation failed (hasTikz=true but no images)
+      // 2. Text-only result for a diagram-worthy question (hasTikz=false)
+      // Delete the stale record and regenerate with the updated prompt/budgets.
+      log.info({ walkthroughId: existing.id, hasTikz }, 'Deleting stale walkthrough (no images) to allow regeneration')
       await serviceClient
         .from('walkthrough_sessions')
         .delete()

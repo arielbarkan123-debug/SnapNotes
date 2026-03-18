@@ -120,7 +120,7 @@ export async function renderWalkthroughSteps(
   tikzCode: string,
   totalSteps: number,
   onStepRendered: (stepIndex: number, imageUrl: string) => void,
-  _onStepFailed?: (stepIndex: number, error: string) => void,
+  onStepFailed?: (stepIndex: number, error: string) => void,
 ): Promise<void> {
   const parsed = parseTikzLayers(tikzCode)
 
@@ -156,6 +156,7 @@ export async function renderWalkthroughSteps(
         onStepRendered(stepIndex, result.url)
       } else {
         log.warn(`Step ${stepIndex + 1} failed: ${result.error?.slice(0, 100)}`)
+        onStepFailed?.(stepIndex, result.error || 'Compilation failed')
       }
     }
   }

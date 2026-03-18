@@ -123,13 +123,13 @@ PRE-COMPUTE ALL coordinates as decimal numbers before writing code.
 
 SMOOTH CURVES — CRITICAL:
 When drawing ANY curve (parabola, trajectory, function graph, sine wave, etc.):
-- Use AT LEAST 15 coordinate points, spaced every 0.5 units along x-axis
+- Use 10-12 coordinate points for smooth curves
 - ALWAYS add tension=0.6 to smooth: \\draw[smooth, tension=0.6] plot coordinates {...}
-- More points = smoother curve. 7-9 points create UGLY straight-line segments.
-- For parabolas spanning 8 x-units: use 17 points (every 0.5)
-- For shorter curves (4 x-units): use at least 12 points (every ~0.35)
+- 5 or fewer points create ugly polygon segments. 10-12 is the sweet spot.
+- For parabolas spanning 8 x-units: use 11 points (every ~0.8)
+- For shorter curves (4 x-units): use 9 points (every ~0.5)
 WRONG: plot coordinates {(0,0) (2,3) (4,4) (6,3) (8,0)} — only 5 points, looks like a polygon
-RIGHT: plot coordinates {(0,0) (0.5,0.9) (1,1.7) (1.5,2.4) (2,3) (2.5,3.5) (3,3.8) (3.5,4.0) (4,4.0) (4.5,3.8) (5,3.5) (5.5,3.0) (6,2.4) (6.5,1.7) (7,0.9) (8,0)} — 16 points, smooth curve
+RIGHT: plot coordinates {(0,0) (0.8,1.4) (1.6,2.5) (2.4,3.2) (3.2,3.7) (4,4.0) (4.8,3.7) (5.6,3.2) (6.4,2.5) (7.2,1.4) (8,0)} — 11 points, smooth curve
 
 SPATIAL ZONE PLANNING — MUST FOLLOW:
 Before writing TikZ, mentally divide the canvas into zones:
@@ -156,9 +156,9 @@ LABEL ANCHORING RULES — EVERY node MUST have positioning:
 - NEVER use bare node{text} without a position — it WILL overlap other elements.
 - ALL label nodes MUST have: fill=white, inner sep=2pt
 
-CHARACTER BUDGET:
-- Each LAYER: 300-700 characters max (curve layers with many coordinates may need more)
-- Total TikZ code: under 3500 characters (compiled multiple times)
+CHARACTER BUDGET — STRICT (exceeding these limits causes compilation failure):
+- Each LAYER: 300-500 characters max
+- Total TikZ code: under 2500 characters (each step is compiled cumulatively — overhead grows)
 - Keep it SIMPLE — correct placement and smooth curves beat decorative elements
 
 NO RED COLORING — CRITICAL:
@@ -173,6 +173,7 @@ GENERAL DRAWING RULES:
 - COLORS: blue!70, green!60!black, orange!80!black, black for outlines
 - Use \\draw arc for angles. NEVER use \\pic.
 - No Unicode characters — use LaTeX: ^{\\circ}, \\theta, \\alpha, etc.
+- ALL text inside TikZ \\node{} MUST be English or LaTeX math ($...$). NEVER use Hebrew or other non-Latin text in TikZ code — pdflatex cannot render it. Hebrew text goes ONLY in the JSON fields (titleHe, explanationHe, finalAnswerHe).
 
 PROJECTILE TRAJECTORY — CRITICAL:
 When drawing a projectile trajectory curve, the INITIAL TANGENT of the curve MUST match the launch angle exactly.
@@ -241,11 +242,10 @@ Use the GROUND-LEVEL template for flat ground launches, ELEVATED template for la
 % === LAYER 3: Trajectory ===
 % CRITICAL: First segment slope = tan(30°) = 0.577. Curve must start in SAME direction as v_0 arrow!
 % Parabola: y = -0.0721*(x-0.5)*(x-8.5), symmetric, peak at x=4.5
-% Use 17 points (every 0.5) for a SMOOTH curve — fewer points create ugly polygon segments
+% Use 11 points for a smooth curve
 \\draw[very thick, blue!70, smooth, tension=0.6] plot coordinates {
-  (0.5,0.0) (1.0,0.27) (1.5,0.50) (2.0,0.69) (2.5,0.86) (3.0,0.99) (3.5,1.08)
-  (4.0,1.13) (4.5,1.15) (5.0,1.13) (5.5,1.08) (6.0,0.99) (6.5,0.86) (7.0,0.69)
-  (7.5,0.50) (8.0,0.27) (8.5,0.0)
+  (0.5,0.0) (1.3,0.42) (2.1,0.72) (2.9,0.94) (3.7,1.09) (4.5,1.15)
+  (5.3,1.09) (6.1,0.94) (6.9,0.72) (7.7,0.42) (8.5,0.0)
 };
 \\fill[blue!70] (0.5,0) circle (3pt);
 \\fill[blue!70] (8.5,0) circle (3pt);
@@ -285,12 +285,11 @@ Use the GROUND-LEVEL template for flat ground launches, ELEVATED template for la
   node[left, fill=white, inner sep=2pt] {$v_y=10$};
 % === LAYER 3: Trajectory ===
 % CRITICAL: First segment slope MUST = tan(30°) = 0.577 to match the launch angle!
-% Parabola computed: y = -0.1328x² + 0.8957x + 2.1164 (tangent=0.577 at x=1.2, y=0 at x=8.6)
-% Use 16 points for a SMOOTH curve — fewer points create ugly polygon segments
+% Parabola computed: tangent=0.577 at x=1.2, y=0 at x=8.6
+% Use 11 points for a smooth curve
 \\draw[very thick, blue!70, smooth, tension=0.6] plot coordinates {
-  (1.2,3.0) (1.7,3.26) (2.2,3.45) (2.7,3.56) (3.2,3.61) (3.7,3.58)
-  (4.2,3.49) (4.7,3.33) (5.2,3.10) (5.7,2.81) (6.2,2.45) (6.7,2.02)
-  (7.2,1.53) (7.7,0.97) (8.2,0.35) (8.6,0.0)
+  (1.2,3.0) (1.9,3.38) (2.7,3.56) (3.5,3.60) (4.3,3.48)
+  (5.1,3.18) (5.9,2.70) (6.7,2.04) (7.5,1.20) (8.1,0.42) (8.6,0.0)
 };
 \\fill[blue!70] (1.2,3) circle (3pt);
 \\fill[blue!70] (8.6,0) circle (3pt);
@@ -412,11 +411,10 @@ Follow this structure. Pre-compute ALL plot coordinates as decimals.
 \\draw[thin, gray!30] (5,-0.1) -- (5,0.1) node[below=3pt, fill=white, inner sep=1pt] {\\footnotesize $5$};
 % === LAYER 2: Plot function ===
 % f(x) = x^2 - 4x + 3 = (x-1)(x-3), vertex at (2,-1)
-% Use many points + tension for SMOOTH parabola — never use fewer than 15 points for curves
+% Use 11 points + tension for smooth parabola
 \\draw[very thick, blue!70, smooth, tension=0.6] plot coordinates {
-  (-0.5,5.25) (-0.25,4.06) (0,3) (0.25,2.06) (0.5,1.25) (0.75,0.56) (1,0) (1.25,-0.44)
-  (1.5,-0.75) (1.75,-0.94) (2,-1) (2.25,-0.94) (2.5,-0.75) (2.75,-0.44)
-  (3,0) (3.25,0.56) (3.5,1.25) (3.75,2.06) (4,3) (4.25,4.06) (4.5,5.25)
+  (-0.5,5.25) (0,3) (0.5,1.25) (1,0) (1.5,-0.75) (2,-1) (2.5,-0.75)
+  (3,0) (3.5,1.25) (4,3) (4.5,5.25)
 };
 \\node[above right, blue!70, fill=white, inner sep=2pt] at (4.2,4) {$f(x) = x^2 - 4x + 3$};
 % === LAYER 3: Mark key points ===
@@ -595,7 +593,7 @@ async function generateWalkthroughSolutionOnce(
 
   // Add simplification instruction on retry
   if (options?.simplify) {
-    userText += `\n\nIMPORTANT: Your previous TikZ code was too large (${options.previousMaxSize} characters cumulative). The QuickLaTeX compiler has a 3500 character limit per compilation. SIMPLIFY the diagram: use fewer elements, shorter labels, and simpler geometry. Each layer must be under 400 characters.`
+    userText += `\n\nIMPORTANT: Your previous TikZ code was too large (${options.previousMaxSize} characters cumulative). Each step is compiled with ALL previous layers included, so total code must stay under 2500 characters. SIMPLIFY the diagram: use fewer elements, shorter labels, and simpler geometry. Each layer must be under 400 characters.`
   }
 
   // Add specific validation fix instructions on retry
@@ -768,7 +766,7 @@ export async function generateWalkthroughSolution(
     const sizes = estimateCumulativeSize(parsed)
     const maxSize = Math.max(...sizes, 0)
 
-    if (maxSize > 3500) {
+    if (maxSize > 3200) {
       log.warn({ maxSize }, 'TikZ too large, retrying with simplified prompt')
       try {
         const simplified = await generateWalkthroughSolutionOnce(questionText, imageUrls, {
