@@ -280,16 +280,16 @@ ${wasCorrect === false ? '**The student answered incorrectly and is asking for h
     // The engine is the ONLY diagram source — clear any AI-returned diagram
     delete tutorResponse.diagram  // Don't use AI's old-format diagram
 
-    const engineResult = await enginePromise
-    if (engineResult) {
+    const engineResponse = await enginePromise
+    if (engineResponse?.engineResult) {
       tutorResponse.diagram = {
         type: 'engine_image',
         visibleStep: 0,
         data: {
-          imageUrl: engineResult.imageUrl,
-          pipeline: engineResult.pipeline,
-          overlay: engineResult.overlay,
-          qaVerdict: engineResult.qaVerdict,
+          imageUrl: engineResponse.engineResult.imageUrl,
+          pipeline: engineResponse.engineResult.pipeline,
+          overlay: engineResponse.engineResult.overlay,
+          qaVerdict: engineResponse.engineResult.qaVerdict,
         },
       }
     }

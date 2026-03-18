@@ -260,16 +260,16 @@ export async function POST(
     }
 
     // Override with engine-generated diagram if available (higher quality)
-    const engineResult = await enginePromise
-    if (engineResult) {
+    const engineResponse = await enginePromise
+    if (engineResponse?.engineResult) {
       diagram = {
         type: 'engine_image',
         visibleStep: 0,
         data: {
-          imageUrl: engineResult.imageUrl,
-          pipeline: engineResult.pipeline,
-          overlay: engineResult.overlay,
-          qaVerdict: engineResult.qaVerdict,
+          imageUrl: engineResponse.engineResult.imageUrl,
+          pipeline: engineResponse.engineResult.pipeline,
+          overlay: engineResponse.engineResult.overlay,
+          qaVerdict: engineResponse.engineResult.qaVerdict,
         },
       }
     }

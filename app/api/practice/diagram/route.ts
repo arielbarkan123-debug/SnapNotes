@@ -42,13 +42,13 @@ export async function POST(request: NextRequest) {
 
     const result = await tryEngineDiagram(question)
 
-    if (!result) {
+    if (!result?.engineResult) {
       return NextResponse.json({ skip: true, reason: 'generation_failed' })
     }
 
     return NextResponse.json({
-      imageUrl: result.imageUrl,
-      pipeline: result.pipeline,
+      imageUrl: result.engineResult.imageUrl,
+      pipeline: result.engineResult.pipeline,
     })
   } catch (error) {
     log.error({ err: error }, 'Error')

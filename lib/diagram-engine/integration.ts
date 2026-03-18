@@ -16,7 +16,7 @@ import { shouldUseEngine } from './tiered-router';
 import { generateLayeredTikz } from './layered-tikz-generator';
 import { routeQuestionWithAI } from './router';
 import { preCompute } from './smart-pipeline';
-import type { Lesson, OverlayLabel } from '@/types';
+import type { DiagramStatus, Lesson, OverlayLabel } from '@/types';
 import type { StepImage } from '@/components/homework/diagram/types';
 import { createLogger } from '@/lib/logger'
 
@@ -51,15 +51,24 @@ export interface EngineDiagramResult {
 }
 
 /**
+ * Result from tryEngineDiagram including status information for the frontend.
+ * engineResult is present on success; diagramStatus is always present (except skipped).
+ */
+export interface EngineResult {
+  engineResult?: EngineDiagramResult
+  diagramStatus?: DiagramStatus
+}
+
+/**
  * Try to generate a diagram using the engine.
- * Returns undefined if the question doesn't need the engine,
- * or if generation fails (so the caller can fall back to React components).
+ * Returns an EngineResult with engineResult on success and diagramStatus for error tracking.
+ * Returns undefined if the question doesn't need the engine (skipped).
  */
 export async function tryEngineDiagram(
   question: string,
   forcePipeline?: Pipeline,
-  options?: { skipStepCapture?: boolean; skipQA?: boolean },
-): Promise<EngineDiagramResult | undefined> {
+  options?: { skipStepCapture?: boolean; skipQA?: boolean; userId?: string; skipVerification?: boolean },
+): Promise<EngineResult | undefined> {
   log.info({ question: question.slice(0, 80) }, 'tryEngineDiagram called');
 
   if (!forcePipeline && !shouldUseEngine(question)) {
@@ -88,13 +97,13 @@ export async function tryEngineDiagram(
     // Skipping saves an AI API call (runs in parallel, but reduces load/cost).
     const shouldGenerateLayered = mayBeTikz && !options?.skipStepCapture;
     const [result, layeredSource] = await Promise.all([
-      generateDiagram(enrichedQuestion, predictedPipeline, options),
+      generateDiagram(enrichedQuestion, predictedPipeline, { skipStepCapture: options?.skipStepCapture, skipQA: options?.skipQA, userId: options?.userId, skipVerification: options?.skipVerification }),
       shouldGenerateLayered ? generateLayeredTikz(enrichedQuestion) : Promise.resolve(null),
     ]);
 
     if ('error' in result) {
       log.error({ error: result.error, pipeline: result.pipeline }, 'Generation failed');
-      return undefined;
+      return { diagramStatus: { status: 'failed', reason: result.error } };
     }
 
     log.info({ pipeline: result.pipeline, urlLength: result.imageUrl?.length }, 'Generation succeeded');
@@ -133,7 +142,7 @@ export async function tryEngineDiagram(
       log.info({ steps: recraftStepSource.steps.length }, 'Recraft step explanations ready');
     }
 
-    return {
+    const engineResult: EngineDiagramResult = {
       type: 'engine_diagram',
       imageUrl: result.imageUrl,
       pipeline: result.pipeline,
@@ -143,9 +152,18 @@ export async function tryEngineDiagram(
       stepByStepSource: validLayeredSource || recraftStepSource || undefined,
       stepImages: result.stepImages,
     };
+    return {
+      engineResult,
+      diagramStatus: {
+        status: 'success',
+        imageUrl: result.imageUrl,
+        labels: result.overlay || [],
+        stepMetadata: result.stepMetadata || [],
+      },
+    };
   } catch (err) {
     log.error({ err: err }, 'Unexpected error:');
-    return undefined;
+    return { diagramStatus: { status: 'failed', reason: String(err) } };
   }
 }
 
@@ -228,20 +246,21 @@ export async function generateDiagramsForSteps(
   let generated = 0;
   for (let i = 0; i < results.length; i++) {
     const result = results[i];
-    if (result.status === 'fulfilled' && result.value) {
+    if (result.status === 'fulfilled' && result.value?.engineResult) {
+      const engineResult = result.value.engineResult;
       const { lessonIdx, stepIdx } = tasks[i];
       lessons[lessonIdx].steps[stepIdx].diagramData = {
         type: 'engine_image',
         data: {
-          imageUrl: result.value.imageUrl,
-          pipeline: result.value.pipeline,
-          overlay: result.value.overlay,
-          qaVerdict: result.value.qaVerdict,
+          imageUrl: engineResult.imageUrl,
+          pipeline: engineResult.pipeline,
+          overlay: engineResult.overlay,
+          qaVerdict: engineResult.qaVerdict,
         },
-        stepByStepSource: result.value.stepByStepSource,
-        stepImages: result.value.stepImages,
+        stepByStepSource: engineResult.stepByStepSource,
+        stepImages: engineResult.stepImages,
       };
-      log.info({ pipeline: result.value.pipeline, step: tasks[i].description.slice(0, 60) }, 'Diagram pipeline used');
+      log.info({ pipeline: engineResult.pipeline, step: tasks[i].description.slice(0, 60) }, 'Diagram pipeline used');
       generated++;
     } else if (result.status === 'rejected') {
       log.error({ diagramIndex: i, err: result.reason }, 'Diagram rejected');
