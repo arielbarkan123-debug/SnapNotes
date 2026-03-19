@@ -67,10 +67,11 @@ export async function generateRecraftImage(
     ? `${params.negative_prompt}, ${textNegativePrompt}`
     : textNegativePrompt;
 
+  // Recraft V4 does NOT support styles — omit the style field entirely.
+  // See: https://www.recraft.ai/docs/api-reference/styles
   const body: Record<string, unknown> = {
     prompt: params.prompt,
     model: 'recraftv4',
-    style: effectiveStyle,
     response_format: 'url',
     // ALWAYS enforce no text generation
     controls: { no_text: true },
