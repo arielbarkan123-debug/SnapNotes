@@ -7,7 +7,7 @@ import type {
   ReferenceAnalysis,
   TutorContext,
 } from '@/lib/homework/types'
-import { generateTutorResponse, checkForSolution } from '@/lib/homework/tutor-engine'
+import { generateTutorResponse, checkForSolution, type DeferredDiagramResponse } from '@/lib/homework/tutor-engine'
 import { searchYouTubeVideos } from '@/lib/prepare/youtube-search'
 import type { ExplanationStyleId } from '@/lib/homework/explanation-styles'
 import { addMessage, updateProgress, getRecentMessages } from '@/lib/homework/session-manager'
@@ -196,7 +196,17 @@ export async function POST(
       studentIntelligence,
     }
 
-    // Step 3: Generate Socratic tutor response
+    // Step 3: For auto-start, use streaming response so greeting text arrives fast
+    // and the engine diagram arrives when ready (not blocked for 45-60s)
+    if (isAutoStart) {
+      return handleAutoStartStreaming(
+        supabase, context, sessionId, user.id,
+        enableDiagrams, diagramMode as 'off' | 'quick' | 'accurate',
+        explanationStyle as ExplanationStyleId | undefined,
+      )
+    }
+
+    // Step 3b: Generate Socratic tutor response (non-auto-start path)
     // If escalation is active, prepend the escalation instruction to the student message
     const messageForTutor = escalationAction
       ? `${getEscalationInstruction(escalationAction)}\n\nStudent says: ${cleanMessage}`
@@ -325,6 +335,170 @@ export async function POST(
     }
     return createErrorResponse(ErrorCodes.CHAT_FAILED)
   }
+}
+
+// ============================================================================
+// Streaming Auto-Start Handler
+// ============================================================================
+
+/**
+ * Streaming response for auto-start requests.
+ * Sends the greeting text immediately (~5s), then sends the engine diagram
+ * when it's ready (~30-60s). The client processes NDJSON stream events.
+ *
+ * Events:
+ * - { type: 'greeting', tutorResponse, session, diagramStatus? }
+ * - { type: 'heartbeat', timestamp }
+ * - { type: 'diagram', diagram, diagramStatus }
+ * - { type: 'done' }
+ * - { type: 'error', error }
+ */
+async function handleAutoStartStreaming(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  context: TutorContext,
+  sessionId: string,
+  userId: string,
+  enableDiagrams: boolean,
+  diagramMode: 'off' | 'quick' | 'accurate',
+  explanationStyle?: ExplanationStyleId,
+): Promise<Response> {
+  const encoder = new TextEncoder()
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (data: object) => {
+        try {
+          controller.enqueue(encoder.encode(JSON.stringify(data) + '\n'))
+        } catch {
+          // Stream may have been closed by client abort
+        }
+      }
+      const heartbeat = setInterval(() => send({ type: 'heartbeat', timestamp: Date.now() }), 2000)
+
+      try {
+        // Phase 1: Generate greeting text with deferred diagram
+        const tutorResponse = await generateTutorResponse(
+          context, '__auto_start__', enableDiagrams,
+          explanationStyle, diagramMode,
+          { deferDiagram: true },
+        ) as DeferredDiagramResponse
+
+        // Save greeting to DB
+        const tutorMessage: ConversationMessage = {
+          role: 'tutor',
+          content: tutorResponse.message,
+          timestamp: new Date().toISOString(),
+          pedagogicalIntent: tutorResponse.pedagogicalIntent,
+          showsUnderstanding: tutorResponse.detectedUnderstanding,
+          misconceptionDetected: tutorResponse.detectedMisconception || undefined,
+          diagram: tutorResponse.diagram,
+          visualUpdate: tutorResponse.visualUpdate,
+        }
+
+        let savedSession: HomeworkSession
+        try {
+          savedSession = await addMessage(sessionId, userId, tutorMessage)
+        } catch {
+          // Fallback: manual update
+          const { data: currentSession } = await supabase
+            .from('homework_sessions')
+            .select('*')
+            .eq('id', sessionId)
+            .single()
+          const conv = [...((currentSession as HomeworkSession)?.conversation || []), tutorMessage]
+          const { data: updated } = await supabase
+            .from('homework_sessions')
+            .update({ conversation: conv })
+            .eq('id', sessionId)
+            .eq('user_id', userId)
+            .select()
+            .single()
+          savedSession = updated as HomeworkSession
+        }
+
+        // Send greeting immediately — client can render the text now
+        send({
+          type: 'greeting',
+          tutorResponse: {
+            message: tutorResponse.message,
+            pedagogicalIntent: tutorResponse.pedagogicalIntent,
+            detectedUnderstanding: tutorResponse.detectedUnderstanding,
+            detectedMisconception: tutorResponse.detectedMisconception,
+            suggestedNextAction: tutorResponse.suggestedNextAction,
+            estimatedProgress: tutorResponse.estimatedProgress,
+            shouldEndSession: tutorResponse.shouldEndSession,
+            celebrationMessage: tutorResponse.celebrationMessage,
+            diagram: tutorResponse.diagram,
+            visualUpdate: tutorResponse.visualUpdate,
+            diagramStatus: tutorResponse.diagramStatus,
+          },
+          session: savedSession,
+          diagramStatus: tutorResponse.diagramStatus,
+        })
+
+        // Phase 2: Wait for engine diagram if one is pending.
+        // Wrapped in its own try-catch so diagram failures don't cause a stream error
+        // (the greeting is already delivered — a diagram failure is non-fatal).
+        const diagramPromise = tutorResponse._diagramPromise
+        if (diagramPromise) {
+          try {
+            log.info('[streaming] Waiting for engine diagram...')
+            const resolved = await diagramPromise
+
+            if (resolved.diagram) {
+              log.info('[streaming] Engine diagram resolved, updating conversation')
+
+              // Update the conversation in DB — add diagram to the last tutor message
+              const { data: freshSession } = await supabase
+                .from('homework_sessions')
+                .select('*')
+                .eq('id', sessionId)
+                .single()
+
+              if (freshSession) {
+                const conv = [...((freshSession as HomeworkSession).conversation || [])]
+                // Find the last tutor message and add the diagram
+                for (let i = conv.length - 1; i >= 0; i--) {
+                  if (conv[i].role === 'tutor') {
+                    conv[i] = { ...conv[i], diagram: resolved.diagram }
+                    break
+                  }
+                }
+                await supabase
+                  .from('homework_sessions')
+                  .update({ conversation: conv })
+                  .eq('id', sessionId)
+                  .eq('user_id', userId)
+              }
+
+              send({ type: 'diagram', diagram: resolved.diagram, diagramStatus: resolved.diagramStatus })
+            } else if (resolved.diagramStatus) {
+              send({ type: 'diagram_status', diagramStatus: resolved.diagramStatus })
+            }
+          } catch (diagramErr) {
+            log.error({ err: diagramErr }, '[streaming] Diagram phase failed (non-fatal, greeting already sent)')
+            send({ type: 'diagram_status', diagramStatus: { status: 'failed', reason: 'Engine error' } })
+          }
+        }
+
+        send({ type: 'done' })
+      } catch (error) {
+        log.error({ err: error }, '[streaming] Auto-start streaming error')
+        send({ type: 'error', error: error instanceof Error ? error.message : String(error) })
+      } finally {
+        clearInterval(heartbeat)
+        try { controller.close() } catch { /* already closed */ }
+      }
+    }
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-cache',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  })
 }
 
 // ============================================================================

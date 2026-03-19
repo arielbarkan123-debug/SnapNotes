@@ -259,9 +259,10 @@ export default function HomeworkResultsPage() {
     )
 
     try {
-      // Client-side timeout: 90s for auto-start, 120s for normal messages
+      // Client-side timeout: 120s for auto-start (streaming — diagram can take 90s),
+      // 120s for normal messages
       const controller = new AbortController()
-      const timeoutMs = isAutoStart ? 90_000 : 120_000
+      const timeoutMs = 120_000
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
       const res = await fetch(`/api/homework/sessions/${sessionId}/chat`, {
@@ -275,29 +276,101 @@ export default function HomeworkResultsPage() {
 
       if (!res.ok) {
         const errorBody = await res.json()
-        // API returns { success: false, error: { code, message, retryable } }
         const errorInfo = errorBody.error || {}
         const errorMessage = typeof errorInfo === 'string' ? errorInfo : (errorInfo.message || 'Failed to send message')
         const err = new Error(errorMessage)
-        // Attach retryable flag so catch block can decide whether to retry
         ;(err as Error & { retryable?: boolean }).retryable = errorInfo.retryable ?? true
         throw err
       }
 
-      const { session: updated, solved, relatedVideos: videos, diagramStatus } = await res.json()
-      setHelpSession(updated)
-      setRelatedVideos(videos || [])
+      if (isAutoStart) {
+        // Streaming response: read NDJSON events
+        // - 'greeting' arrives in ~5s (text is ready)
+        // - 'diagram' arrives in ~30-60s (engine diagram ready)
+        // Track whether greeting was received to avoid corrupting conversation on diagram-phase errors
+        let greetingReceived = false
+        const reader = res.body!.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
 
-      if (solved) {
-        toast.success('Congratulations! You solved it!')
-        trackFeature('homework_help_solved', { sessionId })
-      }
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
 
-      // Notify user about diagram generation failures
-      if (diagramStatus?.status === 'failed') {
-        toast.error(t('diagramNotAvailable') || 'Could not generate diagram for this topic')
-      } else if (diagramStatus?.status === 'timeout') {
-        toast.info(t('diagramTimeout') || 'Diagram is still generating — it may appear on your next message')
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+
+          for (const line of lines) {
+            if (!line.trim()) continue
+            try {
+              const event = JSON.parse(line)
+
+              if (event.type === 'greeting') {
+                // Greeting text is ready — update UI immediately
+                greetingReceived = true
+                setHelpSession(event.session)
+                setIsChatLoading(false)  // Stop loading spinner — text is visible
+
+                if (event.diagramStatus?.status === 'failed') {
+                  toast.error(t('diagramNotAvailable') || 'Could not generate diagram for this topic')
+                }
+              } else if (event.type === 'diagram') {
+                // Engine diagram arrived — merge into the last tutor message
+                setHelpSession((prev) => {
+                  if (!prev) return prev
+                  const conv = [...prev.conversation]
+                  for (let i = conv.length - 1; i >= 0; i--) {
+                    if (conv[i].role === 'tutor') {
+                      conv[i] = { ...conv[i], diagram: event.diagram }
+                      break
+                    }
+                  }
+                  return { ...prev, conversation: conv }
+                })
+              } else if (event.type === 'diagram_status') {
+                if (event.diagramStatus?.status === 'failed') {
+                  toast.error(t('diagramNotAvailable') || 'Could not generate diagram for this topic')
+                } else if (event.diagramStatus?.status === 'timeout') {
+                  toast.info(t('diagramTimeout') || 'Diagram is still generating — it may appear on your next message')
+                }
+              } else if (event.type === 'error') {
+                // Only throw if greeting hasn't been received yet.
+                // After greeting is delivered, diagram errors are non-fatal.
+                if (!greetingReceived) {
+                  throw new Error(event.error)
+                }
+                log.warn(`Diagram phase error (non-fatal): ${event.error}`)
+              }
+              // Ignore 'heartbeat' and 'done' events
+            } catch (parseErr) {
+              // Skip malformed lines (heartbeats, etc.)
+              if (parseErr instanceof SyntaxError) continue
+              throw parseErr
+            }
+          }
+        }
+
+        // If we completed streaming but never got a greeting, something went wrong
+        if (!greetingReceived) {
+          throw new Error('No greeting received from stream')
+        }
+      } else {
+        // Regular JSON response for follow-up messages
+        const { session: updated, solved, relatedVideos: videos, diagramStatus } = await res.json()
+        setHelpSession(updated)
+        setRelatedVideos(videos || [])
+
+        if (solved) {
+          toast.success('Congratulations! You solved it!')
+          trackFeature('homework_help_solved', { sessionId })
+        }
+
+        if (diagramStatus?.status === 'failed') {
+          toast.error(t('diagramNotAvailable') || 'Could not generate diagram for this topic')
+        } else if (diagramStatus?.status === 'timeout') {
+          toast.info(t('diagramTimeout') || 'Diagram is still generating — it may appear on your next message')
+        }
       }
     } catch (error) {
       log.error({ detail: error }, 'Chat error')
@@ -319,7 +392,6 @@ export default function HomeworkResultsPage() {
         autoStartRetries.current += 1
         log.warn(`Retry ${autoStartRetries.current}/${MAX_AUTO_START_RETRIES}`)
         setIsChatLoading(false)
-        // Reset hasAutoStarted so the useEffect re-triggers
         hasAutoStarted.current = false
         return
       }

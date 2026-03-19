@@ -879,15 +879,94 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
   return tutorResponse
 }
 
+// ============================================================================
+// Engine Diagram Resolution (shared between sync and deferred paths)
+// ============================================================================
+
+interface ResolvedDiagram {
+  diagram?: TutorResponse['diagram']
+  diagramStatus?: TutorResponse['diagramStatus']
+  removeDiagram?: boolean
+}
+
+/**
+ * Await the engine diagram promise with a timeout, and return the processed result.
+ * Used by both the synchronous (normal messages) and deferred (streaming auto-start) paths.
+ */
+async function resolveEngineDiagram(
+  enginePromise: Promise<EngineResult | undefined>,
+  aiDiagram: TutorResponse['diagram'],
+  isAutoStart: boolean,
+  timeoutMs: number,
+): Promise<ResolvedDiagram> {
+  const engineStartTime = Date.now()
+  const engineTimeout = new Promise<undefined>((resolve) =>
+    setTimeout(() => resolve(undefined), timeoutMs)
+  )
+  const engineResponse = await Promise.race([enginePromise, engineTimeout])
+  const engineElapsed = Date.now() - engineStartTime
+  const { engineResult, diagramStatus } = engineResponse ?? {}
+
+  if (engineResult) {
+    log.info(`Engine diagram succeeded in ${engineElapsed}ms — pipeline: ${engineResult.pipeline}, imageUrl length: ${engineResult.imageUrl?.length}`)
+    return {
+      diagram: {
+        type: 'engine_image',
+        visibleStep: 0,
+        data: {
+          imageUrl: engineResult.imageUrl,
+          pipeline: engineResult.pipeline,
+          overlay: engineResult.overlay,
+          qaVerdict: engineResult.qaVerdict,
+        },
+        stepByStepSource: engineResult.stepByStepSource,
+        stepImages: engineResult.stepImages,
+      },
+      diagramStatus,
+    }
+  }
+
+  if (engineElapsed >= timeoutMs - 100) {
+    log.warn(`Engine diagram TIMED OUT after ${engineElapsed}ms (budget: ${timeoutMs}ms) — returning without diagram`)
+    // Let engine finish in background (result is cached for next request)
+    enginePromise.catch((err) => { log.warn({ err }, 'Background engine diagram failed after timeout') })
+    return { diagramStatus: { status: 'timeout', willRetryOnNext: true } }
+  }
+
+  log.warn(`Engine diagram returned undefined in ${engineElapsed}ms (did not timeout — engine failed or was skipped)`)
+
+  if (aiDiagram && (aiDiagram.type === 'engine_image' || aiDiagram.type === 'step_sequence')) {
+    log.info(`Using AI-generated diagram fallback (type: ${aiDiagram.type})`)
+    return { diagram: aiDiagram, diagramStatus }
+  }
+
+  log.info(`No engine result. AI diagram type '${aiDiagram?.type || 'none'}' not renderable. Diagram removed.`)
+  return { diagramStatus, removeDiagram: true }
+}
+
+// ============================================================================
+// Generate Tutor Response
+// ============================================================================
+
+/**
+ * Result type when deferDiagram is true — greeting text is returned immediately,
+ * and the diagram generation continues in the background via _diagramPromise.
+ */
+export interface DeferredDiagramResponse extends TutorResponse {
+  _diagramPromise?: Promise<ResolvedDiagram>
+}
+
 /**
  * Generate a tutor response to a student message
  */
+
 export async function generateTutorResponse(
   context: TutorContext,
   studentMessage: string,
   enableDiagrams = true,
   explanationStyle?: ExplanationStyleId,
   pipelineMode: 'off' | 'quick' | 'accurate' = 'quick',
+  options?: { deferDiagram?: boolean },
 ): Promise<TutorResponse> {
   const client = getAnthropicClient()
 
@@ -1076,7 +1155,30 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
   }
 
   // Log diagram pipeline state for debugging
-  log.info(`Diagram pipeline: isAutoStart=${isAutoStart}, pipelineMode=${pipelineMode}, enableDiagrams=${enableDiagrams}, aiDiagramType=${aiDiagram?.type || 'none'}, enginePromisePending=${enginePromise !== Promise.resolve(undefined)}`)
+  log.info(`Diagram pipeline: isAutoStart=${isAutoStart}, pipelineMode=${pipelineMode}, enableDiagrams=${enableDiagrams}, aiDiagramType=${aiDiagram?.type || 'none'}, deferDiagram=${!!options?.deferDiagram}`)
+
+  // Deferred diagram mode: return greeting text immediately, let caller stream the diagram later.
+  // This avoids blocking the greeting response for 45-60s while the engine runs.
+  if (options?.deferDiagram && isAutoStart && shouldFireEngine) {
+    // Clean up non-renderable AI diagram before sending greeting.
+    // Only engine_image and step_sequence are renderable on the frontend.
+    // SVG component types (fbd, coordinate_plane, etc.) would fail to render.
+    if (tutorResponse.diagram &&
+        tutorResponse.diagram.type !== 'engine_image' &&
+        tutorResponse.diagram.type !== 'step_sequence') {
+      delete tutorResponse.diagram
+    }
+    log.info(`[deferDiagram] Returning greeting immediately, engine diagram will resolve asynchronously`)
+    attachVisualUpdate(tutorResponse, context)
+    const deferredPromise = resolveEngineDiagram(enginePromise, aiDiagram, true, 90_000)
+    return Object.assign(tutorResponse, { _diagramPromise: deferredPromise }) as DeferredDiagramResponse
+  }
+  if (options?.deferDiagram && isAutoStart && !shouldFireEngine) {
+    // No engine fired — nothing to defer. Return as-is.
+    log.info(`[deferDiagram] No engine fired, returning immediately`)
+    attachVisualUpdate(tutorResponse, context)
+    return tutorResponse
+  }
 
   // For auto-start: skip waiting for engine if AI already has a renderable diagram (saves 5-15s)
   // For normal messages: engine takes priority (higher quality images)
@@ -1091,54 +1193,13 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     // Race against a hard timeout to prevent Vercel function 504 and client AbortError.
     // Auto-start gets 45s budget (must respond fast), normal messages get 60s.
     const ENGINE_TIMEOUT_MS = isAutoStart ? 45_000 : 60_000
-    const engineStartTime = Date.now()
-    const engineTimeout = new Promise<undefined>((resolve) =>
-      setTimeout(() => resolve(undefined), ENGINE_TIMEOUT_MS)
-    )
-    const engineResponse = await Promise.race([enginePromise, engineTimeout])
-    const engineElapsed = Date.now() - engineStartTime
-    const { engineResult, diagramStatus } = engineResponse ?? {}
-
-    if (engineResult) {
-      log.info(`Engine diagram succeeded in ${engineElapsed}ms — pipeline: ${engineResult.pipeline}, imageUrl length: ${engineResult.imageUrl?.length}`)
-      tutorResponse.diagram = {
-        type: 'engine_image',
-        visibleStep: 0,
-        data: {
-          imageUrl: engineResult.imageUrl,
-          pipeline: engineResult.pipeline,
-          overlay: engineResult.overlay,
-          qaVerdict: engineResult.qaVerdict,
-        },
-        // Pass step-by-step source if available (TikZ pipeline only)
-        stepByStepSource: engineResult.stepByStepSource,
-        // Pass pre-rendered step images if available (all pipelines)
-        stepImages: engineResult.stepImages,
-      }
-      tutorResponse.diagramStatus = diagramStatus
-    } else if (!engineResult && engineElapsed >= ENGINE_TIMEOUT_MS - 100) {
-      log.warn(`Engine diagram TIMED OUT after ${engineElapsed}ms (budget: ${ENGINE_TIMEOUT_MS}ms) — returning without diagram`)
-      // Let engine finish in background (result is cached for next request)
-      enginePromise.catch((err) => { log.warn({ err }, 'Background engine diagram failed after timeout') })
-      tutorResponse.diagramStatus = { status: 'timeout', willRetryOnNext: true }
-    } else {
-      log.warn(`Engine diagram returned undefined in ${engineElapsed}ms (did not timeout — engine failed or was skipped)`)
-      tutorResponse.diagramStatus = diagramStatus
+    const resolved = await resolveEngineDiagram(enginePromise, aiDiagram, isAutoStart, ENGINE_TIMEOUT_MS)
+    if (resolved.diagram) {
+      tutorResponse.diagram = resolved.diagram
     }
-
-    if (!engineResult) {
-      if (aiDiagram && (aiDiagram.type === 'engine_image' || aiDiagram.type === 'step_sequence')) {
-        // Engine didn't produce a result — restore AI-generated diagram only if it's
-        // a type the frontend can render (engine_image or step_sequence).
-        // React SVG component types (fbd, coordinate_plane, etc.) are NOT supported.
-        tutorResponse.diagram = aiDiagram
-        log.info(`Using AI-generated diagram fallback (type: ${aiDiagram.type})`)
-      } else {
-        // Engine didn't produce a result and AI diagram is not renderable.
-        // MUST delete to prevent non-renderable types (fbd, etc.) from reaching frontend.
-        delete tutorResponse.diagram
-        log.info(`No engine result. AI diagram type '${aiDiagram?.type || 'none'}' not renderable. Diagram removed.`)
-      }
+    tutorResponse.diagramStatus = resolved.diagramStatus
+    if (resolved.removeDiagram) {
+      delete tutorResponse.diagram
     }
   }
 
@@ -1339,6 +1400,51 @@ ${(referenceAnalysis.keyDefinitions || []).slice(0, 5).map((d, i) => `${i + 1}. 
   return prompt
 }
 
+/**
+ * Extract a balanced JSON object from text starting from `searchFrom`.
+ * Uses brace counting that respects JSON string escaping.
+ * Returns the extracted substring or null if no balanced object found.
+ */
+function extractJsonFromPosition(text: string, searchFrom: number): { json: string; end: number } | null {
+  const start = text.indexOf('{', searchFrom)
+  if (start === -1) return null
+
+  let depth = 0
+  let inString = false
+  let escape = false
+
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i]
+
+    if (escape) {
+      escape = false
+      continue
+    }
+
+    if (ch === '\\' && inString) {
+      escape = true
+      continue
+    }
+
+    if (ch === '"') {
+      inString = !inString
+      continue
+    }
+
+    if (inString) continue
+
+    if (ch === '{') depth++
+    if (ch === '}') {
+      depth--
+      if (depth === 0) {
+        return { json: text.slice(start, i + 1), end: i + 1 }
+      }
+    }
+  }
+
+  return null
+}
+
 function parseTutorResponse(response: Anthropic.Message): TutorResponse {
   const textContent = response.content.find((b) => b.type === 'text')
   if (!textContent || textContent.type !== 'text') {
@@ -1347,30 +1453,51 @@ function parseTutorResponse(response: Anthropic.Message): TutorResponse {
 
   const text = textContent.text
 
-  // Try to parse JSON response
-  try {
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0])
-      return {
-        message: String(parsed.message || text),
-        pedagogicalIntent: validateIntent(parsed.pedagogicalIntent),
-        detectedUnderstanding: Boolean(parsed.detectedUnderstanding),
-        detectedMisconception: parsed.detectedMisconception || null,
-        suggestedNextAction: String(parsed.suggestedNextAction || ''),
-        estimatedProgress: Math.min(100, Math.max(0, Number(parsed.estimatedProgress) || 0)),
-        shouldEndSession: Boolean(parsed.shouldEndSession),
-        celebrationMessage: parsed.celebrationMessage || undefined,
-        diagram: parseDiagramResponse(parsed.diagram),
+  // Try to find and parse a JSON response using balanced brace extraction.
+  // Retry from subsequent '{' positions if the first match isn't valid JSON
+  // (e.g., set notation {1,2,3} appearing before the actual JSON).
+  let searchFrom = 0
+  while (searchFrom < text.length) {
+    const extracted = extractJsonFromPosition(text, searchFrom)
+    if (!extracted) break
+
+    try {
+      const parsed = JSON.parse(extracted.json)
+      // Validate that parsed.message exists and is a string
+      const message = typeof parsed.message === 'string' && parsed.message.trim()
+        ? parsed.message
+        : null
+      if (message) {
+        return {
+          message,
+          pedagogicalIntent: validateIntent(parsed.pedagogicalIntent),
+          detectedUnderstanding: Boolean(parsed.detectedUnderstanding),
+          detectedMisconception: parsed.detectedMisconception || null,
+          suggestedNextAction: String(parsed.suggestedNextAction || ''),
+          estimatedProgress: Math.min(100, Math.max(0, Number(parsed.estimatedProgress) || 0)),
+          shouldEndSession: Boolean(parsed.shouldEndSession),
+          celebrationMessage: parsed.celebrationMessage || undefined,
+          diagram: parseDiagramResponse(parsed.diagram),
+        }
       }
+      // parsed.message was falsy — try next '{' position
+      log.warn('parseTutorResponse: JSON parsed but message field was empty/missing, trying next object')
+    } catch {
+      // Not valid JSON — try next '{' position
     }
-  } catch {
-    // Fall through to plain text handling
+
+    // Move past this '{' and try the next one
+    searchFrom = text.indexOf('{', searchFrom) + 1
+    if (searchFrom === 0) break // indexOf returned -1
   }
 
-  // If no JSON, use the text as-is
+  // If no valid JSON found, strip any JSON-looking blocks and use remaining text.
+  // This prevents raw JSON from being displayed as the tutor message.
+  log.warn('parseTutorResponse: No valid JSON with message field found, using plain text')
+  const cleanedText = text.replace(/```json[\s\S]*?```/g, '').replace(/\{[\s\S]*\}/g, '').trim()
+
   return {
-    message: text,
+    message: cleanedText || text,
     pedagogicalIntent: 'guide_next_step',
     detectedUnderstanding: false,
     detectedMisconception: null,
