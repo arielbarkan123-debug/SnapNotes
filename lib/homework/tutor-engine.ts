@@ -1030,12 +1030,15 @@ export async function generateTutorResponse(
     log.info(`Student explicitly requested diagram. enableDiagrams=${enableDiagrams}, previousDiagram=${!!previousDiagram}. Overriding toggle.`)
   }
 
+  // Visual Builder mode explicitly requests new diagrams on every message
+  const isVisualBuilder = explanationStyle === 'visual_builder'
+
   // Fire engine diagram in parallel with AI call
-  // Trigger when: (1) diagrams enabled and no previous diagram, OR (2) student explicitly requests a diagram
-  // Note: studentRequestsDiagram overrides enableDiagrams toggle — if the student asks for a diagram, we generate it
+  // Trigger when: (1) diagrams enabled and no previous diagram, OR (2) student explicitly requests a diagram,
+  // OR (3) Visual Builder is active (always generates fresh diagrams for each response)
   const engineConditions = {
     enabledOrRequested: enableDiagrams || studentRequestsDiagram,
-    noPreviousOrRequested: !previousDiagram || studentRequestsDiagram,
+    noPreviousOrRequested: !previousDiagram || studentRequestsDiagram || isVisualBuilder,
     engineSupported: shouldUseEngine(diagramTopic),
   }
   const shouldFireEngine = engineConditions.enabledOrRequested && engineConditions.noPreviousOrRequested && engineConditions.engineSupported
@@ -1125,8 +1128,13 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
   // For step_sequence mode (Visual Builder) or multi-step problems with guide/show_answer intent
   // SKIP step sequence on auto-start: it generates 3-5 diagrams sequentially (30-150s)
   // which causes Vercel function timeouts. The single engine diagram (parallel) is enough.
+  // Visual Builder (chatDiagramMode === 'step_sequence') bypasses the !previousDiagram check
+  // because the user explicitly requested fresh diagrams with each response.
   const intent = tutorResponse.pedagogicalIntent
-  if (enableDiagrams && !previousDiagram && !isAutoStart && !isQuickMode &&
+  const allowStepSequence = chatDiagramMode === 'step_sequence'
+    ? true  // Visual Builder: always generate fresh step sequences
+    : !previousDiagram  // Other modes: only if no previous diagram exists
+  if (enableDiagrams && allowStepSequence && !isAutoStart && !isQuickMode &&
       (chatDiagramMode === 'step_sequence' ||
        (isMultiStepProblem(diagramTopic) && (intent === 'show_answer' || intent === 'guide_next_step')))) {
     try {
