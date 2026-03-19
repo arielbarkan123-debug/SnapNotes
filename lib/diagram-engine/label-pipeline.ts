@@ -128,12 +128,15 @@ export async function uploadBaseImage(
 
     const buffer = Buffer.from(await response.arrayBuffer())
     const supabase = createServiceClient()
-    const storagePath = `${userId}/${diagramHash}/base.png`
+    // Detect actual content type — Recraft V4 returns WebP, not PNG
+    const actualContentType = response.headers.get('content-type') || 'image/webp'
+    const ext = actualContentType.includes('webp') ? 'webp' : actualContentType.includes('jpeg') ? 'jpg' : 'png'
+    const storagePath = `${userId}/${diagramHash}/base.${ext}`
 
     const { data, error } = await supabase.storage
       .from(BUCKET)
       .upload(storagePath, buffer, {
-        contentType: 'image/png',
+        contentType: actualContentType,
         cacheControl: '86400',
         upsert: true,
       })

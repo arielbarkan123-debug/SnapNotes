@@ -1125,16 +1125,13 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     return tutorResponse
   }
 
-  // For step_sequence mode (Visual Builder) or multi-step problems with guide/show_answer intent
-  // SKIP step sequence on auto-start: it generates 3-5 diagrams sequentially (30-150s)
-  // which causes Vercel function timeouts. The single engine diagram (parallel) is enough.
-  // Visual Builder (chatDiagramMode === 'step_sequence') bypasses the !previousDiagram check
-  // because the user explicitly requested fresh diagrams with each response.
+  // For step_sequence mode (Visual Builder) or multi-step problems with guide/show_answer intent.
+  // Step sequences generate 3-5 diagrams sequentially (30-150s) which causes timeouts.
+  // SKIP on auto-start and when a previous diagram exists (use engine diagram instead).
+  // Visual Builder follow-ups use the engine diagram (single Recraft image with labels)
+  // which is faster (~30s) and stays within the 120s Vercel function timeout.
   const intent = tutorResponse.pedagogicalIntent
-  const allowStepSequence = chatDiagramMode === 'step_sequence'
-    ? true  // Visual Builder: always generate fresh step sequences
-    : !previousDiagram  // Other modes: only if no previous diagram exists
-  if (enableDiagrams && allowStepSequence && !isAutoStart && !isQuickMode &&
+  if (enableDiagrams && !previousDiagram && !isAutoStart && !isQuickMode &&
       (chatDiagramMode === 'step_sequence' ||
        (isMultiStepProblem(diagramTopic) && (intent === 'show_answer' || intent === 'guide_next_step')))) {
     try {

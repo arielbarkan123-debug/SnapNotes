@@ -441,8 +441,17 @@ async function generateRecraftDiagramV2(
     log.info(`[v2] Phase 3 complete: verification done`);
   }
 
-  // Generate step metadata (shared with v1)
-  const stepMetadata = await generateStepMetadata(question);
+  // v2 uses client-side SVG label overlay — step metadata is derived from labels directly.
+  // Skip the expensive generateStepMetadata Claude call (~10-15s) to stay within timeout.
+  const stepMetadata = overlayLabels.length > 0
+    ? overlayLabels.map((label, i) => ({
+        step: i + 1,
+        label: label.text,
+        labelHe: label.textHe || label.text,
+        explanation: label.description || label.text,
+        explanationHe: label.descriptionHe || label.description || label.text,
+      }))
+    : undefined;
 
   // v2: NO TikZ compositing. Return base image + label data.
   // The frontend LabeledDiagramOverlay renders labels as SVG+HTML overlay.
