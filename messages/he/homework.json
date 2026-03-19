@@ -51,6 +51,8 @@
   "tryAgain": "נסה שוב בגישה אחרת",
   "notFound": "בדיקת שיעורי הבית לא נמצאה",
   "loadError": "טעינת התוצאות נכשלה",
+  "diagramNotAvailable": "לא ניתן ליצור תרשים לנושא זה",
+  "diagramTimeout": "התרשים עדיין בהכנה — ייתכן שיופיע בהודעה הבאה",
   "homeworkCheck": "בדיקת שיעורי בית",
   "inputMode": {
     "uploadImage": "העלאת תמונה",

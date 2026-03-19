@@ -459,3 +459,32 @@ export * from './prepare'
 
 export * from './walkthrough'
 
+// ─── Diagram Overlay Labels ─────────────────────────────────────────────────
+
+export interface OverlayLabel {
+  text: string
+  textHe?: string
+  x: number
+  y: number
+  targetX: number
+  targetY: number
+  description?: string
+  descriptionHe?: string
+  stepGroup?: number
+  found?: boolean  // defaults to true when absent
+}
+
+export interface RecraftStepMeta {
+  step: number
+  label: string
+  labelHe: string
+  explanation: string
+  explanationHe: string
+}
+
+export type DiagramStatus =
+  | { status: 'generating' }
+  | { status: 'success'; imageUrl: string; labels: OverlayLabel[]; stepMetadata?: RecraftStepMeta[] }
+  | { status: 'failed'; reason: string; fallbackText?: string }
+  | { status: 'timeout'; willRetryOnNext: boolean }
+

@@ -284,13 +284,20 @@ export default function HomeworkResultsPage() {
         throw err
       }
 
-      const { session: updated, solved, relatedVideos: videos } = await res.json()
+      const { session: updated, solved, relatedVideos: videos, diagramStatus } = await res.json()
       setHelpSession(updated)
       setRelatedVideos(videos || [])
 
       if (solved) {
         toast.success('Congratulations! You solved it!')
         trackFeature('homework_help_solved', { sessionId })
+      }
+
+      // Notify user about diagram generation failures
+      if (diagramStatus?.status === 'failed') {
+        toast.error(t('diagramNotAvailable') || 'Could not generate diagram for this topic')
+      } else if (diagramStatus?.status === 'timeout') {
+        toast.info(t('diagramTimeout') || 'Diagram is still generating — it may appear on your next message')
       }
     } catch (error) {
       log.error({ detail: error }, 'Chat error')

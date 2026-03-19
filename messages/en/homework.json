@@ -51,6 +51,8 @@
   "tryAgain": "Try again with a different approach",
   "notFound": "Homework check not found",
   "loadError": "Failed to load results",
+  "diagramNotAvailable": "Could not generate diagram for this topic",
+  "diagramTimeout": "Diagram is still generating — it may appear on your next message",
   "homeworkCheck": "Homework Check",
   "inputMode": {
     "uploadImage": "Upload Image",

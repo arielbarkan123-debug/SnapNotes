@@ -9,14 +9,7 @@
  */
 
 import StepByStepButton from './StepByStepButton'
-
-interface OverlayLabel {
-  text: string
-  x: number
-  y: number
-  targetX: number
-  targetY: number
-}
+import type { OverlayLabel } from '@/types'
 
 interface EngineDiagramImageProps {
   imageUrl: string

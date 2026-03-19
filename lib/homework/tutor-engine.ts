@@ -16,7 +16,8 @@ import type {
 } from './types'
 // Diagram generation uses a hybrid pipeline: visual-learning validation + engine routing + adapter layer
 import { validateSchema, autoCorrectDiagram, type DiagramType as VisualDiagramType, type StructuredDiagram, SCHEMA_VERSION } from '@/lib/visual-learning'
-import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
+import { tryEngineDiagram, shouldUseEngine, type EngineResult } from '@/lib/diagram-engine/integration'
+import type { DiagramStatus } from '@/types'
 import { generateStepSequence, isMultiStepProblem } from '@/lib/diagram-engine/step-sequence'
 import { getExplanationStyle, type ExplanationStyleId } from '@/lib/homework/explanation-styles'
 import { getHybridPipeline } from '@/lib/diagram-engine/router'
@@ -735,17 +736,21 @@ export async function generateInitialGreeting(context: TutorContext, enableDiagr
 
   // Pipeline selection: quick forces TikZ (fast HTTP API, ~8s). Accurate uses AI router
   // (Recraft/Matplotlib/LaTeX, but can take 30-50s — too slow for greeting).
-  // Recraft quality is available via walkthrough (240s budget) or "Detailed diagram" mode.
+  // Exception: anatomy/biology topics need Recraft even in quick mode (TikZ can't render them).
   const isQuickMode = pipelineMode === 'quick'
-  const forcePipeline = isQuickMode ? 'tikz' as const : undefined
+  const needsRecraft = /\b(anatomy|human eye|human heart|human brain|human lung|human ear|human skin|cell structure|cell diagram|organ|dna|bacteria|virus|labeled)\b/i
+  const forcePipeline = isQuickMode
+    ? (needsRecraft.test(questionText) ? undefined : 'tikz' as const)
+    : undefined
+  const skipVerification = isQuickMode  // quick mode Recraft skips Phase 3
   const skipQA = isQuickMode
   const skipStepCapture = isQuickMode
 
   // Fire engine diagram in parallel with AI call (if topic needs it)
-  const enginePromise = enableDiagrams && shouldUseEngine(questionText)
-    ? tryEngineDiagram(questionText, forcePipeline, { skipStepCapture, skipQA }).catch((err) => {
+  const enginePromise: Promise<EngineResult | undefined> = enableDiagrams && shouldUseEngine(questionText)
+    ? tryEngineDiagram(questionText, forcePipeline, { skipStepCapture, skipQA, skipVerification, userId: context.session.user_id }).catch((err): EngineResult => {
         log.warn('Engine diagram failed for greeting:', err)
-        return undefined
+        return { diagramStatus: { status: 'failed', reason: String(err) } }
       })
     : Promise.resolve(undefined)
 
@@ -840,8 +845,10 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
   }
 
   // Engine diagram takes priority over AI diagram (higher quality images)
-  const engineResult = await enginePromise
+  const engineResponse = await enginePromise
+  const { engineResult, diagramStatus } = engineResponse ?? {}
   log.info(`Engine result received: ${engineResult ? 'success' : 'undefined'}`)
+  tutorResponse.diagramStatus = diagramStatus
   if (engineResult) {
     log.info(`Engine result details - pipeline: ${engineResult.pipeline}, imageUrl length: ${engineResult.imageUrl?.length || 0}`)
     tutorResponse.diagram = {
@@ -958,16 +965,20 @@ export async function generateTutorResponse(
 
   // Pipeline selection: quick forces TikZ (fast HTTP API, ~8s). Accurate uses AI router
   // (Recraft/Matplotlib/LaTeX, but can take 30-50s — too slow for chat responses).
-  // Recraft quality is available via walkthrough (240s budget) or "Detailed diagram" mode.
+  // Exception: anatomy/biology topics need Recraft even in quick mode (TikZ can't render them).
   const isQuickMode = pipelineMode === 'quick'
-  const forcePipeline = isQuickMode ? 'tikz' as const : undefined
+  const needsRecraft = /\b(anatomy|human eye|human heart|human brain|human lung|human ear|human skin|cell structure|cell diagram|organ|dna|bacteria|virus|labeled)\b/i
+  const forcePipeline = isQuickMode
+    ? (needsRecraft.test(diagramTopic) ? undefined : 'tikz' as const)
+    : undefined
+  const skipVerification = isQuickMode  // quick mode Recraft skips Phase 3
   const skipQA = isQuickMode
   const skipStepCapture = isQuickMode
 
-  const enginePromise = shouldFireEngine
-    ? tryEngineDiagram(diagramTopic, forcePipeline, { skipStepCapture, skipQA }).catch((err) => {
+  const enginePromise: Promise<EngineResult | undefined> = shouldFireEngine
+    ? tryEngineDiagram(diagramTopic, forcePipeline, { skipStepCapture, skipQA, skipVerification, userId: context.session.user_id }).catch((err): EngineResult => {
         log.warn('Engine diagram failed for chat:', err)
-        return undefined
+        return { diagramStatus: { status: 'failed', reason: String(err) } }
       })
     : Promise.resolve(undefined)
 
@@ -1085,8 +1096,9 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     const engineTimeout = new Promise<undefined>((resolve) =>
       setTimeout(() => resolve(undefined), ENGINE_TIMEOUT_MS)
     )
-    const engineResult = await Promise.race([enginePromise, engineTimeout])
+    const engineResponse = await Promise.race([enginePromise, engineTimeout])
     const engineElapsed = Date.now() - engineStartTime
+    const { engineResult, diagramStatus } = engineResponse ?? {}
 
     if (engineResult) {
       log.info(`Engine diagram succeeded in ${engineElapsed}ms — pipeline: ${engineResult.pipeline}, imageUrl length: ${engineResult.imageUrl?.length}`)
@@ -1104,12 +1116,15 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
         // Pass pre-rendered step images if available (all pipelines)
         stepImages: engineResult.stepImages,
       }
+      tutorResponse.diagramStatus = diagramStatus
     } else if (!engineResult && engineElapsed >= ENGINE_TIMEOUT_MS - 100) {
       log.warn(`Engine diagram TIMED OUT after ${engineElapsed}ms (budget: ${ENGINE_TIMEOUT_MS}ms) — returning without diagram`)
       // Let engine finish in background (result is cached for next request)
-      enginePromise.catch(() => {})
+      enginePromise.catch((err) => { log.warn({ err }, 'Background engine diagram failed after timeout') })
+      tutorResponse.diagramStatus = { status: 'timeout', willRetryOnNext: true }
     } else {
       log.warn(`Engine diagram returned undefined in ${engineElapsed}ms (did not timeout — engine failed or was skipped)`)
+      tutorResponse.diagramStatus = diagramStatus
     }
 
     if (!engineResult) {

@@ -4,7 +4,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import type { TutorDiagramState, PedagogicalIntent, HintLevel } from '@/lib/homework/types'
 import { createErrorResponse, ErrorCodes } from '@/lib/errors'
 import { getFilteredDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-schemas'
-import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
+import { tryEngineDiagram, shouldUseEngine, type EngineResult } from '@/lib/diagram-engine/integration'
 import { getExplanationStyle } from '@/lib/homework/explanation-styles'
 import { AI_MODEL } from '@/lib/ai/claude'
 import { getContentLanguage, buildLanguageInstruction as buildLangInstruction } from '@/lib/ai/language'
@@ -234,9 +234,9 @@ ${wasCorrect === false ? '**The student answered incorrectly and is asking for h
     // Fire engine diagram generation in parallel with AI call (if enabled and topic needs it).
     // This saves 10-60s vs running them sequentially.
     const enginePromise = enableDiagrams && shouldUseEngine(question)
-      ? tryEngineDiagram(question).catch((err) => {
+      ? tryEngineDiagram(question).catch((err): EngineResult => {
           log.warn({ err }, 'Engine diagram failed, using fallback')
-          return undefined
+          return { diagramStatus: { status: 'failed' as const, reason: String(err) } }
         })
       : Promise.resolve(undefined)
 
@@ -280,16 +280,16 @@ ${wasCorrect === false ? '**The student answered incorrectly and is asking for h
     // The engine is the ONLY diagram source — clear any AI-returned diagram
     delete tutorResponse.diagram  // Don't use AI's old-format diagram
 
-    const engineResult = await enginePromise
-    if (engineResult) {
+    const engineResponse = await enginePromise
+    if (engineResponse?.engineResult) {
       tutorResponse.diagram = {
         type: 'engine_image',
         visibleStep: 0,
         data: {
-          imageUrl: engineResult.imageUrl,
-          pipeline: engineResult.pipeline,
-          overlay: engineResult.overlay,
-          qaVerdict: engineResult.qaVerdict,
+          imageUrl: engineResponse.engineResult.imageUrl,
+          pipeline: engineResponse.engineResult.pipeline,
+          overlay: engineResponse.engineResult.overlay,
+          qaVerdict: engineResponse.engineResult.qaVerdict,
         },
       }
     }

@@ -3,6 +3,14 @@ import { AI_MODEL } from '@/lib/ai/claude';
 import { Sandbox } from '@e2b/code-interpreter';
 import { generateRecraftImage, type RecraftStyle } from './recraft-client';
 import { createLogger } from '@/lib/logger'
+import {
+  generateLabelContent,
+  mapLabelsToImage,
+  verifyLabelPlacement,
+  computeLabelPositions,
+  uploadBaseImage,
+} from './label-pipeline'
+import { generateDiagramHash } from './step-capture/upload-steps'
 
 const log = createLogger('diagram:recraft-executor')
 
@@ -13,21 +21,8 @@ const anthropic = new Anthropic({
 // Custom E2B template ID with texlive-full pre-installed
 const LATEX_TEMPLATE_ID = process.env.E2B_LATEX_TEMPLATE_ID || undefined;
 
-export interface OverlayLabel {
-  text: string;
-  x: number;
-  y: number;
-  targetX: number;
-  targetY: number;
-}
-
-export interface RecraftStepMeta {
-  step: number;
-  label: string;
-  labelHe: string;
-  explanation: string;
-  explanationHe: string;
-}
+import type { OverlayLabel, RecraftStepMeta } from '@/types'
+export type { OverlayLabel, RecraftStepMeta }
 
 export interface RecraftResult {
   imageUrl: string;
@@ -160,8 +155,16 @@ Return ONLY a valid JSON array. No explanation, no markdown fences, no text befo
  * 4. Claude Vision analyzes the image and places educational labels as JSON overlay
  */
 export async function generateRecraftDiagram(
-  question: string
+  question: string,
+  userId?: string,
+  skipVerification?: boolean,
 ): Promise<RecraftResult | RecraftError> {
+  const pipelineVersion = process.env.RECRAFT_PIPELINE_VERSION || 'v1'
+
+  if (pipelineVersion === 'v2' && userId) {
+    return generateRecraftDiagramV2(question, userId, skipVerification)
+  }
+
   log.info(`generateRecraftDiagram called with: "${question.slice(0, 80)}..."`);
 
   const { style, is3D } = classifyTopic(question);
@@ -187,7 +190,8 @@ export async function generateRecraftDiagram(
       rewriteText && rewriteText.type === 'text'
         ? rewriteText.text.trim().slice(0, 950)
         : buildFallbackPrompt(question, is3D);
-  } catch {
+  } catch (err) {
+    log.warn({ detail: err }, 'v1 prompt rewrite failed, using fallback');
     cleanPrompt = buildFallbackPrompt(question, is3D);
   }
 
@@ -201,7 +205,7 @@ export async function generateRecraftDiagram(
       style,
       size: '1024x1024',
       format: 'png',
-      // Note: no_text and negative_prompt for text are now enforced in recraft-client.ts
+      negative_prompt: 'callout lines, leader lines, pointer dots, annotation markers, reference lines, label dots, numbered markers, indicator lines',
     });
     imageUrl = image.url;
   } catch (err) {
@@ -213,7 +217,7 @@ export async function generateRecraftDiagram(
   // Step 3: Claude Vision identifies label positions
   let labels: OverlayLabel[] | undefined;
   try {
-    const imageResponse = await fetch(imageUrl);
+    const imageResponse = await fetch(imageUrl, { signal: AbortSignal.timeout(15000) });
     const imageBuffer = await imageResponse.arrayBuffer();
     const base64Image = Buffer.from(imageBuffer).toString('base64');
     const contentType = imageResponse.headers.get('content-type') || 'image/png';
@@ -268,7 +272,28 @@ export async function generateRecraftDiagram(
   }
 
   // Step 5: Generate step-by-step teaching explanations (for text-based walkthrough)
-  let stepMetadata: RecraftStepMeta[] | undefined;
+  const stepMetadata = await generateStepMetadata(question);
+
+  // Step 6: Composite labels using TikZ (text is ONLY added via TikZ, never by Recraft)
+  if (labels && labels.length > 0) {
+    log.info(`Compositing ${labels.length} labels via TikZ...`);
+    const compositedUrl = await compositeWithTikzLabels(imageUrl, labels);
+    if (compositedUrl) {
+      log.info('TikZ composite successful');
+      return { imageUrl: compositedUrl, baseImageUrl: imageUrl, labels, stepMetadata };
+    }
+    log.info('TikZ composite failed, returning base image without labels');
+  }
+
+  // Return base image if no labels or compositing failed
+  return { imageUrl, baseImageUrl: imageUrl, labels, stepMetadata };
+}
+
+/**
+ * Shared helper: Generate step-by-step teaching explanations via Claude.
+ * Used by both v1 and v2 pipelines. Returns undefined on failure (non-blocking).
+ */
+async function generateStepMetadata(question: string): Promise<RecraftStepMeta[] | undefined> {
   try {
     const stepsMsg = await anthropic.messages.create({
       model: AI_MODEL,
@@ -294,33 +319,141 @@ Return ONLY a valid JSON array, no other text:
       const parsed = JSON.parse(jsonStr) as RecraftStepMeta[];
       if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].label) {
         // Ensure all required fields exist (AI may omit Hebrew translations)
-        stepMetadata = parsed.map((s, i) => ({
+        const result = parsed.map((s, i) => ({
           step: s.step ?? i + 1,
           label: s.label || `Step ${i + 1}`,
           labelHe: s.labelHe || s.label || `שלב ${i + 1}`,
           explanation: s.explanation || '',
           explanationHe: s.explanationHe || s.explanation || '',
         }));
-        log.info(`Generated ${stepMetadata.length} step explanations for recraft diagram`);
+        log.info(`Generated ${result.length} step explanations for recraft diagram`);
+        return result;
+      } else {
+        log.warn({ parsedLength: (parsed as unknown[])?.length }, 'Step metadata parsed but failed validation — discarding')
       }
     }
   } catch (err) {
     log.warn({ err }, 'Step metadata generation failed (non-blocking)');
   }
+  return undefined;
+}
 
-  // Step 6: Composite labels using TikZ (text is ONLY added via TikZ, never by Recraft)
-  if (labels && labels.length > 0) {
-    log.info(`Compositing ${labels.length} labels via TikZ...`);
-    const compositedUrl = await compositeWithTikzLabels(imageUrl, labels);
-    if (compositedUrl) {
-      log.info('TikZ composite successful');
-      return { imageUrl: compositedUrl, baseImageUrl: imageUrl, labels, stepMetadata };
-    }
-    log.info('TikZ composite failed, returning base image without labels');
+/**
+ * V2 Pipeline: Smart Label Pipeline behind RECRAFT_PIPELINE_VERSION=v2 flag.
+ *
+ * Flow:
+ * Phase 1 (parallel): generateLabelContent + generateRecraftImage
+ * Upload: base image → Supabase permanent URL
+ * Phase 2: mapLabelsToImage (Vision maps labels to image coordinates)
+ * Compute: computeLabelPositions (collision avoidance)
+ * Phase 3 (optional): verifyLabelPlacement (second Vision pass)
+ * Step metadata: reuse shared generateStepMetadata helper
+ */
+async function generateRecraftDiagramV2(
+  question: string,
+  userId: string,
+  skipVerification?: boolean,
+): Promise<RecraftResult | RecraftError> {
+  log.info(`[v2] generateRecraftDiagramV2 called with: "${question.slice(0, 80)}..."`);
+
+  const { style, is3D } = classifyTopic(question);
+  const rewriteTemplate = is3D ? REWRITE_PROMPT_3D : REWRITE_PROMPT_2D;
+
+  log.info(`[v2] Style: ${style}, 3D: ${is3D}`);
+
+  // Step 1: Rewrite prompt for clean image generation (same as v1)
+  let cleanPrompt: string;
+  try {
+    const rewriteMsg = await anthropic.messages.create({
+      model: AI_MODEL,
+      max_tokens: 400,
+      messages: [
+        {
+          role: 'user',
+          content: rewriteTemplate.replace('{QUESTION}', question),
+        },
+      ],
+    });
+    const rewriteText = rewriteMsg.content.find((b) => b.type === 'text');
+    cleanPrompt =
+      rewriteText && rewriteText.type === 'text'
+        ? rewriteText.text.trim().slice(0, 950)
+        : buildFallbackPrompt(question, is3D);
+  } catch (err) {
+    log.warn({ detail: err }, 'v2 prompt rewrite failed, using fallback');
+    cleanPrompt = buildFallbackPrompt(question, is3D);
   }
 
-  // Return base image if no labels or compositing failed
-  return { imageUrl, baseImageUrl: imageUrl, labels, stepMetadata };
+  log.info(`[v2] Prompt: ${cleanPrompt.slice(0, 120)}...`);
+
+  // Phase 1 (parallel): Label content generation + Recraft image generation
+  const [labelResult, imageResult] = await Promise.allSettled([
+    generateLabelContent(question),
+    generateRecraftImage({
+      prompt: cleanPrompt,
+      style,
+      size: '1024x1024',
+      format: 'png',
+      negative_prompt: 'callout lines, leader lines, pointer dots, annotation markers, reference lines, label dots, numbered markers, indicator lines',
+    }),
+  ]);
+
+  // Extract label content (graceful degradation — empty array on failure)
+  const labelContent = labelResult.status === 'fulfilled' ? labelResult.value : [];
+  if (labelResult.status === 'rejected') {
+    log.warn({ err: labelResult.reason }, '[v2] Label content generation failed');
+  }
+
+  // Extract image URL (fatal — cannot proceed without image)
+  if (imageResult.status === 'rejected') {
+    const errMsg = imageResult.reason instanceof Error
+      ? imageResult.reason.message
+      : 'Recraft generation failed';
+    return { error: errMsg };
+  }
+  const recraftImageUrl = imageResult.value.url;
+
+  log.info(`[v2] Phase 1 complete: ${labelContent.length} labels, image ready`);
+
+  // Upload base image to Supabase for permanent URL
+  const diagramHash = generateDiagramHash(question, 'recraft-v2');
+  const permanentUrl = await uploadBaseImage(recraftImageUrl, userId, diagramHash);
+  // Use permanent URL if upload succeeded, fall back to Recraft CDN URL
+  const baseImageUrl = permanentUrl || recraftImageUrl;
+
+  log.info(`[v2] Base image URL: ${permanentUrl ? 'Supabase' : 'Recraft CDN (fallback)'}`);
+
+  // Phase 2: Map labels to image coordinates via Vision
+  let overlayLabels: OverlayLabel[] = [];
+  if (labelContent.length > 0) {
+    const visionResults = await mapLabelsToImage(baseImageUrl, labelContent, question);
+
+    // Compute label text positions with collision avoidance
+    overlayLabels = computeLabelPositions(visionResults, labelContent);
+    log.info(`[v2] Phase 2 complete: ${overlayLabels.length} positioned labels`);
+  }
+
+  // Phase 3 (optional): Verify label placement with second Vision pass
+  if (!skipVerification && overlayLabels.length > 0) {
+    overlayLabels = await verifyLabelPlacement(baseImageUrl, overlayLabels);
+    // Recompute positions after verification corrections
+    overlayLabels = fixLabelCollisions(overlayLabels);
+    log.info(`[v2] Phase 3 complete: verification done`);
+  }
+
+  // Generate step metadata (shared with v1)
+  const stepMetadata = await generateStepMetadata(question);
+
+  // v2: NO TikZ compositing. Return base image + label data.
+  // The frontend LabeledDiagramOverlay renders labels as SVG+HTML overlay.
+  log.info({ labelCount: overlayLabels.length }, '[v2] Pipeline complete — returning labels for client-side rendering');
+
+  return {
+    imageUrl: baseImageUrl,
+    baseImageUrl,
+    labels: overlayLabels.length > 0 ? overlayLabels : undefined,
+    stepMetadata,
+  };
 }
 
 /**
@@ -535,7 +668,7 @@ else:
 
     return null;
   } catch (err) {
-    log.error({ detail: err }, 'Error');
+    log.error({ detail: err }, 'compositeWithTikzLabels failed — returning base image without labels');
     return null;
   } finally {
     await sandbox.kill();

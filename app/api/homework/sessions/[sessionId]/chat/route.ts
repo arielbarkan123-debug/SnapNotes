@@ -310,6 +310,7 @@ export async function POST(
 
     return NextResponse.json({
       tutorResponse,
+      diagramStatus: tutorResponse.diagramStatus,  // Transient — not persisted in conversation DB
       session: finalSession,
       solved: solutionCheck.solved,
       relatedVideos,

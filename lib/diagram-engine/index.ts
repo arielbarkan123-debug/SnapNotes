@@ -2,7 +2,7 @@ import { SYSTEM_PROMPT } from './system-prompt';
 import { executeCode, detectMode, type RenderMode } from './e2b-executor';
 import { generateTikzDiagram } from './tikz-executor';
 import { generateRecraftDiagram } from './recraft-executor';
-import type { OverlayLabel, RecraftStepMeta } from './recraft-executor';
+import type { OverlayLabel, RecraftStepMeta } from '@/types';
 import { routeQuestionWithAI, getFallbackPipeline, type Pipeline } from './router';
 import { postProcessDiagram } from './post-process';
 import { getQAPrompt } from './qa-prompts';
@@ -123,7 +123,7 @@ async function qaCheckDiagram(
       issues: typeof parsed.issues === 'string' ? parsed.issues : '',
     };
   } catch (err) {
-    log.error({ err }, 'Vision check failed, passing by default');
+    log.error({ err }, 'Vision QA check failed — passing diagram by default (QA was skipped, not validated)');
     // If QA itself fails, don't block the user
     return { pass: true, issues: '' };
   }
@@ -338,7 +338,7 @@ async function generateE2BDiagram(
 export async function generateDiagram(
   question: string,
   forcePipeline?: Pipeline,
-  options?: { skipStepCapture?: boolean; skipQA?: boolean }
+  options?: { skipStepCapture?: boolean; skipQA?: boolean; userId?: string; skipVerification?: boolean }
 ): Promise<DiagramResult | DiagramError> {
   const pipeline = forcePipeline || await routeQuestionWithAI(question);
   log.info(`Question: "${question.slice(0, 80)}..." → Pipeline: ${pipeline}`);
@@ -353,8 +353,8 @@ export async function generateDiagram(
     }
     log.info(`MISS for pipeline ${pipeline}`);
     trackDiagramEvent({ type: 'cache_miss', pipeline, question, durationMs: 0, attempts: 0, cacheHit: false });
-  } catch {
-    // Cache unavailable — not fatal, proceed with generation
+  } catch (err) {
+    log.warn({ err }, 'Cache check failed — proceeding with generation')
   }
 
   const startTime = performance.now();
@@ -378,13 +378,13 @@ export async function generateDiagram(
   if (PIPELINE_TIMEOUT_MS) {
     log.info(`Quick mode: ${PIPELINE_TIMEOUT_MS}ms per-pipeline timeout`);
     result = await Promise.race([
-      runPipeline(pipeline, enrichedQuestion, options?.skipQA),
+      runPipeline(pipeline, enrichedQuestion, options?.skipQA, options?.userId, options?.skipVerification),
       new Promise<DiagramError>((resolve) =>
         setTimeout(() => resolve({ error: `Pipeline ${pipeline} timed out after ${PIPELINE_TIMEOUT_MS}ms`, pipeline }), PIPELINE_TIMEOUT_MS)
       ),
     ]);
   } else {
-    result = await runPipeline(pipeline, enrichedQuestion, options?.skipQA);
+    result = await runPipeline(pipeline, enrichedQuestion, options?.skipQA, options?.userId, options?.skipVerification);
   }
 
   // ── Cross-pipeline fallback: if primary failed and no forced pipeline ──
@@ -396,13 +396,13 @@ export async function generateDiagram(
 
       if (PIPELINE_TIMEOUT_MS) {
         result = await Promise.race([
-          runPipeline(fallback, enrichedQuestion, options?.skipQA),
+          runPipeline(fallback, enrichedQuestion, options?.skipQA, options?.userId, options?.skipVerification),
           new Promise<DiagramError>((resolve) =>
             setTimeout(() => resolve({ error: `Fallback ${fallback} timed out after ${PIPELINE_TIMEOUT_MS}ms`, pipeline: fallback }), PIPELINE_TIMEOUT_MS)
           ),
         ]);
       } else {
-        result = await runPipeline(fallback, enrichedQuestion, options?.skipQA);
+        result = await runPipeline(fallback, enrichedQuestion, options?.skipQA, options?.userId, options?.skipVerification);
       }
 
       if (!('error' in result)) {
@@ -537,8 +537,8 @@ export async function generateDiagram(
     // ── Cache store: save successful result (fire-and-forget) ──
     // Pass the originally-routed pipeline so fallback results are cached
     // under the key that future lookups (using routeQuestion) will use.
-    void cacheDiagram(question, result, pipeline).catch(() => {
-      // Swallow — caching is best-effort
+    void cacheDiagram(question, result, pipeline).catch((err) => {
+      log.warn({ err, pipeline }, 'Cache store failed (non-blocking)')
     });
   }
 
@@ -555,6 +555,8 @@ async function runPipeline(
   pipeline: Pipeline,
   question: string,
   skipQA?: boolean,
+  userId?: string,
+  skipVerification?: boolean,
 ): Promise<DiagramResult | DiagramError> {
   switch (pipeline) {
     case 'e2b-latex':
@@ -564,7 +566,7 @@ async function runPipeline(
     case 'tikz':
       return generateTikzWithQA(question, skipQA);
     case 'recraft':
-      return generateRecraftWithQA(question, skipQA);
+      return generateRecraftWithQA(question, skipQA, userId, skipVerification);
   }
 }
 
@@ -617,13 +619,15 @@ async function generateTikzWithQA(
 async function generateRecraftWithQA(
   question: string,
   skipQA?: boolean,
+  userId?: string,
+  skipVerification?: boolean,
 ): Promise<DiagramResult | DiagramError> {
   const MAX_QA_RETRIES = skipQA ? 0 : 2;
   log.info(`Starting for: "${question.slice(0, 80)}..."`);
 
   for (let qaRound = 0; qaRound <= MAX_QA_RETRIES; qaRound++) {
     log.info(`QA round ${qaRound + 1}/${MAX_QA_RETRIES + 1}`);
-    const recraftResult = await generateRecraftDiagram(question);
+    const recraftResult = await generateRecraftDiagram(question, userId, skipVerification);
     log.info({ result: 'error' in recraftResult ? recraftResult.error : 'success' }, 'Recraft result');
 
     if ('error' in recraftResult) {
@@ -653,6 +657,7 @@ async function generateRecraftWithQA(
       stepMetadata: recraftResult.stepMetadata,
       baseImageUrl: recraftResult.baseImageUrl,
       labels: recraftResult.labels,
+      overlay: recraftResult.labels,
     };
   }
 

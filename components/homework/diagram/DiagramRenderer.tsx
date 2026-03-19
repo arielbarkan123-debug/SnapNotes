@@ -2,11 +2,14 @@
 
 import { Component, type ReactNode, lazy, Suspense, useState, useCallback } from 'react'
 import { type DiagramState, getDiagramTypeName } from './types'
+import type { OverlayLabel } from '@/types'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('ui:diagram-renderer')
 import type { StepLayerMeta } from './types'
 import EngineDiagramImage from './EngineDiagramImage'
+import LabeledDiagramOverlay from './LabeledDiagramOverlay'
+import StepByStepButton from './StepByStepButton'
 
 const StepSequencePlayer = lazy(() => import('./StepSequencePlayer'))
 const StepByStepWalkthrough = lazy(() => import('./StepByStepWalkthrough'))
@@ -280,7 +283,7 @@ export default function DiagramRenderer({
     const engineData = diagram.data as {
       imageUrl?: string
       pipeline?: string
-      overlay?: Array<{ text: string; x: number; y: number; targetX: number; targetY: number }>
+      overlay?: OverlayLabel[]
       qaVerdict?: string
     } | undefined
 
@@ -322,6 +325,7 @@ export default function DiagramRenderer({
                 pipeline={engineData.pipeline}
                 language={language}
                 onClose={handleCloseWalkthrough}
+                overlay={engineData.overlay}
               />
             </Suspense>
           </DiagramErrorBoundary>
@@ -329,6 +333,30 @@ export default function DiagramRenderer({
       }
 
       // Default: show static diagram with optional Step by Step button
+      // For Recraft images with labels, use LabeledDiagramOverlay instead
+      if (engineData.pipeline === 'recraft' && engineData.overlay && engineData.overlay.length > 0) {
+        return (
+          <DiagramErrorBoundary diagramType={diagramType} diagramData={engineData} onError={onRenderError}>
+            <div className="relative">
+              <LabeledDiagramOverlay
+                imageUrl={engineData.imageUrl}
+                labels={engineData.overlay}
+                locale={language ?? 'en'}
+                step={null}
+              />
+              {hasStepByStep && (
+                <div className="absolute bottom-2 right-2 z-10">
+                  <StepByStepButton
+                    onClick={handleStepByStepClick}
+                    loading={walkthroughMode === 'loading'}
+                  />
+                </div>
+              )}
+            </div>
+          </DiagramErrorBoundary>
+        )
+      }
+
       return (
         <DiagramErrorBoundary diagramType={diagramType} diagramData={engineData} onError={onRenderError}>
           <EngineDiagramImage

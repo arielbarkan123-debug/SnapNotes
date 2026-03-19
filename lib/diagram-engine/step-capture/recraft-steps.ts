@@ -13,7 +13,7 @@
  */
 
 import { Sandbox } from '@e2b/code-interpreter'
-import type { OverlayLabel, RecraftStepMeta } from '../recraft-executor'
+import type { OverlayLabel, RecraftStepMeta } from '@/types'
 import type { StepImage } from '@/components/homework/diagram/types'
 import { uploadStepImages, generateDiagramHash } from './upload-steps'
 import { createLogger } from '@/lib/logger'
@@ -220,6 +220,6 @@ else:
     log.error({ err }, 'Recraft step capture error')
     return { stepImages: [], captureTimeMs: Date.now() - startTime }
   } finally {
-    await sandbox.kill().catch(() => {})
+    await sandbox.kill().catch((err) => { log.warn({ err }, 'Failed to kill E2B sandbox — may leak resources') })
   }
 }
