@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
+import { useTheme } from 'next-themes'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/contexts/ToastContext'
 import { useEventTracking } from '@/lib/analytics/hooks'
@@ -20,8 +21,6 @@ const log = createLogger('page:settings-pagex')
 // =============================================================================
 // Types
 // =============================================================================
-
-type Theme = 'light' | 'dark' | 'system'
 
 interface UserSettings {
   displayName: string
@@ -75,7 +74,7 @@ export default function SettingsPage() {
   const [hasTrackedView, setHasTrackedView] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
-  const [theme, setTheme] = useState<Theme>('system')
+  const { theme, setTheme } = useTheme()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
@@ -150,15 +149,7 @@ export default function SettingsPage() {
           // Columns may not exist yet
         }
 
-        // Load theme preference (safe access for mobile/private mode)
-        try {
-          const savedTheme = localStorage.getItem('theme') as Theme | null
-          if (savedTheme) {
-            setTheme(savedTheme)
-          }
-        } catch {
-          // localStorage not available
-        }
+        // Theme is managed by next-themes (useTheme hook) — no manual loading needed
       } catch {
         toast.error(t('toast.loadError'))
       } finally {
@@ -181,57 +172,7 @@ export default function SettingsPage() {
     }
   }, [isLoading, hasTrackedView, settings, trackFeature])
 
-  // Apply theme
-  useEffect(() => {
-    // Guard against SSR
-    if (typeof window === 'undefined') return
-
-    const applyTheme = (t: Theme) => {
-      const root = document.documentElement
-      if (t === 'system') {
-        // Safe matchMedia access with fallback
-        try {
-          const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ?? false
-          root.classList.toggle('dark', prefersDark)
-        } catch {
-          // matchMedia not available - default to light theme
-          root.classList.remove('dark')
-        }
-      } else {
-        root.classList.toggle('dark', t === 'dark')
-      }
-    }
-
-    applyTheme(theme)
-    try {
-      localStorage.setItem('theme', theme)
-    } catch {
-      // localStorage not available
-    }
-
-    // Listen for system theme changes (with safe access)
-    let mediaQuery: MediaQueryList | null = null
-    const handleChange = () => {
-      if (theme === 'system') {
-        applyTheme('system')
-      }
-    }
-
-    try {
-      mediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)') ?? null
-      mediaQuery?.addEventListener?.('change', handleChange)
-    } catch {
-      // matchMedia not available - skip listener
-    }
-
-    return () => {
-      try {
-        mediaQuery?.removeEventListener?.('change', handleChange)
-      } catch {
-        // Cleanup failed - not critical
-      }
-    }
-  }, [theme])
+  // Theme is managed by next-themes — no manual apply/persist/listen needed
 
   // Update setting helper
   const updateSetting = useCallback(<K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
