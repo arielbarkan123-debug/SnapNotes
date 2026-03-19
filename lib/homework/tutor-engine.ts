@@ -1120,7 +1120,7 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     } else if (!engineResult && engineElapsed >= ENGINE_TIMEOUT_MS - 100) {
       log.warn(`Engine diagram TIMED OUT after ${engineElapsed}ms (budget: ${ENGINE_TIMEOUT_MS}ms) — returning without diagram`)
       // Let engine finish in background (result is cached for next request)
-      enginePromise.catch(() => {})
+      enginePromise.catch((err) => { log.warn({ err }, 'Background engine diagram failed after timeout') })
       tutorResponse.diagramStatus = { status: 'timeout', willRetryOnNext: true }
     } else {
       log.warn(`Engine diagram returned undefined in ${engineElapsed}ms (did not timeout — engine failed or was skipped)`)

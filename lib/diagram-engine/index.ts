@@ -123,7 +123,7 @@ async function qaCheckDiagram(
       issues: typeof parsed.issues === 'string' ? parsed.issues : '',
     };
   } catch (err) {
-    log.error({ err }, 'Vision check failed, passing by default');
+    log.error({ err }, 'Vision QA check failed — passing diagram by default (QA was skipped, not validated)');
     // If QA itself fails, don't block the user
     return { pass: true, issues: '' };
   }
@@ -353,8 +353,8 @@ export async function generateDiagram(
     }
     log.info(`MISS for pipeline ${pipeline}`);
     trackDiagramEvent({ type: 'cache_miss', pipeline, question, durationMs: 0, attempts: 0, cacheHit: false });
-  } catch {
-    // Cache unavailable — not fatal, proceed with generation
+  } catch (err) {
+    log.warn({ err }, 'Cache check failed — proceeding with generation')
   }
 
   const startTime = performance.now();
@@ -537,8 +537,8 @@ export async function generateDiagram(
     // ── Cache store: save successful result (fire-and-forget) ──
     // Pass the originally-routed pipeline so fallback results are cached
     // under the key that future lookups (using routeQuestion) will use.
-    void cacheDiagram(question, result, pipeline).catch(() => {
-      // Swallow — caching is best-effort
+    void cacheDiagram(question, result, pipeline).catch((err) => {
+      log.warn({ err, pipeline }, 'Cache store failed (non-blocking)')
     });
   }
 

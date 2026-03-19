@@ -220,6 +220,6 @@ else:
     log.error({ err }, 'Recraft step capture error')
     return { stepImages: [], captureTimeMs: Date.now() - startTime }
   } finally {
-    await sandbox.kill().catch(() => {})
+    await sandbox.kill().catch((err) => { log.warn({ err }, 'Failed to kill E2B sandbox — may leak resources') })
   }
 }

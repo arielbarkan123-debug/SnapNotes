@@ -328,6 +328,8 @@ Return ONLY a valid JSON array, no other text:
         }));
         log.info(`Generated ${result.length} step explanations for recraft diagram`);
         return result;
+      } else {
+        log.warn({ parsedLength: (parsed as unknown[])?.length }, 'Step metadata parsed but failed validation — discarding')
       }
     }
   } catch (err) {
@@ -666,7 +668,7 @@ else:
 
     return null;
   } catch (err) {
-    log.error({ detail: err }, 'Error');
+    log.error({ detail: err }, 'compositeWithTikzLabels failed — returning base image without labels');
     return null;
   } finally {
     await sandbox.kill();
