@@ -56,22 +56,13 @@ export async function generateRecraftImage(
     throw new Error('RECRAFT_API_KEY is not configured. Add it to .env.local')
   }
 
-  // CRITICAL: Recraft must NEVER generate text. Text is added via TikZ only.
-  // Always enforce no_text control and negative prompt for text-related terms.
-  const textNegativePrompt = 'text, labels, letters, words, numbers, writing, annotations, captions, watermark, signature, title, heading, typography';
-  const combinedNegativePrompt = params.negative_prompt
-    ? `${params.negative_prompt}, ${textNegativePrompt}`
-    : textNegativePrompt;
-
-  // Recraft V4 does NOT support styles — omit the style field entirely.
+  // Recraft V4 does NOT support styles, negative_prompt, or controls.
+  // Text suppression is handled via the prompt itself (prompt rewriter adds "no text" instructions).
   // See: https://www.recraft.ai/docs/api-reference/styles
   const body: Record<string, unknown> = {
     prompt: params.prompt,
     model: 'recraftv4',
     response_format: 'url',
-    // ALWAYS enforce no text generation
-    controls: { no_text: true },
-    negative_prompt: combinedNegativePrompt,
   }
 
   if (params.size) {
