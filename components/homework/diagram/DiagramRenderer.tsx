@@ -325,6 +325,7 @@ export default function DiagramRenderer({
                 pipeline={engineData.pipeline}
                 language={language}
                 onClose={handleCloseWalkthrough}
+                overlay={engineData.overlay}
               />
             </Suspense>
           </DiagramErrorBoundary>

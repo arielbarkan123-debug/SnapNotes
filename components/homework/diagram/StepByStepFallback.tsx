@@ -7,6 +7,8 @@ import { useTranslations } from 'next-intl'
 import EngineDiagramImage from './EngineDiagramImage'
 import { MathText } from '@/components/ui/MathRenderer'
 import type { StepLayerMeta } from './types'
+import type { OverlayLabel } from '@/types'
+import LabeledDiagramOverlay from './LabeledDiagramOverlay'
 
 interface StepByStepFallbackProps {
   steps: StepLayerMeta[]
@@ -14,6 +16,7 @@ interface StepByStepFallbackProps {
   pipeline?: string
   language?: 'en' | 'he'
   onClose: () => void
+  overlay?: OverlayLabel[]  // NEW: labels for Recraft v2 diagrams
 }
 
 /**
@@ -26,6 +29,7 @@ export default function StepByStepFallback({
   pipeline,
   language = 'en',
   onClose,
+  overlay,
 }: StepByStepFallbackProps) {
   const t = useTranslations('diagram')
   const isHe = language === 'he'
@@ -60,7 +64,16 @@ export default function StepByStepFallback({
 
       {/* Final diagram */}
       <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-        <EngineDiagramImage imageUrl={finalImageUrl} pipeline={pipeline} />
+        {pipeline === 'recraft' && overlay && overlay.length > 0 ? (
+          <LabeledDiagramOverlay
+            imageUrl={finalImageUrl}
+            labels={overlay}
+            locale={language ?? 'en'}
+            step={null}
+          />
+        ) : (
+          <EngineDiagramImage imageUrl={finalImageUrl} pipeline={pipeline} />
+        )}
       </div>
 
       {/* Step list */}
