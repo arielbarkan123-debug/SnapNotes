@@ -56,10 +56,6 @@ export async function generateRecraftImage(
     throw new Error('RECRAFT_API_KEY is not configured. Add it to .env.local')
   }
 
-  // SVG format requires vector_illustration style
-  const effectiveStyle =
-    params.format === 'svg' ? 'vector_illustration' : params.style
-
   // CRITICAL: Recraft must NEVER generate text. Text is added via TikZ only.
   // Always enforce no_text control and negative prompt for text-related terms.
   const textNegativePrompt = 'text, labels, letters, words, numbers, writing, annotations, captions, watermark, signature, title, heading, typography';
