@@ -17,7 +17,6 @@ import type {
 // Diagram generation uses a hybrid pipeline: visual-learning validation + engine routing + adapter layer
 import { validateSchema, autoCorrectDiagram, type DiagramType as VisualDiagramType, type StructuredDiagram, SCHEMA_VERSION } from '@/lib/visual-learning'
 import { tryEngineDiagram, shouldUseEngine, type EngineResult } from '@/lib/diagram-engine/integration'
-import type { DiagramStatus } from '@/types'
 import { generateStepSequence, isMultiStepProblem } from '@/lib/diagram-engine/step-sequence'
 import { getExplanationStyle, type ExplanationStyleId } from '@/lib/homework/explanation-styles'
 import { getHybridPipeline } from '@/lib/diagram-engine/router'
