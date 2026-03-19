@@ -484,7 +484,7 @@ export interface RecraftStepMeta {
 
 export type DiagramStatus =
   | { status: 'generating' }
-  | { status: 'success'; imageUrl: string; labels: OverlayLabel[]; stepMetadata: RecraftStepMeta[] }
+  | { status: 'success'; imageUrl: string; labels: OverlayLabel[]; stepMetadata?: RecraftStepMeta[] }
   | { status: 'failed'; reason: string; fallbackText?: string }
   | { status: 'timeout'; willRetryOnNext: boolean }
 

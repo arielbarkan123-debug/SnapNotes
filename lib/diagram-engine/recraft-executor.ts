@@ -217,7 +217,7 @@ export async function generateRecraftDiagram(
   // Step 3: Claude Vision identifies label positions
   let labels: OverlayLabel[] | undefined;
   try {
-    const imageResponse = await fetch(imageUrl);
+    const imageResponse = await fetch(imageUrl, { signal: AbortSignal.timeout(15000) });
     const imageBuffer = await imageResponse.arrayBuffer();
     const base64Image = Buffer.from(imageBuffer).toString('base64');
     const contentType = imageResponse.headers.get('content-type') || 'image/png';

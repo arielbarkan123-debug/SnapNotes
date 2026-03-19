@@ -115,6 +115,10 @@ export async function uploadBaseImage(
   userId: string,
   diagramHash: string,
 ): Promise<string | null> {
+  if (!imageUrl || typeof imageUrl !== 'string') {
+    log.error('uploadBaseImage called with invalid imageUrl')
+    return null
+  }
   try {
     const response = await fetch(imageUrl, { signal: AbortSignal.timeout(15000) })
     if (!response.ok) {

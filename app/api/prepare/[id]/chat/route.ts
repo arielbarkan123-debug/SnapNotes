@@ -5,7 +5,7 @@ import { getContentLanguage, buildLanguageInstruction as buildLangInstruction } 
 import { ErrorCodes, createErrorResponse } from '@/lib/api/errors'
 import { getFilteredDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-schemas'
 import { AI_MODEL } from '@/lib/ai/claude'
-import { tryEngineDiagram, shouldUseEngine } from '@/lib/diagram-engine/integration'
+import { tryEngineDiagram, shouldUseEngine, type EngineResult } from '@/lib/diagram-engine/integration'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('api:prepare-chat')
@@ -223,9 +223,9 @@ export async function POST(
     // Uses the user's message/question as the prompt for the diagram engine.
     const diagramPrompt = userMessage
     const enginePromise = enableDiagrams && shouldUseEngine(diagramPrompt)
-      ? tryEngineDiagram(diagramPrompt).catch((err) => {
+      ? tryEngineDiagram(diagramPrompt).catch((err): EngineResult => {
           log.warn({ err }, 'Engine diagram failed')
-          return undefined
+          return { diagramStatus: { status: 'failed' as const, reason: String(err) } }
         })
       : Promise.resolve(undefined)
 
