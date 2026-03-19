@@ -736,10 +736,12 @@ export async function generateInitialGreeting(context: TutorContext, enableDiagr
   // Pipeline selection: quick forces TikZ (fast HTTP API, ~8s). Accurate uses AI router
   // (Recraft/Matplotlib/LaTeX, but can take 30-50s — too slow for greeting).
   // Exception: anatomy/biology topics need Recraft even in quick mode (TikZ can't render them).
+  // Exception 2: If E2B isn't configured, TikZ can't compile — fall back to AI router.
   const isQuickMode = pipelineMode === 'quick'
   const needsRecraft = /\b(anatomy|human eye|human heart|human brain|human lung|human ear|human skin|cell structure|cell diagram|organ|dna|bacteria|virus|labeled)\b/i
+  const e2bAvailable = !!process.env.E2B_LATEX_TEMPLATE_ID
   const forcePipeline = isQuickMode
-    ? (needsRecraft.test(questionText) ? undefined : 'tikz' as const)
+    ? (needsRecraft.test(questionText) || !e2bAvailable ? undefined : 'tikz' as const)
     : undefined
   const skipVerification = isQuickMode  // quick mode Recraft skips Phase 3
   const skipQA = isQuickMode
@@ -1047,10 +1049,12 @@ export async function generateTutorResponse(
   // Pipeline selection: quick forces TikZ (fast HTTP API, ~8s). Accurate uses AI router
   // (Recraft/Matplotlib/LaTeX, but can take 30-50s — too slow for chat responses).
   // Exception: anatomy/biology topics need Recraft even in quick mode (TikZ can't render them).
+  // Exception 2: If E2B isn't configured, TikZ can't compile — fall back to AI router.
   const isQuickMode = pipelineMode === 'quick'
   const needsRecraft = /\b(anatomy|human eye|human heart|human brain|human lung|human ear|human skin|cell structure|cell diagram|organ|dna|bacteria|virus|labeled)\b/i
+  const e2bAvailable = !!process.env.E2B_LATEX_TEMPLATE_ID
   const forcePipeline = isQuickMode
-    ? (needsRecraft.test(diagramTopic) ? undefined : 'tikz' as const)
+    ? (needsRecraft.test(diagramTopic) || !e2bAvailable ? undefined : 'tikz' as const)
     : undefined
   const skipVerification = isQuickMode  // quick mode Recraft skips Phase 3
   const skipQA = isQuickMode
