@@ -9,6 +9,7 @@ const log = createLogger('ui:diagram-renderer')
 import type { StepLayerMeta } from './types'
 import EngineDiagramImage from './EngineDiagramImage'
 import LabeledDiagramOverlay from './LabeledDiagramOverlay'
+import StepByStepButton from './StepByStepButton'
 
 const StepSequencePlayer = lazy(() => import('./StepSequencePlayer'))
 const StepByStepWalkthrough = lazy(() => import('./StepByStepWalkthrough'))
@@ -335,12 +336,22 @@ export default function DiagramRenderer({
       if (engineData.pipeline === 'recraft' && engineData.overlay && engineData.overlay.length > 0) {
         return (
           <DiagramErrorBoundary diagramType={diagramType} diagramData={engineData} onError={onRenderError}>
-            <LabeledDiagramOverlay
-              imageUrl={engineData.imageUrl}
-              labels={engineData.overlay}
-              locale={language ?? 'en'}
-              step={null}
-            />
+            <div className="relative">
+              <LabeledDiagramOverlay
+                imageUrl={engineData.imageUrl}
+                labels={engineData.overlay}
+                locale={language ?? 'en'}
+                step={null}
+              />
+              {hasStepByStep && (
+                <div className="absolute bottom-2 right-2 z-10">
+                  <StepByStepButton
+                    onClick={handleStepByStepClick}
+                    loading={walkthroughMode === 'loading'}
+                  />
+                </div>
+              )}
+            </div>
           </DiagramErrorBoundary>
         )
       }
