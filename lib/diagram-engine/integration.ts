@@ -81,13 +81,24 @@ export async function tryEngineDiagram(
   try {
     // Pre-compute values with SymPy BEFORE parallel generation, so both
     // generateDiagram and generateLayeredTikz benefit from exact values.
-    const { enrichedQuestion } = await preCompute(question);
+    // Skip when E2B isn't available — SymPy runs in E2B sandbox.
+    const e2bCheck = !!process.env.E2B_LATEX_TEMPLATE_ID;
+    const { enrichedQuestion } = e2bCheck ? await preCompute(question) : { enrichedQuestion: question };
 
     // Speculatively start layered TikZ generation if routing predicts tikz.
     // We check result.pipeline AFTER generation to ensure no mismatch when
     // a fallback occurs (e.g., tikz → matplotlib or matplotlib → tikz).
     // Use AI-powered router for intelligent language-agnostic pipeline selection.
-    const predictedPipeline = forcePipeline || await routeQuestionWithAI(question);
+    const e2bAvailable = !!process.env.E2B_LATEX_TEMPLATE_ID;
+    let predictedPipeline = forcePipeline || await routeQuestionWithAI(question);
+
+    // When E2B isn't available, override E2B-dependent pipelines to recraft.
+    // tikz, e2b-latex, e2b-matplotlib all require E2B sandbox for compilation.
+    if (!e2bAvailable && predictedPipeline !== 'recraft') {
+      log.info(`E2B not available, overriding pipeline ${predictedPipeline} → recraft`);
+      predictedPipeline = 'recraft';
+    }
+
     const mayBeTikz = predictedPipeline === 'tikz';
 
     // Generate diagram and layered TikZ in parallel (for TikZ pipeline).
