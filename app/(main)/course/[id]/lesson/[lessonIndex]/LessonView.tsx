@@ -801,18 +801,16 @@ export default function LessonView({
         </footer>
       )}
 
-      {/* Floating Help Button - only show for non-question steps */}
-      {!isQuestion && (
-        <button
-          onClick={() => setShowHelp(true)}
-          className="fixed bottom-[calc(128px+env(safe-area-inset-bottom,0px))] md:bottom-8 end-3 xs:end-4 md:end-8 w-11 h-11 xs:w-12 xs:h-12 bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-300 rounded-full shadow-lg flex items-center justify-center hover:bg-violet-200 dark:hover:bg-violet-900 transition-all hover:scale-110 z-40"
-          aria-label={t('getHelp')}
-          title={t('needHelpPressF9')}
-          type="button"
-        >
-          <span className="text-lg xs:text-xl">❓</span>
-        </button>
-      )}
+      {/* Floating Help Button */}
+      <button
+        onClick={() => setShowHelp(true)}
+        className="fixed bottom-[calc(128px+env(safe-area-inset-bottom,0px))] md:bottom-8 end-3 xs:end-4 md:end-8 w-11 h-11 xs:w-12 xs:h-12 bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-300 rounded-full shadow-lg flex items-center justify-center hover:bg-violet-200 dark:hover:bg-violet-900 transition-all hover:scale-110 z-40"
+        aria-label={t('getHelp')}
+        title={t('needHelpPressF9')}
+        type="button"
+      >
+        <span className="text-lg xs:text-xl">❓</span>
+      </button>
 
       {/* Help Modal */}
       <HelpModal
@@ -822,7 +820,7 @@ export default function LessonView({
       />
 
       {/* AI Chat Tutor Button - positioned above the help button */}
-      {!isQuestion && !isChatOpen && (
+      {!isChatOpen && (
         <button
           onClick={() => setIsChatOpen(true)}
           className="fixed bottom-[calc(184px+env(safe-area-inset-bottom,0px))] md:bottom-24 end-3 xs:end-4 md:end-8 w-11 h-11 xs:w-12 xs:h-12 bg-violet-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-violet-700 transition-all hover:scale-110 z-40"

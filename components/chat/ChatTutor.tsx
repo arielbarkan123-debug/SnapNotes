@@ -2,7 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import dynamic from 'next/dynamic'
 import { createLogger } from '@/lib/logger'
+
+const MarkdownWithMath = dynamic(() => import('@/components/prepare/MarkdownWithMath'), { ssr: false })
 
 const log = createLogger('ui:chat-tutor')
 
@@ -249,7 +252,13 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-md'
               }`}
             >
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              {message.role === 'assistant' ? (
+                <MarkdownWithMath className="text-sm [&>p]:my-1 [&>p:first-child]:mt-0 [&>p:last-child]:mb-0 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:my-1 [&_li]:my-0.5 [&_code]:bg-black/10 dark:[&_code]:bg-white/10 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_.katex]:overflow-x-auto [&_.katex-display]:overflow-x-auto [&_.katex-display]:my-2">
+                  {message.content}
+                </MarkdownWithMath>
+              ) : (
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              )}
             </div>
           </div>
         ))}
