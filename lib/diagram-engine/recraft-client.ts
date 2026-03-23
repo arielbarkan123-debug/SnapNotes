@@ -26,8 +26,10 @@ export interface RecraftGenerateParams {
   size?: RecraftSize
   format?: RecraftFormat
   negative_prompt?: string
-  // no_text is ALWAYS enforced - Recraft must NEVER generate text
-  // Text labels are added via TikZ compositing instead
+  // NOTE: Recraft V4 does NOT support negative_prompt, style, or no_text controls.
+  // Text suppression relies ENTIRELY on the prompt itself — the caller must ensure
+  // the prompt ends with "No text or labels." and avoids enumerating component names.
+  // Labels are added as a client-side SVG overlay after image generation.
 }
 
 export interface RecraftImage {

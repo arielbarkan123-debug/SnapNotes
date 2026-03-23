@@ -272,7 +272,7 @@ The diagram system (100+ components) was built in Feb 2026. Below are known conc
 
 ### MUST FIX — Visual QA & Rendering
 
-1. **No component has been visually verified in a browser.** All 80 math + 27 geometry components were built by AI agents without visual testing. SVG coordinates, colors, text placement, and animations could all be wrong.
+1. **Components were verified and working as of Feb 2026.** A regression in the language system changes (March 16) may have broken TikZ walkthrough compilation. Investigate diffs against commit 69a67dc (pre-language-system).
 2. **RTL layout testing.** Hebrew mode flips layout direction. Step controls, labels, and diagram text positions may break in RTL.
 3. **Mobile responsiveness.** Diagrams use fixed viewBox sizes (350-500px). Verify they scale on small screens.
 4. **Animation performance.** Framer Motion animations on 100+ SVG elements could cause jank on low-end devices.

@@ -45,7 +45,7 @@ export default function ReviewComplete({
   const [showReflection, setShowReflection] = useState(false)
   const hasAwardedXP = useRef(false)
   const hasTriggeredReflection = useRef(false)
-  const { showXP, showLevelUp, showAchievement } = useXP()
+  const { showXP, showLevelUp } = useXP()
   const [showStreakPopup, setShowStreakPopup] = useState(false)
   const t = useTranslations('review')
 
@@ -140,23 +140,6 @@ export default function ReviewComplete({
           }, 500)
         }
 
-        // Check for new achievements
-        try {
-          const checkResponse = await fetch('/api/gamification/check', { method: 'POST' })
-          if (checkResponse.ok) {
-            const checkData = await checkResponse.json()
-            if (checkData.newAchievements && Array.isArray(checkData.newAchievements)) {
-              for (let i = 0; i < checkData.newAchievements.length; i++) {
-                const achievement = checkData.newAchievements[i]
-                setTimeout(() => {
-                  showAchievement(achievement.name, achievement.xpReward || 0, achievement.emoji)
-                }, 2000 + i * 2000)
-              }
-            }
-          }
-        } catch {
-          // Achievement check failed silently
-        }
 
         // Trigger reflection after a meaningful session (3+ cards)
         if (!hasTriggeredReflection.current && cardsReviewed >= 3) {
@@ -172,7 +155,7 @@ export default function ReviewComplete({
     }
 
     awardXP()
-  }, [cardsReviewed, estimatedXP, accuracy, showXP, showAchievement])
+  }, [cardsReviewed, estimatedXP, accuracy, showXP])
 
   // Show level up popup when levelUp state is set (separate effect to avoid stale closure)
   useEffect(() => {

@@ -45,7 +45,7 @@ interface StepContentProps {
 export default function StepContent({
   step,
   lessonTitle,
-  onRequestHelp,
+  onRequestHelp: _onRequestHelp,
   annotation,
   onSaveAnnotation,
   onDeleteAnnotation,
@@ -64,11 +64,6 @@ export default function StepContent({
     imageCreditUrl: step.imageCreditUrl,
   }
 
-  // Help button for non-question content steps
-  const helpButton = onRequestHelp ? (
-    <HelpButton onClick={onRequestHelp} t={t} />
-  ) : null
-
   // Annotation button for step-level annotations
   const annotationButton = onSaveAnnotation && onDeleteAnnotation ? (
     <div className="mt-3 flex justify-end">
@@ -84,7 +79,7 @@ export default function StepContent({
     case 'explanation':
       return (
         <>
-          <ExplanationStep content={step.content} t={t} {...imageProps} helpButton={helpButton} />
+          <ExplanationStep content={step.content} t={t} {...imageProps} />
           {annotationButton}
           <GoDeeper courseId={courseId} lessonIndex={lessonIndex} stepIndex={stepIndex} />
         </>
@@ -92,7 +87,7 @@ export default function StepContent({
     case 'key_point':
       return (
         <>
-          <KeyPointStep content={step.content} t={t} helpButton={helpButton} />
+          <KeyPointStep content={step.content} t={t} />
           {annotationButton}
           <GoDeeper courseId={courseId} lessonIndex={lessonIndex} stepIndex={stepIndex} />
         </>
@@ -100,7 +95,7 @@ export default function StepContent({
     case 'formula':
       return (
         <>
-          <FormulaStep content={step.content} explanation={step.explanation} t={t} helpButton={helpButton} />
+          <FormulaStep content={step.content} explanation={step.explanation} t={t} />
           {annotationButton}
           <GoDeeper courseId={courseId} lessonIndex={lessonIndex} stepIndex={stepIndex} />
         </>
@@ -115,7 +110,7 @@ export default function StepContent({
     case 'example':
       return (
         <>
-          <ExampleStep content={step.content} t={t} {...imageProps} helpButton={helpButton} />
+          <ExampleStep content={step.content} t={t} {...imageProps} />
           {annotationButton}
           <GoDeeper courseId={courseId} lessonIndex={lessonIndex} stepIndex={stepIndex} />
         </>
@@ -134,26 +129,11 @@ export default function StepContent({
     default:
       return (
         <>
-          <ExplanationStep content={step.content} t={t} {...imageProps} helpButton={helpButton} />
+          <ExplanationStep content={step.content} t={t} {...imageProps} />
           {annotationButton}
         </>
       )
   }
-}
-
-function HelpButton({ onClick, t }: { onClick: () => void; t: ReturnType<typeof useTranslations<'lesson'>> }) {
-  return (
-    <button
-      onClick={onClick}
-      className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-violet-500 dark:hover:text-violet-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors z-10"
-      aria-label={t('getHelp')}
-      type="button"
-    >
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    </button>
-  )
 }
 
 interface StepImageProps {
@@ -234,13 +214,11 @@ interface ImageStepProps {
   imageCredit?: string
   imageCreditUrl?: string
   t: ReturnType<typeof useTranslations<'lesson'>>
-  helpButton?: React.ReactNode
 }
 
-function ExplanationStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl, t, helpButton }: ImageStepProps) {
+function ExplanationStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl, t }: ImageStepProps) {
   return (
-    <div className="animate-fadeIn relative">
-      {helpButton}
+    <div className="animate-fadeIn">
       <p className="text-lg sm:text-xl text-gray-800 dark:text-gray-200 leading-relaxed">
         {content}
       </p>
@@ -252,13 +230,11 @@ function ExplanationStep({ content, imageUrl, imageAlt, imageCaption, imageCredi
 interface KeyPointStepProps {
   content: string
   t: ReturnType<typeof useTranslations<'lesson'>>
-  helpButton?: React.ReactNode
 }
 
-function KeyPointStep({ content, t, helpButton }: KeyPointStepProps) {
+function KeyPointStep({ content, t }: KeyPointStepProps) {
   return (
-    <div className="animate-fadeIn relative">
-      {helpButton}
+    <div className="animate-fadeIn">
       <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6">
         <div className="flex items-start gap-4">
           {/* Lightbulb icon */}
@@ -285,13 +261,11 @@ interface FormulaStepProps {
   content: string
   explanation?: string
   t: ReturnType<typeof useTranslations<'lesson'>>
-  helpButton?: React.ReactNode
 }
 
-function FormulaStep({ content, explanation, t, helpButton }: FormulaStepProps) {
+function FormulaStep({ content, explanation, t }: FormulaStepProps) {
   return (
-    <div className="animate-fadeIn space-y-4 relative">
-      {helpButton}
+    <div className="animate-fadeIn space-y-4">
       {/* Formula box */}
       <div className="bg-gradient-to-br from-blue-50 to-violet-50 dark:from-blue-900/20 dark:to-violet-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-3">
@@ -435,10 +409,9 @@ function DiagramStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, i
   )
 }
 
-function ExampleStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl, t, helpButton }: ImageStepProps) {
+function ExampleStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl, t }: ImageStepProps) {
   return (
-    <div className="animate-fadeIn relative">
-      {helpButton}
+    <div className="animate-fadeIn">
       <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-3">
           <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

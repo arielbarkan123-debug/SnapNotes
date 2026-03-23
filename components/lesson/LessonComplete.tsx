@@ -56,7 +56,7 @@ export default function LessonComplete({
   const [showStreakPopup, setShowStreakPopup] = useState(false)
   const [streakDays, setStreakDays] = useState(0)
   const hasAwardedXP = useRef(false)
-  const { showXP, showLevelUp, showAchievement } = useXP()
+  const { showXP, showLevelUp } = useXP()
 
   const hasNextLesson = lessonIndex < totalLessons - 1
   const hasQuestions = questionsTotal > 0
@@ -116,30 +116,13 @@ export default function LessonComplete({
           // Streak update failed silently
         }
 
-        // Check for new achievements
-        try {
-          const checkResponse = await fetch('/api/gamification/check', { method: 'POST' })
-          if (checkResponse.ok) {
-            const checkData = await checkResponse.json()
-            if (checkData.newAchievements && Array.isArray(checkData.newAchievements)) {
-              for (let i = 0; i < checkData.newAchievements.length; i++) {
-                const achievement = checkData.newAchievements[i]
-                setTimeout(() => {
-                  showAchievement(achievement.name, achievement.xpReward || 0, achievement.emoji)
-                }, 2000 + i * 2000)
-              }
-            }
-          }
-        } catch {
-          // Achievement check failed silently
-        }
       } catch {
         // XP award failed silently - not critical
       }
     }
 
     awardXP()
-  }, [isPerfect, courseId, lessonIndex, accuracy, showXP, showLevelUp, showAchievement])
+  }, [isPerfect, courseId, lessonIndex, accuracy, showXP, showLevelUp])
 
   // Staggered animations
   useEffect(() => {

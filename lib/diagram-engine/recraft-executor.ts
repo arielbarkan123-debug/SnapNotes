@@ -66,7 +66,14 @@ const REWRITE_PROMPT_2D = `You are an expert at writing image generation prompts
 
 Rewrite the student's question into a prompt for a CLEAN 2D ILLUSTRATION. Max 500 characters.
 
-CRITICAL: The image must contain ZERO text. No letters, numbers, labels, annotations, or writing of any kind. Labels will be added as a separate overlay AFTER the image is generated. The image is ONLY the visual — pure illustration, nothing else.
+CRITICAL — NO TEXT IN IMAGE:
+The image generator will render any named components as text overlays on the image. Labels are added SEPARATELY after generation. You must describe the VISUAL SCENE only — shapes, colors, spatial layout — never enumerate parts by name.
+
+BAD (causes text rendering): "showing cell wall, membrane, nucleus, chloroplasts"
+GOOD (purely visual): "cross-section showing all internal organelles, each in a distinct bright color"
+
+BAD: "showing glass envelope, tungsten filament, support wires, inert gas"
+GOOD: "cutaway view showing all internal components in distinct colors with bold outlines"
 
 STYLE RULES:
 - Flat, clean 2D digital illustration with bold outlines and flat colors
@@ -81,22 +88,25 @@ STRUCTURE:
 - Chains → connected stages left-to-right or top-to-bottom
 - Anatomy → cross-section showing internal parts in distinct colors
 
-DO NOT include words like "labeled", "annotated", "with text", "with names" in the prompt. The image must be purely visual.
-
 EXAMPLES:
-- "plant cell" → "Clean 2D cross-section of a plant cell showing cell wall, membrane, nucleus, chloroplasts, mitochondria, vacuole, each organelle in a distinct color with bold outlines, flat style, white background"
-- "water cycle" → "Flat 2D illustration of the water cycle showing ocean, rising water vapor, cloud formation, rain falling on mountains, rivers flowing back to ocean, each stage in distinct blue tones, arrows showing flow direction, white background"
-- "food chain" → "Clean 2D illustration of a forest food chain with sun, grass, grasshopper, frog, snake, eagle connected by arrows, each organism clearly drawn in distinct colors, white background"
+- "plant cell" → "Clean 2D cross-section of a plant cell with all major organelles visible, each in a distinct bright color with bold outlines, flat vector style, white background. No text or labels."
+- "water cycle" → "Flat 2D illustration of the complete water cycle from ocean to sky to land and back, each stage in distinct blue tones with directional arrows, white background. No text or labels."
+- "food chain" → "Clean 2D illustration of a forest food chain with five trophic levels connected by directional arrows, each organism clearly drawn in distinct colors, white background. No text or labels."
+- "light bulb" → "Clean 2D cutaway of an incandescent light bulb with all internal components visible in distinct colors and bold outlines, flat vector style, white background. No text or labels."
 
 Original question: "{QUESTION}"
 
-Return ONLY the rewritten prompt. Do NOT include "no text" or "no labels" — that is handled separately.`;
+Return ONLY the rewritten prompt. ALWAYS end with "No text or labels."`;
 
 const REWRITE_PROMPT_3D = `You are an expert at writing image generation prompts for educational 3D models.
 
 Rewrite the student's question into a prompt for a photorealistic 3D CUTAWAY MODEL. Max 500 characters.
 
-CRITICAL: The image must contain ZERO text. No letters, numbers, labels, annotations, or writing of any kind. Labels will be added as a separate overlay AFTER the image is generated. The image is ONLY the visual — pure 3D model, nothing else.
+CRITICAL — NO TEXT IN IMAGE:
+The image generator will render any named components as text overlays on the image. Labels are added SEPARATELY after generation. You must describe the VISUAL SCENE only — shapes, colors, spatial layout — never enumerate parts by name.
+
+BAD (causes text rendering): "showing chambers, valves, aorta, and blood vessels"
+GOOD (purely visual): "cutaway revealing all internal structures in distinct red and blue tones"
 
 STYLE RULES:
 - Photorealistic 3D cutaway model, like a museum exhibit piece or medical teaching model
@@ -106,12 +116,12 @@ STYLE RULES:
 - No surroundings, table, surface, props, or environment
 
 EXAMPLES:
-- "anatomy of the heart" → "Photorealistic 3D cutaway medical model of the human heart showing chambers, valves, aorta, and blood vessels in distinct red and blue tones, clean cross-section revealing interior structure, studio lighting, pure white background"
-- "inside of a volcano" → "Photorealistic 3D cutaway geological model of a volcano showing magma chamber, conduit, lava flow, layers of rock and ash, cross-section view, studio lighting, pure white background"
+- "anatomy of the heart" → "Photorealistic 3D cutaway medical model of the human heart with all internal structures visible in distinct red and blue tones, clean cross-section revealing interior, studio lighting, pure white background. No text or labels."
+- "inside of a volcano" → "Photorealistic 3D cutaway geological model of a volcano with all layers and internal structures visible in distinct earth tones, cross-section view, studio lighting, pure white background. No text or labels."
 
 Original question: "{QUESTION}"
 
-Return ONLY the rewritten prompt. Do NOT include "no text" or "no labels" — that is handled separately.`;
+Return ONLY the rewritten prompt. ALWAYS end with "No text or labels."`;
 
 const VISION_LABELING_PROMPT = `You are an expert scientific illustrator placing precise labels on an educational image.
 
@@ -195,9 +205,12 @@ export async function generateRecraftDiagram(
     cleanPrompt = buildFallbackPrompt(question, is3D);
   }
 
+  // Apply safety-net filter to strip any remaining component name lists
+  cleanPrompt = sanitizePromptForRecraft(cleanPrompt);
+
   log.info(`Prompt: ${cleanPrompt.slice(0, 120)}...`);
 
-  // Step 2: Generate image with Recraft (no_text is ALWAYS enforced in the client)
+  // Step 2: Generate image with Recraft
   let imageUrl: string;
   try {
     const image = await generateRecraftImage({
@@ -384,6 +397,9 @@ async function generateRecraftDiagramV2(
     cleanPrompt = buildFallbackPrompt(question, is3D);
   }
 
+  // Apply safety-net filter to strip any remaining component name lists
+  cleanPrompt = sanitizePromptForRecraft(cleanPrompt);
+
   log.info(`[v2] Prompt: ${cleanPrompt.slice(0, 120)}...`);
 
   // Phase 1 (parallel): Label content generation + Recraft image generation
@@ -514,9 +530,41 @@ function fixLabelCollisions(labels: OverlayLabel[]): OverlayLabel[] {
 
 function buildFallbackPrompt(question: string, is3D: boolean): string {
   if (is3D) {
-    return `Photorealistic 3D cutaway model of ${question}, showing internal structure with distinct colors for each component, studio lighting, pure white background`.slice(0, 950);
+    return `Photorealistic 3D cutaway model of ${question}, with all internal structures visible in distinct colors, studio lighting, pure white background. No text or labels.`.slice(0, 950);
   }
-  return `Clean 2D digital illustration of ${question}, flat style, bold outlines, distinct colors for each component, white background`.slice(0, 950);
+  return `Clean 2D digital illustration of ${question}, flat style, bold outlines, all components visible in distinct colors, white background. No text or labels.`.slice(0, 950);
+}
+
+/**
+ * Safety-net filter: ensure Recraft prompt never contains patterns that cause
+ * the image generator to render text labels into the image.
+ *
+ * 1. Appends "No text or labels" if not already present
+ * 2. Strips comma-separated lists of capitalized component names
+ *    (e.g., "showing Glass Bulb, Filament, Support Wires" → "showing all components")
+ */
+function sanitizePromptForRecraft(prompt: string): string {
+  let cleaned = prompt;
+
+  // Strip enumerated component lists: "showing X, Y, Z, W" where X/Y/Z/W are capitalized terms
+  // Pattern: "showing" followed by 3+ comma-separated capitalized phrases
+  cleaned = cleaned.replace(
+    /\bshowing\s+(?:[A-Z][a-z]+(?:\s+[A-Za-z]+)*,\s*){2,}(?:and\s+)?[A-Z][a-z]+(?:\s+[A-Za-z]+)*/g,
+    'showing all key components in distinct colors'
+  );
+
+  // Strip "with X, Y, Z" enumerated lists of capitalized terms
+  cleaned = cleaned.replace(
+    /\bwith\s+(?:[A-Z][a-z]+(?:\s+[A-Za-z]+)*,\s*){2,}(?:and\s+)?[A-Z][a-z]+(?:\s+[A-Za-z]+)*/g,
+    'with all key components in distinct colors'
+  );
+
+  // Ensure prompt ends with no-text instruction
+  if (!/no text|no labels|no annotations/i.test(cleaned)) {
+    cleaned = cleaned.trimEnd().replace(/\.?$/, '. No text, labels, or annotations.');
+  }
+
+  return cleaned;
 }
 
 /**
