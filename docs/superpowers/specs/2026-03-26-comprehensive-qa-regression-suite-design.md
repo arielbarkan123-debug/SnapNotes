@@ -936,11 +936,53 @@ jobs:
     if: always()
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
       - run: node scripts/generate-test-report.js
       - uses: actions/upload-artifact@v4
         with:
           name: test-report
           path: test-report.json
+
+      # Post failure report as PR comment (so you can paste it to Claude)
+      - name: Post failure report to PR
+        if: github.event_name == 'pull_request' && failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('test-report.json', 'utf8'));
+            const failures = report.failures || [];
+            if (failures.length === 0) return;
+
+            let body = `## 🔴 Test Failures (${failures.length})\n\n`;
+            body += `**Commit:** \`${report.meta.commit}\` | **Branch:** \`${report.meta.branch}\`\n\n`;
+            body += `| Layer | Test | File:Line | Error | Severity |\n`;
+            body += `|-------|------|-----------|-------|----------|\n`;
+            for (const f of failures) {
+              body += `| ${f.layer} | ${f.test_name} | \`${f.source_file}:${f.source_line || '?'}\` | ${f.error_message.slice(0, 80)} | ${f.severity} |\n`;
+            }
+            body += `\n<details><summary>📋 Full JSON report (paste to Claude to fix)</summary>\n\n\`\`\`json\n${JSON.stringify(report, null, 2).slice(0, 60000)}\n\`\`\`\n</details>`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
+
+      # Email notification on failure
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // GitHub automatically sends email notifications for failed CI checks
+            // to the commit author and PR participants.
+            // No additional config needed — GitHub handles this via:
+            // Settings → Notifications → "Actions" → "Send notifications for failed workflows only"
+            console.log('CI failed — GitHub will email the commit author automatically.');
 
   # Triggered by Vercel deployment, not by push
   smoke-tests:
