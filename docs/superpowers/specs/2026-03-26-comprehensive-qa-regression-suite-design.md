@@ -1,20 +1,38 @@
 # NoteSnap Comprehensive QA & Regression Test Suite — Design Spec
 
 **Date:** 2026-03-26
-**Status:** Draft
+**Status:** Draft (Rev 2 — post-review fixes)
 **Author:** QA Architecture Session
 
 ## 1. Goal
 
 Build an automated test suite that catches **every possible regression** — from algorithm bugs to visual breakage to auth bypass — before any code reaches production. Every test run produces a machine-readable report with exact file:line references that can be handed to Claude to fix.
 
+## 1.1 Prerequisites — New Dependencies
+
+| Package | Purpose | Why |
+|---------|---------|-----|
+| `zod` | API response schema validation | Contract testing between frontend/backend |
+| `@playwright/test` | E2E browser tests | User journey testing |
+| `@axe-core/playwright` | Accessibility auditing in E2E | WCAG 2.2 AA compliance |
+| `jest-axe` | Accessibility auditing in unit tests | Component-level a11y |
+| `@lhci/cli` | Lighthouse CI | Performance regression budgets |
+| `wait-on` | Wait for server in CI | Lighthouse needs running server |
+
+## 1.2 Existing Test Baseline
+
+**Current state (as of 2026-03-26):** 53 test files, **1,064 passing tests**, 3 second runtime. All tests are Jest unit/integration tests — no E2E, no accessibility, no visual regression, no performance budgets, no post-deploy smoke tests.
+
+The spec below defines **net-new tests** to add on top of the existing 1,064. Where existing tests already cover a module, the spec notes "existing" and defines only the gaps.
+
 ## 2. System Under Test — Scope
 
 | Dimension | Count |
 |-----------|-------|
-| API routes | 129 endpoints |
-| User-facing pages | 45 pages |
+| API routes | 131 endpoints |
+| User-facing pages | 49 pages |
 | Library modules | 337 files across 47 directories |
+| Custom hooks | 25 hooks in `/hooks/` |
 | Diagram components | 100+ SVG/React components |
 | i18n languages | 2 (English + Hebrew with RTL) |
 | Diagram schemas | 102 |
@@ -25,17 +43,19 @@ Build an automated test suite that catches **every possible regression** — fro
 
 ```
 Layer 8: Post-Deploy Smoke Tests (Playwright vs production)     ~10 tests
-Layer 7: Visual Regression (Playwright screenshot diffs)        ~20 comparisons
+Layer 7: Visual Regression (Playwright screenshot diffs)        ~25 comparisons (incl. dark mode)
 Layer 6: Performance Budgets (Lighthouse CI on key pages)       ~8 pages
-Layer 5: Accessibility (axe-core in Jest + Playwright)          ~50 checks
-Layer 4: E2E Tests (Playwright browser journeys)                ~50 tests
-Layer 3: API Integration Tests (Jest, mocked/real Supabase)     ~400 tests
-Layer 2: Unit Tests (Jest, pure logic)                          ~300 tests
+Layer 5: Accessibility (axe-core in Jest + Playwright)          ~60 checks
+Layer 4: E2E Tests (Playwright browser journeys)                ~70 tests
+Layer 3: API Integration Tests (Jest, mocked Supabase)          ~550 tests (131 routes x ~4 avg)
+Layer 2: Unit Tests (Jest, pure logic)                          ~450 tests
 Layer 1: Static Analysis (TypeScript + ESLint + npm audit)      continuous
 ```
 
-**Total: ~850+ automated checks**
-**CI target: ~12 minutes**
+**Existing tests:** 1,064
+**Net-new tests:** ~750-850
+**Total target: ~1,800+ automated checks**
+**CI target: ~14 minutes** (with proper caching — see Section 12)
 
 ## 4. Layer 1 — Static Analysis
 
@@ -143,7 +163,41 @@ These don't call real AI — they verify prompt construction and output parsing.
 | `__tests__/lib/feedback/age-adaptive-feedback.test.ts` | `age-adaptive-feedback.ts` | ~8 | Age-appropriate messaging for different grade levels |
 | `__tests__/lib/study-plan/scheduler.test.ts` | `scheduler.ts` | ~10 | Session scheduling, workload distribution, deadline respect |
 
-**Unit test total: ~300 tests**
+### 5.7 Custom Hooks (`hooks/`) — P2
+
+The 25 custom hooks contain significant client-side logic. Key hooks to test:
+
+| Test File | Hook | Tests | Coverage |
+|-----------|------|-------|----------|
+| `__tests__/hooks/useAdaptiveDifficulty.test.ts` | `useAdaptiveDifficulty` | ~8 | Difficulty adjustment, streak detection, performance state |
+| `__tests__/hooks/usePracticeSession.test.ts` | `usePracticeSession` | ~10 | Session lifecycle, answer submission, batch loading |
+| `__tests__/hooks/useGlobalSearch.test.ts` | `useGlobalSearch` | ~6 | Debounced search, result merging, empty query |
+| `__tests__/hooks/useLessonProgress.test.ts` | `useLessonProgress` | ~6 | Step navigation, completion tracking |
+| `__tests__/hooks/useStreakTracker.test.ts` | `useStreakTracker` | ~5 | Streak display, animation trigger |
+| `__tests__/hooks/useServiceWorker.test.ts` | `useServiceWorker` | ~4 | Registration, offline detection |
+
+### 5.8 Missing Lib Directories — P2/P3
+
+Directories not covered in sections 5.1-5.6 that need tests:
+
+| Directory | Files | Priority | Key Tests |
+|-----------|-------|----------|-----------|
+| `lib/practice/` | 7 | P2 | Question generation, session manager, interleaving, math problem generation |
+| `lib/errors/` | 10 | P2 | Error code mapping, user-friendly messages, HTTP status mapping |
+| `lib/formula-scanner/` | 2 | P2 | Formula detection, solving pipeline |
+| `lib/analytics/` | 6 | P3 | Client analytics, funnel analysis, device detection |
+| `lib/concepts/` | 5 | P3 | Concept extraction, gap detection, prerequisite graph |
+| `lib/email/` | 3 | P3 | Email template rendering, report generation |
+| `lib/images/` | 4 | P3 | Image search, smart search, upload |
+| `lib/metrics/` | 3 | P3 | Engagement scoring, self-efficacy tracking |
+| `lib/prepare/` | 2 | P3 | Guide generation, YouTube search |
+| `lib/monitoring/` | 2 | P3 | Error reporting |
+| `lib/learning/` | 2 | P3 | Age config, intensity config |
+| `lib/insights/` | 2 | P3 | Mistake analysis, gap routing |
+| `lib/visual-learning/` | 3 | P3 | Validation, type checking |
+| `lib/youtube/` | 2 | P3 | Transcript extraction, course generation |
+
+**Unit test total: ~450 tests (net-new ~250, existing ~200 expanded)**
 
 ## 6. Layer 3 — API Integration Tests (Jest)
 
@@ -274,11 +328,11 @@ export const CourseResponseSchema = z.object({
 | `/api/recommendations` | GET | 4 | Personalized recommendations, tracking |
 | `/api/search` | POST | 5 | Cross-entity search, relevance ranking, empty queries |
 
-#### P4 — Auth & Infrastructure
+#### P1 — Auth & Infrastructure (CRITICAL — auth bypass = security vulnerability)
 
 | Route | Method | Tests | Key Assertions |
 |-------|--------|-------|----------------|
-| `/api/auth/forgot-password` | POST | 4 | Email sent, rate limiting (5/hour), invalid email handling |
+| `/api/auth/forgot-password` | POST | 5 | Email sent, rate limiting (5/hour), invalid email handling, consecutive requests throttled |
 | `/api/auth/me` | GET | 3 | Returns user info, 401 for unauthenticated |
 | `/api/upload` | POST | 5 | File type validation, size limit, URL returned |
 | `/api/upload-images` | POST | 5 | Batch upload, type validation, all URLs returned |
@@ -287,7 +341,146 @@ export const CourseResponseSchema = z.object({
 | `/api/monitoring/errors` | POST | 3 | Error recording, sanitization |
 | `/api/reports/weekly` | GET, POST | 5 | Report generation, email sending |
 
-**API integration test total: ~400 tests**
+#### P0 — Adaptive Learning (controls real-time difficulty — MISSING FROM ORIGINAL SPEC)
+
+| Route | Method | Tests | Key Assertions |
+|-------|--------|-------|----------------|
+| `/api/adaptive/feedback` | POST | 4 | Records too_easy/too_hard feedback, updates state |
+| `/api/adaptive/record` | POST | 5 | Records answer, updates performance, auth required |
+| `/api/adaptive/reset` | POST | 4 | Resets session, saves snapshot, auth required |
+| `/api/adaptive/state` | GET | 4 | Returns performance state, user-isolated |
+
+#### P1 — Missing Course Routes
+
+| Route | Method | Tests | Key Assertions |
+|-------|--------|-------|----------------|
+| `/api/courses/from-youtube` | POST | 5 | YouTube URL validation, transcript extraction, course generation |
+| `/api/courses/manual` | POST | 4 | Manual lesson data, validation |
+| `/api/courses/recent` | GET | 3 | Returns most recent course, Safari/iOS fallback |
+| `/api/courses/[id]/lessons/[lessonIndex]` | GET, DELETE | 5 | Lesson fetch, delete with cascade |
+| `/api/courses/[id]/lessons/[lessonIndex]/expand` | POST | 4 | Sub-step generation, lesson integrity |
+| `/api/courses/[id]/lessons/[lessonIndex]/worked-example` | POST | 4 | Worked example generation |
+| `/api/courses/[id]/mastery` | GET | 3 | Mastery analysis per lesson |
+| `/api/courses/[id]/title` | PUT | 3 | Title update, validation, auth |
+
+#### P1 — Missing Practice & SRS Routes
+
+| Route | Method | Tests | Key Assertions |
+|-------|--------|-------|----------------|
+| `/api/practice/diagram` | POST | 4 | Single diagram generation, pipeline routing |
+| `/api/practice/generate` | POST | 5 | Mixed/interleaved question generation |
+| `/api/practice/log` | POST | 3 | Card review logging |
+| `/api/practice/questions` | GET | 4 | Question filtering, availability |
+| `/api/practice/tutor` | POST | 5 | Pedagogical diagram + AI tutoring |
+| `/api/practice/widget` | GET | 3 | Dashboard widget data |
+| `/api/srs/cards/generate-all` | POST | 4 | Batch generation for all courses |
+| `/api/srs/course/[id]` | GET | 3 | Per-course card stats |
+| `/api/srs/optimize` | POST | 4 | FSRS parameter optimization trigger |
+| `/api/srs/settings` | GET, PUT | 5 | SRS settings CRUD |
+| `/api/srs/stats` | GET | 3 | Comprehensive SRS statistics |
+| `/api/deep-practice` | POST | 4 | Mastery tracking for deep practice mode |
+
+#### P1 — Missing Homework Routes
+
+| Route | Method | Tests | Key Assertions |
+|-------|--------|-------|----------------|
+| `/api/homework/check/[checkId]` | GET | 3 | Specific check result retrieval |
+| `/api/homework/check/[checkId]/practice-complete` | POST | 3 | Practice completion recording |
+| `/api/homework/walkthrough/[walkthroughId]/retry-step` | POST | 4 | Single step retry compilation |
+| `/api/homework/walkthrough/[walkthroughId]/step-chat` | GET, POST | 5 | Step-specific chat |
+
+#### P2 — Missing Study & Preparation Routes
+
+| Route | Method | Tests | Key Assertions |
+|-------|--------|-------|----------------|
+| `/api/study-plan` | GET, POST | 5 | Study plan CRUD |
+| `/api/study-plan/[id]/complete-task` | PATCH | 3 | Task completion |
+| `/api/study-plan/[id]/recalculate` | POST | 3 | Task recalculation |
+| `/api/study-sessions` | POST, PATCH | 5 | Start/end session, fatigue detection |
+| `/api/generate-questions` | POST | 5 | Practice question generation |
+| `/api/generate-cover` | POST | 3 | Single cover image generation |
+| `/api/generate-all-covers` | POST | 3 | Batch cover generation |
+| `/api/prepare/[id]/pdf` | GET | 3 | PDF export works |
+| `/api/prepare/[id]/share` | POST | 3 | Share link generation |
+
+#### P2 — Missing User & Profile Routes
+
+| Route | Method | Tests | Key Assertions |
+|-------|--------|-------|----------------|
+| `/api/user/gaps` | GET, POST, PATCH | 6 | Knowledge gap detection, AI enrichment, resolution |
+| `/api/user/language` | PATCH | 3 | Language preference update |
+| `/api/user/mastery` | GET | 3 | Concept mastery levels |
+| `/api/profile/refinement` | GET, POST, PUT | 5 | Dynamic profile refinement (RLPA) |
+| `/api/self-assessment` | POST | 3 | Self-assessment recording |
+| `/api/reflections` | POST | 3 | Reflection saving |
+| `/api/weak-areas` | GET | 3 | Low mastery detection |
+| `/api/concepts/extract` | POST | 4 | Concept extraction from course |
+
+#### P3 — Missing Analytics & Tracking Routes
+
+| Route | Method | Tests | Key Assertions |
+|-------|--------|-------|----------------|
+| `/api/annotations` | GET | 3 | Annotation fetch for course/lesson |
+| `/api/dashboard/intelligence` | GET | 3 | Dashboard directives from LIE |
+| `/api/diagrams/render-steps` | POST | 4 | On-demand step rendering |
+| `/api/cron/aggregate-analytics` | POST | 3 | Daily aggregation trigger |
+| `/api/sign-image-urls` | POST | 3 | Signed URL generation |
+| `/api/insights/mistakes` | GET | 3 | Mistake pattern analysis |
+| `/api/metrics/engagement` | GET, POST | 4 | Engagement event recording/analysis |
+| `/api/metrics/self-efficacy` | GET, POST | 4 | Self-efficacy tracking |
+| `/api/tracking/explanation-engagement` | POST | 3 | Explanation time tracking |
+| `/api/tracking/feature-affinity` | POST | 3 | Feature usage tracking |
+| `/api/tracking/recommendation` | POST | 3 | Recommendation tracking |
+| `/api/extraction/feedback` | GET, POST, PATCH | 4 | Extraction feedback CRUD |
+| `/api/progress` | GET | 3 | Comprehensive progress analytics |
+| `/api/progress/lesson-map` | GET | 3 | Lesson completion map |
+| `/api/lesson-progress` | POST | 3 | Lesson progress update |
+| `/api/performance/steps` | POST | 3 | Step performance calculation |
+| `/api/process-document` | POST | 4 | Document processing pipeline |
+
+**API integration test total: ~550 tests (covering all 131 routes)**
+
+### 6.4 AI Mocking Strategy for Tests
+
+AI-dependent routes (`/api/generate-course`, `/api/chat`, `/api/homework/check`, `/api/evaluate-answer`, `/api/practice/tutor`, etc.) must NOT call real Claude API in CI. Strategy:
+
+```typescript
+// __tests__/helpers/mock-anthropic.ts
+jest.mock('@anthropic-ai/sdk', () => ({
+  default: jest.fn().mockImplementation(() => ({
+    messages: {
+      create: jest.fn().mockResolvedValue({
+        content: [{ type: 'text', text: '{"title":"Mock Course","overview":"...","lessons":[...]}' }],
+        usage: { input_tokens: 100, output_tokens: 200 }
+      })
+    }
+  }))
+}))
+```
+
+- **Unit tests:** Mock the Anthropic SDK directly
+- **API integration tests:** Mock at the SDK level, test parsing/validation/error handling
+- **E2E tests:** Intercept API routes at the network level with Playwright `page.route()`, return fixture data
+- **Fixture directory:** `__tests__/fixtures/mock-ai-responses/` with real-world examples of valid, malformed, truncated, and edge-case AI outputs
+- **Cost:** $0 — no real API calls in CI
+
+### 6.5 Middleware Tests
+
+`middleware.ts` handles auth redirects, locale detection, and route protection for the entire app. A bug here breaks everything.
+
+```typescript
+// __tests__/middleware.test.ts
+describe('Root Middleware', () => {
+  it('redirects unauthenticated users from protected routes to /login')
+  it('allows unauthenticated access to public routes (/, /login, /signup, /privacy, /terms)')
+  it('detects locale from Accept-Language header and sets cookie')
+  it('preserves locale cookie on subsequent requests')
+  it('redirects authenticated users from /login to /dashboard')
+  it('handles missing cookies gracefully')
+  it('passes through API routes without redirect')
+  it('handles malformed auth tokens without crashing')
+})
+```
 
 ## 7. Layer 4 — E2E Tests (Playwright)
 
@@ -411,7 +604,7 @@ async function loginAsTestUser(page: Page) {
 | Share guide | Click share → copy link | Public link works in incognito |
 | Study plan | Create plan → view tasks | Tasks listed with schedule |
 
-#### Suite 7: Dashboard & Navigation (`e2e/navigation.spec.ts`) — 6 tests
+#### Suite 7: Dashboard & Navigation (`e2e/navigation.spec.ts`) — 8 tests
 
 | Test | Steps | Assertion |
 |------|-------|-----------|
@@ -421,6 +614,8 @@ async function loginAsTestUser(page: Page) {
 | Profile page | Navigate to profile | Achievements, stats, progress displayed |
 | Knowledge map | Navigate to map | Concept nodes render |
 | Mobile navigation | Switch to mobile viewport | Hamburger menu, responsive layout |
+| Progress page | Navigate to progress | Charts and insights render |
+| Onboarding flow | New user → grade/subject selection | Onboarding completes, redirects to dashboard |
 
 #### Suite 8: i18n & RTL (`e2e/i18n.spec.ts`) — 5 tests
 
@@ -432,7 +627,30 @@ async function loginAsTestUser(page: Page) {
 | Switch back to English | Settings → English | Layout returns to LTR |
 | Mixed content | Hebrew UI + English math | Both render correctly |
 
-**E2E test total: ~60 tests**
+#### Suite 9: Additional Features (`e2e/features.spec.ts`) — 8 tests
+
+| Test | Steps | Assertion |
+|------|-------|-----------|
+| Formula scanner | Navigate → scan formula | Formula detected and displayed |
+| Cheatsheet generation | Select course → generate | Cheatsheet renders with content |
+| Course list page | Navigate to /courses | Filtering, search, course cards visible |
+| Processing page | Upload file → visit processing | Progress indicator shown, updates |
+| Past exam settings | Settings → past exams | Upload and manage templates |
+| Study plan creation | Navigate → create plan | Tasks generated with schedule |
+| Formula solver | Scan formula → solve | Step-by-step solution shown |
+| Dark mode toggle | Settings → toggle dark mode | UI switches without flash |
+
+#### Suite 10: Rate Limiting & Edge Cases (`e2e/edge-cases.spec.ts`) — 5 tests
+
+| Test | Steps | Assertion |
+|------|-------|-----------|
+| Rate limit on forgot password | Submit 6 rapid requests | 429 response after 5th |
+| Large file upload rejection | Upload >10MB file | Error message, no crash |
+| Empty course state | New user, no courses | Empty state UI shown correctly |
+| Session timeout | Wait for token expiry | Graceful redirect to login |
+| Concurrent tab behavior | Open same course in 2 tabs | No data corruption |
+
+**E2E test total: ~70 tests**
 
 ## 8. Layer 5 — Accessibility Tests (axe-core)
 
@@ -539,21 +757,22 @@ Capture screenshots and compare against committed baselines. Detects CSS/layout 
 
 ### 10.1 Screenshot Matrix
 
-| Page | Desktop (1280x800) | Mobile (375x812) | Hebrew RTL |
-|------|--------------------|-------------------|------------|
-| Landing page | Yes | Yes | — |
-| Login page | Yes | Yes | — |
-| Dashboard | Yes | Yes | Yes |
-| Course page | Yes | Yes | — |
-| Lesson step (explanation) | Yes | — | — |
-| Lesson step (quiz) | Yes | — | Yes |
-| Homework check results | Yes | — | — |
-| Practice session | Yes | Yes | — |
-| SRS review card | Yes | — | — |
-| Settings page | Yes | — | — |
-| Diagram walkthrough | Yes | — | — |
+| Page | Desktop (1280x800) | Mobile (375x812) | Hebrew RTL | Dark Mode |
+|------|--------------------|-------------------|------------|-----------|
+| Landing page | Yes | Yes | — | — |
+| Login page | Yes | Yes | — | Yes |
+| Dashboard | Yes | Yes | Yes | Yes |
+| Course page | Yes | Yes | — | — |
+| Lesson step (explanation) | Yes | — | — | Yes |
+| Lesson step (quiz) | Yes | — | Yes | — |
+| Homework check results | Yes | — | — | — |
+| Practice session | Yes | Yes | — | Yes |
+| SRS review card | Yes | — | — | — |
+| Settings page | Yes | — | — | Yes |
+| Diagram walkthrough | Yes | — | — | — |
+| Onboarding | Yes | Yes | — | — |
 
-**~20 screenshot comparisons**
+**~25 screenshot comparisons** (including dark mode variants — known dark mode flash bug in commit eb5a98b)
 
 ### 10.2 Threshold
 
@@ -758,7 +977,14 @@ Push/PR
   └─→ [After Vercel Deploy] Smoke Tests             ~45s
 ```
 
-**Total wall-clock time: ~9-12 minutes** (jobs run in parallel where possible)
+**Total wall-clock time: ~12-14 minutes** (jobs run in parallel where possible)
+
+**Critical CI optimizations (without these, time balloons to 20+ minutes):**
+- Cache `~/.cache/ms-playwright` between runs (`actions/cache`)
+- Cache `node_modules/` between runs (`actions/cache` with `package-lock.json` hash)
+- Share build artifact between build → e2e/visual/lighthouse jobs (`actions/upload-artifact`)
+- Lighthouse runs against production build (`next start`), not dev server
+- Single Playwright install shared across e2e + visual regression jobs
 
 ## 13. Report Format — Claude-Compatible
 
@@ -861,7 +1087,39 @@ Every CI run produces `test-report.json`:
 }
 ```
 
-### 13.1 Report Generator Script
+### 13.1 Related Failures Grouping
+
+When a single source file change breaks multiple tests, the report groups them:
+
+```json
+"related_failure_groups": [
+  {
+    "root_source_file": "lib/srs/fsrs.ts",
+    "failure_count": 8,
+    "failures": ["fsrs-lapse-interval", "fsrs-stability-decay", "srs-review-api-200", ...],
+    "suggestion": "Fix the root cause in lib/srs/fsrs.ts — all 8 failures trace back to this file."
+  }
+]
+```
+
+This prevents Claude from fixing symptoms instead of root causes.
+
+### 13.2 Flaky Test Detection
+
+Tests that fail then pass on retry are marked as flaky (not counted as failures):
+
+```json
+"flaky_tests": [
+  {
+    "test_name": "walkthrough generation streams correctly",
+    "file": "__tests__/api/homework-walkthrough.test.ts",
+    "retry_count": 1,
+    "note": "Flaky — passed on retry. Likely timing-dependent. Investigate but don't fix urgently."
+  }
+]
+```
+
+### 13.3 Report Generator Script
 
 A Node.js script (`scripts/generate-test-report.js`) that:
 1. Reads Jest JSON output (`--json --outputFile=jest-results.json`)
@@ -869,8 +1127,21 @@ A Node.js script (`scripts/generate-test-report.js`) that:
 3. Reads Lighthouse CI results
 4. Reads coverage output
 5. Merges into the unified `test-report.json` format above
-6. Classifies each failure with `category` and `severity`
-7. Generates `fix_context` from test metadata and source file analysis
+6. Classifies each failure with `category` and `severity` using heuristics:
+   - Test file path → category (e.g., `__tests__/api/` → "api_regression")
+   - Error message patterns → severity (e.g., "401" in auth test → "critical")
+7. Populates `fix_context` from **test file JSDoc comments** (not auto-generated):
+
+```typescript
+/**
+ * @fix_context The lapse interval uses stability decay from FSRS-4.5.
+ *   If this fails, check the decay exponent in fsrs.ts around line 140.
+ */
+it('calculates interval after lapse correctly', () => { ... })
+```
+
+8. Groups related failures by `source_file` into `related_failure_groups`
+9. Flags flaky tests (passed on retry via `--retries=1`)
 
 ### 13.2 Usage with Claude
 
@@ -946,26 +1217,68 @@ NoteSnap/
 
 ## 15. Implementation Priority
 
-| Phase | What | Tests Added | Effort |
-|-------|------|-------------|--------|
-| **Phase 1** | CI hardening + expand unit tests for P0 modules | ~150 | 2-3 sessions |
-| **Phase 2** | API integration tests for all P0/P1 routes + Zod schemas | ~200 | 3-4 sessions |
-| **Phase 3** | Playwright E2E setup + auth + course + homework suites | ~30 | 2-3 sessions |
-| **Phase 4** | Remaining E2E suites + accessibility tests | ~40 | 2-3 sessions |
-| **Phase 5** | Visual regression + Lighthouse CI + smoke tests | ~40 | 1-2 sessions |
-| **Phase 6** | Report generator + remaining unit tests for P2/P3 | ~100 | 2-3 sessions |
-| **Phase 7** | Remaining API integration tests for P2/P3/P4 | ~200 | 2-3 sessions |
-| **Phase 8** | AI output parsing tests + edge case hardening | ~50 | 1-2 sessions |
+Phase ordering accounts for dependencies: report generator early (so all phases produce usable output), AI parsing early (most common production bugs), E2E after unit/integration (needs stable foundation).
 
-**Total: ~850+ tests across 15-20 implementation sessions**
+| Phase | What | Net-New Tests | Effort |
+|-------|------|---------------|--------|
+| **Phase 1** | CI hardening (remove `--passWithNoTests`, add `npm audit`, add caching) + report generator script + AI output parsing tests | ~70 | 2-3 sessions |
+| **Phase 2** | P0 unit tests (FSRS, answer checker, adaptive, AI prompts) + Zod response schemas | ~120 | 3-4 sessions |
+| **Phase 3** | API integration tests for all P0 routes (courses, SRS, practice, adaptive) + middleware tests | ~100 | 3-4 sessions |
+| **Phase 4** | Playwright E2E setup + auth + course + homework + practice suites | ~35 | 3-4 sessions |
+| **Phase 5** | API integration tests for P1 routes (homework, exams, auth, study) | ~120 | 3-4 sessions |
+| **Phase 6** | Remaining E2E suites + accessibility tests (jest-axe + Playwright axe-core) | ~60 | 3-4 sessions |
+| **Phase 7** | Visual regression + dark mode + Lighthouse CI + post-deploy smoke tests | ~45 | 2-3 sessions |
+| **Phase 8** | P2/P3 unit tests (gamification, personalization, curriculum, utilities) + hooks tests | ~80 | 2-3 sessions |
+| **Phase 9** | Remaining API integration tests for P2/P3/P4 routes + edge case hardening | ~120 | 3-4 sessions |
 
-## 16. Success Criteria
+**Total: ~750-850 net-new tests + 1,064 existing = ~1,800+ total across 24-33 implementation sessions**
+
+## 16. Maintenance Plan
+
+### 16.1 New Route Coverage Gate
+
+Add a CI check that fails if a new `route.ts` file exists without a corresponding test file:
+
+```bash
+# scripts/check-test-coverage-gate.sh
+for route in $(find app/api -name 'route.ts'); do
+  test_path="__tests__/api/$(echo $route | sed 's|app/api/||;s|/route.ts||;s|/|-|g').test.ts"
+  if [ ! -f "$test_path" ]; then
+    echo "MISSING TEST: $route → expected $test_path"
+    exit 1
+  fi
+done
+```
+
+### 16.2 Visual Regression Baseline Updates
+
+- Baselines are committed to git and updated manually: `npx playwright test --update-snapshots`
+- When a visual change is intentional, the PR must include updated baselines
+- Add a GitHub Actions label `update-snapshots` that triggers baseline regeneration
+
+### 16.3 Flaky Test Protocol
+
+- Tests that fail > 2 times in 10 runs are flagged as flaky
+- Flaky tests get a `@flaky` tag and are retried once (`--retries=1`)
+- A monthly flaky test audit identifies and fixes or removes chronic offenders
+
+### 16.4 Test Ownership
+
+- When adding/modifying a feature, the developer is responsible for adding/updating tests in the same PR
+- The PR template includes a checkbox: "Tests added/updated for this change?"
+
+## 17. Success Criteria
 
 - [ ] Every push to `main` triggers the full 8-layer pipeline
 - [ ] No code merges without all layers passing
 - [ ] Every failure produces a report with file:line, expected/actual, category, severity, and fix context
+- [ ] Related failures are grouped by root source file
 - [ ] Coverage > 75% for `app/api/`, `lib/`, and `hooks/`
 - [ ] Zero WCAG 2.2 AA violations on critical pages
 - [ ] LCP < 4s on all measured pages
 - [ ] Post-deploy smoke tests run against production after every Vercel deployment
-- [ ] Visual regression catches CSS changes > 0.5% pixel diff
+- [ ] Visual regression catches CSS changes > 0.5% pixel diff (including dark mode)
+- [ ] New API routes without tests fail CI
+- [ ] All 131 API routes have at least auth + validation + happy path + error tests
+- [ ] AI-dependent tests use mocked responses ($0 API cost in CI)
+- [ ] Flaky tests are tagged and retried, not silently ignored
