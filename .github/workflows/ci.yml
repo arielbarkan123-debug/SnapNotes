@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  deployment_status:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
   NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -13,9 +18,13 @@ env:
   YOUTUBE_DATA_API_KEY: placeholder-for-build
 
 jobs:
-  ci:
+  # -----------------------------------------------------------------------
+  # 1. Static analysis — no dependencies
+  # -----------------------------------------------------------------------
+  static-analysis:
+    if: github.event_name != 'deployment_status'
     runs-on: ubuntu-latest
-
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -30,11 +39,434 @@ jobs:
       - name: TypeScript check
         run: npx tsc --noEmit
 
-      - name: Lint
+      - name: ESLint
         run: npm run lint
 
-      - name: Tests
-        run: npm test -- --ci --passWithNoTests
+      - name: npm audit (advisories only)
+        run: npm audit --audit-level=high || true
 
-      - name: Build
+  # -----------------------------------------------------------------------
+  # 2. Unit tests
+  # -----------------------------------------------------------------------
+  unit-tests:
+    if: github.event_name != 'deployment_status'
+    needs: static-analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npx jest --ci --json --outputFile=jest-results.json --coverage --coverageReporters=json-summary
+
+      - name: Upload Jest results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jest-results
+          path: |
+            jest-results.json
+            coverage/coverage-summary.json
+          retention-days: 7
+
+  # -----------------------------------------------------------------------
+  # 3. API / integration tests
+  # -----------------------------------------------------------------------
+  api-integration-tests:
+    if: github.event_name != 'deployment_status'
+    needs: static-analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run API integration tests
+        run: npx jest --ci --testPathPattern='__tests__/api'
+
+  # -----------------------------------------------------------------------
+  # 4. Build
+  # -----------------------------------------------------------------------
+  build:
+    if: github.event_name != 'deployment_status'
+    needs: [unit-tests, api-integration-tests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js
         run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-build
+          path: .next
+          retention-days: 1
+
+  # -----------------------------------------------------------------------
+  # 5. E2E tests
+  # -----------------------------------------------------------------------
+  e2e-tests:
+    if: github.event_name != 'deployment_status'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Install Playwright deps (cached)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium webkit
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nextjs-build
+          path: .next
+
+      - name: Run E2E tests
+        run: npx playwright test --project=desktop-chrome --project=mobile-safari
+
+      - name: Upload Playwright results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  # -----------------------------------------------------------------------
+  # 6. Visual regression
+  # -----------------------------------------------------------------------
+  visual-regression:
+    if: github.event_name != 'deployment_status'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright deps (cached)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nextjs-build
+          path: .next
+
+      - name: Run visual regression tests
+        run: npx playwright test --project=visual-regression
+
+      - name: Upload visual regression results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-results
+          path: |
+            playwright-report/
+            test-results/
+            e2e/screenshots/diff/
+          retention-days: 7
+
+  # -----------------------------------------------------------------------
+  # 7. Lighthouse CI
+  # -----------------------------------------------------------------------
+  lighthouse:
+    if: github.event_name != 'deployment_status'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nextjs-build
+          path: .next
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli
+
+      - name: Run Lighthouse CI
+        run: lhci autorun || true
+
+      - name: Upload Lighthouse results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-results
+          path: .lighthouseci/
+          retention-days: 7
+
+  # -----------------------------------------------------------------------
+  # 8. Generate consolidated report
+  # -----------------------------------------------------------------------
+  generate-report:
+    if: always() && github.event_name != 'deployment_status'
+    needs:
+      [
+        unit-tests,
+        api-integration-tests,
+        build,
+        e2e-tests,
+        visual-regression,
+        lighthouse,
+      ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Download Jest results
+        uses: actions/download-artifact@v4
+        with:
+          name: jest-results
+          path: .
+        continue-on-error: true
+
+      - name: Download Playwright results
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-results
+          path: .
+        continue-on-error: true
+
+      - name: Download Lighthouse results
+        uses: actions/download-artifact@v4
+        with:
+          name: lighthouse-results
+          path: .lighthouseci
+        continue-on-error: true
+
+      - name: Generate test report
+        run: node scripts/generate-test-report.js
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: test-report.json
+          retention-days: 30
+
+  # -----------------------------------------------------------------------
+  # 9. PR comment with results
+  # -----------------------------------------------------------------------
+  pr-comment:
+    if: always() && github.event_name == 'pull_request'
+    needs: generate-report
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download test report
+        uses: actions/download-artifact@v4
+        with:
+          name: test-report
+          path: .
+
+      - name: Post PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('test-report.json', 'utf8'));
+            const s = report.summary;
+            const sev = report.severity_counts;
+            const lh = report.lighthouse.scores || {};
+            const cov = report.coverage.summary || {};
+
+            const lhScore = (v) => v == null ? 'N/A' : `${Math.round(v * 100)}%`;
+            const covPct = (v) => v == null ? 'N/A' : `${v}%`;
+
+            let body = `## QA Report\n\n`;
+            body += `| Metric | Value |\n|--------|-------|\n`;
+            body += `| Passed | ${s.total_passed} |\n`;
+            body += `| Failed | ${s.total_failed} |\n`;
+            body += `| Flaky | ${s.flaky_tests} |\n`;
+            body += `| Pass Rate | ${s.pass_rate}% |\n\n`;
+
+            if (s.total_failed > 0) {
+              body += `### Failures by Severity\n`;
+              body += `| Severity | Count |\n|----------|-------|\n`;
+              body += `| Critical | ${sev.critical} |\n`;
+              body += `| High | ${sev.high} |\n`;
+              body += `| Medium | ${sev.medium} |\n`;
+              body += `| Low | ${sev.low} |\n\n`;
+            }
+
+            body += `### Lighthouse\n`;
+            body += `| Category | Score |\n|----------|-------|\n`;
+            body += `| Performance | ${lhScore(lh.performance)} |\n`;
+            body += `| Accessibility | ${lhScore(lh.accessibility)} |\n`;
+            body += `| Best Practices | ${lhScore(lh.bestPractices)} |\n`;
+            body += `| SEO | ${lhScore(lh.seo)} |\n\n`;
+
+            body += `### Coverage\n`;
+            body += `| Metric | Coverage |\n|--------|----------|\n`;
+            body += `| Lines | ${covPct(cov.lines)} |\n`;
+            body += `| Branches | ${covPct(cov.branches)} |\n`;
+            body += `| Functions | ${covPct(cov.functions)} |\n`;
+
+            if (report.failures.length > 0) {
+              body += `\n### Failed Tests (top 10)\n`;
+              body += `| Test | Layer | Severity |\n|------|-------|----------|\n`;
+              for (const f of report.failures.slice(0, 10)) {
+                body += `| ${f.name.slice(0, 60)} | ${f.layer} | ${f.severity} |\n`;
+              }
+            }
+
+            body += `\n---\n*Generated at ${report.generated_at}*`;
+
+            // Find and update existing comment or create new one
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('## QA Report')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+  # -----------------------------------------------------------------------
+  # 10. Post-deploy smoke tests
+  # -----------------------------------------------------------------------
+  post-deploy-smoke:
+    if: github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright deps (cached)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Run smoke tests
+        run: npx playwright test --grep @smoke
+        env:
+          BASE_URL: ${{ github.event.deployment_status.target_url }}

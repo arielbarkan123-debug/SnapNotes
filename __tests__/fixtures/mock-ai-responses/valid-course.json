@@ -1,0 +1,71 @@
+{
+  "title": "Introduction to Algebra",
+  "overview": "Learn the fundamentals of algebra including variables, expressions, and equations.",
+  "lessons": [
+    {
+      "title": "Variables and Expressions",
+      "steps": [
+        {
+          "type": "explanation",
+          "title": "What is a Variable?",
+          "content": "A variable is a symbol, usually a letter, that represents an unknown value. For example, in the expression 2x + 3, x is a variable."
+        },
+        {
+          "type": "key_point",
+          "title": "Key Concept",
+          "content": "Variables allow us to write general formulas that work for many different numbers."
+        },
+        {
+          "type": "question",
+          "title": "Quick Check",
+          "content": "If x = 5, what is the value of 2x + 3?",
+          "options": ["10", "13", "8", "15"],
+          "correct_answer": 1,
+          "explanation": "2(5) + 3 = 10 + 3 = 13"
+        },
+        {
+          "type": "example",
+          "title": "Worked Example",
+          "content": "Let's evaluate the expression 3y - 1 when y = 4.\nStep 1: Replace y with 4: 3(4) - 1\nStep 2: Multiply: 12 - 1\nStep 3: Subtract: 11"
+        }
+      ]
+    },
+    {
+      "title": "Solving Simple Equations",
+      "steps": [
+        {
+          "type": "explanation",
+          "title": "What is an Equation?",
+          "content": "An equation is a mathematical statement that two expressions are equal. For example, 2x + 3 = 13 is an equation."
+        },
+        {
+          "type": "formula",
+          "title": "Balance Method",
+          "content": "To solve an equation, perform the same operation on both sides to isolate the variable."
+        },
+        {
+          "type": "question",
+          "title": "Practice",
+          "content": "Solve for x: x + 7 = 12",
+          "options": ["4", "5", "7", "19"],
+          "correct_answer": 1,
+          "explanation": "x + 7 = 12, so x = 12 - 7 = 5"
+        }
+      ]
+    }
+  ],
+  "learningObjectives": [
+    {
+      "id": "lo_1",
+      "objective": "Define what a variable is in algebraic expressions",
+      "bloomLevel": "remember",
+      "actionVerb": "define"
+    },
+    {
+      "id": "lo_2",
+      "objective": "Solve simple one-step equations",
+      "bloomLevel": "apply",
+      "actionVerb": "solve"
+    }
+  ]
+}

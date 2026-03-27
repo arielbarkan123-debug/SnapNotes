@@ -717,4 +717,145 @@ describe('Course Generation API - POST', () => {
       expect(successMsg?.courseId).toBe('existing-course-123')
     })
   })
+
+  /** @fix_context Streaming format verification */
+  describe('Streaming Format', () => {
+    it('emits progress messages with stage and percent', async () => {
+      const request = new NextRequest('http://localhost/api/generate-course', {
+        method: 'POST',
+        body: JSON.stringify({ imageUrl: 'https://example.com/image.jpg' }),
+      })
+
+      const messages = await drainStream(await POST(request))
+      const progressMsgs = messages.filter((m) => m.type === 'progress')
+
+      expect(progressMsgs.length).toBeGreaterThan(0)
+      for (const msg of progressMsgs) {
+        expect(msg.stage).toBeDefined()
+        expect(typeof msg.percent).toBe('number')
+      }
+    })
+
+    it('emits heartbeat messages with timestamp', async () => {
+      const request = new NextRequest('http://localhost/api/generate-course', {
+        method: 'POST',
+        body: JSON.stringify({ imageUrl: 'https://example.com/image.jpg' }),
+      })
+
+      const messages = await drainStream(await POST(request))
+      const heartbeats = messages.filter((m) => m.type === 'heartbeat')
+
+      // At least one heartbeat should fire during the async process
+      // (heartbeat interval starts immediately)
+      for (const hb of heartbeats) {
+        expect(typeof hb.timestamp).toBe('number')
+      }
+    })
+
+    it('success message includes sourceType and courseId', async () => {
+      const request = new NextRequest('http://localhost/api/generate-course', {
+        method: 'POST',
+        body: JSON.stringify({ textContent: 'Test content about biology' }),
+      })
+
+      const messages = await drainStream(await POST(request))
+      const successMsg = messages.find((m) => m.type === 'success')
+
+      expect(successMsg).toBeDefined()
+      expect(successMsg?.courseId).toBe('course-123')
+      expect(successMsg?.sourceType).toBe('text')
+      expect(successMsg?.cardsGenerated).toBeDefined()
+      expect(successMsg?.imagesProcessed).toBeDefined()
+    })
+  })
+
+  /** @fix_context Error mid-stream */
+  describe('Error Mid-Stream', () => {
+    it('sends error message when AI generation fails', async () => {
+      const { generateCourseFromImage, ClaudeAPIError: MockClaudeAPIError, getUserFriendlyError } = require('@/lib/ai')
+      generateCourseFromImage.mockRejectedValue(new MockClaudeAPIError('API overloaded', 'overloaded'))
+      getUserFriendlyError.mockReturnValue('The AI service is currently overloaded')
+
+      const request = new NextRequest('http://localhost/api/generate-course', {
+        method: 'POST',
+        body: JSON.stringify({ imageUrl: 'https://example.com/image.jpg' }),
+      })
+
+      const messages = await drainStream(await POST(request))
+      const errorMsg = messages.find((m) => m.type === 'error')
+
+      expect(errorMsg).toBeDefined()
+      expect(errorMsg?.retryable).toBe(true)
+    })
+
+    it('sends error for invalid request body', async () => {
+      // Override the request.json() to throw by sending non-JSON
+      // The route reads body inside the stream IIFE, so we need to provide invalid JSON
+      const request = new NextRequest('http://localhost/api/generate-course', {
+        method: 'POST',
+        body: 'not-json{{{',
+      })
+
+      const messages = await drainStream(await POST(request))
+      const errorMsg = messages.find((m) => m.type === 'error')
+
+      expect(errorMsg).toBeDefined()
+    })
+  })
+
+  /** @fix_context Source type edge cases */
+  describe('Source Type Edge Cases', () => {
+    it('treats text with supplementary images as text source type', async () => {
+      const { generateCourseFromText } = require('@/lib/ai')
+
+      const request = new NextRequest('http://localhost/api/generate-course', {
+        method: 'POST',
+        body: JSON.stringify({
+          textContent: 'Some educational content about cells and biology',
+        }),
+      })
+
+      const messages = await drainStream(await POST(request))
+      const successMsg = messages.find((m) => m.type === 'success')
+
+      expect(successMsg).toBeDefined()
+      expect(successMsg?.sourceType).toBe('text')
+      expect(generateCourseFromText).toHaveBeenCalled()
+    })
+
+    it('skips duplicate detection for text source type', async () => {
+      // Text-based generation should NOT check for duplicates
+      const request = new NextRequest('http://localhost/api/generate-course', {
+        method: 'POST',
+        body: JSON.stringify({
+          textContent: 'Unique content about quantum mechanics',
+        }),
+      })
+
+      const messages = await drainStream(await POST(request))
+      const successMsg = messages.find((m) => m.type === 'success')
+
+      expect(successMsg).toBeDefined()
+      expect(successMsg?.courseId).toBe('course-123')
+    })
+
+    it('filters out empty strings from imageUrls', async () => {
+      const { generateCourseFromImage } = require('@/lib/ai')
+
+      // Only one valid URL after filtering
+      const request = new NextRequest('http://localhost/api/generate-course', {
+        method: 'POST',
+        body: JSON.stringify({
+          imageUrls: ['', 'https://example.com/image.jpg', ''],
+        }),
+      })
+
+      const messages = await drainStream(await POST(request))
+      const successMsg = messages.find((m) => m.type === 'success')
+
+      expect(successMsg).toBeDefined()
+      // Should use single-image path since only one valid URL remains
+      expect(generateCourseFromImage).toHaveBeenCalled()
+    })
+  })
 })

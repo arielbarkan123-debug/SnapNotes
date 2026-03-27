@@ -1,0 +1,31 @@
+{
+  "title": "Bad Course",
+  "overview": "This course has structural problems",
+  "lessons": [
+    {
+      "title": "Lesson Without Steps"
+    },
+    {
+      "title": "Lesson With Empty Steps",
+      "steps": []
+    },
+    {
+      "title": "Lesson With Invalid Step Types",
+      "steps": [
+        {
+          "type": "nonexistent_type",
+          "content": "This step type doesn't exist"
+        }
+      ]
+    },
+    {
+      "title": null,
+      "steps": [
+        {
+          "type": "explanation",
+          "content": "Valid step in lesson with null title"
+        }
+      ]
+    }
+  ]
+}

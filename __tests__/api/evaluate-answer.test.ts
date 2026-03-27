@@ -276,6 +276,121 @@ describe('Evaluate Answer API', () => {
     })
   })
 
+  /** @fix_context Partial credit scoring */
+  describe('Partial Credit', () => {
+    it('returns partial credit score between 0 and 100', async () => {
+      const { evaluateAnswer } = require('@/lib/evaluation/answer-checker')
+      evaluateAnswer.mockResolvedValue({
+        isCorrect: false,
+        score: 45,
+        feedback: 'Partially correct. You identified the concept but missed key details.',
+        explanation: 'The answer is incomplete.',
+      })
+
+      const request = new NextRequest('http://localhost/api/evaluate-answer', {
+        method: 'POST',
+        body: JSON.stringify({
+          question: 'Explain photosynthesis',
+          expectedAnswer: 'Process where plants convert light energy to chemical energy using chlorophyll',
+          userAnswer: 'Plants use sunlight to make food',
+        }),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.isCorrect).toBe(false)
+      expect(data.score).toBe(45)
+      expect(data.evaluationTimeMs).toBeGreaterThanOrEqual(0)
+    })
+
+    it('passes acceptableAnswers to evaluateAnswer', async () => {
+      const { evaluateAnswer } = require('@/lib/evaluation/answer-checker')
+
+      const request = new NextRequest('http://localhost/api/evaluate-answer', {
+        method: 'POST',
+        body: JSON.stringify({
+          question: 'What is H2O?',
+          expectedAnswer: 'Water',
+          userAnswer: 'Dihydrogen monoxide',
+          acceptableAnswers: ['Water', 'Dihydrogen monoxide', 'H2O'],
+        }),
+      })
+
+      await POST(request)
+
+      expect(evaluateAnswer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          acceptableAnswers: ['Water', 'Dihydrogen monoxide', 'H2O'],
+        })
+      )
+    })
+  })
+
+  /** @fix_context Hebrew content evaluation */
+  describe('Hebrew Content', () => {
+    it('evaluates Hebrew questions and answers', async () => {
+      const { evaluateAnswer } = require('@/lib/evaluation/answer-checker')
+      const { getContentLanguage } = require('@/lib/ai/language')
+
+      getContentLanguage.mockResolvedValueOnce('he')
+      evaluateAnswer.mockResolvedValue({
+        isCorrect: true,
+        score: 90,
+        feedback: 'תשובה מצוינת!',
+        explanation: 'זיהית נכון את המושג.',
+      })
+
+      const request = new NextRequest('http://localhost/api/evaluate-answer', {
+        method: 'POST',
+        body: JSON.stringify({
+          question: 'מהו DNA?',
+          expectedAnswer: 'חומצה דאוקסיריבונוקלאית',
+          userAnswer: 'DNA הוא חומצה דאוקסיריבונוקלאית',
+        }),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.isCorrect).toBe(true)
+      expect(data.score).toBe(90)
+
+      expect(evaluateAnswer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          language: 'he',
+        })
+      )
+    })
+  })
+
+  /** @fix_context Gap detection recording */
+  describe('Gap Detection', () => {
+    it('triggers gap detection when conceptIds are provided', async () => {
+      const request = new NextRequest('http://localhost/api/evaluate-answer', {
+        method: 'POST',
+        body: JSON.stringify({
+          question: 'What is mitosis?',
+          expectedAnswer: 'Cell division',
+          userAnswer: 'When a cell divides',
+          conceptIds: ['concept-mitosis-1'],
+          courseId: 'course-bio-1',
+          lessonIndex: 2,
+          responseTimeMs: 8000,
+        }),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.isCorrect).toBe(true)
+      // Gap detection is fire-and-forget, so we just verify the endpoint succeeded
+    })
+  })
+
   describe('Error Handling', () => {
     it('returns 500 on unexpected error', async () => {
       const request = new NextRequest('http://localhost/api/evaluate-answer', {
@@ -288,6 +403,61 @@ describe('Evaluate Answer API', () => {
 
       expect(response.status).toBe(500)
       expect(data.error).toContain('Failed to evaluate answer')
+    })
+
+    it('returns 500 when evaluateAnswer throws', async () => {
+      const { evaluateAnswer } = require('@/lib/evaluation/answer-checker')
+      evaluateAnswer.mockRejectedValue(new Error('Claude API unavailable'))
+
+      const request = new NextRequest('http://localhost/api/evaluate-answer', {
+        method: 'POST',
+        body: JSON.stringify({
+          question: 'What is DNA?',
+          expectedAnswer: 'Deoxyribonucleic acid',
+          userAnswer: 'test',
+        }),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(500)
+      expect(data.error).toContain('Failed to evaluate answer')
+    })
+
+    it('succeeds even when curriculum context fetch fails', async () => {
+      // Override user_learning_profile to throw
+      mockSupabase.from.mockImplementation((table: string) => {
+        const builder: any = {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          single: jest.fn(),
+          maybeSingle: jest.fn(),
+          upsert: jest.fn().mockResolvedValue({ data: null, error: null }),
+        }
+
+        if (table === 'user_learning_profile') {
+          builder.single.mockRejectedValue(new Error('DB timeout'))
+        }
+
+        return builder
+      })
+
+      const request = new NextRequest('http://localhost/api/evaluate-answer', {
+        method: 'POST',
+        body: JSON.stringify({
+          question: 'What is DNA?',
+          expectedAnswer: 'Deoxyribonucleic acid',
+          userAnswer: 'DNA is deoxyribonucleic acid',
+        }),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      // Should succeed because curriculum context is optional
+      expect(response.status).toBe(200)
+      expect(data.isCorrect).toBe(true)
     })
   })
 })

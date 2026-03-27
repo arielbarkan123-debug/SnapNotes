@@ -158,6 +158,34 @@ describe('Practice Session API', () => {
         expect(data.recentSessions).toEqual(mockRecentSessions)
         expect(getRecentSessions).toHaveBeenCalledWith('user-123', 10)
       })
+
+      it('returns multiple includes (stats,active,recent) together', async () => {
+        const request = new NextRequest('http://localhost/api/practice/session?include=stats,active,recent')
+
+        const response = await GET(request)
+        const data = await response.json()
+
+        expect(response.status).toBe(200)
+        expect(data.stats).toBeDefined()
+        expect(data.activeSessions).toBeDefined()
+        expect(data.recentSessions).toBeDefined()
+      })
+    })
+
+    /** @fix_context GET Error Handling */
+    describe('Error Handling', () => {
+      it('returns 500 when getUserPracticeStats throws', async () => {
+        const { getUserPracticeStats } = require('@/lib/practice')
+        getUserPracticeStats.mockRejectedValue(new Error('DB connection failed'))
+
+        const request = new NextRequest('http://localhost/api/practice/session')
+
+        const response = await GET(request)
+        const data = await response.json()
+
+        expect(response.status).toBe(500)
+        expect(data.success).toBe(false)
+      })
     })
   })
 
@@ -186,6 +214,7 @@ describe('Practice Session API', () => {
       })
     })
 
+    /** @fix_context Validation for all session types */
     describe('Validation', () => {
       it('returns VALIDATION_ERROR for invalid session type', async () => {
         const request = new NextRequest('http://localhost/api/practice/session', {
@@ -198,6 +227,59 @@ describe('Practice Session API', () => {
 
         expect(response.status).toBe(400)
         expect(data.success).toBe(false)
+      })
+
+      it('returns VALIDATION_ERROR when sessionType is missing', async () => {
+        const request = new NextRequest('http://localhost/api/practice/session', {
+          method: 'POST',
+          body: JSON.stringify({ courseId: 'course-1' }),
+        })
+
+        const response = await POST(request)
+        const data = await response.json()
+
+        expect(response.status).toBe(400)
+        expect(data.success).toBe(false)
+      })
+
+      it('accepts all valid session types: mixed', async () => {
+        const request = new NextRequest('http://localhost/api/practice/session', {
+          method: 'POST',
+          body: JSON.stringify({ sessionType: 'mixed', courseId: 'course-1' }),
+        })
+
+        const response = await POST(request)
+        expect(response.status).toBe(200)
+      })
+
+      it('accepts all valid session types: exam_prep', async () => {
+        const request = new NextRequest('http://localhost/api/practice/session', {
+          method: 'POST',
+          body: JSON.stringify({ sessionType: 'exam_prep', courseId: 'course-1' }),
+        })
+
+        const response = await POST(request)
+        expect(response.status).toBe(200)
+      })
+
+      it('accepts all valid session types: quick', async () => {
+        const request = new NextRequest('http://localhost/api/practice/session', {
+          method: 'POST',
+          body: JSON.stringify({ sessionType: 'quick', courseId: 'course-1' }),
+        })
+
+        const response = await POST(request)
+        expect(response.status).toBe(200)
+      })
+
+      it('accepts all valid session types: infinite', async () => {
+        const request = new NextRequest('http://localhost/api/practice/session', {
+          method: 'POST',
+          body: JSON.stringify({ sessionType: 'infinite', courseId: 'course-1' }),
+        })
+
+        const response = await POST(request)
+        expect(response.status).toBe(200)
       })
     })
 

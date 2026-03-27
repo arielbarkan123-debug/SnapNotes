@@ -1,0 +1,15 @@
+{
+  "title": "Truncated Course",
+  "overview": "This course was cut off mid-generation",
+  "lessons": [
+    {
+      "title": "Complete Lesson",
+      "steps": [
+        {
+          "type": "explanation",
+          "content": "This is a complete explanation step."
+        }
+      ]
+    },
+    {
+      "title": "Truncated Less
