@@ -109,7 +109,7 @@ export function PracticeWidget() {
         </h2>
         <Link
           href="/practice"
-          className="text-sm text-violet-600 dark:text-violet-400 hover:underline"
+          className="text-sm text-violet-600 dark:text-violet-400 underline hover:underline"
         >
           {t('viewAll')}
         </Link>

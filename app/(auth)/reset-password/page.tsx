@@ -186,7 +186,7 @@ export default function ResetPasswordPage() {
                 </Link>
                 <Link
                   href="/login"
-                  className="block text-violet-600 dark:text-violet-400 hover:underline font-medium"
+                  className="block text-violet-600 dark:text-violet-400 underline hover:underline font-medium"
                 >
                   ← {t('resetPassword.backToLogin')}
                 </Link>
@@ -292,7 +292,7 @@ export default function ResetPasswordPage() {
           <p className="text-center text-gray-600 dark:text-gray-400 mt-6">
             <Link
               href="/login"
-              className="text-violet-600 dark:text-violet-400 hover:underline font-medium"
+              className="text-violet-600 dark:text-violet-400 underline hover:underline font-medium"
             >
               ← {t('resetPassword.backToLogin')}
             </Link>

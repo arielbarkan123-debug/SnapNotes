@@ -431,7 +431,7 @@ export default function KnowledgeMapContent({
           </div>
           <Link
             href="/dashboard"
-            className="text-violet-600 dark:text-violet-400 hover:underline"
+            className="text-violet-600 dark:text-violet-400 underline hover:underline"
           >
             {t('backToDashboard')}
           </Link>

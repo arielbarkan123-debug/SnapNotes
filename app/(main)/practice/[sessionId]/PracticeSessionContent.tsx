@@ -855,7 +855,7 @@ export default function PracticeSessionContent({
             <button
               type="button"
               onClick={() => router.push(`/homework/${session.error_context!.checkId}`)}
-              className="text-xs text-violet-600 dark:text-violet-400 hover:underline mt-1"
+              className="text-xs text-violet-600 dark:text-violet-400 underline hover:underline mt-1"
             >
               {tp('backToHomework')}
             </button>

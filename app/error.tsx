@@ -83,7 +83,7 @@ Stack: ${error.stack || 'N/A'}
               )}
               <button
                 onClick={copyErrorDetails}
-                className="text-violet-600 dark:text-violet-400 hover:underline"
+                className="text-violet-600 dark:text-violet-400 underline hover:underline"
               >
                 Copy error details
               </button>

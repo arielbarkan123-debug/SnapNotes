@@ -338,7 +338,7 @@ export default function SignupPage() {
                     type="button"
                     onClick={handleResendVerification}
                     disabled={isResending || resendCooldown > 0}
-                    className="text-violet-600 dark:text-violet-400 hover:underline text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="text-violet-600 dark:text-violet-400 underline hover:underline text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isResending
                       ? t('signup.resending')
@@ -413,8 +413,9 @@ export default function SignupPage() {
 
             {/* Terms Acceptance */}
             <div className="space-y-1">
-              <label className="flex items-start gap-3 cursor-pointer">
+              <label htmlFor="terms-accepted" className="flex items-start gap-3 cursor-pointer">
                 <input
+                  id="terms-accepted"
                   type="checkbox"
                   checked={termsAccepted}
                   onChange={(e) => {
@@ -427,12 +428,12 @@ export default function SignupPage() {
                 <span className="text-sm text-gray-600 dark:text-gray-400">
                   {t.rich('signup.termsAcceptance', {
                     terms: (chunks) => (
-                      <Link href="/terms" target="_blank" className="text-violet-600 dark:text-violet-400 hover:underline font-medium">
+                      <Link href="/terms" target="_blank" className="text-violet-600 dark:text-violet-400 underline hover:underline font-medium">
                         {chunks}
                       </Link>
                     ),
                     privacy: (chunks) => (
-                      <Link href="/privacy" target="_blank" className="text-violet-600 dark:text-violet-400 hover:underline font-medium">
+                      <Link href="/privacy" target="_blank" className="text-violet-600 dark:text-violet-400 underline hover:underline font-medium">
                         {chunks}
                       </Link>
                     ),
@@ -486,7 +487,7 @@ export default function SignupPage() {
             {t('signup.hasAccount')}{' '}
             <Link
               href="/login"
-              className="text-violet-600 dark:text-violet-400 hover:underline active:text-violet-700 font-medium"
+              className="text-violet-600 dark:text-violet-400 underline hover:underline active:text-violet-700 font-medium"
             >
               {t('signup.signIn')}
             </Link>

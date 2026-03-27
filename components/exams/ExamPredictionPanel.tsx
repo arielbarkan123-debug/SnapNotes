@@ -123,7 +123,7 @@ export default function ExamPredictionPanel({
             <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
             <button
               onClick={handleGenerate}
-              className="mt-2 text-sm font-medium text-violet-600 dark:text-violet-400 hover:underline"
+              className="mt-2 text-sm font-medium text-violet-600 dark:text-violet-400 underline hover:underline"
             >
               {t('tryAgain')}
             </button>
@@ -214,7 +214,7 @@ export default function ExamPredictionPanel({
               <div>
                 <button
                   onClick={() => setShowPriorities(!showPriorities)}
-                  className="flex items-center gap-2 text-sm font-medium text-violet-600 dark:text-violet-400 hover:underline"
+                  className="flex items-center gap-2 text-sm font-medium text-violet-600 dark:text-violet-400 underline hover:underline"
                 >
                   {showPriorities ? '▼' : '▶'} {t('studyPlan')}
                 </button>

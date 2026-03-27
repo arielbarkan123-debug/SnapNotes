@@ -8,8 +8,8 @@ interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
-  ({ label, error, type = 'text', id, className = '', ...props }, ref) => {
-    const inputId = id || label.toLowerCase().replace(/\s+/g, '-')
+  ({ label, error, type = 'text', id, name, className = '', ...props }, ref) => {
+    const inputId = id || (name ? `form-input-${name}` : label.toLowerCase().replace(/\s+/g, '-'))
 
     return (
       <div className="w-full">
@@ -23,6 +23,7 @@ const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
           ref={ref}
           type={type}
           id={inputId}
+          name={name}
           className={`
             w-full px-4 py-3.5 sm:py-3 rounded-xl sm:rounded-lg border bg-white dark:bg-gray-700
             text-gray-900 dark:text-white outline-none transition text-base

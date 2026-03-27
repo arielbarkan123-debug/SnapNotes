@@ -434,7 +434,7 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
           <div className="bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card mb-8 animate-fadeSlideIn stagger-4">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
               <h2 className="font-bold text-gray-900 dark:text-white text-lg">{t('todaysPlan')}</h2>
-              <Link href="/study-plan" className="text-sm font-medium text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1">
+              <Link href="/study-plan" className="text-sm font-medium text-violet-600 dark:text-violet-400 underline hover:underline flex items-center gap-1">
                 {t('viewFullPlan')}
                 <ChevronRight className="w-4 h-4" />
               </Link>
@@ -529,7 +529,7 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold text-gray-900 dark:text-white text-lg">{t('myCourses')}</h2>
             {totalCount > 3 && (
-              <Link href="/courses" className="text-sm font-medium text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1">
+              <Link href="/courses" className="text-sm font-medium text-violet-600 dark:text-violet-400 underline hover:underline flex items-center gap-1">
                 {t('viewAll')}
                 <ChevronRight className="w-4 h-4" />
               </Link>
@@ -547,7 +547,7 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
               </div>
               <button
                 onClick={() => router.refresh()}
-                className="text-sm font-medium text-violet-600 dark:text-violet-400 hover:underline flex-shrink-0 ms-4"
+                className="text-sm font-medium text-violet-600 dark:text-violet-400 underline hover:underline flex-shrink-0 ms-4"
               >
                 {t('retry')}
               </button>

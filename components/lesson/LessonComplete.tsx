@@ -285,7 +285,7 @@ export default function LessonComplete({
             )}
             <Link
               href="/knowledge-map"
-              className="flex items-center justify-center gap-1 text-sm text-violet-600 dark:text-violet-400 hover:underline mt-4"
+              className="flex items-center justify-center gap-1 text-sm text-violet-600 dark:text-violet-400 underline hover:underline mt-4"
             >
               {t('viewKnowledgeMap')}
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

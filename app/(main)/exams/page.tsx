@@ -287,14 +287,14 @@ export default function ExamsPage() {
                   ) : templateCount > 0 ? (
                     <Link
                       href="/settings/past-exams"
-                      className="text-xs text-violet-600 dark:text-violet-400 hover:underline"
+                      className="text-xs text-violet-600 dark:text-violet-400 underline hover:underline"
                     >
                       {t('pastExamTemplates.templatesAvailable', { count: templateCount })}
                     </Link>
                   ) : (
                     <Link
                       href="/settings/past-exams"
-                      className="text-xs text-violet-600 dark:text-violet-400 hover:underline"
+                      className="text-xs text-violet-600 dark:text-violet-400 underline hover:underline"
                     >
                       {t('pastExamTemplates.addTemplates')}
                     </Link>

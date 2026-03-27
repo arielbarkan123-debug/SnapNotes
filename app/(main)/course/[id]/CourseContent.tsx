@@ -46,14 +46,14 @@ export default function CourseContent({ sections }: CourseContentProps) {
       <div className="flex items-center justify-end gap-2 text-sm">
         <button
           onClick={expandAll}
-          className="text-violet-600 dark:text-violet-400 hover:underline"
+          className="text-violet-600 dark:text-violet-400 underline hover:underline"
         >
           Expand All
         </button>
         <span className="text-gray-300 dark:text-gray-600">|</span>
         <button
           onClick={collapseAll}
-          className="text-violet-600 dark:text-violet-400 hover:underline"
+          className="text-violet-600 dark:text-violet-400 underline hover:underline"
         >
           Collapse All
         </button>

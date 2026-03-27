@@ -122,7 +122,7 @@ export default function OnboardingInsights() {
       {actionLabel && (
         <button
           onClick={action}
-          className="flex-shrink-0 text-sm font-medium text-violet-600 dark:text-violet-400 hover:underline"
+          className="flex-shrink-0 text-sm font-medium text-violet-600 dark:text-violet-400 underline hover:underline"
         >
           {actionLabel}
         </button>

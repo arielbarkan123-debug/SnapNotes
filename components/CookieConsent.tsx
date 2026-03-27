@@ -40,7 +40,7 @@ export default function CookieConsent() {
           {t('message')}{' '}
           <Link
             href="/privacy"
-            className="text-violet-600 dark:text-violet-400 hover:underline font-medium"
+            className="text-violet-600 dark:text-violet-400 underline hover:underline font-medium"
           >
             {t('learnMore')}
           </Link>

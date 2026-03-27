@@ -247,7 +247,7 @@ export default function CoursesPage() {
           </p>
           <button
             onClick={() => setSearchQuery('')}
-            className="text-violet-600 dark:text-violet-400 font-medium hover:underline"
+            className="text-violet-600 dark:text-violet-400 font-medium underline hover:underline"
           >
             {t('clearSearch')}
           </button>

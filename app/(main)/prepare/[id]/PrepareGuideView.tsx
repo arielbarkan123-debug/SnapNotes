@@ -99,7 +99,7 @@ export default function PrepareGuideView({ guideId, shareToken, isOwner }: Prepa
     return (
       <div className="max-w-4xl mx-auto px-4 py-16 text-center">
         <p className="text-red-500">{error || 'Guide not found'}</p>
-        <Link href="/prepare" className="mt-4 inline-block text-violet-600 hover:underline">
+        <Link href="/prepare" className="mt-4 inline-block text-violet-600 underline hover:underline">
           {t('viewer.backToGuides')}
         </Link>
       </div>

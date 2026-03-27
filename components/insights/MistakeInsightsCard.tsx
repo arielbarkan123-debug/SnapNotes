@@ -162,7 +162,7 @@ export default function MistakeInsightsCard() {
           <button
             onClick={() => fetchData(true)}
             disabled={isRefreshing}
-            className="text-xs font-medium text-violet-600 dark:text-violet-400 hover:underline disabled:opacity-50"
+            className="text-xs font-medium text-violet-600 dark:text-violet-400 underline hover:underline disabled:opacity-50"
           >
             {isRefreshing ? t('refreshing') : t('refreshAnalysis')}
           </button>

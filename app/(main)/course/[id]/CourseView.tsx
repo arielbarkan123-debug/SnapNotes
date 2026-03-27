@@ -220,7 +220,7 @@ export default function CourseView({ course, progress }: CourseViewProps) {
                 {/* Knowledge Map Link */}
                 <Link
                   href="/knowledge-map"
-                  className="text-sm text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1"
+                  className="text-sm text-violet-600 dark:text-violet-400 underline hover:underline flex items-center gap-1"
                 >
                   {tc('viewKnowledgeMap')}
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

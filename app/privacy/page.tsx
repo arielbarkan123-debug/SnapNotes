@@ -22,7 +22,7 @@ export default async function PrivacyPage() {
         <div className="mb-8">
           <Link
             href="/"
-            className="text-violet-600 dark:text-violet-400 hover:underline font-medium text-sm"
+            className="text-violet-600 dark:text-violet-400 underline hover:underline font-medium text-sm"
           >
             {t('backToHome')}
           </Link>
@@ -203,7 +203,7 @@ export default async function PrivacyPage() {
               </p>
               <a
                 href={`mailto:${t('privacy.contactEmail')}`}
-                className="text-violet-600 dark:text-violet-400 hover:underline font-medium"
+                className="text-violet-600 dark:text-violet-400 underline hover:underline font-medium"
               >
                 {t('privacy.contactEmail')}
               </a>
@@ -215,7 +215,7 @@ export default async function PrivacyPage() {
         <div className="text-center mt-8">
           <Link
             href="/terms"
-            className="text-sm text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 hover:underline"
+            className="text-sm text-gray-500 dark:text-gray-400 underline hover:text-violet-600 dark:hover:text-violet-400 hover:underline"
           >
             {t('termsTitle')}
           </Link>

@@ -36,7 +36,7 @@ export default function AchievementProgressWidget() {
         </h3>
         <Link
           href="/progress"
-          className="text-xs text-violet-600 dark:text-violet-400 hover:underline"
+          className="text-xs text-violet-600 dark:text-violet-400 underline hover:underline"
         >
           {t('achievementProgress.viewAll')}
         </Link>

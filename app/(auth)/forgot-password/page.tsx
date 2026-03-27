@@ -244,7 +244,7 @@ export default function ForgotPasswordPage() {
               </p>
               <a
                 href={`mailto:${ADMIN_EMAIL}?subject=Account Recovery Request&body=Hi,%0A%0AI need help recovering my NoteSnap account.%0A%0AMy registered email: ${email || '[your email]'}%0A%0APlease help me reset my password.%0A%0AThank you.`}
-                className="inline-flex items-center gap-2 text-sm text-violet-600 dark:text-violet-400 hover:underline font-medium"
+                className="inline-flex items-center gap-2 text-sm text-violet-600 dark:text-violet-400 underline hover:underline font-medium"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -258,7 +258,7 @@ export default function ForgotPasswordPage() {
           <p className="text-center text-gray-600 dark:text-gray-400 mt-6 text-sm sm:text-base">
             <Link
               href="/login"
-              className="text-violet-600 dark:text-violet-400 hover:underline active:text-violet-700 font-medium"
+              className="text-violet-600 dark:text-violet-400 underline hover:underline active:text-violet-700 font-medium"
             >
               ← {t('forgotPassword.backToLogin')}
             </Link>

@@ -84,7 +84,7 @@ export default function NotFound() {
           Need help?{' '}
           <a
             href="mailto:support@notesnap.app"
-            className="text-violet-600 dark:text-violet-400 hover:underline"
+            className="text-violet-600 dark:text-violet-400 underline hover:underline"
           >
             Contact Support
           </a>

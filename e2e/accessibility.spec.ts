@@ -287,18 +287,19 @@ test.describe('Accessibility — Specific checks', () => {
     await page.goto('/');
     await waitForStable(page);
 
-    const headings = page.locator('h1, h2, h3, h4, h5, h6');
-    const count = await headings.count();
+    // Scope to <main> content to avoid footer/nav heading resets
+    const mainHeadings = page.locator('main h1, main h2, main h3, main h4, main h5, main h6');
+    const count = await mainHeadings.count();
     expect(count).toBeGreaterThan(0);
 
-    // Must have exactly one h1
+    // Must have exactly one h1 on the entire page
     const h1Count = await page.locator('h1').count();
     expect(h1Count, 'Page should have exactly one h1').toBe(1);
 
-    // Heading levels should not skip (e.g. h1 -> h3 without h2)
+    // Heading levels within <main> should not skip (e.g. h1 -> h3 without h2)
     let prevLevel = 0;
     for (let i = 0; i < count; i++) {
-      const tag = await headings.nth(i).evaluate((el) => el.tagName.toLowerCase());
+      const tag = await mainHeadings.nth(i).evaluate((el) => el.tagName.toLowerCase());
       const level = parseInt(tag.replace('h', ''), 10);
 
       if (prevLevel > 0) {

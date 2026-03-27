@@ -181,7 +181,7 @@ function LoginForm() {
         <div className="flex justify-end">
           <Link
             href="/forgot-password"
-            className="text-sm text-violet-600 dark:text-violet-400 hover:underline active:text-violet-700 py-1"
+            className="text-sm text-violet-600 dark:text-violet-400 underline hover:underline active:text-violet-700 py-1"
           >
             {t('login.forgotPassword')}
           </Link>
@@ -227,7 +227,7 @@ function LoginForm() {
         {t('login.noAccount')}{' '}
         <Link
           href="/signup"
-          className="text-violet-600 dark:text-violet-400 hover:underline active:text-violet-700 font-medium"
+          className="text-violet-600 dark:text-violet-400 underline hover:underline active:text-violet-700 font-medium"
         >
           {t('login.signUp')}
         </Link>
