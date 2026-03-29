@@ -60,7 +60,7 @@ export function PastExamUploadModal({
   defaultSubjectId,
 }: PastExamUploadModalProps) {
   const t = useTranslations('pastExams')
-  const { subjects, isLoading: loadingSubjects } = useUserSubjects()
+  const { subjects, groups, isLoading: loadingSubjects } = useUserSubjects()
 
   // Form state
   const [file, setFile] = useState<File | null>(null)
@@ -272,11 +272,21 @@ export function PastExamUploadModal({
                 required
               >
                 <option value="">{t('uploadModal.selectSubject')}</option>
-                {subjects.map((subject) => (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.label}
-                  </option>
-                ))}
+                {groups.length > 0
+                  ? groups.map((group) => (
+                      <optgroup key={group.category} label={group.category}>
+                        {group.subjects.map((subject) => (
+                          <option key={subject.id} value={subject.id}>
+                            {subject.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))
+                  : subjects.map((subject) => (
+                      <option key={subject.id} value={subject.id}>
+                        {subject.label}
+                      </option>
+                    ))}
               </select>
             )}
           </div>
