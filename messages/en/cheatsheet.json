@@ -12,6 +12,13 @@
   "noBlocks": "This cheatsheet has no content blocks",
   "generateButton": "Generate Cheatsheet",
   "generating": "Generating...",
+  "createFromContent": "Create Cheatsheet",
+  "createFromContentDesc": "Upload notes or paste text to generate a cheatsheet",
+  "uploadContent": "Upload Content",
+  "createButton": "Create Cheatsheet",
+  "creating": "Creating cheatsheet...",
+  "cancel": "Cancel",
+  "createError": "Failed to create cheatsheet. Please try again.",
   "severity": {
     "high": "Must Know",
     "medium": "Important",

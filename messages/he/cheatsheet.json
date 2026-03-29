@@ -12,6 +12,13 @@
   "noBlocks": "לדף עזר זה אין בלוקים של תוכן",
   "generateButton": "צור דף עזר",
   "generating": "יוצר...",
+  "createFromContent": "יצירת דף סיכום",
+  "createFromContentDesc": "העלו סיכומים או הדביקו טקסט ליצירת דף סיכום",
+  "uploadContent": "העלאת תוכן",
+  "createButton": "יצירת דף סיכום",
+  "creating": "יוצר דף סיכום...",
+  "cancel": "ביטול",
+  "createError": "יצירת דף הסיכום נכשלה. נסו שוב.",
   "severity": {
     "high": "חובה לדעת",
     "medium": "חשוב",
