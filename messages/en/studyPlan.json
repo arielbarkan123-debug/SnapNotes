@@ -85,6 +85,13 @@
     "moreItems": "+{count} more"
   },
   "calendar": {
+    "title": "Study Calendar",
+    "today": "Today",
+    "month": "Month",
+    "week": "Week",
+    "noEvents": "No events this month",
+    "addEvent": "Add Event",
+    "moreEvents": "+{count} more",
     "dayNames": {
       "sun": "S",
       "mon": "M",
@@ -101,6 +108,96 @@
       "overdue": "Overdue"
     }
   },
+  "events": {
+    "title": "Academic Events",
+    "addTitle": "Add Event",
+    "editTitle": "Event Details",
+    "types": {
+      "test": "Test",
+      "quiz": "Quiz",
+      "homework": "Homework",
+      "project": "Project",
+      "presentation": "Presentation",
+      "other": "Other"
+    },
+    "fields": {
+      "title": "Title",
+      "titlePlaceholder": "e.g., Biology Final Exam",
+      "eventType": "Event Type",
+      "date": "Date",
+      "time": "Time",
+      "subject": "Subject",
+      "subjectPlaceholder": "e.g., Biology, Math",
+      "description": "Description",
+      "descriptionPlaceholder": "Notes about this event...",
+      "priority": "Priority",
+      "priorityLow": "Low",
+      "priorityMedium": "Medium",
+      "priorityHigh": "High"
+    },
+    "topics": {
+      "title": "Topics",
+      "addPlaceholder": "Add a topic...",
+      "empty": "No topics added yet"
+    },
+    "materials": {
+      "title": "Materials",
+      "addLink": "Add Link",
+      "addNote": "Add Note",
+      "linkPlaceholder": "https://...",
+      "titlePlaceholder": "Link title",
+      "notePlaceholder": "Write a note...",
+      "empty": "No materials added yet"
+    },
+    "prep": {
+      "title": "Study Preparation",
+      "cram": "Cram",
+      "cramDesc": "Study everything the night before",
+      "spread": "Spread",
+      "spreadDesc": "Distribute across multiple days",
+      "custom": "Custom",
+      "customDesc": "Plan it yourself",
+      "days": "{count} days before",
+      "generate": "Generate Study Schedule",
+      "generating": "Generating..."
+    },
+    "delete": "Delete Event",
+    "deleteConfirm": "Are you sure you want to delete this event? This cannot be undone.",
+    "cancel": "Cancel",
+    "create": "Create Event",
+    "creating": "Creating...",
+    "save": "Save",
+    "saved": "Saved"
+  },
+  "chat": {
+    "title": "AI Study Assistant",
+    "welcome": "Hi! I'm your study planning assistant. Tell me about your upcoming tests, quizzes, or assignments, and I'll help you organize your study schedule.",
+    "placeholder": "Tell me about your upcoming tests...",
+    "clearChat": "Clear chat",
+    "clearConfirm": "Clear all chat history?",
+    "sending": "Thinking...",
+    "error": "Something went wrong. Please try again.",
+    "retry": "Retry",
+    "suggestions": {
+      "test": "I have a test coming up",
+      "today": "What should I study today?",
+      "week": "Help me plan this week",
+      "events": "Show my upcoming events"
+    },
+    "actions": {
+      "created": "Created: {title} on {date}",
+      "updated": "Updated event",
+      "deleted": "Removed event",
+      "scheduled": "Generated study schedule",
+      "applied": "Applied",
+      "pending": "Pending"
+    }
+  },
+  "tabs": {
+    "calendar": "Calendar",
+    "assistant": "AI Assistant"
+  },
+  "todayTasks": "Today's Tasks",
   "showCalendar": "View Calendar",
   "hideCalendar": "Hide Calendar",
   "insightMessages": {

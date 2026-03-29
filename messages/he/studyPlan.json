@@ -85,6 +85,13 @@
     "moreItems": "+{count} עוד"
   },
   "calendar": {
+    "title": "לוח שנה לימודי",
+    "today": "היום",
+    "month": "חודש",
+    "week": "שבוע",
+    "noEvents": "אין אירועים החודש",
+    "addEvent": "הוסף אירוע",
+    "moreEvents": "+{count} עוד",
     "dayNames": {
       "sun": "א",
       "mon": "ב",
@@ -101,6 +108,96 @@
       "overdue": "באיחור"
     }
   },
+  "events": {
+    "title": "אירועים אקדמיים",
+    "addTitle": "הוסף אירוע",
+    "editTitle": "פרטי אירוע",
+    "types": {
+      "test": "מבחן",
+      "quiz": "בוחן",
+      "homework": "שיעורי בית",
+      "project": "פרויקט",
+      "presentation": "מצגת",
+      "other": "אחר"
+    },
+    "fields": {
+      "title": "כותרת",
+      "titlePlaceholder": "לדוגמה: מבחן סופי בביולוגיה",
+      "eventType": "סוג אירוע",
+      "date": "תאריך",
+      "time": "שעה",
+      "subject": "מקצוע",
+      "subjectPlaceholder": "לדוגמה: ביולוגיה, מתמטיקה",
+      "description": "תיאור",
+      "descriptionPlaceholder": "הערות על האירוע...",
+      "priority": "עדיפות",
+      "priorityLow": "נמוכה",
+      "priorityMedium": "בינונית",
+      "priorityHigh": "גבוהה"
+    },
+    "topics": {
+      "title": "נושאים",
+      "addPlaceholder": "הוסף נושא...",
+      "empty": "עדיין לא הוספו נושאים"
+    },
+    "materials": {
+      "title": "חומרי לימוד",
+      "addLink": "הוסף קישור",
+      "addNote": "הוסף הערה",
+      "linkPlaceholder": "https://...",
+      "titlePlaceholder": "כותרת הקישור",
+      "notePlaceholder": "כתוב הערה...",
+      "empty": "עדיין לא הוספו חומרים"
+    },
+    "prep": {
+      "title": "הכנה ללימודים",
+      "cram": "בלילה שלפני",
+      "cramDesc": "ללמוד הכל בלילה שלפני",
+      "spread": "פריסה",
+      "spreadDesc": "לפזר על פני מספר ימים",
+      "custom": "מותאם אישית",
+      "customDesc": "לתכנן בעצמך",
+      "days": "{count} ימים לפני",
+      "generate": "צור לוח לימודים",
+      "generating": "יוצר..."
+    },
+    "delete": "מחק אירוע",
+    "deleteConfirm": "האם אתה בטוח שברצונך למחוק אירוע זה? לא ניתן לבטל פעולה זו.",
+    "cancel": "ביטול",
+    "create": "צור אירוע",
+    "creating": "יוצר...",
+    "save": "שמור",
+    "saved": "נשמר"
+  },
+  "chat": {
+    "title": "עוזר לימודים AI",
+    "welcome": "שלום! אני העוזר שלך לתכנון לימודים. ספר לי על המבחנים, הבחנים או המטלות הקרובים שלך, ואני אעזור לך לארגן את לוח הלימודים.",
+    "placeholder": "ספר לי על המבחנים הקרובים שלך...",
+    "clearChat": "נקה צ'אט",
+    "clearConfirm": "לנקות את כל היסטוריית הצ'אט?",
+    "sending": "חושב...",
+    "error": "משהו השתבש. נסה שוב.",
+    "retry": "נסה שוב",
+    "suggestions": {
+      "test": "יש לי מבחן בקרוב",
+      "today": "מה כדאי לי ללמוד היום?",
+      "week": "עזור לי לתכנן את השבוע",
+      "events": "הצג את האירועים הקרובים שלי"
+    },
+    "actions": {
+      "created": "נוצר: {title} ב-{date}",
+      "updated": "אירוע עודכן",
+      "deleted": "אירוע הוסר",
+      "scheduled": "לוח לימודים נוצר",
+      "applied": "בוצע",
+      "pending": "ממתין"
+    }
+  },
+  "tabs": {
+    "calendar": "לוח שנה",
+    "assistant": "עוזר AI"
+  },
+  "todayTasks": "המשימות של היום",
   "showCalendar": "הצג לוח שנה",
   "hideCalendar": "הסתר לוח שנה",
   "insightMessages": {

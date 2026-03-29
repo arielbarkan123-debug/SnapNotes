@@ -459,6 +459,8 @@ export * from './prepare'
 
 export * from './walkthrough'
 
+export * from './academic-events'
+
 // ─── Diagram Overlay Labels ─────────────────────────────────────────────────
 
 export interface OverlayLabel {

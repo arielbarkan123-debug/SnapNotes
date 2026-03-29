@@ -144,6 +144,7 @@ export const RATE_LIMITS = {
   generateExam: parseRateLimitEnv(process.env.RATE_LIMIT_GENERATE_EXAM, 10, 60 * 1000),
   generateQuestions: parseRateLimitEnv(process.env.RATE_LIMIT_GENERATE_QUESTIONS, 20, 60 * 1000),
   chat: parseRateLimitEnv(process.env.RATE_LIMIT_CHAT, 30, 60 * 1000),
+  studyPlanChat: parseRateLimitEnv(process.env.RATE_LIMIT_STUDY_PLAN_CHAT, 30, 60 * 1000),
   evaluateAnswer: parseRateLimitEnv(process.env.RATE_LIMIT_EVALUATE_ANSWER, 30, 60 * 1000),
 
   // Medium operations

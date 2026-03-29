@@ -103,3 +103,10 @@ export {
   type UseStudyPlanReturn,
 } from './useStudyPlan'
 
+// Academic Events (Study Plan v2)
+export {
+  useAcademicEvents,
+  ACADEMIC_EVENTS_CACHE_KEY,
+  type UseAcademicEventsReturn,
+} from './useAcademicEvents'
+
