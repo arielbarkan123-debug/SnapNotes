@@ -384,8 +384,24 @@ Study goal: ${studentCtx.studyGoal || 'Not specified'}`
     log.error({ err: error }, 'Unhandled error in POST /api/study-plan/chat')
 
     // Map Claude API errors specifically
-    if (error instanceof Error && error.message?.includes('anthropic')) {
-      return createErrorResponse(ErrorCodes.AI_PROCESSING_FAILED, 'AI service error')
+    const errMsg = error instanceof Error ? error.message : String(error)
+    const errStatus = (error as { status?: number })?.status
+
+    // Insufficient credits / billing errors
+    if (errStatus === 400 && errMsg.includes('credit')) {
+      return createErrorResponse(ErrorCodes.AI_SERVICE_UNAVAILABLE, 'Insufficient API credits. Please check your Anthropic billing.')
+    }
+    if (errStatus === 401 || errMsg.includes('authentication') || errMsg.includes('api_key')) {
+      return createErrorResponse(ErrorCodes.AI_SERVICE_UNAVAILABLE, 'AI service authentication failed. Please check your API key.')
+    }
+    if (errStatus === 429 || errMsg.includes('rate_limit')) {
+      return createErrorResponse(ErrorCodes.RATE_LIMITED, 'AI service rate limited. Please try again in a moment.')
+    }
+    if (errStatus === 529 || errMsg.includes('overloaded')) {
+      return createErrorResponse(ErrorCodes.AI_SERVICE_UNAVAILABLE, 'AI service is temporarily overloaded. Please try again shortly.')
+    }
+    if (errMsg.includes('anthropic') || errMsg.includes('claude') || errMsg.includes('API')) {
+      return createErrorResponse(ErrorCodes.AI_PROCESSING_FAILED, 'AI service error: ' + errMsg.slice(0, 100))
     }
 
     return createErrorResponse(ErrorCodes.INTERNAL_ERROR, 'Failed to process chat message')

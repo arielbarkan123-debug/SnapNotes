@@ -44,8 +44,11 @@ export function useStudyPlanChat() {
           body: JSON.stringify({ message: text }),
         })
         if (!res.ok) {
-          const err = await res.json().catch(() => ({}))
-          throw new Error(err.error || 'Failed to send message')
+          const errData = await res.json().catch(() => ({}))
+          const errMsg = typeof errData.error === 'string'
+            ? errData.error
+            : errData.error?.message || 'Failed to send message'
+          throw new Error(errMsg)
         }
         const responseData = await res.json()
 
