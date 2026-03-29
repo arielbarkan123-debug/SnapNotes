@@ -97,7 +97,7 @@ jobs:
         run: npm ci
 
       - name: Run API integration tests
-        run: npx jest --ci --testPathPattern='__tests__/api'
+        run: npx jest --ci --testPathPatterns='__tests__/api'
 
   # -----------------------------------------------------------------------
   # 4. Build
