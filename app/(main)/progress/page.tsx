@@ -102,6 +102,16 @@ export default function ProgressPage() {
       </div>
 
       {/* Charts Row - Lazy loaded */}
+
+      {/* Time by Feature */}
+      {data.featureTimeBreakdown && (
+        <div className="bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 shadow-card p-4 sm:p-6 mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            {t('timeByFeature')}
+          </h2>
+          <FeatureTimeBreakdown data={data.featureTimeBreakdown} />
+        </div>
+      )}
       <LazySection
         skeleton={
           <div className="grid lg:grid-cols-2 gap-6 mb-8">
@@ -765,4 +775,82 @@ function sampleData<T>(data: T[], maxPoints: number): T[] {
   if (data.length <= maxPoints) return data
   const step = Math.ceil(data.length / maxPoints)
   return data.filter((_, index) => index % step === 0).slice(0, maxPoints)
+}
+
+// =============================================================================
+// Feature Time Breakdown
+// =============================================================================
+
+const FEATURE_CONFIG: Record<string, { icon: string; color: string; barColor: string }> = {
+  lesson: { icon: '📖', color: 'text-blue-600 dark:text-blue-400', barColor: 'bg-blue-500' },
+  practice: { icon: '🎯', color: 'text-violet-600 dark:text-violet-400', barColor: 'bg-violet-500' },
+  review: { icon: '🔄', color: 'text-green-600 dark:text-green-400', barColor: 'bg-green-500' },
+  exam: { icon: '📝', color: 'text-amber-600 dark:text-amber-400', barColor: 'bg-amber-500' },
+}
+
+interface FeatureTimeBreakdownProps {
+  data: Array<{ type: string; weekMs: number; monthMs: number }>
+}
+
+function FeatureTimeBreakdown({ data }: FeatureTimeBreakdownProps) {
+  const t = useTranslations('progress')
+  const totalWeek = data.reduce((sum, d) => sum + d.weekMs, 0)
+  const totalMonth = data.reduce((sum, d) => sum + d.monthMs, 0)
+  const maxWeek = Math.max(...data.map(d => d.weekMs), 1)
+
+  return (
+    <div>
+      {/* Total time header */}
+      <div className="flex items-baseline gap-2 mb-5">
+        <span className="text-2xl font-bold text-gray-900 dark:text-white">
+          {formatTime(totalMonth)}
+        </span>
+        <span className="text-sm text-gray-500 dark:text-gray-400">
+          {t('totalThisMonth')}
+        </span>
+      </div>
+
+      {/* Feature bars */}
+      <div className="space-y-4">
+        {data.map(item => {
+          const config = FEATURE_CONFIG[item.type] || FEATURE_CONFIG.lesson
+          const widthPercent = maxWeek > 0 ? Math.max((item.weekMs / maxWeek) * 100, 2) : 2
+          const monthPercent = totalMonth > 0 ? Math.round((item.monthMs / totalMonth) * 100) : 0
+
+          return (
+            <div key={item.type}>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{config.icon}</span>
+                  <span className={`text-sm font-medium ${config.color}`}>
+                    {t(`feature_${item.type}`)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="font-semibold text-gray-900 dark:text-white">
+                    {formatTime(item.weekMs)}
+                  </span>
+                  <span className="text-gray-400 dark:text-gray-500 text-xs">
+                    {monthPercent}%
+                  </span>
+                </div>
+              </div>
+              <div className="h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${config.barColor}`}
+                  style={{ width: `${widthPercent}%` }}
+                />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Week total footer */}
+      <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <span className="text-sm text-gray-500 dark:text-gray-400">{t('thisWeekTotal')}</span>
+        <span className="text-sm font-semibold text-gray-900 dark:text-white">{formatTime(totalWeek)}</span>
+      </div>
+    </div>
+  )
 }

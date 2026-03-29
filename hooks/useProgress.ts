@@ -99,6 +99,7 @@ export interface ProgressData {
   weakAreas: LessonArea[]
   strongAreas: LessonArea[]
   insights: Insight[]
+  featureTimeBreakdown: Array<{ type: string; weekMs: number; monthMs: number }>
 }
 
 export interface UseProgressReturn {

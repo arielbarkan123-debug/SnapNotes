@@ -42,5 +42,12 @@
   "practice": "תרגול",
   "errorTitle": "לא ניתן לטעון התקדמות",
   "errorDesc": "משהו השתבש. אנא נסה שוב מאוחר יותר.",
-  "backToDashboard": "חזרה ללוח הבקרה"
+  "backToDashboard": "חזרה ללוח הבקרה",
+  "timeByFeature": "זמן לפי פיצ'ר",
+  "totalThisMonth": "סהכ החודש",
+  "thisWeekTotal": "סהכ השבוע",
+  "feature_lesson": "שיעורים",
+  "feature_practice": "תרגול",
+  "feature_review": "חזרה",
+  "feature_exam": "מבחנים"
 }

@@ -42,5 +42,12 @@
   "practice": "Practice",
   "errorTitle": "Couldn't load progress",
   "errorDesc": "Something went wrong. Please try again later.",
-  "backToDashboard": "Back to Dashboard"
+  "backToDashboard": "Back to Dashboard",
+  "timeByFeature": "Time by Feature",
+  "totalThisMonth": "total this month",
+  "thisWeekTotal": "This week total",
+  "feature_lesson": "Lessons",
+  "feature_practice": "Practice",
+  "feature_review": "Review",
+  "feature_exam": "Exams"
 }

@@ -225,6 +225,17 @@ export async function GET() {
     const studyTimeWeek = reviewTimeWeekMs + practiceTimeWeekMs + (sessionTimeWeekSec * 1000)
     const studyTimeMonth = reviewTimeMonthMs + practiceTimeMonthMs + (sessionTimeMonthSec * 1000)
 
+    // Per-feature time breakdown from study_sessions (grouped by session_type)
+    const featureTimeBreakdown = (['lesson', 'practice', 'review', 'exam'] as const).map(type => {
+      const weekSec = studySessionsWeek
+        .filter(s => s.session_type === type)
+        .reduce((sum, s) => sum + (s.duration_seconds || 0), 0)
+      const monthSec = studySessionsMonth
+        .filter(s => s.session_type === type)
+        .reduce((sum, s) => sum + (s.duration_seconds || 0), 0)
+      return { type, weekMs: weekSec * 1000, monthMs: monthSec * 1000 }
+    })
+
     // =========================================================================
     // Cards Reviewed with Trend (combines review_logs + practice_logs)
     // =========================================================================
@@ -335,6 +346,7 @@ export async function GET() {
           totalLessons,
         },
       },
+      featureTimeBreakdown,
       accuracyChart,
       timeChart,
       masteryMap,

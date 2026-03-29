@@ -62,6 +62,12 @@ describe('useProgress', () => {
       weakAreas: [],
       strongAreas: [],
       insights: [{ icon: '💡', text: 'Keep it up!', type: 'positive' }],
+      featureTimeBreakdown: [
+        { type: 'lesson', weekMs: 600000, monthMs: 2400000 },
+        { type: 'practice', weekMs: 300000, monthMs: 1200000 },
+        { type: 'review', weekMs: 180000, monthMs: 720000 },
+        { type: 'exam', weekMs: 0, monthMs: 600000 },
+      ],
     }
 
     mockUseSWR.mockReturnValue({
