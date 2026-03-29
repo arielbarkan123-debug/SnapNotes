@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useParams, useRouter } from 'next/navigation'
-import { type ExamWithQuestions, type ExamQuestion, type ExamAnswer } from '@/types'
+import { type ExamWithQuestions, type ExamQuestion, type ExamAnswer, type HelpContext } from '@/types'
 import QuestionRenderer from '@/components/exam/QuestionRenderer'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { useEventTracking } from '@/lib/analytics'
+import { useHelpContext } from '@/hooks/useHelpContext'
 
 // localStorage keys for exam answer backup
 const EXAM_ANSWERS_KEY_PREFIX = 'notesnap_exam_answers_'
@@ -547,6 +548,19 @@ export default function TakeExamPage() {
     )
   }
 
+  // Push help context to global FloatingHelpButtons
+  const helpContext: HelpContext = useMemo(() => ({
+    courseId: exam.course_id,
+    courseTitle: exam.course_title || exam.title,
+    lessonIndex: question.lesson_index ?? 0,
+    lessonTitle: question.lesson_title || exam.title,
+    stepIndex: currentQuestion,
+    stepContent: question.question_text || '',
+    stepType: 'question',
+  }), [exam.course_id, exam.course_title, exam.title, question.lesson_index, question.lesson_title, question.question_text, currentQuestion])
+
+  useHelpContext(helpContext, exam.course_id, exam.course_title || exam.title)
+
   return (
     <div className="min-h-screen bg-transparent">
       {/* Header with timer */}
@@ -681,6 +695,7 @@ export default function TakeExamPage() {
         confirmLabel={te('submitExam')}
         variant="warning"
       />
+
     </div>
   )
 }

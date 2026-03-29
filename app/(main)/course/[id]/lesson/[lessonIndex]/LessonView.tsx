@@ -11,13 +11,12 @@ import StepContent from '@/components/lesson/StepContent'
 import QuestionStep from '@/components/lesson/QuestionStep'
 import { useFunnelTracking } from '@/lib/analytics'
 import { useAnnotations } from '@/hooks/useAnnotations'
+import { useHelpContext } from '@/hooks/useHelpContext'
 
 // Dynamic imports for components not needed immediately
 const LessonComplete = dynamic(() => import('@/components/lesson/LessonComplete'), {
   loading: () => <div className="fixed inset-0 bg-transparent flex items-center justify-center"><div className="w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" /></div>
 })
-const HelpModal = dynamic(() => import('@/components/help/HelpModal'))
-const ChatTutor = dynamic(() => import('@/components/chat/ChatTutor').then(mod => ({ default: mod.ChatTutor })))
 const ReviewBeforeRetry = dynamic(() => import('@/components/lesson/ReviewBeforeRetry'))
 const LessonNotes = dynamic(() => import('@/components/course/LessonNotes'))
 
@@ -81,9 +80,6 @@ export default function LessonView({
   const [currentStep, setCurrentStep] = useState(getInitialStep)
   const [isSaving, setIsSaving] = useState(false)
   const [showCompletion, setShowCompletion] = useState(false)
-  const [showHelp, setShowHelp] = useState(false)
-  const [isChatOpen, setIsChatOpen] = useState(false)
-
   // Annotations hook
   const {
     annotations,
@@ -117,32 +113,31 @@ export default function LessonView({
     return count
   }, [answers])
 
-  // Help context for floating help button
+  // Push help context to global FloatingHelpButtons — in retry mode, use the retried question's step
   const helpContext: HelpContext = useMemo(() => {
-    const stepData = steps[currentStep] || {}
+    const effectiveStepIndex = retryMode
+      ? (failedQuestions[currentRetryIndex] ?? currentStep)
+      : currentStep
+    const stepData = steps[effectiveStepIndex] || {}
     return {
       courseId: course.id,
       courseTitle: course.generated_course?.title || course.title,
       lessonIndex,
       lessonTitle: lesson.title || `Lesson ${lessonIndex + 1}`,
-      stepIndex: currentStep,
+      stepIndex: effectiveStepIndex,
       stepContent: stepData.content || '',
       stepType: stepData.type || 'unknown',
     }
-  }, [course.id, course.generated_course?.title, course.title, lessonIndex, lesson.title, currentStep, steps])
+  }, [course.id, course.generated_course?.title, course.title, lessonIndex, lesson.title, currentStep, steps, retryMode, failedQuestions, currentRetryIndex])
 
-  // Keyboard shortcuts: F9 for help, F4 for annotations
+  useHelpContext(helpContext, course.id, course.generated_course?.title || course.title)
+
+  // Keyboard shortcuts: F4 for annotations
   const [showAnnotationInput, setShowAnnotationInput] = useState(false)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
-
-      // F9 for help
-      if (e.key === 'F9') {
-        e.preventDefault()
-        setShowHelp(true)
-      }
 
       // F4 for annotations (toggle annotation input for current step)
       if (e.key === 'F4') {
@@ -531,6 +526,7 @@ export default function LessonView({
     return answers.filter(a => a.correct).length
   }, [answers])
 
+  // Floating help & AI tutor buttons — rendered in all views except completion
   // Show completion screen
   if (showCompletion) {
     return (
@@ -623,6 +619,7 @@ export default function LessonView({
             </div>
           </div>
         </main>
+
       </div>
     )
   }
@@ -713,7 +710,7 @@ export default function LessonView({
                 key={currentStep}
                 step={currentStepData}
                 lessonTitle={lesson.title}
-                onRequestHelp={() => setShowHelp(true)}
+
                 annotation={getAnnotationForStep(currentStep)}
                 onSaveAnnotation={(params) => saveAnnotation({ stepIndex: currentStep, ...params })}
                 onDeleteAnnotation={deleteAnnotation}
@@ -801,45 +798,6 @@ export default function LessonView({
         </footer>
       )}
 
-      {/* Floating Help Button */}
-      <button
-        onClick={() => setShowHelp(true)}
-        className="fixed bottom-[calc(128px+env(safe-area-inset-bottom,0px))] md:bottom-8 end-3 xs:end-4 md:end-8 w-11 h-11 xs:w-12 xs:h-12 bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-300 rounded-full shadow-lg flex items-center justify-center hover:bg-violet-200 dark:hover:bg-violet-900 transition-all hover:scale-110 z-40"
-        aria-label={t('getHelp')}
-        title={t('needHelpPressF9')}
-        type="button"
-      >
-        <span className="text-lg xs:text-xl">❓</span>
-      </button>
-
-      {/* Help Modal */}
-      <HelpModal
-        isOpen={showHelp}
-        onClose={() => setShowHelp(false)}
-        context={helpContext}
-      />
-
-      {/* AI Chat Tutor Button - positioned above the help button */}
-      {!isChatOpen && (
-        <button
-          onClick={() => setIsChatOpen(true)}
-          className="fixed bottom-[calc(184px+env(safe-area-inset-bottom,0px))] md:bottom-24 end-3 xs:end-4 md:end-8 w-11 h-11 xs:w-12 xs:h-12 bg-violet-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-violet-700 transition-all hover:scale-110 z-40"
-          aria-label={t('askAI')}
-          title={t('askAI')}
-        >
-          <svg className="w-5 h-5 xs:w-6 xs:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-          </svg>
-        </button>
-      )}
-
-      {/* Chat Tutor Modal */}
-      <ChatTutor
-        courseId={course.id}
-        courseName={course.generated_course?.title || course.title}
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-      />
     </div>
   )
 }

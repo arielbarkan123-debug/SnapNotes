@@ -6,8 +6,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { type Course, type UserProgress, type GeneratedCourse, type Lesson } from '@/types'
-import { ChatTutor } from '@/components/chat/ChatTutor'
 import { useCourseMastery } from '@/hooks'
+import { useHelpContext } from '@/hooks/useHelpContext'
 import { useGenerationStatus } from '@/hooks/useGenerationStatus'
 import { useToast } from '@/contexts/ToastContext'
 
@@ -27,12 +27,14 @@ export default function CourseView({ course, progress }: CourseViewProps) {
   const router = useRouter()
   const { success: showSuccess } = useToast()
   const tcs = useTranslations('cheatsheet')
-  const [isChatOpen, setIsChatOpen] = useState(false)
   const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false)
   const [isGeneratingCheatsheet, setIsGeneratingCheatsheet] = useState(false)
 
   // Safely parse generated_course - handle null/undefined cases
   const generatedCourse = (course.generated_course || {}) as GeneratedCourse & { sections?: Lesson[] }
+
+  // Push course info to global FloatingHelpButtons
+  useHelpContext(null, course.id, generatedCourse?.title || course.title || '')
   // Handle both "lessons" and legacy "sections" from AI response, filter out null entries
   const lessons = (generatedCourse?.lessons || generatedCourse?.sections || []).filter(Boolean)
 
@@ -309,29 +311,6 @@ export default function CourseView({ course, progress }: CourseViewProps) {
           )}
         </div>
       </main>
-
-      {/* AI Chat Tutor Button - positioned above mobile bottom nav */}
-      {!isChatOpen && (
-        <button
-          onClick={() => setIsChatOpen(true)}
-          className="fixed bottom-20 md:bottom-6 end-4 z-50 bg-violet-600 text-white p-3 xs:p-4 rounded-full shadow-lg hover:bg-violet-700 transition-all hover:scale-105 flex items-center gap-2 min-h-[48px] min-w-[48px]"
-          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
-          aria-label={t('askAI')}
-        >
-          <svg className="w-5 h-5 xs:w-6 xs:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-          </svg>
-          <span className="hidden sm:inline font-medium">{t('askAI')}</span>
-        </button>
-      )}
-
-      {/* Chat Tutor Modal */}
-      <ChatTutor
-        courseId={course.id}
-        courseName={generatedCourse?.title || course.title || ''}
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-      />
 
       {/* Add Material Modal */}
       <UploadModal

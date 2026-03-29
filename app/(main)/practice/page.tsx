@@ -10,6 +10,7 @@ import type { MistakeItem } from '@/components/practice/MistakeReview'
 import type { ReviewCard as ReviewCardType } from '@/types/srs'
 import { useCourses } from '@/hooks'
 import { useEventTracking } from '@/lib/analytics'
+import { useHelpContext } from '@/hooks/useHelpContext'
 import { useVisuals } from '@/contexts/VisualsContext'
 import { useFeatureTracker } from '@/lib/student-context/feature-tracker'
 import DifficultyFeedback from '@/components/shared/DifficultyFeedback'
@@ -59,9 +60,6 @@ const ShortAnswer = dynamic(() => import('@/components/practice/ShortAnswer'))
 const Matching = dynamic(() => import('@/components/practice/Matching'))
 const Sequence = dynamic(() => import('@/components/practice/Sequence'))
 const MultiSelect = dynamic(() => import('@/components/practice/MultiSelect'))
-
-// Lazy load HelpModal - only loaded when user requests help
-const HelpModal = dynamic(() => import('@/components/help/HelpModal'), { ssr: false })
 
 // Lazy load MistakeReview - only loaded on session complete
 const MistakeReview = dynamic(() => import('@/components/practice/MistakeReview'), { ssr: false })
@@ -181,7 +179,6 @@ export default function PracticePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [, setAnswers] = useState<Answer[]>([])
   const [interactiveResult, setInteractiveResult] = useState<boolean | null>(null) // Track if interactive card was answered correctly
-  const [showHelp, setShowHelp] = useState(false)
   const [difficultyFeedbackGiven, setDifficultyFeedbackGiven] = useState(false)
   const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [mistakes, setMistakes] = useState<MistakeItem[]>([])
@@ -701,8 +698,8 @@ export default function PracticePage() {
   // Computed values
   // ==========================================================================
 
-  // Help context for current card
-  const helpContext: HelpContext | null = currentCard ? {
+  // Help context for current card — memoized to avoid re-rendering global FloatingHelpButtons
+  const helpContext: HelpContext | null = useMemo(() => currentCard ? {
     courseId: currentCard.course_id || '',
     courseTitle: currentCard.courseName || 'Practice Session',
     lessonIndex: currentCard.lesson_index ?? 0,
@@ -710,7 +707,10 @@ export default function PracticePage() {
     stepIndex: currentCard.step_index ?? 0,
     stepContent: currentCard.front || '',
     stepType: currentCard.card_type || 'flashcard',
-  } : null
+  } : null, [currentCard?.course_id, currentCard?.courseName, currentCard?.lesson_index, currentCard?.lessonTitle, currentCard?.step_index, currentCard?.front, currentCard?.card_type])
+
+  // Push help context to global FloatingHelpButtons
+  useHelpContext(helpContext, currentCard?.course_id || null, currentCard?.courseName || null)
 
   // Check if card is an interactive type (handled by its own component)
   const isInteractiveCard = (card: PracticeCard): boolean => {
@@ -1452,18 +1452,6 @@ export default function PracticePage() {
             // Default: Flashcard / Key Point / Explanation / Formula (simple reveal)
             return (
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden relative">
-                {/* Help Button */}
-                {helpContext && (
-                  <button
-                    onClick={() => setShowHelp(true)}
-                    className="absolute top-3 right-3 p-2 text-gray-400 hover:text-violet-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition z-10"
-                    aria-label="Get help"
-                    type="button"
-                  >
-                    <span>❓</span>
-                  </button>
-                )}
-
                 {/* Card Type Badge */}
                 <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
                   <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
@@ -1494,16 +1482,6 @@ export default function PracticePage() {
                         </p>
                       </div>
 
-                      {/* Help link */}
-                      {helpContext && (
-                        <button
-                          onClick={() => setShowHelp(true)}
-                          className="mt-3 text-sm text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition"
-                          type="button"
-                        >
-                          🤔 {t('needHelpUnderstanding')}
-                        </button>
-                      )}
                     </div>
                   </>
                 )}
@@ -1608,15 +1586,6 @@ export default function PracticePage() {
         )}
         </div>
       </div>
-
-      {/* Help Modal */}
-      {helpContext && (
-        <HelpModal
-          isOpen={showHelp}
-          onClose={() => setShowHelp(false)}
-          context={helpContext}
-        />
-      )}
 
       {/* End Session Confirm Modal */}
       <ConfirmModal

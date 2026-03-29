@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/ui/Sidebar'
 import NavigationProgress from '@/components/ui/NavigationProgress'
 import OfflineIndicator from '@/components/ui/OfflineIndicator'
+import FloatingHelpButtons from '@/components/help/FloatingHelpButtons'
 
 export default async function MainLayout({
   children,
@@ -35,7 +36,9 @@ export default async function MainLayout({
         isAdmin={isAdmin}
       />
       <main className="sidebar-main min-h-screen">
-        {children}
+        <FloatingHelpButtons>
+          {children}
+        </FloatingHelpButtons>
       </main>
       <OfflineIndicator />
     </div>
