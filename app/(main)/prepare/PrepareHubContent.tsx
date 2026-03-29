@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
+import { getDateLocale } from '@/lib/utils'
 import PrepareUploadModal from '@/components/prepare/PrepareUploadModal'
 
 interface GuideListItem {
@@ -74,8 +75,9 @@ export default function PrepareHubContent() {
       )
     : visibleGuides
 
+  const locale = useLocale()
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString(undefined, {
+    return new Date(dateStr).toLocaleDateString(getDateLocale(locale), {
       month: 'short',
       day: 'numeric',
       year: 'numeric',

@@ -103,7 +103,7 @@ export default function CheatsheetContent({ cheatsheetId }: CheatsheetContentPro
             📋 {title}
           </h1>
           <p className="text-xs text-gray-400 dark:text-gray-500">
-            {new Date(data.created_at).toLocaleDateString()}
+            {new Date(data.created_at).toLocaleDateString(locale === 'he' ? 'he-IL' : 'en-US')}
           </p>
         </div>
 

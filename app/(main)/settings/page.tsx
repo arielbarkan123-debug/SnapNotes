@@ -947,7 +947,7 @@ export default function SettingsPage() {
                   </button>
                   <span className="text-xs text-gray-400 dark:text-gray-500">
                     {lastReportSent
-                      ? t('parentReports.lastSent', { date: new Date(lastReportSent).toLocaleDateString() })
+                      ? t('parentReports.lastSent', { date: new Date(lastReportSent).toLocaleDateString(settings.language === 'he' ? 'he-IL' : 'en-US') })
                       : t('parentReports.neverSent')
                     }
                   </span>

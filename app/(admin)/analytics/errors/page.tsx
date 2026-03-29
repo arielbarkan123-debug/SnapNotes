@@ -114,7 +114,7 @@ export default function ErrorsPage() {
                       {err.error_type}
                     </span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {new Date(err.occurred_at).toLocaleString()}
+                      {new Date(err.occurred_at).toLocaleString('en-US')}
                     </span>
                     <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
                       {err.page_path}

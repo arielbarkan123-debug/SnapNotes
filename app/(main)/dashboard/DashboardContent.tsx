@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback, Component, type ReactNode, ty
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
+import { getDateLocale } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import { type Course } from '@/types'
 import { useCourses } from '@/hooks'
@@ -134,6 +135,7 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
   const router = useRouter()
   const t = useTranslations('dashboard')
   const tTask = useTranslations('studyPlan.taskTypes')
+  const locale = useLocale()
   const { error: showError, success: showSuccess } = useToast()
 
   // Load intelligence from the Learning Intelligence Engine (non-blocking)
@@ -284,7 +286,7 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
               {displayName}
             </h1>
             <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-              {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+              {new Date().toLocaleDateString(getDateLocale(locale), { weekday: 'long', month: 'long', day: 'numeric' })}
             </p>
           </div>
           <div className="relative">

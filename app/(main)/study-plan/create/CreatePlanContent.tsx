@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
+import { getDateLocale } from '@/lib/utils'
 import { useCourses } from '@/hooks'
 import {
   BookOpen,
@@ -40,6 +41,8 @@ const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 export default function CreatePlanContent() {
   const router = useRouter()
   const t = useTranslations('studyPlan.wizard')
+  const locale = useLocale()
+  const dateLoc = getDateLocale(locale)
   const { courses, isLoading: coursesLoading } = useCourses()
 
   // Wizard state
@@ -436,7 +439,7 @@ export default function CreatePlanContent() {
                         onClick={() => toggleSkipDate(date)}
                         className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-sm flex items-center gap-1"
                       >
-                        {new Date(date + 'T00:00:00').toLocaleDateString()}
+                        {new Date(date + 'T00:00:00').toLocaleDateString(dateLoc)}
                         <span className="text-red-400">&times;</span>
                       </button>
                     ))}
@@ -542,7 +545,7 @@ export default function CreatePlanContent() {
                 <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
                   <span className="text-gray-500 dark:text-gray-400">{t('step2Title')}</span>
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {examDate ? new Date(examDate + 'T00:00:00').toLocaleDateString() : '-'}
+                    {examDate ? new Date(examDate + 'T00:00:00').toLocaleDateString(dateLoc) : '-'}
                   </span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">

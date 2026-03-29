@@ -117,7 +117,7 @@ export default function WalkthroughQualityPage() {
     return `${Math.floor(diff / 86400000)}d ago`
   }
 
-  const formatDate = (dateStr: string) => new Date(dateStr).toLocaleString()
+  const formatDate = (dateStr: string) => new Date(dateStr).toLocaleString('en-US')
 
   // Loading / not admin
   if (isAdmin === null || (isAdmin && isLoading && walkthroughs.length === 0)) {

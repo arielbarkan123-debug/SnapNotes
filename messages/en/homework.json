@@ -44,6 +44,8 @@
   "stepByStep": "Step by step",
   "checkAnswer": "Check my answer",
   "history": "History",
+  "todayAt": "Today at {time}",
+  "yesterdayAt": "Yesterday at {time}",
   "newSession": "New Session",
   "chatPlaceholder": "Ask a question about your homework...",
   "thinking": "Thinking...",

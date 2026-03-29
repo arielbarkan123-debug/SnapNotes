@@ -210,7 +210,7 @@ export default function HeatmapPage() {
                         className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                       >
                         <td className="py-2 px-3 text-gray-900 dark:text-white">
-                          {new Date(click.time).toLocaleString()}
+                          {new Date(click.time).toLocaleString('en-US')}
                         </td>
                         <td className="py-2 px-3 text-gray-600 dark:text-gray-400 font-mono text-xs">
                           {click.path}

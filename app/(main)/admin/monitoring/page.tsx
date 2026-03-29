@@ -175,7 +175,7 @@ export default function MonitoringDashboard() {
   // Format date
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
-    return date.toLocaleString()
+    return date.toLocaleString('en-US')
   }
 
   // Format relative time

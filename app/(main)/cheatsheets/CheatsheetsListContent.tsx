@@ -102,7 +102,7 @@ export default function CheatsheetsListContent() {
                       </span>
                     )}
                     <span className="text-xs text-gray-400 dark:text-gray-500">
-                      {new Date(sheet.created_at).toLocaleDateString()}
+                      {new Date(sheet.created_at).toLocaleDateString(locale === 'he' ? 'he-IL' : 'en-US')}
                     </span>
                   </div>
                 </div>

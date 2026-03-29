@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
+import { getDateLocale } from '@/lib/utils'
 import { useStudyPlan } from '@/hooks/useStudyPlan'
 import { CalendarPlus, RefreshCw, ArrowLeft } from 'lucide-react'
 import DailyChecklist from '@/components/study-plan/DailyChecklist'
@@ -11,6 +12,7 @@ import PlanProgress from '@/components/study-plan/PlanProgress'
 
 export default function StudyPlanContent() {
   const t = useTranslations('studyPlan')
+  const locale = useLocale()
   const { plan, tasks, todayTasks, isLoading, completeTask, mutate } = useStudyPlan()
   const [recalculating, setRecalculating] = useState(false)
 
@@ -106,7 +108,7 @@ export default function StudyPlanContent() {
           </h1>
           <div className="flex items-center gap-4 mt-1 text-sm text-gray-500 dark:text-gray-400">
             <span>
-              {t('examDate')}: {new Date(plan.exam_date).toLocaleDateString()}
+              {t('examDate')}: {new Date(plan.exam_date).toLocaleDateString(getDateLocale(locale))}
             </span>
             <span className="font-medium text-violet-600 dark:text-violet-400">
               {daysLeft === 0

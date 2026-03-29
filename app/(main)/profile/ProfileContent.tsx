@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
+import { getDateLocale } from '@/lib/utils'
 import {
   getXPProgress,
   getLevelTitle,
@@ -76,6 +77,7 @@ export default function ProfileContent({
   courseCount,
 }: ProfileContentProps) {
   const t = useTranslations('profile')
+  const locale = useLocale()
   const [selectedCategory, setSelectedCategory] = useState<AchievementCategory | 'all'>('all')
   const [selectedAchievement, setSelectedAchievement] = useState<string | null>(null)
 
@@ -153,7 +155,7 @@ export default function ProfileContent({
                 <span>{getLevelTitle(xpProgress.level)}</span>
               </div>
               <div className="mt-1 text-sm text-white/70">
-                {t('memberSince', { date: new Date(user.createdAt).toLocaleDateString('he-IL', { month: 'long', year: 'numeric' }) })}
+                {t('memberSince', { date: new Date(user.createdAt).toLocaleDateString(getDateLocale(locale), { month: 'long', year: 'numeric' }) })}
               </div>
             </div>
           </div>
@@ -343,6 +345,7 @@ interface ActivityCalendarProps {
 }
 
 function ActivityCalendar({ activityByDate, t }: ActivityCalendarProps) {
+  const locale = useLocale()
   const [hoveredDate, setHoveredDate] = useState<string | null>(null)
 
   // Generate last 90 days
@@ -418,7 +421,7 @@ function ActivityCalendar({ activityByDate, t }: ActivityCalendarProps) {
   }
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
+    return new Date(dateStr).toLocaleDateString(getDateLocale(locale), {
       month: 'short',
       day: 'numeric',
     })
@@ -519,6 +522,7 @@ function AchievementsGrid({
   onSelect,
   t,
 }: AchievementsGridProps) {
+  const locale = useLocale()
   const filteredAchievements = ACHIEVEMENTS.filter((a) => {
     // Hide hidden achievements unless earned
     if (a.hidden && !earnedCodes.has(a.code)) return false
@@ -604,7 +608,7 @@ function AchievementsGrid({
                     </span>
                     {isEarned && earnedDate && (
                       <span className="text-green-600 dark:text-green-400">
-                        {t('earned', { date: new Date(earnedDate).toLocaleDateString() })}
+                        {t('earned', { date: new Date(earnedDate).toLocaleDateString(getDateLocale(locale)) })}
                       </span>
                     )}
                     {!isEarned && (
@@ -633,6 +637,7 @@ interface RecentActivityListProps {
 }
 
 function RecentActivityList({ activityByDate, t }: RecentActivityListProps) {
+  const locale = useLocale()
   const recentDays = useMemo(() => {
     const result: { date: string; dayIndex: number; data: ActivityData }[] = []
     const today = new Date()
@@ -654,7 +659,7 @@ function RecentActivityList({ activityByDate, t }: RecentActivityListProps) {
   const getDayLabel = (dayIndex: number, dateStr: string) => {
     if (dayIndex === 0) return t('today')
     if (dayIndex === 1) return t('yesterday')
-    return new Date(dateStr).toLocaleDateString('he-IL', { weekday: 'long' })
+    return new Date(dateStr).toLocaleDateString(getDateLocale(locale), { weekday: 'long' })
   }
 
   // Estimate XP (rough calculation)

@@ -8,7 +8,8 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
+import { getDateLocale } from '@/lib/utils'
 import { useEventTracking, useFunnelTracking } from '@/lib/analytics/hooks'
 import { usePracticeStats } from '@/hooks/usePracticeSession'
 import { ToastContainer, type Toast } from '@/components/ui/Toast'
@@ -114,6 +115,7 @@ interface RecentSessionCardProps {
 
 function RecentSessionCard({ session, onClick }: RecentSessionCardProps) {
   const tp = useTranslations('practice')
+  const locale = useLocale()
   const statusColors = {
     active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
     paused: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
@@ -157,7 +159,7 @@ function RecentSessionCard({ session, onClick }: RecentSessionCardProps) {
           {accuracy}%
         </p>
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          {new Date(session.created_at).toLocaleDateString()}
+          {new Date(session.created_at).toLocaleDateString(getDateLocale(locale))}
         </p>
       </div>
     </button>

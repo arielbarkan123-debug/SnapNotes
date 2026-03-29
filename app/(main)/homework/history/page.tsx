@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslations, useLocale } from 'next-intl'
+import { getDateLocale } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 
 // ============================================================================
@@ -71,18 +73,23 @@ export default function HomeworkHistoryPage() {
     return item.type === filter
   })
 
+  const t = useTranslations('homework')
+  const locale = useLocale()
+  const dateLoc = getDateLocale(locale)
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const today = new Date()
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
 
+    const timeStr = date.toLocaleTimeString(dateLoc, { hour: '2-digit', minute: '2-digit' })
     if (date.toDateString() === today.toDateString()) {
-      return `Today at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+      return t('todayAt', { time: timeStr })
     } else if (date.toDateString() === yesterday.toDateString()) {
-      return `Yesterday at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+      return t('yesterdayAt', { time: timeStr })
     } else {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+      return date.toLocaleDateString(dateLoc, { month: 'short', day: 'numeric', year: 'numeric' })
     }
   }
 
