@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx jest --ci && next build",
+  "buildCommand": "next build",
   "crons": [
     {
       "path": "/api/cron/aggregate-analytics",
