@@ -16,6 +16,9 @@ import { ToastContainer, type Toast } from '@/components/ui/Toast'
 import type { SessionType, PracticeSession } from '@/lib/practice/types'
 import type { DifficultyLevel } from '@/lib/adaptive/types'
 import { PastExamNudgeBanner, PastExamUploadModal } from '@/components/past-exams'
+import ContentUploadPanel, { type ContentInput } from '@/components/shared/ContentUploadPanel'
+import { uploadFileToStorage, uploadImagesToStorage } from '@/lib/upload/direct-upload'
+import { createClient } from '@/lib/supabase/client'
 import { createLogger } from '@/lib/logger'
 
 
@@ -197,6 +200,11 @@ export default function PracticeHubContent({
   // Past exam upload for practice personalization
   const [showPastExamUpload, setShowPastExamUpload] = useState(false)
 
+  // Practice from uploaded content
+  const [showContentUpload, setShowContentUpload] = useState(false)
+  const [contentInput, setContentInput] = useState<ContentInput | null>(null)
+  const [contentProgress, setContentProgress] = useState('')
+
   // Custom session setup state
   const [showCustomSetup, setShowCustomSetup] = useState(false)
   const [customConfig, setCustomConfig] = useState({
@@ -358,6 +366,94 @@ export default function PracticeHubContent({
     }
   }, [router, customConfig, trackStep, trackFeature, addToast])
 
+  // Create practice from uploaded content
+  const createFromContent = useCallback(async () => {
+    if (!contentInput) return
+    setIsCreating(true)
+    setContentProgress('Processing content...')
+
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      let textContent = contentInput.textContent || ''
+      let imageUrls: string[] | undefined
+      let documentUrl: string | undefined
+      let fileName: string | undefined
+      let fileType: string | undefined
+
+      if (contentInput.mode === 'files' && contentInput.files?.length) {
+        setContentProgress('Uploading files...')
+        if (contentInput.fileType === 'image') {
+          const uploaded = await uploadImagesToStorage(contentInput.files, user.id, `practice-${Date.now()}`)
+          const signRes = await fetch('/api/sign-image-urls', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paths: uploaded.map(u => u.storagePath) }),
+          })
+          const signData = await signRes.json()
+          imageUrls = signData.urls || []
+        } else {
+          const file = contentInput.files[0]
+          const result = await uploadFileToStorage(file, user.id)
+          documentUrl = result.storagePath
+          fileName = file.name
+          fileType = result.fileType
+
+          setContentProgress('Extracting text...')
+          const extractRes = await fetch('/api/process-document', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ storagePath: result.storagePath, fileName: file.name, fileType: result.fileType }),
+          })
+          const extractData = await extractRes.json()
+          if (extractData.success && extractData.extractedContent) {
+            textContent = extractData.extractedContent
+          } else {
+            throw new Error('Failed to extract text from document')
+          }
+        }
+      }
+
+      // Create shell course + generate SRS cards via from-content API
+      setContentProgress('Generating practice cards...')
+      const res = await fetch('/api/srs/cards/from-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textContent, imageUrls, documentUrl, fileName, fileType }),
+      })
+
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        throw new Error(typeof data.error === 'string' ? data.error : data.error?.message || 'Failed to create practice content')
+      }
+
+      // Now create a practice session from the new course
+      setContentProgress('Starting practice session...')
+      const sessionRes = await fetch('/api/practice/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionType: 'exam_prep', courseId: data.courseId, questionCount: 10 }),
+      })
+
+      const sessionData = await sessionRes.json()
+      if (sessionRes.ok && sessionData.sessionId) {
+        setShowContentUpload(false)
+        router.push(`/practice/${sessionData.sessionId}`)
+      } else {
+        // Cards created but session failed — still a partial success
+        addToast('success', `${data.cardsCreated} cards created! Go to your courses to practice.`)
+        setShowContentUpload(false)
+      }
+    } catch (error) {
+      addToast('error', error instanceof Error ? error.message : 'Failed to create practice')
+    } finally {
+      setIsCreating(false)
+      setContentProgress('')
+    }
+  }, [contentInput, router, addToast])
+
   // Total available questions
   const totalQuestions = Object.values(questionsPerCourse).reduce((a, b) => a + b, 0)
 
@@ -387,6 +483,58 @@ export default function PracticeHubContent({
           isOpen={showPastExamUpload}
           onClose={() => setShowPastExamUpload(false)}
         />
+
+        {/* Practice from Content Modal */}
+        {showContentUpload && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+            onClick={!isCreating ? () => setShowContentUpload(false) : undefined}
+          >
+            <div
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="flex justify-between items-center p-5 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Practice from Content</h2>
+                <button onClick={() => setShowContentUpload(false)} disabled={isCreating} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50">✕</button>
+              </div>
+              <div className="p-5 space-y-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Upload notes or paste text to generate practice questions.</p>
+                <ContentUploadPanel onContentReady={setContentInput} isDisabled={isCreating} compact />
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowContentUpload(false)}
+                    disabled={isCreating}
+                    className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={createFromContent}
+                    disabled={!contentInput || isCreating}
+                    className="flex-1 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-400 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    {isCreating && contentProgress ? (
+                      <>
+                        <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        {contentProgress}
+                      </>
+                    ) : (
+                      'Start Practice'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stats Overview */}
         {stats && (
@@ -466,6 +614,13 @@ export default function PracticeHubContent({
               available={totalQuestions >= 10}
               onClick={() => createSession('mixed')}
               variant="primary"
+            />
+            <QuickPracticeCard
+              title="From Content"
+              description="Upload notes or paste text to practice"
+              icon="📄"
+              available={!isCreating}
+              onClick={() => setShowContentUpload(true)}
             />
             <QuickPracticeCard
               title="SRS Review"
