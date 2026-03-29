@@ -10,6 +10,7 @@ import type { PastExamTemplate, AnalysisStatus } from '@/types/past-exam'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { ToastContainer, type Toast } from '@/components/ui/Toast'
 import dynamic from 'next/dynamic'
+import { formatSubjectLabel } from '@/lib/past-exams/utils'
 import { createLogger } from '@/lib/logger'
 
 
@@ -103,26 +104,6 @@ function ClockIcon({ className }: { className?: string }) {
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   )
-}
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/** Convert subject ID to display label */
-function formatSubjectLabel(subjectId: string): string {
-  // Convert "biology-hl" to "Biology HL", "math-5" to "Math 5"
-  return subjectId
-    .split('-')
-    .map((part, i) => {
-      if (i === 0) {
-        return part.charAt(0).toUpperCase() + part.slice(1)
-      }
-      // Keep HL/SL uppercase, numbers as-is
-      if (part.match(/^(hl|sl)$/i)) return part.toUpperCase()
-      return part
-    })
-    .join(' ')
 }
 
 // =============================================================================

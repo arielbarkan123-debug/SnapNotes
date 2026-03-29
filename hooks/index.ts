@@ -89,6 +89,13 @@ export {
   type UsePastExamTemplatesReturn,
 } from './usePastExamTemplates'
 
+// User Subjects
+export {
+  useUserSubjects,
+  type UserSubject,
+  type UseUserSubjectsReturn,
+} from './useUserSubjects'
+
 // Study Plan
 export {
   useStudyPlan,

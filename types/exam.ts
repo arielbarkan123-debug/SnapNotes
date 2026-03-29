@@ -122,6 +122,8 @@ export interface CreateExamRequest {
   questionCount: number
   timeLimitMinutes: number
   examFormat?: 'match_real' | 'adaptive' | 'standard'
+  /** Optional subject ID to filter past exam templates by (e.g., "biology-hl") */
+  subjectId?: string
 }
 
 export interface ExamAnswer {

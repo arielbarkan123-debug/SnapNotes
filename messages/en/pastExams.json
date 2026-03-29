@@ -1,5 +1,6 @@
 {
   "title": "Past Exam Templates",
+  "loading": "Loading...",
   "subtitle": "Upload past exams to help generate similar-style questions",
   "backToSettings": "Back to Settings",
   "uploadButton": "Upload Past Exam",
@@ -63,6 +64,36 @@
     "message": "Are you sure you want to delete this template? This action cannot be undone.",
     "confirm": "Delete",
     "cancel": "Cancel"
+  },
+
+  "nudge": {
+    "noTemplates": "Train AI with your past exams",
+    "noTemplatesDescription": "Upload past exams to get questions in your exam style",
+    "addMore": "You have {count} past exam(s). Add more to improve accuracy",
+    "addMoreDescription": "More templates help the AI match your teacher's style better",
+    "personalized": "AI personalized with {count} past exam(s)",
+    "uploadCta": "Upload Past Exam",
+    "addMoreCta": "Add More"
+  },
+
+  "analysisPending": {
+    "title": "Exam Template Being Analyzed",
+    "message": "Your past exam \"{title}\" is still being analyzed by AI",
+    "waitButton": "Wait & Generate with past exam",
+    "skipButton": "Generate without it",
+    "analyzing": "Analyzing your exam pattern..."
+  },
+
+  "dashboard": {
+    "title": "Past Exam Templates",
+    "noTemplates": "Upload past exams to personalize your learning",
+    "noTemplatesDescription": "The AI will learn your teacher's exam style and generate similar questions",
+    "hasTemplates": "You have {count} past exam(s)",
+    "hasTemplatesDescription": "Add more to unlock exam predictions",
+    "personalized": "Exam predictions available",
+    "personalizedDescription": "AI is personalized with {count} past exam(s)",
+    "manageCta": "Manage Templates",
+    "uploadCta": "Upload Past Exam"
   },
 
   "errors": {

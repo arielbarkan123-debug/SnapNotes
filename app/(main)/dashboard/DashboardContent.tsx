@@ -14,6 +14,7 @@ import { useStudyPlan } from '@/hooks/useStudyPlan'
 import { ChevronRight, Check, ArrowRight, Flame, Zap, Trophy, Coffee } from 'lucide-react'
 import type { StudyPlanTask } from '@/lib/study-plan/types'
 import { useFeatureTracker } from '@/lib/student-context/feature-tracker'
+import { usePastExamTemplates } from '@/hooks/usePastExamTemplates'
 import { createLogger } from '@/lib/logger'
 
 
@@ -134,12 +135,16 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
 
   const router = useRouter()
   const t = useTranslations('dashboard')
+  const tPastExams = useTranslations('pastExams')
   const tTask = useTranslations('studyPlan.taskTypes')
   const locale = useLocale()
   const { error: showError, success: showSuccess } = useToast()
 
   // Load intelligence from the Learning Intelligence Engine (non-blocking)
   const intelligence = useDashboardIntelligence()
+
+  // Past exam templates for the adaptive dashboard card
+  const { count: pastExamCount, isLoading: pastExamsLoading } = usePastExamTemplates()
 
   // Show celebration toast if the engine says so
   const celebrationShown = useRef(false)
@@ -430,6 +435,61 @@ export default function DashboardContent({ initialCourses, userName, dbError }: 
             <p className="text-gray-500 dark:text-gray-400 text-sm">{t('quickPracticeDesc')}</p>
           </Link>
         </div>
+
+        {/* Past Exam Templates — Adaptive Dashboard Card */}
+        {!pastExamsLoading && (
+          <div className="mb-8 animate-fadeSlideIn stagger-4">
+            {pastExamCount === 0 ? (
+              <Link
+                href="/settings/past-exams"
+                className="block bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-[22px] border border-violet-200 dark:border-violet-800 p-5 shadow-card card-hover-lift group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">📄</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-gray-900 dark:text-white mb-0.5">{tPastExams('dashboard.noTemplates')}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{tPastExams('dashboard.noTemplatesDescription')}</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-violet-400 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+            ) : pastExamCount < 3 ? (
+              <Link
+                href="/settings/past-exams"
+                className="block bg-white dark:bg-gray-800 rounded-[22px] border border-gray-200 dark:border-gray-700 p-5 shadow-card card-hover-lift group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">📝</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-gray-900 dark:text-white mb-0.5">{tPastExams('dashboard.hasTemplates', { count: pastExamCount })}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{tPastExams('dashboard.hasTemplatesDescription')}</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+            ) : (
+              <Link
+                href="/settings/past-exams"
+                className="block bg-white dark:bg-gray-800 rounded-[22px] border border-green-200 dark:border-green-800 p-5 shadow-card card-hover-lift group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">✅</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-gray-900 dark:text-white mb-0.5">{tPastExams('dashboard.personalized')}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{tPastExams('dashboard.personalizedDescription', { count: pastExamCount })}</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-green-400 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+            )}
+          </div>
+        )}
 
         {/* Today's Plan Section */}
         {plan && (

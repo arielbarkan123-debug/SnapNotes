@@ -15,6 +15,7 @@ import { usePracticeStats } from '@/hooks/usePracticeSession'
 import { ToastContainer, type Toast } from '@/components/ui/Toast'
 import type { SessionType, PracticeSession } from '@/lib/practice/types'
 import type { DifficultyLevel } from '@/lib/adaptive/types'
+import { PastExamNudgeBanner, PastExamUploadModal } from '@/components/past-exams'
 import { createLogger } from '@/lib/logger'
 
 
@@ -193,6 +194,9 @@ export default function PracticeHubContent({
     })
   }, [trackStep, trackFeature, courses.length, gapsCount, questionsPerCourse, activeSessions.length])
 
+  // Past exam upload for practice personalization
+  const [showPastExamUpload, setShowPastExamUpload] = useState(false)
+
   // Custom session setup state
   const [showCustomSetup, setShowCustomSetup] = useState(false)
   const [customConfig, setCustomConfig] = useState({
@@ -369,6 +373,20 @@ export default function PracticeHubContent({
             Practice with targeted questions, fix knowledge gaps, and prepare for exams.
           </p>
         </div>
+
+        {/* Past Exam Templates Nudge */}
+        <div className="mb-6">
+          <PastExamNudgeBanner
+            variant="compact"
+            onUploadClick={() => setShowPastExamUpload(true)}
+          />
+        </div>
+
+        {/* Past Exam Upload Modal */}
+        <PastExamUploadModal
+          isOpen={showPastExamUpload}
+          onClose={() => setShowPastExamUpload(false)}
+        />
 
         {/* Stats Overview */}
         {stats && (

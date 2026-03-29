@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { useExams, useCourses, EXAMS_CACHE_KEY } from '@/hooks'
 import { usePastExamTemplates } from '@/hooks/usePastExamTemplates'
 import { useSWRConfig } from 'swr'
 import { useFeatureTracker } from '@/lib/student-context/feature-tracker'
+import { PastExamUploadModal, PastExamNudgeBanner, AnalysisPendingDialog } from '@/components/past-exams'
 import { createLogger } from '@/lib/logger'
 
 
@@ -23,7 +23,7 @@ export default function ExamsPage() {
   // SWR hooks for data fetching with caching
   const { exams, isLoading: examsLoading, error: examsError } = useExams()
   const { courses, isLoading: coursesLoading, error: coursesError } = useCourses()
-  const { count: templateCount, isLoading: templatesLoading } = usePastExamTemplates()
+  const { templates } = usePastExamTemplates()
 
   // Local state for UI
   const [showCreate, setShowCreate] = useState(false)
@@ -33,23 +33,37 @@ export default function ExamsPage() {
   const [questionCount, setQuestionCount] = useState(10)
   const [timeLimit, setTimeLimit] = useState(30)
 
-  // Log performance on initial load
-  useEffect(() => {
-    if (!examsLoading && !coursesLoading) {
-    }
-  }, [examsLoading, coursesLoading])
+  // Past exam upload inline flow
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showAnalysisPending, setShowAnalysisPending] = useState(false)
+  const [analyzingTemplateName, setAnalyzingTemplateName] = useState('')
 
+  // Track mounted state for safe async operations
+  const mountedRef = useRef(true)
   useEffect(() => {
+    return () => { mountedRef.current = false }
   }, [])
 
   const loading = examsLoading || coursesLoading
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (!selectedCourse) {
       setError(t('pleaseSelectCourse'))
       return
     }
 
+    // Check if any templates are still being analyzed
+    const analyzingTemplate = templates.find(t => t.analysis_status === 'analyzing')
+    if (analyzingTemplate) {
+      setAnalyzingTemplateName(analyzingTemplate.title || 'Untitled')
+      setShowAnalysisPending(true)
+      return
+    }
+
+    doGenerate()
+  }
+
+  const doGenerate = async () => {
     setCreating(true)
     setError(null)
 
@@ -63,6 +77,7 @@ export default function ExamsPage() {
           timeLimitMinutes: timeLimit,
         }),
       })
+
 
       // Check if response is JSON before parsing
       const contentType = res.headers.get('content-type')
@@ -271,39 +286,11 @@ export default function ExamsPage() {
                 </div>
               </div>
 
-              {/* Past Exam Templates Section */}
-              <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      {t('pastExamTemplates.title')}
-                    </span>
-                  </div>
-                  {templatesLoading ? (
-                    <span className="text-xs text-gray-400">...</span>
-                  ) : templateCount > 0 ? (
-                    <Link
-                      href="/settings/past-exams"
-                      className="text-xs text-violet-600 dark:text-violet-400 underline hover:underline"
-                    >
-                      {t('pastExamTemplates.templatesAvailable', { count: templateCount })}
-                    </Link>
-                  ) : (
-                    <Link
-                      href="/settings/past-exams"
-                      className="text-xs text-violet-600 dark:text-violet-400 underline hover:underline"
-                    >
-                      {t('pastExamTemplates.addTemplates')}
-                    </Link>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {t('pastExamTemplates.description')}
-                </p>
-              </div>
+              {/* Past Exam Templates — Inline upload nudge */}
+              <PastExamNudgeBanner
+                variant="compact"
+                onUploadClick={() => setShowUploadModal(true)}
+              />
 
               <button
                 onClick={handleCreate}
@@ -316,6 +303,63 @@ export default function ExamsPage() {
           </div>
         </div>
       )}
+
+      {/* Past Exam Upload Modal — inline in exam flow */}
+      <PastExamUploadModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onUploadComplete={(templateId) => {
+          setShowUploadModal(false)
+          // The template is now uploading + analyzing — store its name for the pending dialog
+          const uploaded = templates.find(t => t.id === templateId)
+          if (uploaded) {
+            setAnalyzingTemplateName(uploaded.title || 'Untitled')
+          }
+        }}
+      />
+
+      {/* Analysis Pending Dialog — shown when generating while analysis is running */}
+      <AnalysisPendingDialog
+        isOpen={showAnalysisPending}
+        onClose={() => setShowAnalysisPending(false)}
+        onWait={() => {
+          setShowAnalysisPending(false)
+          setCreating(true)
+          // Poll until analysis completes, then generate
+          const pollAndGenerate = async () => {
+            const maxAttempts = 30 // 30 × 4s = 2 min max wait
+            for (let i = 0; i < maxAttempts; i++) {
+              if (!mountedRef.current) return
+              await new Promise(r => setTimeout(r, 4000))
+              if (!mountedRef.current) return
+              try {
+                const res = await fetch('/api/past-exams')
+                if (!res.ok) break
+                const data = await res.json()
+                const stillAnalyzing = data.templates?.some((tp: { analysis_status: string }) => tp.analysis_status === 'analyzing')
+                if (!stillAnalyzing) break
+              } catch {
+                // Network error — stop polling and generate anyway
+                break
+              }
+            }
+            if (mountedRef.current) {
+              await doGenerate()
+            }
+          }
+          pollAndGenerate().catch(() => {
+            if (mountedRef.current) {
+              setError(t('connectionError'))
+              setCreating(false)
+            }
+          })
+        }}
+        onSkip={() => {
+          setShowAnalysisPending(false)
+          doGenerate()
+        }}
+        templateTitle={analyzingTemplateName}
+      />
     </div>
   )
 }

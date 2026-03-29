@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { useToast } from '@/contexts/ToastContext'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
 import Button from '@/components/ui/Button'
+import { PastExamNudgeBanner, PastExamUploadModal } from '@/components/past-exams'
 
 interface CreateCourseModalProps {
   isOpen: boolean
@@ -25,6 +26,7 @@ export default function CreateCourseModal({ isOpen, onClose, onOpenUpload }: Cre
   const [tab, setTab] = useState<Tab>('ai')
   const [title, setTitle] = useState('')
   const [isCreating, setIsCreating] = useState(false)
+  const [showPastExamUpload, setShowPastExamUpload] = useState(false)
 
   // Reset state when modal closes
   useEffect(() => {
@@ -138,12 +140,20 @@ export default function CreateCourseModal({ isOpen, onClose, onOpenUpload }: Cre
         <div className="p-6">
           {tab === 'ai' ? (
             <div className="text-center">
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
                 {t('aiDesc')}
               </p>
-              <Button variant="primary" onClick={handleAIUpload} className="w-full">
+              <Button variant="primary" onClick={handleAIUpload} className="w-full mb-4">
                 {t('tabAI')}
               </Button>
+              <PastExamNudgeBanner
+                variant="compact"
+                onUploadClick={() => setShowPastExamUpload(true)}
+              />
+              <PastExamUploadModal
+                isOpen={showPastExamUpload}
+                onClose={() => setShowPastExamUpload(false)}
+              />
             </div>
           ) : (
             <div>

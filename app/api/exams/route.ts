@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: CreateExamRequest = await request.json()
-    const { courseId, questionCount, timeLimitMinutes } = body
+    const { courseId, questionCount, timeLimitMinutes, subjectId } = body
 
     if (!courseId || !questionCount || !timeLimitMinutes) {
       return createErrorResponse(ErrorCodes.FIELD_REQUIRED, 'Missing required fields: courseId, questionCount, timeLimitMinutes')
@@ -160,11 +160,22 @@ export async function POST(request: NextRequest) {
     const examFormat = (body.examFormat || userProfile?.exam_format || 'match_real') as ExamFormat
 
     // Fetch user's past exam templates for style guide
-    const { data: pastExamTemplates } = await supabase
+    // Filter by subject when provided to avoid cross-subject mixing
+    let pastExamQuery = supabase
       .from('past_exam_templates')
       .select('extracted_analysis, title')
       .eq('user_id', user.id)
       .eq('analysis_status', 'completed')
+
+    if (subjectId) {
+      pastExamQuery = pastExamQuery.eq('subject_id', subjectId)
+    } else if (subjects.length === 1) {
+      // If user has only one subject, filter by it automatically
+      pastExamQuery = pastExamQuery.eq('subject_id', subjects[0])
+    }
+    // If no subjectId and multiple subjects, use all templates (backwards-compatible)
+
+    const { data: pastExamTemplates } = await pastExamQuery
 
     // Build exam style guide from past exam templates (if any)
     const examStyleGuide = pastExamTemplates && pastExamTemplates.length > 0

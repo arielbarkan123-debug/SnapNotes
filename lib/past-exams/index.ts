@@ -1,6 +1,6 @@
 /**
  * Past Exams Library
- * Exports analyzer and style guide builder functions
+ * Exports analyzer, style guide builder, and shared utility functions
  */
 
 export {
@@ -15,3 +15,6 @@ export {
   pastExamsHaveImages,
   getAggregatedImageAnalysis,
 } from './style-guide'
+
+// Re-export client-safe utilities
+export { formatSubjectLabel } from './utils'
