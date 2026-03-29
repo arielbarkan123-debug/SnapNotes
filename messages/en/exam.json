@@ -39,6 +39,17 @@
   "statusExpired": "expired",
   "statusPending": "pending",
 
+  "fromCourse": "From Course",
+  "fromContent": "From Content",
+  "uploadOrPaste": "Upload files or paste text to generate an exam",
+  "generatingFromContent": "Creating exam from your content...",
+  "processingContent": "Processing your content...",
+  "generatingQuestions": "Generating questions...",
+  "contentTooShort": "Please provide more content (at least 50 characters)",
+  "uploadingFiles": "Uploading files...",
+  "extractingText": "Extracting text from document...",
+  "readingImages": "Reading content from images...",
+
   "pastExamTemplates": {
     "title": "Past Exam Templates",
     "description": "Using past exams helps generate questions in a similar style",

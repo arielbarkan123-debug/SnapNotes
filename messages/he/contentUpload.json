@@ -1,0 +1,17 @@
+{
+  "tabs": {
+    "files": "העלאת קבצים",
+    "text": "הדבקת טקסט"
+  },
+  "files": {
+    "dragDrop": "גרור או לחץ לבחירה",
+    "fileTypes": "תמונות (JPG, PNG, WebP, HEIC) או מסמכים (PPTX, DOCX)",
+    "maxSize": "עד 20MB לקובץ, עד 10 תמונות",
+    "selected": "{count} קבצים נבחרו"
+  },
+  "text": {
+    "placeholder": "הדבק את ההערות, חומר הלימוד, או כל תוכן טקסט...",
+    "minChars": "מינימום 50 תווים",
+    "charCount": "{count} תווים"
+  }
+}

@@ -8,6 +8,9 @@ import { usePastExamTemplates } from '@/hooks/usePastExamTemplates'
 import { useSWRConfig } from 'swr'
 import { useFeatureTracker } from '@/lib/student-context/feature-tracker'
 import { PastExamUploadModal, PastExamNudgeBanner, AnalysisPendingDialog } from '@/components/past-exams'
+import ContentUploadPanel, { type ContentInput } from '@/components/shared/ContentUploadPanel'
+import { uploadFileToStorage, uploadImagesToStorage } from '@/lib/upload/direct-upload'
+import { createClient } from '@/lib/supabase/client'
 import { createLogger } from '@/lib/logger'
 
 
@@ -33,6 +36,11 @@ export default function ExamsPage() {
   const [questionCount, setQuestionCount] = useState(10)
   const [timeLimit, setTimeLimit] = useState(30)
 
+  // Content source mode: 'course' (existing) or 'content' (new upload/paste)
+  const [contentMode, setContentMode] = useState<'course' | 'content'>('course')
+  const [contentInput, setContentInput] = useState<ContentInput | null>(null)
+  const [generationProgress, setGenerationProgress] = useState<string>('')
+
   // Past exam upload inline flow
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [showAnalysisPending, setShowAnalysisPending] = useState(false)
@@ -46,7 +54,142 @@ export default function ExamsPage() {
 
   const loading = examsLoading || coursesLoading
 
+  const handleCreateFromContent = async () => {
+    if (!contentInput) {
+      setError(t('contentTooShort'))
+      return
+    }
+
+    setCreating(true)
+    setError(null)
+    setGenerationProgress(t('processingContent'))
+
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      let textContent = contentInput.textContent || ''
+      let imageUrls: string[] | undefined
+      let documentUrl: string | undefined
+      let fileName: string | undefined
+      let fileType: string | undefined
+
+      // Handle file uploads
+      if (contentInput.mode === 'files' && contentInput.files?.length) {
+        setGenerationProgress(t('uploadingFiles'))
+
+        if (contentInput.fileType === 'image') {
+          // Upload images
+          const uploaded = await uploadImagesToStorage(contentInput.files, user.id, `exam-${Date.now()}`)
+          // Get signed URLs
+          const signRes = await fetch('/api/sign-image-urls', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paths: uploaded.map(u => u.storagePath) }),
+          })
+          const signData = await signRes.json()
+          imageUrls = signData.urls || []
+
+          // For images, extract text via process-document (OCR)
+          setGenerationProgress(t('readingImages'))
+        } else {
+          // Upload document (PPTX/DOCX)
+          const file = contentInput.files[0]
+          const result = await uploadFileToStorage(file, user.id)
+          documentUrl = result.storagePath
+          fileName = file.name
+          fileType = result.fileType
+
+          // Extract text from document
+          setGenerationProgress(t('extractingText'))
+          const extractRes = await fetch('/api/process-document', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              storagePath: result.storagePath,
+              fileName: file.name,
+              fileType: result.fileType,
+            }),
+          })
+          const extractData = await extractRes.json()
+          if (extractData.success && extractData.extractedContent) {
+            textContent = extractData.extractedContent
+          } else {
+            throw new Error(extractData.error || 'Failed to extract text from document')
+          }
+        }
+      }
+
+      // Stream to from-content API
+      setGenerationProgress(t('generatingQuestions'))
+      const res = await fetch('/api/exams/from-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          textContent,
+          imageUrls,
+          documentUrl,
+          fileName,
+          fileType,
+          questionCount,
+          timeLimitMinutes: timeLimit,
+        }),
+      })
+
+      if (!res.ok || !res.body) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(typeof errData.error === 'string' ? errData.error : errData.error?.message || t('failedToCreate'))
+      }
+
+      // Read streaming response
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let examId: string | null = null
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const text = decoder.decode(value)
+        const lines = text.split('\n').filter(Boolean)
+        for (const line of lines) {
+          try {
+            const msg = JSON.parse(line)
+            if (msg.type === 'progress') {
+              setGenerationProgress(msg.stage || t('generatingQuestions'))
+            } else if (msg.type === 'success') {
+              examId = msg.examId
+            } else if (msg.type === 'error') {
+              throw new Error(msg.error || t('failedToCreate'))
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) continue // Skip non-JSON lines
+            throw e
+          }
+        }
+      }
+
+      if (examId) {
+        await globalMutate(EXAMS_CACHE_KEY)
+        router.push(`/exams/${examId}`)
+      } else {
+        throw new Error(t('failedToCreate'))
+      }
+    } catch (err) {
+      log.error({ err }, 'Create from content failed')
+      setError(err instanceof Error ? err.message : t('connectionError'))
+    } finally {
+      setCreating(false)
+      setGenerationProgress('')
+    }
+  }
+
   const handleCreate = () => {
+    if (contentMode === 'content') {
+      handleCreateFromContent()
+      return
+    }
+
     if (!selectedCourse) {
       setError(t('pleaseSelectCourse'))
       return
@@ -238,22 +381,62 @@ export default function ExamsPage() {
             </div>
             <div className="p-4 space-y-4">
               {error && <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm">{error}</div>}
-              {coursesError && <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 rounded-lg text-sm">{coursesError}</div>}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('course')}</label>
-                <select
-                  value={selectedCourse}
-                  onChange={(e) => setSelectedCourse(e.target.value)}
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white"
-                  disabled={courses.length === 0}
+              {/* Source Mode Tabs */}
+              <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => { setContentMode('course'); setError(null) }}
+                  className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                    contentMode === 'course'
+                      ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
                 >
-                  <option value="">{courses.length === 0 ? t('noCoursesAvailable') : t('selectCourse')}</option>
-                  {courses.map((course) => (
-                    <option key={course.id} value={course.id}>{course.title}</option>
-                  ))}
-                </select>
+                  {t('fromCourse')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setContentMode('content'); setError(null) }}
+                  className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                    contentMode === 'content'
+                      ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {t('fromContent')}
+                </button>
               </div>
+
+              {/* Tab Content */}
+              {contentMode === 'course' ? (
+                <>
+                  {coursesError && <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 rounded-lg text-sm">{coursesError}</div>}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('course')}</label>
+                    <select
+                      value={selectedCourse}
+                      onChange={(e) => setSelectedCourse(e.target.value)}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white"
+                      disabled={courses.length === 0}
+                    >
+                      <option value="">{courses.length === 0 ? t('noCoursesAvailable') : t('selectCourse')}</option>
+                      {courses.map((course) => (
+                        <option key={course.id} value={course.id}>{course.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{t('uploadOrPaste')}</p>
+                  <ContentUploadPanel
+                    onContentReady={setContentInput}
+                    isDisabled={creating}
+                    compact
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('questions', { count: questionCount })}</label>
@@ -297,10 +480,13 @@ export default function ExamsPage() {
 
               <button
                 onClick={handleCreate}
-                disabled={creating || !selectedCourse}
+                disabled={creating || (contentMode === 'course' ? !selectedCourse : !contentInput)}
                 className="w-full py-3 bg-violet-600 text-white rounded-xl font-medium hover:bg-violet-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {creating ? t('creatingExam') : t('createExam')}
+                {creating
+                  ? (generationProgress || t('creatingExam'))
+                  : t('createExam')
+                }
               </button>
             </div>
           </div>

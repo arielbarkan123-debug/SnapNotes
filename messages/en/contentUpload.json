@@ -1,0 +1,17 @@
+{
+  "tabs": {
+    "files": "Upload Files",
+    "text": "Paste Text"
+  },
+  "files": {
+    "dragDrop": "Drag & drop or click to select",
+    "fileTypes": "Images (JPG, PNG, WebP, HEIC) or Documents (PPTX, DOCX)",
+    "maxSize": "Max 20MB per file, up to 10 images",
+    "selected": "{count} file(s) selected"
+  },
+  "text": {
+    "placeholder": "Paste your notes, study material, or any text content...",
+    "minChars": "Minimum 50 characters",
+    "charCount": "{count} characters"
+  }
+}

@@ -39,6 +39,17 @@
   "statusExpired": "פג תוקף",
   "statusPending": "ממתין",
 
+  "fromCourse": "מקורס",
+  "fromContent": "מתוכן",
+  "uploadOrPaste": "העלה קבצים או הדבק טקסט ליצירת מבחן",
+  "generatingFromContent": "יוצר מבחן מהתוכן שלך...",
+  "processingContent": "מעבד את התוכן שלך...",
+  "generatingQuestions": "מייצר שאלות...",
+  "contentTooShort": "יש לספק יותר תוכן (לפחות 50 תווים)",
+  "uploadingFiles": "מעלה קבצים...",
+  "extractingText": "מחלץ טקסט מהמסמך...",
+  "readingImages": "קורא תוכן מתמונות...",
+
   "pastExamTemplates": {
     "title": "תבניות מבחנים קודמים",
     "description": "שימוש במבחנים קודמים מסייע ביצירת שאלות בסגנון דומה",

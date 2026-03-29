@@ -71,5 +71,18 @@
       "keepItUp": "Keep it up! Regular review sessions will help these stick better.",
       "default": "Every review strengthens your memory. The cards you found hard will be shown again soon!"
     }
+  },
+
+  "fromContent": {
+    "button": "Create Cards from Content",
+    "title": "Create Review Cards",
+    "description": "Upload notes or paste text to generate review cards",
+    "studySomethingNew": "Want to study something new?",
+    "generating": "Generating review cards...",
+    "processing": "Processing your content...",
+    "uploading": "Uploading files...",
+    "success": "{count} cards created! Ready to review.",
+    "noCards": "Could not generate cards from this content. Try providing more detailed material.",
+    "error": "Failed to create cards. Please try again."
   }
 }

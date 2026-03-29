@@ -11,6 +11,7 @@ import DifficultyFeedback from '@/components/shared/DifficultyFeedback'
 import { useEventTracking } from '@/lib/analytics'
 import { sanitizeError } from '@/lib/utils/error-sanitizer'
 import { useFeatureTracker } from '@/lib/student-context/feature-tracker'
+import CreateCardsFromContent from '@/components/srs/CreateCardsFromContent'
 import type { Rating, ReviewSession } from '@/types'
 import type { MistakeItem } from '@/components/practice/MistakeReview'
 
@@ -57,6 +58,7 @@ export default function ReviewPage() {
   const [interactiveResult, setInteractiveResult] = useState<boolean | null>(null) // Track if interactive card was answered correctly
   const [difficultyFeedbackGiven, setDifficultyFeedbackGiven] = useState(false)
   const [mistakes, setMistakes] = useState<MistakeItem[]>([])
+  const [showContentUpload, setShowContentUpload] = useState(false)
 
   // Stats tracking
   const [stats, setStats] = useState<SessionStats>({
@@ -277,13 +279,24 @@ export default function ReviewPage() {
   // Start state
   if (sessionState === 'start') {
     return (
-      <StartScreen
-        session={session}
-        error={error}
-        onStart={startSession}
-        onRefresh={fetchDueCards}
-        t={t}
-      />
+      <>
+        <StartScreen
+          session={session}
+          error={error}
+          onStart={startSession}
+          onRefresh={fetchDueCards}
+          onCreateFromContent={() => setShowContentUpload(true)}
+          t={t}
+        />
+        <CreateCardsFromContent
+          isOpen={showContentUpload}
+          onClose={() => setShowContentUpload(false)}
+          onSuccess={() => {
+            setShowContentUpload(false)
+            fetchDueCards()
+          }}
+        />
+      </>
     )
   }
 
@@ -374,10 +387,11 @@ interface StartScreenProps {
   error: string | null
   onStart: () => void
   onRefresh: () => void
+  onCreateFromContent: () => void
   t: ReturnType<typeof useTranslations<'review'>>
 }
 
-function StartScreen({ session, error, onStart, onRefresh, t }: StartScreenProps) {
+function StartScreen({ session, error, onStart, onRefresh, onCreateFromContent, t }: StartScreenProps) {
   const totalCards = session?.cards_due || 0
   const newCards = session?.new_cards || 0
   const reviewCards = session?.review_cards || 0
@@ -414,6 +428,19 @@ function StartScreen({ session, error, onStart, onRefresh, t }: StartScreenProps
               className="w-full py-3 px-6 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium rounded-xl transition-colors"
             >
               {t('checkAgain')}
+            </button>
+          </div>
+
+          {/* Create cards from uploaded content */}
+          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+              {t('fromContent.studySomethingNew')}
+            </p>
+            <button
+              onClick={onCreateFromContent}
+              className="w-full py-3 px-6 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 font-medium rounded-xl hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors"
+            >
+              {t('fromContent.button')}
             </button>
           </div>
         </div>

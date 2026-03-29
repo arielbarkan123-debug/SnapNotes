@@ -34,6 +34,7 @@ import insights from './insights.json'
 import examPrediction from './examPrediction.json'
 import youtube from './youtube.json'
 import cheatsheet from './cheatsheet.json'
+import contentUpload from './contentUpload.json'
 
 const messages = {
   common,
@@ -72,6 +73,7 @@ const messages = {
   examPrediction,
   youtube,
   cheatsheet,
+  contentUpload,
 }
 
 export default messages
