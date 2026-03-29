@@ -17,6 +17,7 @@ import DifficultyFeedback from '@/components/shared/DifficultyFeedback'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import DiagramToggle from '@/components/ui/DiagramToggle'
 import ContentUploadPanel, { type ContentInput } from '@/components/shared/ContentUploadPanel'
+import { PastExamNudgeBanner, PastExamUploadModal } from '@/components/past-exams'
 import { uploadFileToStorage, uploadImagesToStorage } from '@/lib/upload/direct-upload'
 import { createClient } from '@/lib/supabase/client'
 
@@ -174,6 +175,9 @@ export default function PracticePage() {
   const [isNoQuestionsError, setIsNoQuestionsError] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isStartingInfinite, setIsStartingInfinite] = useState(false)
+
+  // Past exam upload nudge
+  const [showPastExamUpload, setShowPastExamUpload] = useState(false)
 
   // Content upload state
   const [showContentUpload, setShowContentUpload] = useState(false)
@@ -1244,6 +1248,14 @@ export default function PracticePage() {
                 </div>
               </div>
 
+              {/* Past Exam Templates Nudge */}
+              <div className="mb-4">
+                <PastExamNudgeBanner
+                  variant="compact"
+                  onUploadClick={() => setShowPastExamUpload(true)}
+                />
+              </div>
+
               {/* Start Button */}
               <button
                 onClick={startPractice}
@@ -1328,6 +1340,12 @@ export default function PracticePage() {
           )}
           </div>
         </div>
+
+        {/* Past Exam Upload Modal */}
+        <PastExamUploadModal
+          isOpen={showPastExamUpload}
+          onClose={() => setShowPastExamUpload(false)}
+        />
 
         {/* Content Upload Modal */}
         {showContentUpload && (
