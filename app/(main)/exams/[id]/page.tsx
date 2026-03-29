@@ -187,7 +187,7 @@ export default function TakeExamPage() {
           clearExamLocalStorage(data.exam.id)
         }
       } else {
-        setError(data.error || 'Failed to load exam')
+        setError(typeof data.error === 'string' ? data.error : data.error?.message || 'Failed to load exam')
       }
     } catch {
       setError('Connection error. Please refresh.')
@@ -244,7 +244,7 @@ export default function TakeExamPage() {
         })
         fetchExam()
       } else {
-        setError(data.error || 'Failed to submit')
+        setError(typeof data.error === 'string' ? data.error : data.error?.message || 'Failed to submit')
       }
     } catch {
       setError('Connection error. Please try again.')
@@ -314,7 +314,7 @@ export default function TakeExamPage() {
       if (data.success) {
         fetchExam()
       } else {
-        setError(data.error || 'Failed to start exam')
+        setError(typeof data.error === 'string' ? data.error : data.error?.message || 'Failed to start exam')
       }
     } catch {
       setError('Connection error. Please try again.')
@@ -342,7 +342,7 @@ export default function TakeExamPage() {
       if (data.success && data.examId) {
         router.push(`/exams/${data.examId}`)
       } else {
-        setError(data.error || 'Failed to create new exam')
+        setError(typeof data.error === 'string' ? data.error : data.error?.message || 'Failed to create new exam')
         setRetaking(false)
       }
     } catch {

@@ -62,7 +62,7 @@ export function PracticeMore({ courseId, lessonIndex, wrongQuestion, onClose }: 
         setQuestions(data.questions)
         setStarted(true)
       } else {
-        setError(data.error || t('failedToGenerate'))
+        setError(typeof data.error === 'string' ? data.error : data.error?.message || t('failedToGenerate'))
       }
     } catch {
       setError(t('failedToGenerate'))

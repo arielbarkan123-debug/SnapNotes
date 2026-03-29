@@ -71,9 +71,9 @@ export default function ForgotPasswordPage() {
       if (!response.ok) {
         if (response.status === 429) {
           setRetryAfter(data.retryAfter)
-          setError(data.error)
+          setError(typeof data.error === 'string' ? data.error : data.error?.message || 'Too many requests')
         } else {
-          setError(data.error || 'Something went wrong. Please try again.')
+          setError(typeof data.error === 'string' ? data.error : data.error?.message || 'Something went wrong. Please try again.')
         }
       } else {
         setSuccessMessage(data.message)

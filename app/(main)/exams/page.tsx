@@ -102,7 +102,10 @@ export default function ExamsPage() {
         await globalMutate(EXAMS_CACHE_KEY)
         router.push(`/exams/${data.examId}`)
       } else {
-        setError(data.error || t('failedToCreate'))
+        const errorMsg = typeof data.error === 'string'
+          ? data.error
+          : data.error?.message || t('failedToCreate')
+        setError(errorMsg)
       }
     } catch {
       setError(t('connectionError'))

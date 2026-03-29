@@ -93,7 +93,8 @@ export default function HelpModal({ isOpen, onClose, context }: HelpModalProps) 
         setSourceReference(data.sourceReference || null)
         setView('response')
       } else {
-        setError(data.error || 'Something went wrong.')
+        const errVal = data.error as string | { message?: string } | undefined
+        setError(typeof errVal === 'string' ? errVal : (errVal as { message?: string })?.message || 'Something went wrong.')
         setView('buttons')
       }
     } catch (err) {
