@@ -22,7 +22,7 @@ interface CourseViewProps {
 type LessonStatus = 'completed' | 'current' | 'locked'
 
 export default function CourseView({ course, progress }: CourseViewProps) {
-  const t = useTranslations('lesson')
+  const _t = useTranslations('lesson')
   const tc = useTranslations('course')
   const router = useRouter()
   const { success: showSuccess } = useToast()

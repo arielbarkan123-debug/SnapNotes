@@ -286,6 +286,21 @@ export default function TakeExamPage() {
     return () => clearInterval(interval)
   }, [exam])
 
+  // Push help context to global FloatingHelpButtons (must be before any conditional return)
+  const questions = exam?.questions || []
+  const currentQ = questions[currentQuestion]
+  const helpContext: HelpContext = useMemo(() => ({
+    courseId: exam?.course_id || '',
+    courseTitle: exam?.course_title || exam?.title || '',
+    lessonIndex: currentQ?.lesson_index ?? 0,
+    lessonTitle: currentQ?.lesson_title || exam?.title || '',
+    stepIndex: currentQuestion,
+    stepContent: currentQ?.question_text || '',
+    stepType: 'question',
+  }), [exam?.course_id, exam?.course_title, exam?.title, currentQ?.lesson_index, currentQ?.lesson_title, currentQ?.question_text, currentQuestion])
+
+  useHelpContext(helpContext, exam?.course_id || '', exam?.course_title || exam?.title || '')
+
   const handleStart = async () => {
     try {
       setError(null)
@@ -536,8 +551,7 @@ export default function TakeExamPage() {
   }
 
   // In-progress state - show question taking UI
-  const questions = exam.questions || []
-  const question = questions[currentQuestion]
+  const question = currentQ
 
   if (!question) {
     return (
@@ -547,19 +561,6 @@ export default function TakeExamPage() {
       </div>
     )
   }
-
-  // Push help context to global FloatingHelpButtons
-  const helpContext: HelpContext = useMemo(() => ({
-    courseId: exam.course_id,
-    courseTitle: exam.course_title || exam.title,
-    lessonIndex: question.lesson_index ?? 0,
-    lessonTitle: question.lesson_title || exam.title,
-    stepIndex: currentQuestion,
-    stepContent: question.question_text || '',
-    stepType: 'question',
-  }), [exam.course_id, exam.course_title, exam.title, question.lesson_index, question.lesson_title, question.question_text, currentQuestion])
-
-  useHelpContext(helpContext, exam.course_id, exam.course_title || exam.title)
 
   return (
     <div className="min-h-screen bg-transparent">
