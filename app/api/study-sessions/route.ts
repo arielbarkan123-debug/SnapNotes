@@ -98,12 +98,16 @@ export async function PATCH(request: Request) {
     }
 
     // Verify ownership - include user_id in query to prevent timing attacks
-    const { data: existingSession } = await supabase
+    const { data: existingSession, error: sessionLookupError } = await supabase
       .from('study_sessions')
       .select('id')
       .eq('id', sessionId)
       .eq('user_id', user.id)
       .single()
+
+    if (sessionLookupError && sessionLookupError.code !== 'PGRST116') {
+      log.warn({ err: sessionLookupError, sessionId }, 'Failed to look up study session')
+    }
 
     if (!existingSession) {
       return createErrorResponse(ErrorCodes.ANLYT_SESSION_NOT_FOUND)
@@ -111,12 +115,16 @@ export async function PATCH(request: Request) {
 
     // ── Fatigue detection ────────────────────────────────────────────────
     // Fetch the session first to get started_at and course_id for fatigue analysis
-    const { data: sessionData } = await supabase
+    const { data: sessionData, error: sessionDataError } = await supabase
       .from('study_sessions')
       .select('started_at, course_id, lesson_index')
       .eq('id', sessionId)
       .eq('user_id', user.id)
       .single()
+
+    if (sessionDataError && sessionDataError.code !== 'PGRST116') {
+      log.warn({ err: sessionDataError, sessionId }, 'Failed to fetch session data for fatigue analysis')
+    }
 
     let fatigueData: Record<string, unknown> = {}
 

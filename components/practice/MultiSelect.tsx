@@ -49,15 +49,11 @@ export default function MultiSelect({
     setShowFinalFeedback(false)
   }, [question])
 
-  // Get random encouraging message and tip (stable per render)
-  const encouragementIndex = useMemo(() =>
-    Math.floor(Math.random() * 5) + 1,
-    [question]
-  )
-  const learningTipIndex = useMemo(() =>
-    Math.floor(Math.random() * 4) + 1,
-    [question]
-  )
+  // Get random encouraging message and tip (stable per render, re-randomize per question)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const encouragementIndex = useMemo(() => Math.floor(Math.random() * 5) + 1, [question])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const learningTipIndex = useMemo(() => Math.floor(Math.random() * 4) + 1, [question])
 
   // Shuffle options once per question - intentionally only depends on question
   const shuffledOptions = useMemo<ShuffledOption[]>(() => {

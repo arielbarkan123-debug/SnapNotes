@@ -80,8 +80,8 @@ export default function LabeledDiagramOverlay({
       )}
 
       {/* Layer 1: Base image */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       {!imageError && (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={imageUrl}
           alt=""

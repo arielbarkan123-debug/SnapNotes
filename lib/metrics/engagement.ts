@@ -321,7 +321,7 @@ export async function calculateRetentionMetrics(
 
     // Learning velocity - get from user mastery data
     let conceptsMastered = 0
-    const avgTimeToMasteryMinutes = 0 // TODO: Calculate from time-to-mastery tracking
+    let avgTimeToMasteryMinutes = 0
     let questionsToMasteryAvg = 0
 
     try {
@@ -344,6 +344,33 @@ export async function calculateRetentionMetrics(
       }
     } catch {
       // Mastery table might not exist yet
+    }
+
+    // Average time from card creation to first mastery (state = 'review' means mastered in FSRS)
+    try {
+      let masteredCardsQuery = supabase
+        .from('review_cards')
+        .select('created_at, last_review')
+        .eq('user_id', userId)
+        .eq('state', 'review')
+        .not('last_review', 'is', null)
+
+      if (courseId) {
+        masteredCardsQuery = masteredCardsQuery.eq('course_id', courseId)
+      }
+
+      const { data: masteredCards } = await masteredCardsQuery
+
+      if (masteredCards && masteredCards.length > 0) {
+        const totalMinutes = masteredCards.reduce((sum, card) => {
+          const created = new Date(card.created_at).getTime()
+          const mastered = new Date(card.last_review!).getTime()
+          return sum + (mastered - created) / 60_000
+        }, 0)
+        avgTimeToMasteryMinutes = Math.round(totalMinutes / masteredCards.length)
+      }
+    } catch {
+      // review_cards table might not be accessible
     }
 
     return {

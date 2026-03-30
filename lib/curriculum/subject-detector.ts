@@ -193,10 +193,15 @@ export async function detectSubjectFromContent(
       systemSubjectId = bestSubject
   }
 
+  // Detect topics within the identified subject
+  const topicResult = await detectTopicFromContent(content, system, systemSubjectId || bestSubject)
+  const detectedTopics =
+    topicResult.topicName && topicResult.confidence > 0.1 ? [topicResult.topicName] : []
+
   return {
     subject: systemSubjectId,
     confidence,
-    detectedTopics: [], // TODO: Add topic detection
+    detectedTopics,
     matchedKeywords,
   }
 }

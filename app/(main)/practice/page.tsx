@@ -787,6 +787,7 @@ export default function PracticePage() {
   // ==========================================================================
 
   // Help context for current card — memoized to avoid re-rendering global FloatingHelpButtons
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const helpContext: HelpContext | null = useMemo(() => currentCard ? {
     courseId: currentCard.course_id || '',
     courseTitle: currentCard.courseName || 'Practice Session',

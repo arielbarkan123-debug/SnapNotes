@@ -184,13 +184,14 @@ export default function GeoGebraRenderer({
         }
       })
 
+    const capturedContainerId = containerIdRef.current
     return () => {
       cancelled = true
       // Clean up global callback
-      const callbackName = `${containerIdRef.current}_onLoad`
+      const callbackName = `${capturedContainerId}_onLoad`
       delete window[callbackName]
       // Remove injected GeoGebra iframe to prevent stacking on re-render
-      const container = document.getElementById(containerIdRef.current)
+      const container = document.getElementById(capturedContainerId)
       if (container) {
         while (container.firstChild) {
           container.removeChild(container.firstChild)

@@ -151,7 +151,7 @@ describe('Courses [id] API', () => {
 
     const { createClient, createServiceClient } = require('@/lib/supabase/server')
     createClient.mockResolvedValue(mockSupabase)
-    createServiceClient.mockResolvedValue(mockServiceClient)
+    createServiceClient.mockReturnValue(mockServiceClient)
 
     const { checkRateLimit } = require('@/lib/rate-limit')
     checkRateLimit.mockReturnValue({ allowed: true, remaining: 9 })

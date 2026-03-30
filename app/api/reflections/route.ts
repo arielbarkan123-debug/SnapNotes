@@ -178,7 +178,7 @@ async function checkWeeklyReflectionStatus(supabase: SupabaseClient, userId: str
   const weekOf = mondayOfWeek.toISOString().split('T')[0]
 
   // Check if weekly reflection already exists for this week
-  const { data: existingReflection } = await supabase
+  const { data: existingReflection, error: reflectionError } = await supabase
     .from('reflections')
     .select('id')
     .eq('user_id', userId)
@@ -186,21 +186,33 @@ async function checkWeeklyReflectionStatus(supabase: SupabaseClient, userId: str
     .eq('week_of', weekOf)
     .single()
 
+  if (reflectionError && reflectionError.code !== 'PGRST116') {
+    log.warn({ err: reflectionError, userId, weekOf }, 'Failed to check existing weekly reflection')
+  }
+
   // Get weekly stats for context
   const weekStart = new Date(mondayOfWeek)
   weekStart.setHours(0, 0, 0, 0)
 
-  const { count: reviewCount } = await supabase
+  const { count: reviewCount, error: reviewCountError } = await supabase
     .from('review_logs')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
     .gte('reviewed_at', weekStart.toISOString())
 
-  const { data: gamification } = await supabase
+  if (reviewCountError) {
+    log.warn({ err: reviewCountError, userId }, 'Failed to fetch weekly review count')
+  }
+
+  const { data: gamification, error: gamificationError } = await supabase
     .from('user_gamification')
     .select('current_streak')
     .eq('user_id', userId)
     .single()
+
+  if (gamificationError && gamificationError.code !== 'PGRST116') {
+    log.warn({ err: gamificationError, userId }, 'Failed to fetch gamification data for reflection')
+  }
 
   return {
     isDue: isSundayEvening && !existingReflection,

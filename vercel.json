@@ -8,6 +8,10 @@
     {
       "path": "/api/reports/weekly/send-all",
       "schedule": "0 8 * * 0"
+    },
+    {
+      "path": "/api/cron/cleanup-stuck-courses",
+      "schedule": "0 * * * *"
     }
   ]
 }

@@ -60,6 +60,10 @@ export function useWalkthrough(): UseWalkthroughReturn {
   const [isAutoPlaying, setIsAutoPlaying] = useState(false)
 
   const abortRef = useRef<AbortController | null>(null)
+  // Ref to always hold the latest handleStreamEvent without adding it to
+  // startWalkthrough's dep array (which would recreate the function on every
+  // solution state change, causing AbortController issues).
+  const handleStreamEventRef = useRef<(event: WalkthroughStreamEvent) => void>(() => {})
 
   // ─── Navigation ──────────────────────────────────────────────
 
@@ -188,7 +192,7 @@ export function useWalkthrough(): UseWalkthroughReturn {
           if (!line.trim()) continue
           try {
             const event: WalkthroughStreamEvent = JSON.parse(line)
-            handleStreamEvent(event)
+            handleStreamEventRef.current(event)
           } catch {
             // Skip malformed lines
           }
@@ -199,7 +203,7 @@ export function useWalkthrough(): UseWalkthroughReturn {
       if (buffer.trim()) {
         try {
           const event: WalkthroughStreamEvent = JSON.parse(buffer)
-          handleStreamEvent(event)
+          handleStreamEventRef.current(event)
         } catch {
           // Skip
         }
@@ -268,6 +272,11 @@ export function useWalkthrough(): UseWalkthroughReturn {
         break
     }
   }, [solution])
+
+  // Keep the ref in sync so startWalkthrough always calls the latest version.
+  useEffect(() => {
+    handleStreamEventRef.current = handleStreamEvent
+  }, [handleStreamEvent])
 
   // Cleanup on unmount
   useEffect(() => {

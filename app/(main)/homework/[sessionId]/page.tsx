@@ -401,7 +401,7 @@ export default function HomeworkResultsPage() {
     } finally {
       setIsChatLoading(false)
     }
-  }, [isChatLoading, sessionId, toast, trackFeature, visualPrefs.diagramMode])
+  }, [isChatLoading, sessionId, toast, trackFeature, visualPrefs.diagramMode, t])
 
   // Auto-trigger first AI explanation when session has empty conversation
   const hasAutoStarted = useRef(false)

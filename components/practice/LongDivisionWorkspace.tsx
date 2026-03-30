@@ -99,7 +99,7 @@ export default function LongDivisionWorkspace({
     }
 
     return steps
-  }, [dividend, divisor, dividendDigits])
+  }, [divisor, dividendDigits])
 
   const [steps, setSteps] = useState<DivisionStep[]>(() => generateSteps())
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
