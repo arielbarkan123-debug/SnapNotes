@@ -66,7 +66,7 @@ export default function StepContent({
 
   // Annotation button for step-level annotations
   const annotationButton = onSaveAnnotation && onDeleteAnnotation ? (
-    <div className="mt-3 flex justify-end">
+    <div className="mt-3 flex justify-end rtl:justify-start">
       <AnnotationButton
         annotation={annotation}
         onSave={onSaveAnnotation}

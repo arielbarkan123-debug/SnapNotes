@@ -34,7 +34,7 @@ export async function POST(
     }
 
     // Rate limit
-    const rateLimitResult = checkRateLimit(
+    const rateLimitResult = await checkRateLimit(
       getIdentifier(user.id, request),
       RATE_LIMITS.generateCourse
     )

@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Rate limiting
-    const rateLimitResult = checkRateLimit(
+    const rateLimitResult = await checkRateLimit(
       getIdentifier(user.id, request),
       RATE_LIMITS.studyPlanChat
     )

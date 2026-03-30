@@ -132,6 +132,8 @@ const nextConfig = {
 
   // Bundle optimization
   experimental: {
+    // Run instrumentation.ts register() at server startup (for validateEnv)
+    instrumentationHook: true,
     // Optimize package imports - only import what's used
     optimizePackageImports: [
       '@supabase/supabase-js',

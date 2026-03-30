@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
+import { isRTL, type Locale } from '@/i18n/config'
 import { createBrowserClient } from '@supabase/ssr'
 import dynamic from 'next/dynamic'
 import { useVisuals } from '@/contexts/VisualsContext'
@@ -29,6 +30,8 @@ interface PrepareChatSidebarProps {
 
 export default function PrepareChatSidebar({ guideId, sectionRef, onClearSectionRef }: PrepareChatSidebarProps) {
   const t = useTranslations('prepare')
+  const locale = useLocale()
+  const rtl = isRTL(locale as Locale)
   const { preferences: visualPrefs } = useVisuals()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -155,7 +158,7 @@ export default function PrepareChatSidebar({ guideId, sectionRef, onClearSection
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${msg.role === 'user' ? (rtl ? 'justify-start' : 'justify-end') : (rtl ? 'justify-end' : 'justify-start')}`}
           >
             <div
               className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
@@ -183,7 +186,7 @@ export default function PrepareChatSidebar({ guideId, sectionRef, onClearSection
         ))}
 
         {isLoading && (
-          <div className="flex justify-start">
+          <div className={`flex ${rtl ? 'justify-end' : 'justify-start'}`}>
             <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-bl-md px-4 py-3">
               <div className="flex gap-1">
                 <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }} />

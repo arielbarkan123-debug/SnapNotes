@@ -46,7 +46,7 @@ export async function PATCH(
 
     // Rate limit check (uses same limits as course generation)
     const rateLimitId = getIdentifier(user.id, request)
-    const rateLimit = checkRateLimit(rateLimitId, RATE_LIMITS.generateCourse)
+    const rateLimit = await checkRateLimit(rateLimitId, RATE_LIMITS.generateCourse)
     if (!rateLimit.allowed) {
       return createErrorResponse(ErrorCodes.RATE_LIMITED, 'Too many requests. Please wait before adding more material.')
     }
@@ -264,7 +264,7 @@ export async function DELETE(
 
     // Use service client to bypass RLS for deletions
     // We already verified ownership above
-    const serviceClient = await createServiceClient()
+    const serviceClient = createServiceClient()
 
     // Delete associated data - use service client to bypass RLS
     // Wrap each in try-catch since some tables might not exist

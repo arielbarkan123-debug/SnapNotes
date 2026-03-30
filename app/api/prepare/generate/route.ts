@@ -1,5 +1,5 @@
 import { type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getContentLanguage } from '@/lib/ai/language'
 import { generateGuide } from '@/lib/prepare/guide-generator'
 import { searchMultipleQueries } from '@/lib/prepare/youtube-search'
@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
       }
 
       const funcStart = Date.now()
+      let guideId: string | undefined
       try {
         const supabase = await createClient()
         const {
@@ -157,7 +158,7 @@ export async function POST(request: NextRequest) {
           return
         }
 
-        const guideId = guideRecord.id
+        guideId = guideRecord.id
         send('status', { stage: 'generating', guideId, message: 'Generating study guide...' })
 
         // Generate the guide (with retry and JSON repair)
@@ -230,6 +231,17 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : 'Failed to generate study guide'
         log.error({ err: errMsg, durationSec: ((Date.now() - funcStart) / 1000).toFixed(1) }, 'Generation error')
+        if (guideId) {
+          try {
+            const supabaseForCleanup = createServiceClient()
+            await supabaseForCleanup
+              .from('prepare_guides')
+              .update({ generation_status: 'failed', updated_at: new Date().toISOString() })
+              .eq('id', guideId)
+          } catch {
+            // best-effort cleanup
+          }
+        }
         send('error', { message: errMsg })
       } finally {
         if (heartbeatInterval) {

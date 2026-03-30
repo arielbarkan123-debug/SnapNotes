@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { ErrorFallback } from '@/components/ErrorBoundary'
 import { createLogger } from '@/lib/logger'
 
@@ -12,6 +13,8 @@ interface ErrorPageProps {
 }
 
 export default function AuthErrorPage({ error, reset }: ErrorPageProps) {
+  const t = useTranslations('errors')
+
   useEffect(() => {
     log.error({ detail: [error.message, error.digest || ''] }, 'Error caught')
   }, [error])
@@ -22,8 +25,8 @@ export default function AuthErrorPage({ error, reset }: ErrorPageProps) {
         <ErrorFallback
           error={error}
           reset={reset}
-          title="Authentication Error"
-          message="Something went wrong during authentication. Please try again."
+          title={t('authError')}
+          message={t('authErrorDescription')}
         />
       </div>
     </div>

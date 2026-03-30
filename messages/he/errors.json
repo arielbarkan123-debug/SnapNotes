@@ -14,5 +14,21 @@
   "networkError": "שגיאת רשת. אנא בדוק את החיבור שלך.",
   "loadFailed": "הטעינה נכשלה",
   "saveFailed": "השמירה נכשלה",
-  "errorCode": "קוד שגיאה:"
+  "errorCode": "קוד שגיאה:",
+  "dashboard": "לוח בקרה",
+  "contactSupport": "צור קשר עם התמיכה",
+  "needHelp": "צריך עזרה?",
+  "courseNotFound": "הקורס לא נמצא",
+  "courseNotFoundDescription": "הקורס שאתה מחפש לא קיים או שאין לך הרשאה לצפות בו.",
+  "backToDashboard": "חזרה ללוח הבקרה",
+  "lessonNotAvailable": "השיעור אינו זמין",
+  "lessonLockedDescription": "השיעור הזה נעול. עליך להשלים את השיעורים הקודמים תחילה כדי לפתוח אותו.",
+  "backToCourses": "חזרה לקורסים",
+  "authError": "שגיאת אימות",
+  "authErrorDescription": "משהו השתבש במהלך האימות. נסה שוב.",
+  "showDetails": "הצג פרטי שגיאה",
+  "hideDetails": "הסתר פרטי שגיאה",
+  "copyDetails": "העתק פרטי שגיאה",
+  "copiedToClipboard": "פרטי השגיאה הועתקו ללוח",
+  "copyFailed": "לא ניתן להעתיק ללוח. בדוק את הקונסול לפרטי השגיאה."
 }

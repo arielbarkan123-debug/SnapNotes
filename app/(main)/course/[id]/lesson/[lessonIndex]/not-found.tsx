@@ -1,6 +1,8 @@
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 
-export default function LessonNotFound() {
+export default async function LessonNotFound() {
+  const t = await getTranslations('errors')
   return (
     <div className="min-h-screen bg-transparent flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
@@ -23,10 +25,10 @@ export default function LessonNotFound() {
 
         {/* Message */}
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-          Lesson Not Available
+          {t('lessonNotAvailable')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mb-6">
-          This lesson is locked. You need to complete the previous lessons first to unlock it.
+          {t('lessonLockedDescription')}
         </p>
 
         {/* Actions */}
@@ -38,7 +40,7 @@ export default function LessonNotFound() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
             </svg>
-            Back to Courses
+            {t('backToCourses')}
           </Link>
         </div>
       </div>

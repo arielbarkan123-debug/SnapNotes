@@ -14,5 +14,21 @@
   "networkError": "Network error. Please check your connection.",
   "loadFailed": "Failed to load",
   "saveFailed": "Failed to save",
-  "errorCode": "Error code:"
+  "errorCode": "Error code:",
+  "dashboard": "Dashboard",
+  "contactSupport": "Contact Support",
+  "needHelp": "Need help?",
+  "courseNotFound": "Course Not Found",
+  "courseNotFoundDescription": "The course you're looking for doesn't exist or you don't have permission to view it.",
+  "backToDashboard": "Back to Dashboard",
+  "lessonNotAvailable": "Lesson Not Available",
+  "lessonLockedDescription": "This lesson is locked. You need to complete the previous lessons first to unlock it.",
+  "backToCourses": "Back to Courses",
+  "authError": "Authentication Error",
+  "authErrorDescription": "Something went wrong during authentication. Please try again.",
+  "showDetails": "Show error details",
+  "hideDetails": "Hide error details",
+  "copyDetails": "Copy error details",
+  "copiedToClipboard": "Error details copied to clipboard",
+  "copyFailed": "Could not copy to clipboard. Check console for error details."
 }

@@ -122,7 +122,7 @@ export default function RichTextInput({
     <div className={`relative rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus-within:ring-2 focus-within:ring-violet-500 focus-within:border-transparent transition-all ${className}`}>
       <EditorContent
         editor={editor}
-        className="px-4 py-3 text-gray-900 dark:text-white overflow-y-auto [&_.tiptap]:outline-none [&_.tiptap_p]:my-0 [&_.tiptap_p:not(:first-child)]:mt-2 [&_.is-editor-empty:first-child::before]:text-gray-400 [&_.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.is-editor-empty:first-child::before]:float-left [&_.is-editor-empty:first-child::before]:pointer-events-none [&_.is-editor-empty:first-child::before]:h-0 [&_.tiptap]:min-h-[var(--min-height)]"
+        className="px-4 py-3 text-gray-900 dark:text-white overflow-y-auto [&_.tiptap]:outline-none [&_.tiptap_p]:my-0 [&_.tiptap_p:not(:first-child)]:mt-2 [&_.is-editor-empty:first-child::before]:text-gray-400 [&_.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.is-editor-empty:first-child::before]:float-left rtl:[&_.is-editor-empty:first-child::before]:float-right [&_.is-editor-empty:first-child::before]:pointer-events-none [&_.is-editor-empty:first-child::before]:h-0 [&_.tiptap]:min-h-[var(--min-height)]"
         style={{ '--min-height': minHeight } as React.CSSProperties}
       />
       {maxLength !== undefined && (

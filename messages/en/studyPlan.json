@@ -171,6 +171,9 @@
   },
   "chat": {
     "title": "AI Study Assistant",
+    "emptyTitle": "Plan your study schedule",
+    "emptyDescription": "Tell me about upcoming tests, deadlines, or ask what to study. I can create and manage your calendar events.",
+    "dismiss": "Dismiss",
     "welcome": "Hi! I'm your study planning assistant. Tell me about your upcoming tests, quizzes, or assignments, and I'll help you organize your study schedule.",
     "placeholder": "Tell me about your upcoming tests...",
     "clearChat": "Clear chat",

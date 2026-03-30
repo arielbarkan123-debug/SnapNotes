@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { ErrorFallback } from '@/components/ErrorBoundary'
 import { createLogger } from '@/lib/logger'
 
@@ -12,6 +13,7 @@ interface ErrorPageProps {
 }
 
 export default function ErrorPage({ error, reset }: ErrorPageProps) {
+  const t = useTranslations('errors')
   const [showDetails, setShowDetails] = useState(false)
 
   useEffect(() => {
@@ -41,14 +43,14 @@ Stack: ${error.stack || 'N/A'}
     // Safe clipboard access - may not be available in all contexts
     if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(details).then(() => {
-        alert('Error details copied to clipboard')
+        alert(t('copiedToClipboard'))
       }).catch(() => {
         log.info({ detail: details }, 'Failed to copy, details')
       })
     } else {
       // Fallback - just log to console
       log.info({ detail: details }, 'Clipboard not available. Error details')
-      alert('Could not copy to clipboard. Check console for error details.')
+      alert(t('copyFailed'))
     }
   }
 
@@ -58,8 +60,8 @@ Stack: ${error.stack || 'N/A'}
         <ErrorFallback
           error={error}
           reset={reset}
-          title="Something went wrong"
-          message="We encountered an unexpected error. Please try again."
+          title={t('generic')}
+          message={t('genericDescription')}
         />
 
         {/* Debug section - always visible in development, collapsible in production */}
@@ -68,7 +70,7 @@ Stack: ${error.stack || 'N/A'}
             onClick={() => setShowDetails(!showDetails)}
             className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline"
           >
-            {showDetails ? 'Hide' : 'Show'} error details
+            {showDetails ? t('hideDetails') : t('showDetails')}
           </button>
 
           {showDetails && (
@@ -85,7 +87,7 @@ Stack: ${error.stack || 'N/A'}
                 onClick={copyErrorDetails}
                 className="text-violet-600 dark:text-violet-400 underline hover:underline"
               >
-                Copy error details
+                {t('copyDetails')}
               </button>
             </div>
           )}

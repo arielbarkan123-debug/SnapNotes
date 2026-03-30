@@ -795,7 +795,7 @@ export default function PracticePage() {
     stepIndex: currentCard.step_index ?? 0,
     stepContent: currentCard.front || '',
     stepType: currentCard.card_type || 'flashcard',
-  } : null, [currentCard?.course_id, currentCard?.courseName, currentCard?.lesson_index, currentCard?.lessonTitle, currentCard?.step_index, currentCard?.front, currentCard?.card_type])
+  } : null, [currentCard])
 
   // Push help context to global FloatingHelpButtons
   useHelpContext(helpContext, currentCard?.course_id || null, currentCard?.courseName || null)

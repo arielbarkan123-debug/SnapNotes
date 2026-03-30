@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
+import { isRTL, type Locale } from '@/i18n/config'
 import DiagramToggle from '@/components/ui/DiagramToggle'
 import type { HomeworkSession, ConversationMessage, HintLevel, VisualUpdate } from '@/lib/homework/types'
 import ExplanationStyleSelector from './ExplanationStyleSelector'
@@ -130,6 +131,8 @@ function MessageBubble({
   message: ConversationMessage
   t: ReturnType<typeof useTranslations<'chat'>>
 }) {
+  const locale = useLocale()
+  const rtl = isRTL(locale as Locale)
   const isTutor = message.role === 'tutor'
   const hasDiagram = isTutor && message.diagram
 
@@ -137,7 +140,7 @@ function MessageBubble({
   const diagramState = hasDiagram ? convertToDiagramState(message.diagram!) : null
 
   return (
-    <div className={`flex ${isTutor ? 'justify-start' : 'justify-end'}`}>
+    <div className={`flex ${isTutor ? (rtl ? 'justify-end' : 'justify-start') : (rtl ? 'justify-start' : 'justify-end')}`}>
       <div className={`max-w-[85%] ${isTutor ? '' : 'order-last'}`}>
         {isTutor && (
           <div className="flex items-center gap-2 mb-1">
@@ -258,9 +261,9 @@ function ChatProgressBar({
   )
 }
 
-function LoadingIndicator({ t }: { t: ReturnType<typeof useTranslations<'chat'>> }) {
+function LoadingIndicator({ t, rtl }: { t: ReturnType<typeof useTranslations<'chat'>>; rtl: boolean }) {
   return (
-    <div className="flex justify-start">
+    <div className={`flex ${rtl ? 'justify-end' : 'justify-start'}`}>
       <div className="max-w-[85%]">
         <div className="flex items-center gap-2 mb-1">
           <div className="w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/50 flex items-center justify-center text-sm">
@@ -268,7 +271,7 @@ function LoadingIndicator({ t }: { t: ReturnType<typeof useTranslations<'chat'>>
           </div>
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('tutor')}</span>
         </div>
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-tl-md px-4 py-3">
+        <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl ${rtl ? 'rounded-tr-md' : 'rounded-tl-md'} px-4 py-3`}>
           <div className="flex gap-1">
             <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
             <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -293,6 +296,8 @@ export default function TutoringChat({
   relatedVideos = [],
 }: TutoringChatProps) {
   const t = useTranslations('chat')
+  const locale = useLocale()
+  const rtl = isRTL(locale as Locale)
   const [input, setInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [explanationStyle, setExplanationStyle] = useState<ExplanationStyleId>('step_by_step')
@@ -485,7 +490,7 @@ export default function TutoringChat({
             </div>
           )}
 
-          {isLoading && <LoadingIndicator t={t} />}
+          {isLoading && <LoadingIndicator t={t} rtl={rtl} />}
 
           <div ref={messagesEndRef} />
         </div>

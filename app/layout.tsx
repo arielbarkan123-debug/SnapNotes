@@ -24,7 +24,7 @@ const rubik = Rubik({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    process.env.NEXT_PUBLIC_APP_URL || 'https://notesnap.app'
   ),
   title: {
     default: "NoteSnap - Turn Your Notes Into Study Courses",

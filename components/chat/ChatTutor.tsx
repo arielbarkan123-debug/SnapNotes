@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
+import { isRTL, type Locale } from '@/i18n/config'
 import dynamic from 'next/dynamic'
 import { createLogger } from '@/lib/logger'
 
@@ -25,6 +26,8 @@ interface ChatTutorProps {
 
 export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorProps) {
   const t = useTranslations('chat')
+  const locale = useLocale()
+  const rtl = isRTL(locale as Locale)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -243,7 +246,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${message.role === 'user' ? (rtl ? 'justify-start' : 'justify-end') : (rtl ? 'justify-end' : 'justify-start')}`}
           >
             <div
               className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
@@ -263,7 +266,7 @@ export function ChatTutor({ courseId, courseName, onClose, isOpen }: ChatTutorPr
           </div>
         ))}
         {isLoading && (
-          <div className="flex justify-start">
+          <div className={`flex ${rtl ? 'justify-end' : 'justify-start'}`}>
             <div className="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-bl-md px-4 py-3">
               <div className="flex gap-1">
                 <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />

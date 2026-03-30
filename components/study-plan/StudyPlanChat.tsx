@@ -1,6 +1,9 @@
 'use client'
 
 import { useRef, useEffect, useState, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
+import { useLocale } from 'next-intl'
+import { isRTL, type Locale } from '@/i18n/config'
 import { useStudyPlanChat } from '@/hooks/useStudyPlanChat'
 import { ChatInput } from './ChatInput'
 import { ChatActionCard } from './ChatActionCard'
@@ -140,6 +143,9 @@ function renderMarkdown(text: string): React.ReactNode[] {
 }
 
 export function StudyPlanChat({ onActionApplied }: StudyPlanChatProps) {
+  const t = useTranslations('studyPlan')
+  const locale = useLocale()
+  const rtl = isRTL(locale as Locale)
   const { messages, isLoading, isSending, error, sendMessage, clearChat } =
     useStudyPlanChat()
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -196,15 +202,15 @@ export function StudyPlanChat({ onActionApplied }: StudyPlanChatProps) {
             </svg>
           </div>
           <h3 className="font-semibold text-sm text-gray-900 dark:text-white">
-            AI Study Assistant
+            {t('chat.title')}
           </h3>
         </div>
         {messages.length > 0 && (
           <button
             onClick={handleClear}
             className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-            title="Clear chat"
-            aria-label="Clear chat history"
+            title={t('chat.clearChat')}
+            aria-label={t('chat.clearChat')}
           >
             <svg
               className="w-4 h-4"
@@ -269,11 +275,10 @@ export function StudyPlanChat({ onActionApplied }: StudyPlanChatProps) {
             </div>
             <div className="text-center space-y-1">
               <p className="text-sm font-medium text-gray-900 dark:text-white">
-                Plan your study schedule
+                {t('chat.emptyTitle')}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 max-w-[260px]">
-                Tell me about upcoming tests, deadlines, or ask what to study.
-                I can create and manage your calendar events.
+                {t('chat.emptyDescription')}
               </p>
             </div>
             <SuggestedPrompts onSelect={handleSend} />
@@ -289,7 +294,7 @@ export function StudyPlanChat({ onActionApplied }: StudyPlanChatProps) {
             <div key={msg.id}>
               {/* Message bubble */}
               <div
-                className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${isUser ? (rtl ? 'justify-start' : 'justify-end') : (rtl ? 'justify-end' : 'justify-start')}`}
               >
                 <div
                   className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${
@@ -322,7 +327,7 @@ export function StudyPlanChat({ onActionApplied }: StudyPlanChatProps) {
 
         {/* Typing indicator */}
         {isSending && (
-          <div className="flex justify-start">
+          <div className={`flex ${rtl ? 'justify-end' : 'justify-start'}`}>
             <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-bl-md px-4 py-3">
               <div className="flex gap-1">
                 <span
@@ -355,7 +360,7 @@ export function StudyPlanChat({ onActionApplied }: StudyPlanChatProps) {
             onClick={() => setSendError(null)}
             className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 font-medium"
           >
-            Dismiss
+            {t('chat.dismiss')}
           </button>
         </div>
       )}
@@ -365,7 +370,7 @@ export function StudyPlanChat({ onActionApplied }: StudyPlanChatProps) {
         <ChatInput
           onSend={handleSend}
           disabled={isSending}
-          placeholder="Tell me about your upcoming tests..."
+          placeholder={t('chat.placeholder')}
         />
       </div>
     </div>

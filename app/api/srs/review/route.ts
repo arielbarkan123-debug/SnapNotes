@@ -35,7 +35,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Rate limiting
-    const rateLimitResult = checkRateLimit(
+    const rateLimitResult = await checkRateLimit(
       getIdentifier(user.id, request),
       RATE_LIMITS.evaluateAnswer
     )

@@ -189,7 +189,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
       // 1.5. Check rate limit
       const rateLimitId = getIdentifier(user.id, request)
-      const rateLimit = checkRateLimit(rateLimitId, RATE_LIMITS.generateCourse)
+      const rateLimit = await checkRateLimit(rateLimitId, RATE_LIMITS.generateCourse)
 
       if (!rateLimit.allowed) {
         sendMessage({ type: 'error', error: 'Too many requests. Please wait before generating another course.', code: 'RATE_LIMITED', retryable: true })

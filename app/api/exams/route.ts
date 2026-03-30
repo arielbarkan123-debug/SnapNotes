@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
 
     // Check rate limit
     const rateLimitId = getIdentifier(user.id, request)
-    const rateLimit = checkRateLimit(rateLimitId, RATE_LIMITS.generateExam)
+    const rateLimit = await checkRateLimit(rateLimitId, RATE_LIMITS.generateExam)
 
     if (!rateLimit.allowed) {
       const response = createErrorResponse(ErrorCodes.API_RATE_LIMITED, 'Too many requests. Please wait before generating another exam.')
