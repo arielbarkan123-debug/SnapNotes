@@ -175,10 +175,11 @@ export function validateEnv(): void {
   const errors: string[] = []
 
   // Check client env vars
+  // Note: NEXT_PUBLIC_APP_URL is intentionally excluded — every usage has a
+  // hardcoded 'https://notesnap.app' fallback, so missing it is non-fatal.
   const clientVars = [
     'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-    'NEXT_PUBLIC_APP_URL',
   ]
 
   for (const name of clientVars) {
