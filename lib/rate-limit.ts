@@ -3,7 +3,10 @@
  *
  * Backend selection (automatic):
  *   - If UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN are set → Redis (multi-instance safe)
- *   - Otherwise → in-memory (single-instance only, resets on cold start)
+ *   - Otherwise → NO rate limiting (requests allowed, loud warning logged)
+ *
+ * On Vercel serverless, in-memory fallbacks are useless — each invocation is a
+ * separate process. Without Redis configured, rate limiting is non-functional.
  *
  * To disable all rate limiting: set RATE_LIMIT_DISABLED=true
  */
@@ -12,6 +15,16 @@ import type { Redis as UpstashRedis } from '@upstash/redis'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('lib:rate-limit')
+
+// Warn once at module load time if Redis is not configured
+if (
+  typeof process !== 'undefined' &&
+  !process.env.UPSTASH_REDIS_REST_URL &&
+  process.env.RATE_LIMIT_DISABLED !== 'true' &&
+  process.env.NODE_ENV !== 'test'
+) {
+  log.warn('UPSTASH_REDIS_REST_URL not set — rate limiting is DISABLED. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN in Vercel env vars.')
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,46 +49,15 @@ export interface RateLimitResult {
 }
 
 // ---------------------------------------------------------------------------
-// In-memory backend (fallback when Redis is not configured)
+// No-backend fallback — allows request but logs a warning every time
 // ---------------------------------------------------------------------------
 
-interface RateLimitEntry {
-  count: number
-  resetTime: number
-}
-
-const rateLimitStore = new Map<string, RateLimitEntry>()
-let lastCleanup = Date.now()
-const CLEANUP_INTERVAL_MS = 5 * 60 * 1000
-
-function cleanup() {
-  const now = Date.now()
-  if (now - lastCleanup < CLEANUP_INTERVAL_MS) return
-  lastCleanup = now
-  for (const [key, entry] of rateLimitStore.entries()) {
-    if (now > entry.resetTime) rateLimitStore.delete(key)
-  }
-}
-
-function checkInMemory(identifier: string, config: RateLimitConfig): RateLimitResult {
-  cleanup()
-  const now = Date.now()
-  const entry = rateLimitStore.get(identifier)
-
-  if (!entry || now > entry.resetTime) {
-    rateLimitStore.set(identifier, { count: 1, resetTime: now + config.windowMs })
-    return { allowed: true, remaining: config.limit - 1, resetIn: config.windowMs, limit: config.limit }
-  }
-
-  const remaining = Math.max(0, config.limit - entry.count - 1)
-  const resetIn = entry.resetTime - now
-
-  if (entry.count >= config.limit) {
-    return { allowed: false, remaining: 0, resetIn, limit: config.limit }
-  }
-
-  entry.count++
-  return { allowed: true, remaining, resetIn, limit: config.limit }
+function checkNoBackend(identifier: string, config: RateLimitConfig): RateLimitResult {
+  log.warn(
+    { identifier },
+    'NO RATE LIMITING BACKEND — request allowed without limit. Configure UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN.'
+  )
+  return { allowed: true, remaining: config.limit, resetIn: config.windowMs, limit: config.limit }
 }
 
 // ---------------------------------------------------------------------------
@@ -171,7 +153,7 @@ export async function checkRateLimit(
 
   const redis = await getRedisClient()
   if (redis) return checkRedis(redis, identifier, config)
-  return checkInMemory(identifier, config)
+  return checkNoBackend(identifier, config)
 }
 
 /**

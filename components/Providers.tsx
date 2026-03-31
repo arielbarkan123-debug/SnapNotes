@@ -10,6 +10,7 @@ import { SWRProvider } from './providers/SWRProvider'
 import { AnalyticsProvider } from './providers/AnalyticsProvider'
 import { PWAProvider } from './providers/PWAProvider'
 import { MonitoringProvider } from './providers/MonitoringProvider'
+import { PostHogProvider } from './providers/PostHogProvider'
 
 interface ProvidersProps {
   children: ReactNode
@@ -20,6 +21,7 @@ export function Providers({ children }: ProvidersProps) {
     <ErrorBoundary>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
         <MonitoringProvider>
+          <PostHogProvider>
           <SWRProvider>
             <AnalyticsProvider>
               <PWAProvider>
@@ -33,6 +35,7 @@ export function Providers({ children }: ProvidersProps) {
               </PWAProvider>
             </AnalyticsProvider>
           </SWRProvider>
+          </PostHogProvider>
         </MonitoringProvider>
       </ThemeProvider>
     </ErrorBoundary>

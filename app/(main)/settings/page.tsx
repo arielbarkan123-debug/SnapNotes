@@ -142,8 +142,8 @@ export default function SettingsPage() {
 
         // Load parent report settings
         try {
-          setParentEmail((learningProfile as Record<string, unknown>)?.parent_email as string || '')
-          setReportsEnabled((learningProfile as Record<string, unknown>)?.reports_enabled as boolean || false)
+          setParentEmail(learningProfile?.parent_email as string || '')
+          setReportsEnabled(learningProfile?.reports_enabled as boolean || false)
           setLastReportSent((learningProfile as Record<string, unknown>)?.last_report_sent as string || null)
         } catch {
           // Columns may not exist yet
@@ -257,11 +257,9 @@ export default function SettingsPage() {
         language: settings.language,
       }
 
-      // Add parent report fields (columns may not exist if migration not applied)
-      if (parentEmail.trim()) {
-        profileData.parent_email = parentEmail.trim()
-        profileData.reports_enabled = reportsEnabled
-      }
+      // Always include parent report fields so clearing the email actually saves null
+      profileData.parent_email = parentEmail.trim() || null
+      profileData.reports_enabled = parentEmail.trim() ? reportsEnabled : false
 
       if (existingProfile) {
         // Update existing profile
@@ -868,6 +866,7 @@ export default function SettingsPage() {
                   value={parentEmail}
                   onChange={(e) => {
                     setParentEmail(e.target.value)
+                    if (!e.target.value.trim()) setReportsEnabled(false)
                     setHasChanges(true)
                   }}
                   placeholder={t('parentReports.emailPlaceholder')}

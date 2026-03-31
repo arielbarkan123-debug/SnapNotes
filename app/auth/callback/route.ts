@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createDebugLogger } from '@/lib/utils/debug'
+import { sendWelcomeEmail } from '@/lib/email/send-welcome'
 
 const log = createDebugLogger('[Auth Callback]')
 
@@ -77,6 +78,12 @@ export async function GET(request: Request) {
       log.log(' User ID:', data?.user?.id)
       log.log(' User email:', data?.user?.email)
 
+      // Send welcome email on first signup verification (fire-and-forget)
+      if (type === 'signup' && data?.user?.email) {
+        const name = data.user.user_metadata?.name || data.user.user_metadata?.full_name || ''
+        void sendWelcomeEmail(data.user.email, name)
+      }
+
       const redirectUrl = `${origin}${next}?messageKey=emailVerified`
       const response = NextResponse.redirect(redirectUrl)
 
@@ -146,6 +153,15 @@ export async function GET(request: Request) {
       log.log(' Email verified at:', data?.user?.email_confirmed_at)
       log.log(' Session expires at:', data?.session?.expires_at)
       log.log(' Cookies to transfer:', cookiesToSet.length)
+
+      // Send welcome email if this is a brand-new signup (created within last 10 minutes)
+      if (data?.user?.email && data.user.created_at) {
+        const ageMs = Date.now() - new Date(data.user.created_at).getTime()
+        if (ageMs < 10 * 60 * 1000) {
+          const name = data.user.user_metadata?.name || data.user.user_metadata?.full_name || ''
+          void sendWelcomeEmail(data.user.email, name)
+        }
+      }
 
       // Create redirect response and transfer ALL cookies from the exchange
       const redirectUrl = `${origin}${next}?messageKey=emailVerified`

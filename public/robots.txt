@@ -9,3 +9,10 @@ Sitemap: https://notesnap.app/sitemap.xml
 Disallow: /api/
 Disallow: /dashboard/
 Disallow: /auth/
+Disallow: /courses/
+Disallow: /study/
+Disallow: /exam/
+Disallow: /prepare/
+Disallow: /homework/
+Disallow: /reset
+Disallow: /offline

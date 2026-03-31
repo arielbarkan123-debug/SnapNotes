@@ -12,6 +12,10 @@
     {
       "path": "/api/cron/cleanup-stuck-courses",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/send-nudge-emails",
+      "schedule": "0 9 * * *"
     }
   ]
 }

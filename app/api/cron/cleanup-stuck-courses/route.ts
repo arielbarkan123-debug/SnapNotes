@@ -18,7 +18,10 @@ const STUCK_THRESHOLD_MINUTES = 10
 export async function POST(request: NextRequest) {
   // Verify cron secret
   const authHeader = request.headers.get('authorization')
-  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
+  if (!CRON_SECRET) {
+    return NextResponse.json({ error: 'Cron secret not configured' }, { status: 500 })
+  }
+  if (authHeader !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

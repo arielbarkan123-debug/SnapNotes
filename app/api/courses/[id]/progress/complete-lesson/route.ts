@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { type GeneratedCourse } from '@/types'
 import { createLogger } from '@/lib/logger'
+import { sendCourseCompletionEmail } from '@/lib/email/send-course-completion'
 
 const log = createLogger('api:courses-complete-lesson')
 
@@ -142,7 +143,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Calculate completion status
+    const wasAlreadyComplete = currentCompletedLessons.length >= totalLessons
     const isAllComplete = newCompletedLessons.length >= totalLessons
+
+    // Send course completion email (fire-and-forget, deduped)
+    if (isAllComplete && !wasAlreadyComplete) {
+      const courseTitle = generatedCourse.title || 'Your Course'
+      void (async () => {
+        sendCourseCompletionEmail(user.email!, user.user_metadata?.full_name || '', courseTitle, totalLessons)
+      })()
+    }
 
     return NextResponse.json({
       id: progress.id,

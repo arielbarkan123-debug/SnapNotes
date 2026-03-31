@@ -1,49 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { headers } from 'next/headers'
 import { createLogger } from '@/lib/logger'
+import { checkRateLimit, RATE_LIMITS, getRateLimitHeaders } from '@/lib/rate-limit'
 
 const log = createLogger('api:auth-forgot-password')
-
-// In-memory rate limiting (in production, use Redis or similar)
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
-
-const RATE_LIMIT = {
-  MAX_REQUESTS: 3, // Max 3 reset requests
-  WINDOW_MS: 15 * 60 * 1000, // Per 15 minutes
-  BLOCK_DURATION_MS: 60 * 60 * 1000, // Block for 1 hour after exceeding
-}
-
-function getRateLimitKey(ip: string, email: string): string {
-  // Rate limit by IP AND email to prevent both IP-based and email-based abuse
-  return `${ip}:${email.toLowerCase()}`
-}
-
-function checkRateLimit(key: string): { allowed: boolean; retryAfter?: number } {
-  const now = Date.now()
-  const record = rateLimitMap.get(key)
-
-  if (!record) {
-    rateLimitMap.set(key, { count: 1, resetTime: now + RATE_LIMIT.WINDOW_MS })
-    return { allowed: true }
-  }
-
-  // Check if window has reset
-  if (now > record.resetTime) {
-    rateLimitMap.set(key, { count: 1, resetTime: now + RATE_LIMIT.WINDOW_MS })
-    return { allowed: true }
-  }
-
-  // Check if exceeded
-  if (record.count >= RATE_LIMIT.MAX_REQUESTS) {
-    const retryAfter = Math.ceil((record.resetTime - now) / 1000)
-    return { allowed: false, retryAfter }
-  }
-
-  // Increment count
-  record.count++
-  return { allowed: true }
-}
 
 // Admin email for support contact (from env)
 const ADMIN_EMAIL = process.env.ADMIN_SUPPORT_EMAIL || 'support@notesnap.app'
@@ -68,23 +28,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get client IP for rate limiting
-    const headersList = await headers()
-    const forwardedFor = headersList.get('x-forwarded-for')
-    const ip = forwardedFor ? forwardedFor.split(',')[0] : 'unknown'
+    // Check rate limit — keyed by IP:email to prevent both IP and email abuse
+    const forwarded = request.headers.get('x-forwarded-for')
+    const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown'
+    const rateLimitKey = `ip:${ip}:${email.toLowerCase()}`
+    const rateLimitResult = await checkRateLimit(rateLimitKey, RATE_LIMITS.forgotPassword)
 
-    // Check rate limit
-    const rateLimitKey = getRateLimitKey(ip, email)
-    const { allowed, retryAfter } = checkRateLimit(rateLimitKey)
-
-    if (!allowed) {
+    if (!rateLimitResult.allowed) {
+      const retryAfterSec = Math.ceil(rateLimitResult.resetIn / 1000)
       return NextResponse.json(
         {
           success: false,
-          error: `Too many reset attempts. Please try again in ${Math.ceil((retryAfter || 0) / 60)} minutes.`,
-          retryAfter,
+          error: `Too many reset attempts. Please try again in ${Math.ceil(retryAfterSec / 60)} minutes.`,
+          retryAfter: retryAfterSec,
         },
-        { status: 429 }
+        { status: 429, headers: getRateLimitHeaders(rateLimitResult) }
       )
     }
 

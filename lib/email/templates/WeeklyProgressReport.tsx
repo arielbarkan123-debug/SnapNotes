@@ -23,7 +23,7 @@ const COLORS = {
   white: '#FFFFFF',
 }
 
-export function generateReportHtml(data: WeeklyReportData, dashboardUrl: string): string {
+export function generateReportHtml(data: WeeklyReportData, dashboardUrl: string, unsubscribeUrl?: string): string {
   const { studentName, periodStart, periodEnd, stats, masteryChanges, topMistakes, recommendedTopics, encouragement } = data
 
   const masteryRows = masteryChanges.map(m => {
@@ -178,6 +178,7 @@ export function generateReportHtml(data: WeeklyReportData, dashboardUrl: string)
               <p style="margin: 0; font-size: 12px; color: ${COLORS.gray600};">
                 This report was sent by NoteSnap.
                 <a href="${dashboardUrl}/settings" style="color: ${COLORS.violet}; text-decoration: underline;">Manage report settings</a>
+                ${unsubscribeUrl ? ` · <a href="${unsubscribeUrl}" style="color: ${COLORS.gray600}; text-decoration: underline;">Unsubscribe</a>` : ''}
               </p>
               <p style="margin: 8px 0 0; font-size: 11px; color: ${COLORS.gray600};">
                 © ${new Date().getFullYear()} NoteSnap

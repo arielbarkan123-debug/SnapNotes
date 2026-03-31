@@ -10,7 +10,7 @@ const log = createLogger('api:reports-weekly')
 
 export const maxDuration = 60
 
-const DASHBOARD_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://snap-notes-j68u-three.vercel.app'
+const DASHBOARD_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://notesnap.app'
 
 // GET: Preview report (returns HTML)
 export async function GET() {

@@ -3,13 +3,14 @@ import { createClient } from '@/lib/supabase/server'
 import { generateWeeklyReport } from '@/lib/email/report-generator'
 import { generateReportHtml } from '@/lib/email/templates/WeeklyProgressReport'
 import { sendEmail } from '@/lib/email/resend-client'
+import { generateUnsubscribeToken } from '@/lib/email/unsubscribe'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('api:reports-send-all')
 
 export const maxDuration = 300
 
-const DASHBOARD_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://snap-notes-j68u-three.vercel.app'
+const DASHBOARD_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://notesnap.app'
 
 /**
  * POST /api/reports/weekly/send-all
@@ -53,7 +54,9 @@ export async function POST(request: NextRequest) {
     for (const user of users) {
       try {
         const reportData = await generateWeeklyReport(user.user_id)
-        const html = generateReportHtml(reportData, DASHBOARD_URL)
+        const unsubscribeToken = generateUnsubscribeToken(user.user_id, 'weekly_reports')
+        const unsubscribeUrl = `${DASHBOARD_URL}/api/reports/unsubscribe?token=${unsubscribeToken}`
+        const html = generateReportHtml(reportData, DASHBOARD_URL, unsubscribeUrl)
 
         const result = await sendEmail({
           to: user.parent_email,

@@ -158,6 +158,19 @@ export function getAnthropicApiKey(): string {
 }
 
 /**
+ * Get Resend API key (server-side only)
+ */
+export function getResendApiKey(): string {
+  if (typeof window !== 'undefined') {
+    throw new EnvError('Resend API key must only be accessed on the server')
+  }
+  return validateRequired(
+    'RESEND_API_KEY',
+    process.env.RESEND_API_KEY
+  )
+}
+
+/**
  * Get App URL (required for auth redirects, emails, metadata)
  */
 export function getAppUrl(): string {
@@ -193,6 +206,8 @@ export function validateEnv(): void {
     const serverVars = [
       'SUPABASE_SERVICE_ROLE_KEY',
       'ANTHROPIC_API_KEY',
+      'CRON_SECRET',
+      'RESEND_API_KEY',
     ]
 
     for (const name of serverVars) {
@@ -223,6 +238,7 @@ const envUtils = {
   getSupabaseUrl,
   getSupabaseAnonKey,
   getAnthropicApiKey,
+  getResendApiKey,
 }
 
 export default envUtils
