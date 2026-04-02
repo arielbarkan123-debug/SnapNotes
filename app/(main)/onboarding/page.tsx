@@ -37,7 +37,7 @@ interface OnboardingData {
 // LocalStorage Persistence (prevents progress loss on refresh/close)
 // =============================================================================
 
-const ONBOARDING_STATE_KEY = 'notesnap_onboarding_state'
+const ONBOARDING_STATE_KEY = 'xplus1_onboarding_state'
 
 function saveOnboardingState(data: OnboardingData, step: number): void {
   if (typeof window === 'undefined') return

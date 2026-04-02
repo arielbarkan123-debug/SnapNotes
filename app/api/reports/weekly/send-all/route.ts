@@ -10,7 +10,7 @@ const log = createLogger('api:reports-send-all')
 
 export const maxDuration = 300
 
-const DASHBOARD_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://notesnap.app'
+const DASHBOARD_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://xplus1.ai'
 
 /**
  * POST /api/reports/weekly/send-all

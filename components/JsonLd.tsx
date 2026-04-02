@@ -1,4 +1,4 @@
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://notesnap.app'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://xplus1.ai'
 
 /**
  * JSON-LD structured data for Google Search rich results.
@@ -8,9 +8,9 @@ export default function JsonLd() {
   const webAppSchema = {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
-    name: 'NoteSnap',
+    name: 'X+1',
     description:
-      'AI-powered homework checker and learning assistant. Upload photos of your homework, get instant AI feedback, practice with personalized questions, and visualize concepts with interactive diagrams.',
+      'AI-powered learning platform. Upload your notes and homework, get instant AI feedback, practice with personalized questions, and visualize concepts with interactive diagrams.',
     url: APP_URL,
     applicationCategory: 'EducationalApplication',
     applicationSubCategory: 'StudyTool',
@@ -37,7 +37,7 @@ export default function JsonLd() {
     screenshot: `${APP_URL}/og-image.png`,
     author: {
       '@type': 'Organization',
-      name: 'NoteSnap',
+      name: 'X+1',
       url: APP_URL,
       logo: `${APP_URL}/icon-192.png`,
     },
@@ -46,7 +46,7 @@ export default function JsonLd() {
   const websiteSchema = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'NoteSnap',
+    name: 'X+1',
     url: APP_URL,
   }
 

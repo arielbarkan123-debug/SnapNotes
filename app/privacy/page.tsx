@@ -2,11 +2,11 @@ import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import type { Metadata } from 'next'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://notesnap.app'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://xplus1.ai'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | NoteSnap',
-  description: 'Learn how NoteSnap collects, uses, and protects your personal information. We are committed to safeguarding your privacy.',
+  title: 'Privacy Policy | X+1',
+  description: 'Learn how X+1 collects, uses, and protects your personal information. We are committed to safeguarding your privacy.',
   alternates: {
     canonical: `${APP_URL}/privacy`,
   },
@@ -33,7 +33,7 @@ export default async function PrivacyPage() {
             href="/"
             className="text-xl font-bold text-violet-600 dark:text-violet-400 block text-center mb-2"
           >
-            NoteSnap
+            X+1
           </Link>
 
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white text-center mb-2">

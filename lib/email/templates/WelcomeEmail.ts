@@ -32,7 +32,7 @@ export function generateWelcomeHtml(data: WelcomeEmailData, dashboardUrl: string
     {
       emoji: '📸',
       title: 'Snap Your Notes',
-      desc: 'Upload a photo of your notebook or paste text — NoteSnap extracts and organizes everything.',
+      desc: 'Upload a photo of your notebook or paste text — X+1 extracts and organizes everything.',
     },
     {
       emoji: '🤖',
@@ -62,7 +62,7 @@ export function generateWelcomeHtml(data: WelcomeEmailData, dashboardUrl: string
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to NoteSnap</title>
+  <title>Welcome to X+1</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: ${COLORS.gray100}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${COLORS.gray100}; padding: 32px 16px;">
@@ -74,7 +74,7 @@ export function generateWelcomeHtml(data: WelcomeEmailData, dashboardUrl: string
           <tr>
             <td style="background: linear-gradient(135deg, ${COLORS.violet} 0%, ${COLORS.purple} 100%); padding: 40px 32px; text-align: center;">
               <p style="margin: 0 0 8px; font-size: 28px;">📚</p>
-              <h1 style="margin: 0; color: ${COLORS.white}; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">Welcome to NoteSnap!</h1>
+              <h1 style="margin: 0; color: ${COLORS.white}; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">Welcome to X+1!</h1>
               <p style="margin: 8px 0 0; color: rgba(255,255,255,0.85); font-size: 15px;">Your AI-powered study companion is ready.</p>
             </td>
           </tr>
@@ -85,7 +85,7 @@ export function generateWelcomeHtml(data: WelcomeEmailData, dashboardUrl: string
 
               <p style="margin: 0 0 24px; font-size: 16px; color: ${COLORS.gray700}; line-height: 1.6;">
                 Hi <strong>${displayName}</strong>,<br><br>
-                You're all set! NoteSnap turns your notes into personalized courses so you can study smarter, not harder.
+                You're all set! X+1 turns your notes into personalized courses so you can study smarter, not harder.
               </p>
 
               <!-- Feature cards -->
@@ -107,7 +107,7 @@ export function generateWelcomeHtml(data: WelcomeEmailData, dashboardUrl: string
 
               <p style="margin: 0; font-size: 14px; color: ${COLORS.gray600}; line-height: 1.6; border-top: 1px solid ${COLORS.gray100}; padding-top: 20px;">
                 Have questions? Just reply to this email — we're happy to help.<br>
-                <strong>The NoteSnap Team</strong>
+                <strong>The X+1 Team</strong>
               </p>
 
             </td>
@@ -117,7 +117,7 @@ export function generateWelcomeHtml(data: WelcomeEmailData, dashboardUrl: string
           <tr>
             <td style="background: ${COLORS.gray50}; padding: 20px 32px; text-align: center; border-top: 1px solid ${COLORS.gray100};">
               <p style="margin: 0; font-size: 12px; color: ${COLORS.gray600};">
-                © ${new Date().getFullYear()} NoteSnap. All rights reserved.<br>
+                © ${new Date().getFullYear()} X+1. All rights reserved.<br>
                 <a href="${dashboardUrl}/settings" style="color: ${COLORS.violet}; text-decoration: none;">Manage email preferences</a>
               </p>
             </td>

@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { EXPLANATION_STYLES, type ExplanationStyleId } from '@/lib/homework/explanation-styles'
 
-const STORAGE_KEY = 'notesnap_explanation_style'
+const STORAGE_KEY = 'xplus1_explanation_style'
 
 interface ExplanationStyleSelectorProps {
   value?: ExplanationStyleId

@@ -130,7 +130,7 @@ const ANIMATION_SPEED_MULTIPLIERS: Record<VisualPreferences['animationSpeed'], n
 // Local Storage Key
 // ============================================================================
 
-const STORAGE_KEY = 'notesnap_visual_preferences'
+const STORAGE_KEY = 'xplus1_visual_preferences'
 
 // ============================================================================
 // Context

@@ -51,7 +51,7 @@ interface TutoringChatProps {
 // LocalStorage Draft Persistence
 // ============================================================================
 
-const CHAT_DRAFT_KEY_PREFIX = 'notesnap_chat_draft_'
+const CHAT_DRAFT_KEY_PREFIX = 'xplus1_chat_draft_'
 
 interface ChatDraftStorage {
   text: string

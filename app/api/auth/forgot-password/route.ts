@@ -6,7 +6,7 @@ import { checkRateLimit, RATE_LIMITS, getRateLimitHeaders } from '@/lib/rate-lim
 const log = createLogger('api:auth-forgot-password')
 
 // Admin email for support contact (from env)
-const ADMIN_EMAIL = process.env.ADMIN_SUPPORT_EMAIL || 'support@notesnap.app'
+const ADMIN_EMAIL = process.env.ADMIN_SUPPORT_EMAIL || 'support@xplus1.ai'
 
 export async function POST(request: NextRequest) {
   try {
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       email.toLowerCase(),
       {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://notesnap.app'}/reset-password`,
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://xplus1.ai'}/reset-password`,
       }
     )
 

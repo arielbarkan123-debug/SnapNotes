@@ -6,7 +6,7 @@ import { createLogger } from '@/lib/logger'
 
 const log = createLogger('api:cron-nudge-emails')
 const CRON_SECRET = process.env.CRON_SECRET
-const DASHBOARD_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://notesnap.app'
+const DASHBOARD_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://xplus1.ai'
 
 /** Users inactive for this many days trigger a nudge */
 const INACTIVITY_DAYS = 3

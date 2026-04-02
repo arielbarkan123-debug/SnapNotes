@@ -1,5 +1,5 @@
 /**
- * Structured Logger for NoteSnap
+ * Structured Logger for X+1
  *
  * Uses pino for structured JSON logging in production and readable output in development.
  * Works in both server (Node.js) and browser (React) environments.

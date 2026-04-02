@@ -37,7 +37,7 @@ const fetcher = async (url: string) => {
 // =============================================================================
 
 function getDismissKey(type: InsightType): string {
-  return `notesnap-dismissed-insight-${type}`
+  return `xplus1-dismissed-insight-${type}`
 }
 
 const DISMISS_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000 // 7 days

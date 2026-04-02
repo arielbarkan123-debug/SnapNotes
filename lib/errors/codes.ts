@@ -1,8 +1,8 @@
 /**
- * NoteSnap Comprehensive Error Code System
+ * X+1 Comprehensive Error Code System
  *
  * Error Code Format: NS-{AREA}-{NUMBER}
- * - NS: NoteSnap prefix
+ * - NS: X+1 prefix (legacy "NS" kept for backward compatibility)
  * - AREA: 3-5 letter category code
  * - NUMBER: 3-digit unique ID within category
  *

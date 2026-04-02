@@ -164,7 +164,7 @@ ${hw.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${hw.knownPrerequisit
     }
 
     // Create system prompt with curriculum awareness
-    const systemPrompt = `${langInstruction}You are a helpful AI tutor for NoteSnap, a study app. You're helping a student understand their study material.
+    const systemPrompt = `${langInstruction}You are a helpful AI tutor for X+1, a study app. You're helping a student understand their study material.
 
 ${curriculumSection ? `## Student's Curriculum
 ${curriculumSection}

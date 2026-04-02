@@ -9,7 +9,7 @@
     "description": "Upload a photo of your notebook. Our AI creates a complete, organized study course in seconds. No more messy notes — just clear, structured learning.",
     "getStarted": "Get Started Free",
     "logIn": "Log In",
-    "mockTitle": "NoteSnap — Your Study Course",
+    "mockTitle": "X+1 — Your Study Course",
     "concept1": "Concept 1",
     "concept2": "Concept 2",
     "concept3": "Concept 3"
@@ -42,7 +42,7 @@
   },
   "cta": {
     "title": "Ready to Transform Your Notes?",
-    "subtitle": "Join students who are already studying smarter with NoteSnap. Get started for free — no credit card required.",
+    "subtitle": "Join students who are already studying smarter with X+1. Get started for free — no credit card required.",
     "button": "Start Free Now"
   },
   "footer": {
@@ -50,6 +50,6 @@
     "signUp": "Sign Up",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
-    "copyright": "© {year} NoteSnap. All rights reserved."
+    "copyright": "© {year} X+1. All rights reserved."
   }
 }

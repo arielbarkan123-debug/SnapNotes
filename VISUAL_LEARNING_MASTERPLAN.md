@@ -1,10 +1,10 @@
-# NoteSnap Visual Learning System - Master Plan
+# X+1 Visual Learning System - Master Plan
 
 ## Executive Summary
 
-After deep analysis of the codebase, competitor platforms (Desmos, PhET, Khan Academy, Brilliant, 3Blue1Brown), and educational research, this document outlines the comprehensive strategy to make NoteSnap the **best visual learning platform in the world**.
+After deep analysis of the codebase, competitor platforms (Desmos, PhET, Khan Academy, Brilliant, 3Blue1Brown), and educational research, this document outlines the comprehensive strategy to make X+1 the **best visual learning platform in the world**.
 
-**Core Insight**: The difference between "showing a diagram" and "visual learning" is the difference between a static picture and an interactive understanding experience. We need to transform NoteSnap from diagram generation to **intelligent visual teaching**.
+**Core Insight**: The difference between "showing a diagram" and "visual learning" is the difference between a static picture and an interactive understanding experience. We need to transform X+1 from diagram generation to **intelligent visual teaching**.
 
 ---
 
@@ -708,7 +708,7 @@ function WhatIfMode({ diagram, parameters, calculateResult, suggestions }: WhatI
 
 ```typescript
 const VISUAL_LEARNING_SYSTEM_PROMPT = `
-You are NoteSnap's visual learning tutor. Your goal is to help students understand concepts through clear visuals and step-by-step explanations.
+You are X+1's visual learning tutor. Your goal is to help students understand concepts through clear visuals and step-by-step explanations.
 
 ## CRITICAL REQUIREMENTS
 
@@ -995,7 +995,7 @@ function parseAIResponse(response: string): TutorResponse {
 
 ### What Makes This Better Than Competitors
 
-| Feature | Desmos | Khan | PhET | Brilliant | NoteSnap |
+| Feature | Desmos | Khan | PhET | Brilliant | X+1 |
 |---------|--------|------|------|-----------|----------|
 | Auto-generate from problem | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Step-by-step sync | ❌ | Partial | ❌ | Partial | ✅ |
@@ -1020,7 +1020,7 @@ No other platform combines:
 
 ## Conclusion
 
-This plan transforms NoteSnap from "an app that sometimes shows diagrams" to "the best visual learning platform in the world." The key insights:
+This plan transforms X+1 from "an app that sometimes shows diagrams" to "the best visual learning platform in the world." The key insights:
 
 1. **Structured data is everything** - AI must output structured JSON, not just text
 2. **Synchronization matters** - Visual and explanation must be perfectly aligned
@@ -1028,4 +1028,4 @@ This plan transforms NoteSnap from "an app that sometimes shows diagrams" to "th
 4. **Quality over quantity** - Better to have 10 perfect diagram types than 50 mediocre ones
 5. **Validation prevents errors** - Check physics and layout before rendering
 
-Execute this plan, and NoteSnap will be unmatched in visual learning.
+Execute this plan, and X+1 will be unmatched in visual learning.

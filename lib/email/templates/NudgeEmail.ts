@@ -106,7 +106,7 @@ export function generateNudgeHtml(data: NudgeEmailData, dashboardUrl: string): s
 
               <p style="margin: 0; font-size: 14px; color: ${COLORS.gray600}; line-height: 1.6; border-top: 1px solid ${COLORS.gray100}; padding-top: 20px;">
                 You've got this.<br>
-                <strong>The NoteSnap Team</strong>
+                <strong>The X+1 Team</strong>
               </p>
 
             </td>
@@ -116,7 +116,7 @@ export function generateNudgeHtml(data: NudgeEmailData, dashboardUrl: string): s
           <tr>
             <td style="background: ${COLORS.gray50}; padding: 20px 32px; text-align: center; border-top: 1px solid ${COLORS.gray100};">
               <p style="margin: 0; font-size: 12px; color: ${COLORS.gray600};">
-                © ${new Date().getFullYear()} NoteSnap. All rights reserved.<br>
+                © ${new Date().getFullYear()} X+1. All rights reserved.<br>
                 <a href="${dashboardUrl}/settings" style="color: ${COLORS.violet}; text-decoration: none;">Manage email preferences</a>
               </p>
             </td>

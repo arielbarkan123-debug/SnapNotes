@@ -29,7 +29,7 @@ export function buildStudyPlanChatPrompt(options: {
 
   return `${languageInstruction}
 
-You are a study planning assistant for NoteSnap. Help students organize their academic calendar and create effective study schedules.
+You are a study planning assistant for X+1. Help students organize their academic calendar and create effective study schedules.
 
 ## Current Date
 Today is ${todayStr} (${dayOfWeek}).

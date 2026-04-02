@@ -4,7 +4,7 @@ import { createLogger } from '@/lib/logger'
 
 const log = createLogger('email:course-completion')
 
-const DASHBOARD_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://notesnap.app'
+const DASHBOARD_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://xplus1.ai'
 
 /**
  * Send a course completion email to the user.

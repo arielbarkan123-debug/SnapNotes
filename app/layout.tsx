@@ -24,26 +24,27 @@ const rubik = Rubik({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL || 'https://notesnap.app'
+    process.env.NEXT_PUBLIC_APP_URL || 'https://xplus1.ai'
   ),
   title: {
-    default: "NoteSnap - Turn Your Notes Into Study Courses",
-    template: "%s | NoteSnap",
+    default: "X+1 — Learn anything. Master everything.",
+    template: "%s | X+1",
   },
   description:
-    "Upload a photo of your notebook and let AI create a complete, organized study course in seconds. Transform handwritten notes into structured learning material.",
+    "AI-powered learning platform that transforms your notes, homework, and study materials into interactive courses, practice sessions, and personalized tutoring.",
   keywords: [
-    "study notes",
     "AI learning",
-    "note taking",
+    "AI tutor",
     "study courses",
-    "handwriting recognition",
+    "homework help",
+    "exam prep",
     "education",
     "student tools",
+    "X+1",
   ],
-  authors: [{ name: "NoteSnap" }],
-  creator: "NoteSnap",
-  publisher: "NoteSnap",
+  authors: [{ name: "X+1" }],
+  creator: "X+1",
+  publisher: "X+1",
   robots: {
     index: true,
     follow: true,
@@ -51,24 +52,24 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    siteName: "NoteSnap",
-    title: "NoteSnap - Turn Your Notes Into Study Courses",
+    siteName: "X+1",
+    title: "X+1 — Learn anything. Master everything.",
     description:
-      "Upload a photo of your notebook and let AI create a complete, organized study course in seconds.",
+      "AI-powered learning platform that transforms your notes into interactive courses, practice sessions, and personalized tutoring.",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "NoteSnap - AI-powered note transformation",
+        alt: "X+1 — AI-powered learning platform",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "NoteSnap - Turn Your Notes Into Study Courses",
+    title: "X+1 — Learn anything. Master everything.",
     description:
-      "Upload a photo of your notebook and let AI create a complete, organized study course in seconds.",
+      "AI-powered learning platform that transforms your notes into interactive courses, practice sessions, and personalized tutoring.",
     images: ["/og-image.png"],
   },
   icons: {

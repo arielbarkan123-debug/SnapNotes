@@ -1,5 +1,5 @@
 /**
- * Claude AI Service for NoteSnap
+ * Claude AI Service for X+1
  *
  * Handles all communication with the Anthropic Claude API:
  * - Image analysis for notebook pages

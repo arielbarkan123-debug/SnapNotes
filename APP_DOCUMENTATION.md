@@ -1,4 +1,4 @@
-# NoteSnap App Documentation — User-Facing Audit
+# X+1 App Documentation — User-Facing Audit
 
 > Generated from live testing on production (snap-notes-j68u.vercel.app)
 > Date: 2026-02-02
@@ -10,7 +10,7 @@
 ## 1. NAVIGATION & HEADER
 
 ### Desktop Header (Top Bar)
-- **Logo**: "NoteSnap" text in violet, links to /dashboard
+- **Logo**: "X+1" text in violet, links to /dashboard
 - **Nav links** (L→R in English, R→L in Hebrew): Courses, Review, Practice Mix, Homework, Exams, Study Plan, Progress
 - **Search button**: Magnifying glass icon, opens search modal
 - **Language toggle**: Shows flag + language name (switches EN↔HE)

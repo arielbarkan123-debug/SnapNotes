@@ -1,4 +1,4 @@
-# NoteSnap — Launch Readiness Audit
+# X+1 — Launch Readiness Audit
 
 **Date:** 2026-03-30
 **Audited by:** 8 parallel agents + verified second pass (TypeScript, ESLint, tests, npm audit run live)
@@ -323,8 +323,8 @@ If Claude returns an error mid-stream, the prepare guide or course record may be
 ```typescript
 metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
 ```
-Every other file in the codebase uses `'https://notesnap.app'` as the fallback. If `NEXT_PUBLIC_APP_URL` is missing from Vercel's environment variables, all OG images, Twitter card URLs, and canonical links will point to `http://localhost:3000`.
-**Fix:** Change fallback to `'https://notesnap.app'` (or your actual domain).
+Every other file in the codebase uses `'https://xplus1.ai'` as the fallback. If `NEXT_PUBLIC_APP_URL` is missing from Vercel's environment variables, all OG images, Twitter card URLs, and canonical links will point to `http://localhost:3000`.
+**Fix:** Change fallback to `'https://xplus1.ai'` (or your actual domain).
 **Verify:** Confirm `NEXT_PUBLIC_APP_URL` is set in Vercel → Project Settings → Environment Variables.
 
 **C14 — npm Audit: 8 Vulnerabilities (1 critical, 6 high) *(found in second pass)***

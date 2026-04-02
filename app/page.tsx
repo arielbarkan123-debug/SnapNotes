@@ -67,7 +67,7 @@ async function Header() {
               </svg>
             </div>
             <span className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-              NoteSnap
+              X+1
             </span>
           </Link>
 
@@ -473,7 +473,7 @@ async function Footer() {
                 />
               </svg>
             </div>
-            <span className="text-white font-semibold">NoteSnap</span>
+            <span className="text-white font-semibold">X+1</span>
           </div>
 
           {/* Links */}

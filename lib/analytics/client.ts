@@ -21,8 +21,8 @@ import { createLogger } from '@/lib/logger'
 const log = createLogger('analytics:client')
 
 // Storage keys
-const SESSION_KEY = 'notesnap_analytics_session'
-const SESSION_TIMEOUT_KEY = 'notesnap_analytics_session_timeout'
+const SESSION_KEY = 'xplus1_analytics_session'
+const SESSION_TIMEOUT_KEY = 'xplus1_analytics_session_timeout'
 
 // Safe localStorage wrapper for mobile/private mode compatibility
 const safeStorage = {

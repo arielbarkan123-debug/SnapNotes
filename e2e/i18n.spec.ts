@@ -101,7 +101,7 @@ test.describe('Internationalization (i18n)', () => {
     // The page should render form elements regardless of locale
     await expect(page.locator('input[name="email"]')).toBeVisible()
     await expect(page.locator('input[name="password"]')).toBeVisible()
-    // NoteSnap branding should be present
-    await expect(page.getByText('NoteSnap')).toBeVisible()
+    // X+1 branding should be present
+    await expect(page.getByText('X+1', { exact: true })).toBeVisible()
   })
 })

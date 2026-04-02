@@ -1,5 +1,5 @@
 /**
- * AI Prompts for NoteSnap
+ * AI Prompts for X+1
  *
  * This file contains all the prompts used for:
  * 1. Analyzing notebook images and extracting content

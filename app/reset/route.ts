@@ -14,7 +14,7 @@ export async function GET() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NoteSnap - Updating...</title>
+  <title>X+1 - Updating...</title>
   <style>
     body {
       font-family: system-ui, -apple-system, sans-serif;
@@ -45,7 +45,7 @@ export async function GET() {
 <body>
   <div>
     <div class="spinner" id="spinner"></div>
-    <h1>Updating NoteSnap...</h1>
+    <h1>Updating X+1...</h1>
     <p id="status">Clearing old data...</p>
   </div>
   <script>

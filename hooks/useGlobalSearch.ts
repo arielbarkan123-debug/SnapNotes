@@ -22,7 +22,7 @@ interface SearchResponse {
   query: string
 }
 
-const RECENT_SEARCHES_KEY = 'notesnap-recent-searches'
+const RECENT_SEARCHES_KEY = 'xplus1-recent-searches'
 const MAX_RECENT = 5
 
 export function useGlobalSearch() {

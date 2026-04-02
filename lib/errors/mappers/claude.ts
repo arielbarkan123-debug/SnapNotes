@@ -1,7 +1,7 @@
 /**
  * Claude API Error Mapper
  *
- * Maps Claude/Anthropic API errors to NoteSnap error codes
+ * Maps Claude/Anthropic API errors to X+1 error codes
  */
 
 import { type ErrorCode, ErrorCodes } from '../codes'
@@ -31,7 +31,7 @@ export interface ClaudeAPIError {
 // ============================================================================
 
 /**
- * Maps Claude API errors to NoteSnap error codes
+ * Maps Claude API errors to X+1 error codes
  */
 export function mapClaudeAPIError(error: unknown): MappedError {
   // Handle Error objects

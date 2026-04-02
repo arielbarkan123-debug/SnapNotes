@@ -1,6 +1,8 @@
 'use client'
 
+import { useEffect } from 'react'
 import { type ReactNode } from 'react'
+import { migrateLocalStorage } from '@/lib/migrate-local-storage'
 import { ThemeProvider } from 'next-themes'
 import { ErrorBoundary } from './ErrorBoundary'
 import { ToastProvider } from '@/contexts/ToastContext'
@@ -17,6 +19,8 @@ interface ProvidersProps {
 }
 
 export function Providers({ children }: ProvidersProps) {
+  useEffect(() => { migrateLocalStorage() }, [])
+
   return (
     <ErrorBoundary>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>

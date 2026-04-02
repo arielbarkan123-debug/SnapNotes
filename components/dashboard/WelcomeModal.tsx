@@ -17,7 +17,7 @@ export default function WelcomeModal({ onUploadClick }: WelcomeModalProps) {
       // Check if welcome param exists and not previously dismissed
       const params = new URLSearchParams(window.location.search)
       const isWelcome = params.get('welcome') === 'true'
-      const isDismissed = localStorage.getItem('notesnap_welcome_dismissed')
+      const isDismissed = localStorage.getItem('xplus1_welcome_dismissed')
 
       if (isWelcome && !isDismissed) {
         setShow(true)
@@ -33,7 +33,7 @@ export default function WelcomeModal({ onUploadClick }: WelcomeModalProps) {
 
   const handleDismiss = () => {
     try {
-      localStorage.setItem('notesnap_welcome_dismissed', 'true')
+      localStorage.setItem('xplus1_welcome_dismissed', 'true')
     } catch {
       // localStorage may be unavailable
     }

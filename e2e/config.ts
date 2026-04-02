@@ -25,7 +25,7 @@ export const TEST_CONFIG = {
 
   // Test user credentials
   credentials: {
-    testEmail: process.env.E2E_TEST_EMAIL || 'e2e-test@notesnap.test',
+    testEmail: process.env.E2E_TEST_EMAIL || 'e2e-test@xplus1.test',
     testPassword: process.env.E2E_TEST_PASSWORD || 'TestPassword123!',
   },
 

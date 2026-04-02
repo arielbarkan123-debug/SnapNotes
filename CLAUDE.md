@@ -1,4 +1,4 @@
-# NoteSnap Project Instructions
+# X+1 Project Instructions
 
 ## Important URLs
 

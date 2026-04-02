@@ -22,7 +22,7 @@ function getClient(): Resend {
   return resendClient
 }
 
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'NoteSnap <reports@notesnap.app>'
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'X+1 <reports@xplus1.ai>'
 
 export interface SendEmailParams {
   to: string

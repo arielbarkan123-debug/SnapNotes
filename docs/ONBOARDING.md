@@ -1,6 +1,6 @@
-# NoteSnap — Developer Onboarding Guide
+# X+1 — Developer Onboarding Guide
 
-> **Last updated:** March 15, 2026
+> **Last updated:** March 31, 2026
 > **Production:** https://snap-notes-j68u-three.vercel.app/
 > **Supabase:** https://supabase.com/dashboard/project/ybgkzqrpfdhyftnbvgox
 
@@ -8,7 +8,7 @@
 
 ## Table of Contents
 
-1. [What Is NoteSnap](#1-what-is-notesnap)
+1. [What Is X+1](#1-what-is-x1)
 2. [Quick Start](#2-quick-start)
 3. [Tech Stack](#3-tech-stack)
 4. [Project Structure](#4-project-structure)
@@ -21,12 +21,17 @@
 11. [i18n (English + Hebrew)](#11-i18n-english--hebrew)
 12. [Common Tasks & Recipes](#12-common-tasks--recipes)
 13. [Gotchas & Rules](#13-gotchas--rules)
+14. [Remaining Work — Developer Task List](#14-remaining-work--developer-task-list)
+    - [14.1 RTL Consistency](#141-rtl-consistency-hebrew-ui)
+    - [14.2 Plans, Tiers & Billing](#142-plans-tiers--billing-admin-managed-subscriptions)
+    - [14.3 Past Exam PPTX/DOCX Analysis](#143-past-exam-pptxdocx-analysis)
+    - [14.4 AI Prompt Engineering](#144-ai-prompt-engineering--quality-audit--improvements)
 
 ---
 
-## 1. What Is NoteSnap
+## 1. What Is X+1
 
-NoteSnap is an AI-powered adaptive learning platform for students. Users photograph their notebooks, upload PDFs/PPTX/DOCX, or paste text — and the AI generates interactive courses with lessons, flashcards, practice problems, homework tutoring, exam preparation, and spaced repetition.
+X+1 is an AI-powered adaptive learning platform for students. Users photograph their notebooks, upload PDFs/PPTX/DOCX, or paste text — and the AI generates interactive courses with lessons, flashcards, practice problems, homework tutoring, exam preparation, and spaced repetition.
 
 **Core features:**
 - **Course Generation** — Upload images/documents → AI extracts content → generates structured lessons with explanations, formulas, diagrams, questions
@@ -51,7 +56,7 @@ NoteSnap is an AI-powered adaptive learning platform for students. Users photogr
 ```bash
 # Clone the repo
 git clone <repo-url>
-cd NoteSnap
+cd X+1
 
 # Install dependencies
 npm install
@@ -132,7 +137,7 @@ npm run build
 ## 4. Project Structure
 
 ```
-NoteSnap/
+X+1/
 ├── app/                          # Next.js App Router
 │   ├── (auth)/                   # Public auth pages (login, signup, forgot-password, reset-password)
 │   ├── (main)/                   # Protected pages (require auth)
@@ -788,6 +793,278 @@ describe('My Feature API', () => {
 | Where are tests? | `__tests__/` (49 suites, 1000+ tests) |
 | Where is the DB schema? | `supabase/migrations/` |
 | Where is auth middleware? | `middleware.ts` + `lib/supabase/middleware.ts` |
+
+---
+
+---
+
+## 14. Remaining Work — Developer Task List
+
+### 14.1 RTL Consistency (Hebrew UI)
+
+**Priority:** High | **Effort:** Medium-High | **Type:** QA + Bug Fixes
+
+The app supports Hebrew (RTL) via `tailwindcss-rtl`, but no full RTL pass has been done. Every screen must be tested in Hebrew mode and fixed.
+
+**What to do:**
+- Switch the app to Hebrew (`/he/...` routes) and walk through every page
+- Check for: flipped icons, misaligned text, padding/margin that assume LTR, broken flex/grid layouts, truncated text
+- Pages to test (in priority order):
+  1. Dashboard — widgets, cards, action buttons
+  2. Course viewer — lesson steps, navigation arrows, progress bar
+  3. Homework tutor — chat bubbles, input field, diagram placement
+  4. SRS review — flashcard flip animation, rating buttons
+  5. Practice — question layout, timer, options
+  6. Exam — question navigation, image labels, submission
+  7. Settings — form fields, toggles, parent email section
+  8. Study plan — calendar, task list, chat
+  9. Prepare guides — table of contents, section navigation
+  10. Auth pages — login, signup, forgot password, reset
+- Fix with Tailwind RTL utilities: `rtl:mr-4`, `ltr:ml-4`, `start-0`, `end-0` etc.
+- All translations live in `messages/he/` (37 JSON files) — check for missing keys or English fallback showing through
+
+---
+
+### 14.2 Plans, Tiers & Billing (Admin-Managed Subscriptions)
+
+**Priority:** High | **Effort:** High | **Type:** Full Feature Build
+
+Build a subscription/billing system with an admin dashboard so the owner can manage pricing, tiers, and usage limits without code changes.
+
+#### 14.2.1 Admin Dashboard — Tier Management
+
+Build an admin page at `/admin/billing` (protected by `admin_users` table, `super_admin` role) with:
+
+- **View all tiers** — table showing: tier name, monthly price, annual price, status (active/archived)
+- **Add new tier** — form with: name, slug, description, monthly price, annual price
+- **Edit tier** — change price, description, limits (takes effect for new subscribers; existing ones keep current price until renewal)
+- **Archive/restore tier** — soft-delete, never hard-delete (existing subscribers reference it)
+
+#### 14.2.2 Usage Limits Per Tier
+
+Each tier defines limits that the app enforces. The admin dashboard must show and let the owner edit:
+
+| Limit | Example (Free) | Example (Basic) | Example (Pro) |
+|-------|---------------|-----------------|---------------|
+| Max courses | 2 | 5 | Unlimited |
+| Max homework checks/month | 3 | 15 | Unlimited |
+| Max AI tutoring messages/month | 10 | 50 | Unlimited |
+| Max practice sessions/month | 5 | 20 | Unlimited |
+| Max exams/month | 1 | 5 | Unlimited |
+| Max study guides | 1 | 5 | Unlimited |
+| Max SRS cards | 50 | 500 | Unlimited |
+| Max pages per upload | 3 | 15 | 50 |
+| AI cost ceiling/month (USD) | $0.50 | $3.00 | $15.00 |
+
+The admin should be able to:
+- See current usage vs. limit for each user
+- Adjust any limit per tier
+- Override limits for individual users (e.g. give a student temporary Pro access)
+- See the total AI cost being spent per tier across all users
+
+#### 14.2.3 Stripe Integration
+
+- Stripe Checkout for subscription purchase
+- Stripe Customer Portal for self-service plan changes, cancellation, payment method updates
+- Stripe Webhooks (`/api/webhooks/stripe`) for: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
+- Store `stripe_customer_id` and `stripe_subscription_id` on a new `subscriptions` table
+- Proration handling when upgrading/downgrading mid-cycle
+
+#### 14.2.4 Database Schema Needed
+
+```sql
+-- Tier definitions (admin-managed)
+CREATE TABLE subscription_tiers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug TEXT UNIQUE NOT NULL,          -- 'free', 'basic', 'pro'
+  name TEXT NOT NULL,
+  description TEXT,
+  monthly_price_cents INT NOT NULL DEFAULT 0,
+  annual_price_cents INT NOT NULL DEFAULT 0,
+  limits JSONB NOT NULL DEFAULT '{}', -- { max_courses: 5, max_homework_checks: 15, ... }
+  ai_cost_ceiling_cents INT DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  sort_order INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- User subscriptions
+CREATE TABLE user_subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  tier_id UUID NOT NULL REFERENCES subscription_tiers(id),
+  stripe_customer_id TEXT,
+  stripe_subscription_id TEXT,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'canceled', 'past_due', 'trialing')),
+  current_period_start TIMESTAMPTZ,
+  current_period_end TIMESTAMPTZ,
+  cancel_at_period_end BOOLEAN DEFAULT false,
+  limit_overrides JSONB DEFAULT '{}', -- per-user limit overrides
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id)
+);
+
+-- Monthly usage tracking
+CREATE TABLE usage_tracking (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  period_start DATE NOT NULL,         -- first of month
+  courses_created INT DEFAULT 0,
+  homework_checks INT DEFAULT 0,
+  tutor_messages INT DEFAULT 0,
+  practice_sessions INT DEFAULT 0,
+  exams_created INT DEFAULT 0,
+  guides_created INT DEFAULT 0,
+  ai_cost_cents INT DEFAULT 0,        -- total AI spend this period
+  UNIQUE(user_id, period_start)
+);
+```
+
+#### 14.2.5 Enforcement
+
+- Create `lib/billing/check-limit.ts` — called before every AI operation
+- Pattern: `const { allowed, remaining } = await checkLimit(userId, 'homework_checks')` — returns 403 with upgrade prompt if exceeded
+- Track AI token costs per request using Claude API response `usage.input_tokens` + `usage.output_tokens`
+- Show usage meters in the user's Settings page
+
+---
+
+### 14.3 Past Exam PPTX/DOCX Analysis
+
+**Priority:** Medium | **Effort:** Medium | **Type:** AI Feature
+
+Currently past exam templates only support image uploads. Add support for PPTX and DOCX exam files.
+
+**What to do:**
+1. Extend `app/api/past-exams/analyze/route.ts` to accept PPTX/DOCX file uploads
+2. Use existing `lib/documents/` extraction (already handles PDF, PPTX, DOCX) to extract text + images
+3. Feed extracted content to `lib/past-exams/analyzer.ts` — the analysis prompt already exists
+4. Handle edge cases: scanned PPTX (images only, no text), mixed text+image slides, Hebrew RTL text in documents
+5. Test with real Israeli Bagrut exam files (common format: DOCX with Hebrew text + math formulas as images)
+
+---
+
+### 14.4 AI Prompt Engineering — Quality Audit & Improvements
+
+**Priority:** Critical | **Effort:** High | **Type:** AI Quality
+
+The app has **50+ AI prompts** across 84 files that call Claude. Prompt quality directly determines user experience. Below is a prioritized audit of what needs improvement, organized by user-facing impact.
+
+#### TIER 1 — Highest Impact (directly affects every user)
+
+**1. Course Generation Prompts** (`lib/ai/prompts.ts`)
+- 6 variants: image, document, text, exam, deep practice, continuation
+- **Current state:** Excellent (300+ lines each) but never A/B tested
+- **Work needed:**
+  - Run real student content through each variant and grade output quality (accuracy, engagement, age-appropriateness)
+  - Test with Hebrew content specifically — current prompts are English-first
+  - Add explicit instructions for common failure modes: over-simplification for advanced students, too many explanation steps for simple topics, formula rendering accuracy in Hebrew
+  - Test with edge cases: handwriting with poor quality, mixed language notes, STEM vs humanities content
+  - Add output quality scoring (have Claude self-evaluate each lesson against rubric)
+
+**2. Homework Tutor Prompts** (`lib/homework/tutor-engine.ts` — 4,500 lines)
+- **Current state:** Very detailed Socratic method with emotional intelligence
+- **Work needed:**
+  - Test with real student interactions across subjects (math, physics, biology, literature)
+  - Verify the "never give direct answers" rule holds under pressure (students asking repeatedly)
+  - Test hint progression (5 levels) — does level 3 actually help more than level 2?
+  - Test diagram generation quality — the tutor can generate diagrams, but are they correct?
+  - Add subject-specific strategies (currently one prompt handles all subjects)
+  - Test in Hebrew — tutoring in Hebrew requires different pedagogical patterns
+
+**3. Flashcard/SRS Card Generation** (`lib/srs/card-generator.ts`)
+- **Current state:** Good but generic
+- **Work needed:**
+  - Test card quality across 8 card types (flashcard, MCQ, true/false, fill-blank, matching, sequence, multi-select, image-label)
+  - Add difficulty calibration — cards should match the lesson's depth
+  - Add anti-patterns: avoid trivially obvious cards, avoid cards that test memorization of irrelevant details
+  - Test distractor quality for MCQ — are wrong options plausible enough?
+  - Add domain-specific card strategies: math cards should test computation, history cards should test causation, science cards should test prediction
+
+#### TIER 2 — High Impact (affects active learners)
+
+**4. Practice Question Generation** (`lib/practice/question-generator.ts`)
+- **Current state:** Age-aware, 8 question types, Bloom's taxonomy levels
+- **Work needed:**
+  - Test Bloom's level accuracy — does "analyze" really produce harder questions than "remember"?
+  - Test adaptive difficulty — questions should get harder as student improves
+  - Verify answer key accuracy — wrong answers in the answer key destroy trust
+  - Add subject-specific question patterns (physics ≠ literature ≠ math)
+  - Test image-label questions — are coordinates and labels correct?
+
+**5. Exam Generation** (`app/api/exams/route.ts`, `app/api/exams/from-content/route.ts`)
+- **Current state:** Generates exams from course content or raw content
+- **Work needed:**
+  - Test exam difficulty calibration — does it match the source material's depth?
+  - Verify grading accuracy — the AI grades exams, wrong grades are critical failures
+  - Test with past exam patterns — does it generate questions similar to real exams?
+  - Add time estimation per question (students need to budget time)
+  - Test Hebrew exam generation — mathematical notation in Hebrew context
+
+**6. Study Guide Generation** (`lib/prepare/guide-generator.ts`)
+- **Current state:** Structured JSON output with topics, sections, tables
+- **Work needed:**
+  - Test guide completeness — does it cover all topics from the source material?
+  - Test table generation quality — are comparison tables accurate?
+  - Test YouTube video recommendations relevance
+  - Add exam-day tips and memory techniques specific to the subject
+
+#### TIER 3 — Medium Impact (affects power users)
+
+**7. Diagram Generation** (`lib/diagram-engine/` — 22 files, 8+ prompts)
+- **Current state:** Excellent multi-pipeline (Recraft, TikZ, Desmos, GeoGebra, Mermaid, Recharts)
+- **Work needed:**
+  - Test each pipeline with real student content — which fails most often?
+  - Test the AI router (`router.ts`) — does it pick the right pipeline for each diagram type?
+  - Verify TikZ compilation success rate — LaTeX errors are common
+  - Test label placement accuracy on generated images
+  - Add fallback quality — when a pipeline fails, is the fallback useful?
+
+**8. Concept Extraction** (`lib/concepts/extractor.ts`)
+- **Current state:** Detailed with atomicity, canonicality, prerequisite rules
+- **Work needed:**
+  - Test prerequisite chain accuracy — wrong prerequisites break the learning path
+  - Test difficulty levels (1-5 Bloom's) — are they consistent across subjects?
+  - Test with Hebrew content — concept names in Hebrew
+
+**9. Content Extraction** (`lib/ai/prompts.ts` — IMAGE_ANALYSIS, MULTI_PAGE)
+- **Current state:** Comprehensive with accuracy emphasis
+- **Work needed:**
+  - Test with real student notebooks (handwriting quality varies wildly)
+  - Test formula extraction accuracy — missed subscripts, superscripts, fractions
+  - Test multi-page coherence — does page 3 reference correctly what was on page 1?
+  - Test with mixed language notes (Hebrew + English + math)
+
+#### TIER 4 — Lower Impact but Easy Wins
+
+**10. API Route Inline Prompts** (~15 routes with generic "You are a helpful tutor..." prompts)
+- **Files:** `app/api/chat/route.ts`, `app/api/help/route.ts`, `app/api/courses/[id]/lessons/[lessonIndex]/expand/route.ts`, `app/api/courses/[id]/lessons/[lessonIndex]/worked-example/route.ts`, `app/api/homework/walkthrough/[walkthroughId]/step-chat/route.ts`
+- **Work needed:**
+  - Replace generic "You are a helpful tutor" with detailed, context-aware prompts
+  - Add student profile context (age, level, language) to all inline prompts
+  - Standardize: move all inline prompts to `lib/ai/prompts.ts` for consistency
+
+**11. Mistake Analysis** (`lib/insights/mistake-analyzer.ts`)
+- **Work needed:**
+  - Test with real student mistake patterns
+  - Verify it distinguishes systematic errors from careless mistakes
+  - Add remediation suggestions that link to specific lessons/cards
+
+**12. Exam Prediction** (`lib/exam-prediction/predictor.ts`)
+- **Work needed:**
+  - Test prediction accuracy against real exam outcomes
+  - Add confidence scoring
+
+#### Prompt Engineering Process
+
+For each prompt improvement:
+1. **Baseline:** Run 10 real student inputs through the current prompt, grade outputs 1-5
+2. **Iterate:** Modify the prompt, re-run same 10 inputs, compare grades
+3. **Edge cases:** Test with Hebrew, poor handwriting, mixed subjects, advanced vs beginner
+4. **Regression:** Ensure improvements in one area don't break another
+5. **Monitor:** After deployment, track user satisfaction signals (retry rate, session length, course completion rate)
 
 ---
 

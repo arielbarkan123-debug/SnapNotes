@@ -1,5 +1,5 @@
 /**
- * Integration layer between NoteSnap's existing diagram system and the
+ * Integration layer between X+1's existing diagram system and the
  * new 4-pipeline diagram engine.
  *
  * The existing system uses React SVG components rendered client-side.
@@ -25,7 +25,7 @@ const log = createLogger('diagram:integration')
 export { shouldUseEngine, tieredRoute } from './tiered-router';
 
 /**
- * Result from the engine in a format suitable for the NoteSnap frontend.
+ * Result from the engine in a format suitable for the X+1 frontend.
  * The imageUrl is either a base64 data URL (E2B) or an HTTP URL (TikZ/Recraft).
  */
 export interface EngineDiagramResult {

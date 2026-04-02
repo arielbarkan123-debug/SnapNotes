@@ -1,5 +1,5 @@
 /**
- * Curriculum Types for NoteSnap
+ * Curriculum Types for X+1
  *
  * Defines the structure for curriculum data across different education systems.
  * Supports tiered context injection for AI personalization.

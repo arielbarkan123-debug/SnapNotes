@@ -5,7 +5,7 @@ import { createLogger } from '@/lib/logger'
 
 const log = createLogger('api:reports-unsubscribe')
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://notesnap.app'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://xplus1.ai'
 
 /**
  * GET /api/reports/unsubscribe?token=...

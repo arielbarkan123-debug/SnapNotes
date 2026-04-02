@@ -2,10 +2,10 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Navigation & Public Pages', () => {
   test.describe('Landing page', () => {
-    test('hero section displays NoteSnap branding', async ({ page }) => {
+    test('hero section displays X+1 branding', async ({ page }) => {
       await page.goto('/')
-      // Header has NoteSnap brand text
-      await expect(page.locator('header').getByText('NoteSnap')).toBeVisible()
+      // Header has X+1 brand text
+      await expect(page.locator('header').getByText('X+1')).toBeVisible()
     })
   })
 

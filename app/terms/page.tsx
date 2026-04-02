@@ -2,11 +2,11 @@ import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import type { Metadata } from 'next'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://notesnap.app'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://xplus1.ai'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | NoteSnap',
-  description: 'Read the Terms of Service for NoteSnap, the AI-powered educational platform.',
+  title: 'Terms of Service | X+1',
+  description: 'Read the Terms of Service for X+1, the AI-powered educational platform.',
   alternates: {
     canonical: `${APP_URL}/terms`,
   },
@@ -33,7 +33,7 @@ export default async function TermsPage() {
             href="/"
             className="text-xl font-bold text-violet-600 dark:text-violet-400 block text-center mb-2"
           >
-            NoteSnap
+            X+1
           </Link>
 
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white text-center mb-2">

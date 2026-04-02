@@ -10,8 +10,8 @@ import { useEventTracking } from '@/lib/analytics'
 import { useHelpContext } from '@/hooks/useHelpContext'
 
 // localStorage keys for exam answer backup
-const EXAM_ANSWERS_KEY_PREFIX = 'notesnap_exam_answers_'
-const EXAM_MARKED_KEY_PREFIX = 'notesnap_exam_marked_'
+const EXAM_ANSWERS_KEY_PREFIX = 'xplus1_exam_answers_'
+const EXAM_MARKED_KEY_PREFIX = 'xplus1_exam_marked_'
 
 function getExamStorageKey(examId: string): string {
   return `${EXAM_ANSWERS_KEY_PREFIX}${examId}`

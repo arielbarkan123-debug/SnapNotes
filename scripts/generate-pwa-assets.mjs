@@ -116,13 +116,13 @@ const ogSvg = `
   </g>
 
   <!-- App name -->
-  <text x="520" y="280" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="96" font-weight="700" fill="white">NoteSnap</text>
+  <text x="520" y="280" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="96" font-weight="700" fill="white">X+1</text>
 
   <!-- Tagline -->
-  <text x="520" y="380" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="36" font-weight="400" fill="rgba(255,255,255,0.9)">Turn Your Notes Into Study Courses</text>
+  <text x="520" y="380" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="36" font-weight="400" fill="rgba(255,255,255,0.9)">Learn anything. Master everything.</text>
 
   <!-- Subtitle -->
-  <text x="520" y="440" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="24" font-weight="400" fill="rgba(255,255,255,0.7)">AI-powered learning from handwritten notes</text>
+  <text x="520" y="440" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="24" font-weight="400" fill="rgba(255,255,255,0.7)">AI-powered learning platform</text>
 </svg>
 `;
 
@@ -151,7 +151,7 @@ const dashboardSvg = `
   <rect width="1080" height="200" fill="url(#headerGrad)"/>
 
   <!-- App title in header -->
-  <text x="60" y="130" font-family="system-ui, sans-serif" font-size="56" font-weight="700" fill="white">NoteSnap</text>
+  <text x="60" y="130" font-family="system-ui, sans-serif" font-size="56" font-weight="700" fill="white">X+1</text>
 
   <!-- Dashboard content area -->
   <rect x="40" y="240" width="1000" height="200" rx="24" fill="white" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.1))"/>

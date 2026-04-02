@@ -1,6 +1,6 @@
 import { type MetadataRoute } from 'next'
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://notesnap.app'
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://xplus1.ai'
 
 // Static date — update this when page content meaningfully changes
 const LAST_MODIFIED = new Date('2026-03-31')

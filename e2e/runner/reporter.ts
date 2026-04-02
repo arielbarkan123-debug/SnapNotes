@@ -9,17 +9,10 @@ import type {
   ReportMetadata,
   ReportSummary,
   FlowReport,
-  ScenarioReport,
   ErrorReport,
   FixReport,
   TestResult,
-  DetectedError,
-  AppliedFix,
 } from './types'
-import { createLogger } from '@/lib/logger'
-
-
-const log = createLogger('e2e:runner:reporter')
 // ============================================================================
 // Report Generation
 // ============================================================================
@@ -210,7 +203,7 @@ export function generateMarkdownReport(report: TestReport): string {
   const lines: string[] = []
 
   // Header
-  lines.push('# NoteSnap E2E Test Report')
+  lines.push('# X+1 E2E Test Report')
   lines.push('')
   lines.push(`**Run ID:** ${report.metadata.runId}`)
   lines.push(`**Date:** ${new Date(report.metadata.startTime).toLocaleDateString()}`)
@@ -239,7 +232,7 @@ export function generateMarkdownReport(report: TestReport): string {
     lines.push('')
 
     for (const scenario of flow.scenarios) {
-      const statusIcon = scenario.status === 'pass' ? '✓' : scenario.status === 'fail' ? '✗' : '⚠'
+      const _statusIcon = scenario.status === 'pass' ? '✓' : scenario.status === 'fail' ? '✗' : '⚠'
       const statusText = scenario.status.toUpperCase()
       lines.push(`- [${statusText}] ${scenario.name} (${formatDuration(scenario.duration)})`)
 

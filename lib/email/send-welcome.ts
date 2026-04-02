@@ -4,7 +4,7 @@ import { createLogger } from '@/lib/logger'
 
 const log = createLogger('email:welcome')
 
-const DASHBOARD_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://notesnap.app'
+const DASHBOARD_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://xplus1.ai'
 
 /**
  * Send a welcome email to a newly verified user.
@@ -15,7 +15,7 @@ export async function sendWelcomeEmail(email: string, name: string): Promise<voi
     const html = generateWelcomeHtml({ name, email }, DASHBOARD_URL)
     const result = await sendEmail({
       to: email,
-      subject: 'Welcome to NoteSnap! 📚',
+      subject: 'Welcome to X+1! 📚',
       html,
     })
 

@@ -1,5 +1,6 @@
 import { createHmac } from 'crypto'
 
+// Keep legacy fallback secret to avoid invalidating existing unsubscribe tokens
 const SECRET = process.env.CRON_SECRET || process.env.NEXTAUTH_SECRET || 'notesnap-unsubscribe-secret'
 
 /**

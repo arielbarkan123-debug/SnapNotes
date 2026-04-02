@@ -95,7 +95,7 @@ export default function Header({ userEmail, userName, isAdmin }: HeaderProps) {
               href="/dashboard"
               className="text-xl font-bold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
             >
-              NoteSnap
+              X+1
             </Link>
 
             {/* Desktop Navigation */}

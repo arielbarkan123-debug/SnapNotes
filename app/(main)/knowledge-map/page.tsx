@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import KnowledgeMapContent from './KnowledgeMapContent'
 
 export const metadata: Metadata = {
-  title: 'Knowledge Map - NoteSnap',
+  title: 'Knowledge Map - X+1',
   description: 'Visualize your concept mastery and learning progress',
 }
 

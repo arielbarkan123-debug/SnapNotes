@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://notesnap.app/sitemap.xml
+Sitemap: https://xplus1.ai/sitemap.xml
 
 # Disallow sensitive paths
 Disallow: /api/

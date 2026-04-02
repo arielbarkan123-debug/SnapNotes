@@ -120,7 +120,7 @@ export function PWAProvider({ children }: PWAProviderProps) {
         <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 z-50 bg-violet-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between gap-4">
           <div>
             <p className="font-semibold">Update Available</p>
-            <p className="text-sm text-violet-200">A new version of NoteSnap is ready.</p>
+            <p className="text-sm text-violet-200">A new version of X+1 is ready.</p>
           </div>
           <button
             onClick={sw.applyUpdate}
@@ -141,7 +141,7 @@ export function PWAProvider({ children }: PWAProviderProps) {
               </svg>
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-gray-900 dark:text-white">Install NoteSnap</p>
+              <p className="font-semibold text-gray-900 dark:text-white">Install X+1</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">Add to your home screen for quick access and offline studying.</p>
             </div>
             <button

@@ -1,7 +1,7 @@
 /**
  * Validation Error Mapper
  *
- * Maps validation errors to NoteSnap error codes
+ * Maps validation errors to X+1 error codes
  */
 
 import { type ErrorCode, ErrorCodes } from '../codes'
@@ -374,7 +374,7 @@ interface ZodError {
 }
 
 /**
- * Maps Zod validation errors to NoteSnap error codes
+ * Maps Zod validation errors to X+1 error codes
  */
 export function mapZodError(error: ZodError): MappedError[] {
   return error.issues.map((issue) => {

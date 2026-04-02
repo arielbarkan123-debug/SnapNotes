@@ -1,8 +1,8 @@
-# NoteSnap
+# X+1
 
-**Turn your handwritten notes into organized study courses with AI.**
+**Learn anything. Master everything.**
 
-NoteSnap is a web application that transforms photos of notebook pages into structured, interactive study materials using Claude AI. Upload a photo of your notes, and get back a beautifully organized course with explanations, key concepts, and summaries.
+X+1 is an AI-powered learning platform that transforms your notes, homework, and study materials into interactive courses, practice sessions, and personalized tutoring using Claude AI.
 
 > **New developer?** Start with the comprehensive [Developer Onboarding Guide](docs/ONBOARDING.md) for setup instructions, architecture overview, and common tasks.
 
@@ -38,8 +38,8 @@ NoteSnap is a web application that transforms photos of notebook pages into stru
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/notesnap.git
-cd notesnap
+git clone https://github.com/yourusername/xplus1.git
+cd xplus1
 ```
 
 ### 2. Install Dependencies
@@ -134,7 +134,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ## Project Structure
 
 ```
-notesnap/
+xplus1/
 ├── app/                    # Next.js App Router
 │   ├── (auth)/            # Auth pages (login, signup, etc.)
 │   ├── (main)/            # Protected pages (dashboard, course)
@@ -179,7 +179,7 @@ notesnap/
 
 ### Other Platforms
 
-NoteSnap is a standard Next.js application and can be deployed to any platform that supports Next.js:
+X+1 is a standard Next.js application and can be deployed to any platform that supports Next.js:
 
 - **Netlify**: Use the Next.js adapter
 - **Railway**: Direct Next.js support
@@ -233,7 +233,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you encounter any issues or have questions:
 - Open an issue on GitHub
-- Email: support@notesnap.app
+- Email: support@xplus1.ai
 
 ---
 

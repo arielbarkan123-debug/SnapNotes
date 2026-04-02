@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import PracticeSessionContent from './PracticeSessionContent'
 
 export const metadata: Metadata = {
-  title: 'Practice Session - NoteSnap',
+  title: 'Practice Session - X+1',
   description: 'Practice with targeted questions',
 }
 

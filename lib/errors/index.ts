@@ -1,5 +1,5 @@
 /**
- * NoteSnap Error Code System
+ * X+1 Error Code System
  *
  * A comprehensive error naming system where every possible error has a unique,
  * identifiable code. Error codes follow the pattern: NS-{AREA}-{NUMBER}

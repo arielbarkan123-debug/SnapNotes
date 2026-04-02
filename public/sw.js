@@ -1,5 +1,5 @@
 /**
- * NoteSnap Service Worker — Self-Destructing Version
+ * X+1 Service Worker — Self-Destructing Version
  *
  * This SW exists solely to replace the old caching SW.
  * On install: skipWaiting to immediately take over.

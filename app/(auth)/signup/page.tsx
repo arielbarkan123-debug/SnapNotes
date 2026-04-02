@@ -271,7 +271,7 @@ export default function SignupPage() {
               href="/"
               className="text-xl sm:text-2xl font-bold text-violet-600 dark:text-violet-400"
             >
-              NoteSnap
+              X+1
             </Link>
             <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mt-3 sm:mt-4">
               {t('signup.title')}

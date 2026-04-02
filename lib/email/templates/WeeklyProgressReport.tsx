@@ -176,12 +176,12 @@ export function generateReportHtml(data: WeeklyReportData, dashboardUrl: string,
           <tr>
             <td style="padding: 24px; text-align: center;">
               <p style="margin: 0; font-size: 12px; color: ${COLORS.gray600};">
-                This report was sent by NoteSnap.
+                This report was sent by X+1.
                 <a href="${dashboardUrl}/settings" style="color: ${COLORS.violet}; text-decoration: underline;">Manage report settings</a>
                 ${unsubscribeUrl ? ` · <a href="${unsubscribeUrl}" style="color: ${COLORS.gray600}; text-decoration: underline;">Unsubscribe</a>` : ''}
               </p>
               <p style="margin: 8px 0 0; font-size: 11px; color: ${COLORS.gray600};">
-                © ${new Date().getFullYear()} NoteSnap
+                © ${new Date().getFullYear()} X+1
               </p>
             </td>
           </tr>

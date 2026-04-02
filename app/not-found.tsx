@@ -83,7 +83,7 @@ export default function NotFound() {
         <p className="mt-8 text-sm text-gray-500 dark:text-gray-500">
           Need help?{' '}
           <a
-            href="mailto:support@notesnap.app"
+            href="mailto:support@xplus1.ai"
             className="text-violet-600 dark:text-violet-400 underline hover:underline"
           >
             Contact Support

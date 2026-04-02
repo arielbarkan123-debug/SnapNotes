@@ -1,7 +1,7 @@
 import { type Page, expect } from '@playwright/test';
 
 const TEST_EMAIL =
-  process.env.TEST_USER_EMAIL ?? 'test@notesnap.example.com';
+  process.env.TEST_USER_EMAIL ?? 'test@xplus1.example.com';
 const TEST_PASSWORD =
   process.env.TEST_USER_PASSWORD ?? 'TestPassword123!';
 

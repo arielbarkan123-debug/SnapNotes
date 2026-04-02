@@ -139,7 +139,7 @@ interface Answer {
 // Auto-save constants
 // =============================================================================
 
-const PRACTICE_SESSION_KEY = 'notesnap_practice_session'
+const PRACTICE_SESSION_KEY = 'xplus1_practice_session'
 const SESSION_EXPIRY_MS = 2 * 60 * 60 * 1000 // 2 hours
 
 // =============================================================================

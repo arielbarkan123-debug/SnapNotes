@@ -1,7 +1,7 @@
 {
-  "name": "NoteSnap - AI Study Courses",
-  "short_name": "NoteSnap",
-  "description": "Turn your notes into study courses with AI. Study offline, track progress, and master any subject.",
+  "name": "X+1 — AI Learning Platform",
+  "short_name": "X+1",
+  "description": "Learn anything. Master everything. AI-powered courses, practice, and personalized tutoring.",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",

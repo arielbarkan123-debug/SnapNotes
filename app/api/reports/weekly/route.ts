@@ -10,7 +10,7 @@ const log = createLogger('api:reports-weekly')
 
 export const maxDuration = 60
 
-const DASHBOARD_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://notesnap.app'
+const DASHBOARD_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://xplus1.ai'
 
 // GET: Preview report (returns HTML)
 export async function GET() {

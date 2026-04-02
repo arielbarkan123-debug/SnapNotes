@@ -189,7 +189,7 @@ export function validateEnv(): void {
 
   // Check client env vars
   // Note: NEXT_PUBLIC_APP_URL is intentionally excluded — every usage has a
-  // hardcoded 'https://notesnap.app' fallback, so missing it is non-fatal.
+  // hardcoded 'https://xplus1.ai' fallback, so missing it is non-fatal.
   const clientVars = [
     'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',

@@ -151,7 +151,7 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-rose-500 flex items-center justify-center">
                 <span className="text-white text-lg">📚</span>
               </div>
-              <span className="text-xl font-extrabold gradient-text">NoteSnap</span>
+              <span className="text-xl font-extrabold gradient-text">X+1</span>
             </Link>
             <button
               onClick={toggleCollapsed}
@@ -249,7 +249,7 @@ export default function Sidebar({ userEmail, userName, isAdmin }: SidebarProps) 
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-rose-500 flex items-center justify-center">
               <span className="text-white text-sm">📚</span>
             </div>
-            <span className="text-lg font-bold gradient-text">NoteSnap</span>
+            <span className="text-lg font-bold gradient-text">X+1</span>
           </Link>
 
           {/* Mobile Actions */}

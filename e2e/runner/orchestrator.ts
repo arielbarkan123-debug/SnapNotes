@@ -15,19 +15,9 @@ import { compare, compareAll, summarizeComparison } from './comparator'
 import { autoFixer, AUTO_FIX_INSTRUCTIONS, summarizeFixes } from './auto-fixer'
 import { generateReport, generateMarkdownReport, generateJSONReport, generateConsoleSummary, getTimestamp } from './reporter'
 import type {
-  TestScenario,
-  TestStep,
   TestResult,
   StepResult,
-  CapturedLogs,
-  DetectedError,
-  PageState,
-  TestContext,
 } from './types'
-import { createLogger } from '@/lib/logger'
-
-
-const log = createLogger('e2e:runner:orchestrator')
 // ============================================================================
 // Orchestrator Instructions
 // ============================================================================
@@ -35,7 +25,7 @@ const log = createLogger('e2e:runner:orchestrator')
 export const ORCHESTRATOR_INSTRUCTIONS = `
 # E2E Test Orchestrator Instructions
 
-This document provides step-by-step instructions for running the NoteSnap E2E test suite
+This document provides step-by-step instructions for running the X+1 E2E test suite
 using MCP Browser Tools (Claude-in-Chrome).
 
 ## Prerequisites
@@ -132,7 +122,7 @@ Returns: Accessibility tree for state comparison
 
 After capturing logs, check for these error patterns:
 
-${Object.entries(ERROR_PATTERNS).map(([key, pattern]) =>
+${Object.entries(ERROR_PATTERNS).map(([_key, pattern]) =>
   `- ${pattern.code}: ${pattern.consolePattern || pattern.networkPattern || 'N/A'}`
 ).join('\n')}
 
@@ -461,7 +451,7 @@ export const FULL_TEST_RUN_INSTRUCTIONS = `
 
 ## Overview
 
-Run all E2E tests for NoteSnap, covering:
+Run all E2E tests for X+1, covering:
 - Auth flow (login, logout, protected routes)
 - Upload flow (images, PDFs, text)
 - Learning flow (courses, lessons, questions)

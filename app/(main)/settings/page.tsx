@@ -349,7 +349,7 @@ export default function SettingsPage() {
     if (deleteConfirmText !== 'DELETE') return
 
     // Open mailto link so the user can request deletion from support
-    window.location.href = 'mailto:support@notesnap.app?subject=Account%20Deletion%20Request&body=Please%20delete%20my%20account%20and%20all%20associated%20data.'
+    window.location.href = 'mailto:support@xplus1.ai?subject=Account%20Deletion%20Request&body=Please%20delete%20my%20account%20and%20all%20associated%20data.'
     toast.info(t('toast.deleteContactSupport'))
     setShowDeleteConfirm(false)
     setDeleteConfirmText('')

@@ -129,6 +129,6 @@ describe('useGlobalSearch', () => {
     })
 
     expect(result.current.recentSearches).toEqual([])
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('notesnap-recent-searches')
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('xplus1-recent-searches')
   })
 })

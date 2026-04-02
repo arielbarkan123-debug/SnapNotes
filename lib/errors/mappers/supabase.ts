@@ -1,7 +1,7 @@
 /**
  * Supabase Error Mapper
  *
- * Maps Supabase errors (Auth, Database, Storage) to NoteSnap error codes
+ * Maps Supabase errors (Auth, Database, Storage) to X+1 error codes
  */
 
 import { type ErrorCode, ErrorCodes } from '../codes'

@@ -51,7 +51,7 @@ export const PRACTICE_STATS_KEY = '/api/practice/session?include=stats,active,re
 // LocalStorage Persistence (prevents progress loss on refresh)
 // -----------------------------------------------------------------------------
 
-const PRACTICE_STATE_KEY_PREFIX = 'notesnap_practice_state_'
+const PRACTICE_STATE_KEY_PREFIX = 'xplus1_practice_state_'
 
 interface PracticeStateStorage {
   questionIndex: number

@@ -55,9 +55,9 @@ test.describe('Smoke Tests @smoke', () => {
 
   test('SEO meta tags are present on landing page', async ({ page }) => {
     await page.goto('/')
-    // Title should contain NoteSnap
+    // Title should contain X+1
     const title = await page.title()
-    expect(title).toContain('NoteSnap')
+    expect(title).toContain('X+1')
 
     // Meta description should be present and non-empty
     const metaDescription = await page

@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import FormInput from '@/components/ui/FormInput'
 
 // Admin email for support
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'support@notesnap.app'
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'support@xplus1.ai'
 
 export default function ForgotPasswordPage() {
   const t = useTranslations('auth')
@@ -97,7 +97,7 @@ export default function ForgotPasswordPage() {
               href="/"
               className="text-xl sm:text-2xl font-bold text-violet-600 dark:text-violet-400"
             >
-              NoteSnap
+              X+1
             </Link>
             <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mt-3 sm:mt-4">
               {t('forgotPassword.title')}
@@ -243,7 +243,7 @@ export default function ForgotPasswordPage() {
                 {t('forgotPassword.cantAccessEmail')}
               </p>
               <a
-                href={`mailto:${ADMIN_EMAIL}?subject=Account Recovery Request&body=Hi,%0A%0AI need help recovering my NoteSnap account.%0A%0AMy registered email: ${email || '[your email]'}%0A%0APlease help me reset my password.%0A%0AThank you.`}
+                href={`mailto:${ADMIN_EMAIL}?subject=Account Recovery Request&body=Hi,%0A%0AI need help recovering my X+1 account.%0A%0AMy registered email: ${email || '[your email]'}%0A%0APlease help me reset my password.%0A%0AThank you.`}
                 className="inline-flex items-center gap-2 text-sm text-violet-600 dark:text-violet-400 underline hover:underline font-medium"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
