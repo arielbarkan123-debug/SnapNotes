@@ -9,6 +9,7 @@ import type { VisualUpdate } from '@/lib/homework/types'
 const DesmosEmbed = dynamic(() => import('./DesmosEmbed'), { ssr: false })
 const GeoGebraEmbed = dynamic(() => import('./GeoGebraEmbed'), { ssr: false })
 const RechartsRenderer = dynamic(() => import('@/components/diagrams/RechartsRenderer'), { ssr: false })
+const MermaidRenderer = dynamic(() => import('@/components/diagrams/MermaidRenderer'), { ssr: false })
 const DiagramRenderer = dynamic(
   () => import('./diagram').then((mod) => mod.DiagramRenderer),
   { ssr: false }
@@ -33,6 +34,7 @@ const TOOL_LABEL_KEYS: Record<VisualUpdate['tool'], string> = {
   desmos: 'toolDesmos',
   geogebra: 'toolGeogebra',
   recharts: 'toolRecharts',
+  mermaid: 'toolMermaid',
   svg: 'toolSvg',
   engine_image: 'toolEngineImage',
 }
@@ -185,6 +187,15 @@ export default function VisualSolvingPanel({
             boxPlotData={currentUpdate.rechartsData.boxPlotData}
             xAxisLabel={currentUpdate.rechartsData.xLabel}
             yAxisLabel={currentUpdate.rechartsData.yLabel}
+            title={currentUpdate.title}
+            darkMode={darkMode}
+          />
+        )}
+
+        {/* Mermaid */}
+        {currentUpdate.tool === 'mermaid' && currentUpdate.mermaidDefinition && (
+          <MermaidRenderer
+            definition={currentUpdate.mermaidDefinition}
             title={currentUpdate.title}
             darkMode={darkMode}
           />

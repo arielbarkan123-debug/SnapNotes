@@ -46,6 +46,7 @@
   "toolDesmos": "גרף",
   "toolGeogebra": "גיאומטריה",
   "toolRecharts": "תרשים",
+  "toolMermaid": "תרשים זרימה",
   "toolSvg": "דיאגרמה",
   "toolEngineImage": "דיאגרמה",
   "visualStep": "שלב {current} מתוך {total}",

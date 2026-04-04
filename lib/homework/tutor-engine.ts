@@ -208,9 +208,57 @@ Diagrams should EVOLVE step-by-step as the conversation progresses:
 ### Available Diagram Types
 
 **Physics:** fbd (free body diagram), inclined_plane, projectile, collision, circular_motion, energy, pendulum, circuit, wave
-**Math:** long_division, equation, fraction, number_line, coordinate_plane, quadratic, linear, triangle, circle, bar_model, area_model, systems_of_equations, inequality
+**Math:** long_division, equation, fraction, number_line, bar_model, area_model
 **Chemistry:** atom, molecule, reaction, energy_diagram
 **Biology:** cell, dna, system, process_flow
+**General:** freeform — use this when no specific type fits. Provide a natural language description in data.description and the rendering engine will generate the best visual automatically. Example: { "type": "freeform", "data": { "description": "A Venn diagram showing the overlap between mammals and reptiles", "title": "Animal Classification" } }
+
+### Interactive Diagram Types (PREFERRED for these topics — renders as interactive widgets, not static images)
+
+**Graphing (Desmos — students can zoom, pan, explore):**
+- coordinate_plane — plotting points, lines, curves on axes. data: { curves: [{expression, color}], points: [{x, y, label}], lines: [{points: [{x,y},{x,y}], dashed}], xMin, xMax, yMin, yMax, title }
+- function_graph — any function y=f(x). data: { expression: "x^2+2x-3", title, xMin, xMax, yMin, yMax }
+- linear_equation — line from slope+intercept. data: { slope: 2, intercept: -3, equation: "y=2x-3", title }
+- quadratic_graph — parabola. data: { a: 1, b: 2, c: -3, vertex: {x, y}, equation: "y=x^2+2x-3", title }
+- system_of_equations — multiple equations + solution. data: { equations: ["y=2x+1", "y=-x+4"], solution: {x: 1, y: 3}, title }
+- inequality_graph — shaded region. data: { expression: "y<2x+1", title } or { inequalities: ["y<2x+1", "y>-x"], title }
+- trigonometric_graph — sin/cos/tan. data: { expression: "\\sin(x)", title } or { functions: [{expression, color, label}], title }
+- piecewise_function — multiple pieces. data: { pieces: [{expression, domain}], title }
+- scatter_plot_regression — data points + regression line. data: { points: [{x,y}], regression: "y=0.5x+2", title }
+- parametric_curve — parametric equations. data: { expression: "(\\cos(t), \\sin(t))", title }
+- polar_graph — polar equations. data: { expression: "r=2\\cos(\\theta)", title }
+
+**Geometry (GeoGebra — students can drag points, measure angles):**
+- triangle — from vertices. data: { vertices: [{x,y,label}], showAngles: true, showSides: true, title }
+- circle_geometry — circle with points, chords, tangents. data: { center: {x,y}, radius: 3, points: [{x,y,label}], lines: [{from, to, type}], title }
+- polygon — any polygon. data: { vertices: [{x,y,label}], showAngles: true, title }
+- angle_measurement — angles from vertices. data: { vertices: [{x,y,label}], title }
+- parallel_lines — parallel lines with transversal. data: { vertices: [{x,y,label}], title }
+- transformation — reflection/rotation/translation/dilation. data: { transformationType: "rotation", vertices: [{x,y,label}], angle: 90, center: {x,y}, title }
+- congruence, similarity, pythagorean_theorem, circle_theorems, construction — geometry via vertices. data: { vertices: [{x,y,label}], title }
+
+**Charts (Recharts — responsive, tooltips, dark mode):**
+- bar_chart — bar/column chart. data: { chartType: "bar", data: [{name, value}], xLabel, yLabel, title }
+- histogram — frequency distribution. data: { chartType: "histogram", data: [{name, value}], title }
+- pie_chart — pie/donut chart. data: { chartType: "pie", data: [{name, value}], title }
+- line_chart — line chart. data: { chartType: "line", data: [{name, value}], title }
+- dot_plot — dot plot. data: { chartType: "dot_plot", data: [{name, value}], title }
+- box_plot — box-and-whisker. data: { chartType: "box_plot", boxPlotData: [{label, min, q1, median, q3, max, outliers}], title }
+- stem_leaf_plot — stem-and-leaf. data: { chartType: "stem_leaf_plot", data: [{name: "stem", value: "leaf"}], title }
+- frequency_table — frequency table as bar chart. data: { chartType: "frequency_table", data: [{name, value}], title }
+
+**Flowcharts (Mermaid — renders as SVG):**
+- flowchart — process flow. data: { definition: "graph LR\\n  A[Start] --> B[Process] --> C[End]", title }
+- tree_diagram — hierarchical tree. data: { definition: "graph TD\\n  A --> B\\n  A --> C", title }
+- sequence_diagram — interaction sequence. data: { definition: "sequenceDiagram\\n  Alice->>Bob: Hello", title }
+- factor_tree — prime factorization tree. data: { definition: "graph TD\\n  36 --> 6\\n  36 --> 6", title }
+- probability_tree — probability branches. data: { definition: "graph TD\\n  Start --> |0.5| Heads\\n  Start --> |0.5| Tails", title }
+
+**IMPORTANT:** When a topic fits an interactive type, ALWAYS prefer it over fbd/equation/freeform. For example:
+- "graph y=x²" → use function_graph (NOT freeform)
+- "draw a triangle" → use triangle (NOT fbd)
+- "make a bar chart" → use bar_chart (NOT freeform)
+- "show a flowchart" → use flowchart (NOT freeform)
 
 ### Interactive "What If?" Mode
 
@@ -691,6 +739,23 @@ function diagramToVisualUpdate(
     }
   }
 
+  if (hybridPipeline === 'mermaid') {
+    // Convert diagram data to a mermaid definition string
+    const data = diagram.data
+    const definition = (data.definition as string | undefined) || (data.mermaid as string | undefined)
+    if (definition) {
+      return {
+        tool: 'mermaid',
+        action: 'replace',
+        stepNumber,
+        stepLabel,
+        stepLabelHe,
+        mermaidDefinition: definition,
+        title: data.title as string | undefined,
+      }
+    }
+  }
+
   // For non-hybrid types (SVG-based), wrap the diagram in the svgDiagram field
   return {
     tool: 'svg',
@@ -911,6 +976,14 @@ async function resolveEngineDiagram(
 
   if (engineResult) {
     log.info(`Engine diagram succeeded in ${engineElapsed}ms — pipeline: ${engineResult.pipeline}, imageUrl length: ${engineResult.imageUrl?.length}`)
+
+    // If the AI generated a hybrid type (desmos/geogebra/recharts/mermaid), prefer it
+    // over the engine's static PNG — hybrid renderers give interactive/richer UX
+    if (aiDiagram && getHybridPipeline(aiDiagram.type)) {
+      log.info(`AI generated hybrid diagram (type: ${aiDiagram.type}) — preferring over engine_image for interactive UX`)
+      return { diagram: aiDiagram, diagramStatus }
+    }
+
     return {
       diagram: {
         type: 'engine_image',
@@ -939,6 +1012,12 @@ async function resolveEngineDiagram(
 
   if (aiDiagram && (aiDiagram.type === 'engine_image' || aiDiagram.type === 'step_sequence')) {
     log.info(`Using AI-generated diagram fallback (type: ${aiDiagram.type})`)
+    return { diagram: aiDiagram, diagramStatus }
+  }
+
+  // Hybrid types (desmos, geogebra, recharts, mermaid) are renderable client-side
+  if (aiDiagram && getHybridPipeline(aiDiagram.type)) {
+    log.info(`Using AI-generated hybrid diagram (type: ${aiDiagram.type}, pipeline: ${getHybridPipeline(aiDiagram.type)})`)
     return { diagram: aiDiagram, diagramStatus }
   }
 
@@ -1170,11 +1249,12 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
   // This avoids blocking the greeting response for 45-60s while the engine runs.
   if (options?.deferDiagram && isAutoStart && shouldFireEngine) {
     // Clean up non-renderable AI diagram before sending greeting.
-    // Only engine_image and step_sequence are renderable on the frontend.
-    // SVG component types (fbd, coordinate_plane, etc.) would fail to render.
+    // Renderable types: engine_image, step_sequence, and hybrid types (desmos/geogebra/recharts/mermaid).
+    // Non-hybrid SVG component types (fbd, molecule, etc.) would fail to render on frontend.
     if (tutorResponse.diagram &&
         tutorResponse.diagram.type !== 'engine_image' &&
-        tutorResponse.diagram.type !== 'step_sequence') {
+        tutorResponse.diagram.type !== 'step_sequence' &&
+        !getHybridPipeline(tutorResponse.diagram.type)) {
       delete tutorResponse.diagram
     }
     log.info(`[deferDiagram] Returning greeting immediately, engine diagram will resolve asynchronously`)
@@ -1191,8 +1271,8 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
 
   // For auto-start: skip waiting for engine if AI already has a renderable diagram (saves 5-15s)
   // For normal messages: engine takes priority (higher quality images)
-  // Only engine_image and step_sequence are renderable — SVG component types (fbd, etc.) are NOT supported on frontend
-  if (isAutoStart && aiDiagram && (aiDiagram.type === 'engine_image' || aiDiagram.type === 'step_sequence')) {
+  // Renderable types: engine_image, step_sequence, and hybrid types (desmos/geogebra/recharts/mermaid)
+  if (isAutoStart && aiDiagram && (aiDiagram.type === 'engine_image' || aiDiagram.type === 'step_sequence' || getHybridPipeline(aiDiagram.type))) {
     // Use AI diagram immediately — don't wait for engine
     tutorResponse.diagram = aiDiagram
     log.info(`Auto-start: using AI diagram (type: ${aiDiagram.type}), skipping engine wait`)
@@ -1553,6 +1633,8 @@ function parseDiagramResponse(diagram: unknown): TutorResponse['diagram'] {
     'line_chart', 'stem_leaf_plot', 'frequency_table',
     // Mermaid types (client-side hybrid renderers — see router.ts MERMAID_TYPES)
     'tree_diagram', 'flowchart', 'sequence_diagram', 'factor_tree', 'probability_tree',
+    // Freeform — catch-all for any diagram the AI wants to generate
+    'freeform',
   ]
   if (!d.type || !validTypes.includes(String(d.type))) {
     return undefined

@@ -486,6 +486,8 @@ export interface TutorDiagramState {
     | 'process'
     | 'system'
     | 'process_flow'
+    // Freeform — catch-all for any diagram described in natural language
+    | 'freeform'
     // Engine-generated image diagram (E2B/TikZ/Recraft pipeline)
     | 'engine_image'
     // Step-by-step animated diagram sequence
@@ -526,7 +528,7 @@ export interface TutorDiagramState {
  * persistent diagram that lives alongside the tutoring chat.
  */
 export interface VisualUpdate {
-  tool: 'desmos' | 'geogebra' | 'recharts' | 'svg' | 'engine_image'
+  tool: 'desmos' | 'geogebra' | 'recharts' | 'mermaid' | 'svg' | 'engine_image'
   action: 'add' | 'replace' | 'clear'
   stepNumber: number
   stepLabel: string
@@ -569,6 +571,7 @@ export interface VisualUpdate {
     xLabel?: string
     yLabel?: string
   }
+  mermaidDefinition?: string
   svgDiagram?: TutorDiagramState
   title?: string
   titleHe?: string

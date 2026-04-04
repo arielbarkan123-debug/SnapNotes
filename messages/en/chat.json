@@ -46,6 +46,7 @@
   "toolDesmos": "Graph",
   "toolGeogebra": "Geometry",
   "toolRecharts": "Chart",
+  "toolMermaid": "Flowchart",
   "toolSvg": "Diagram",
   "toolEngineImage": "Diagram",
   "visualStep": "Step {current} of {total}",
