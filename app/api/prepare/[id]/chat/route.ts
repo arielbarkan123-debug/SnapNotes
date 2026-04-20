@@ -234,7 +234,11 @@ export async function POST(
     const response = await client.messages.create({
       model: AI_MODEL,
       max_tokens: MAX_TOKENS,
-      system: buildSystemPrompt(guideContent, language, action, guide.subject || undefined),
+      system: [{
+        type: 'text',
+        text: buildSystemPrompt(guideContent, language, action, guide.subject || undefined),
+        cache_control: { type: 'ephemeral' },
+      }],
       messages,
     })
 

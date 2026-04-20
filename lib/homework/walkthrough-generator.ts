@@ -614,7 +614,7 @@ async function generateWalkthroughSolutionOnce(
   const message = await anthropic.messages.create({
     model: AI_MODEL,
     max_tokens: 4096,
-    system: systemPrompt,
+    system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
     messages: [
       {
         role: 'user',

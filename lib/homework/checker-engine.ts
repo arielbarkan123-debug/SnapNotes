@@ -460,7 +460,7 @@ Respond ONLY with valid JSON matching this exact schema:
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
-    system: systemPrompt,
+    system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
     messages: [
       {
         role: 'user',
@@ -601,7 +601,7 @@ Respond ONLY with valid JSON:
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
-    system: systemPrompt,
+    system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: messageContent }],
   })
 
@@ -752,7 +752,7 @@ Respond ONLY with valid JSON:
   const gradingResponse = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
-    system: gradingPrompt,
+    system: [{ type: 'text', text: gradingPrompt, cache_control: { type: 'ephemeral' } }],
     messages: [{
       role: 'user',
       content: [

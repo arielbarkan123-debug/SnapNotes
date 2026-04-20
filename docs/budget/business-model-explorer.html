@@ -1,0 +1,2379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X+1 Business Model Explorer - Ariel's Strategic Planning Tool</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0e1a;
+    --bg-elev: #111827;
+    --bg-card: #1a2235;
+    --bg-hover: #243149;
+    --border: #2a3449;
+    --border-strong: #3a4869;
+    --text: #e5e7eb;
+    --text-dim: #9ca3af;
+    --text-faint: #6b7280;
+    --accent: #c9a227;
+    --accent-hi: #f4d35e;
+    --accent-dim: #8a7020;
+    --green: #4ade80;
+    --red: #f87171;
+    --blue: #60a5fa;
+    --purple: #a78bfa;
+    --orange: #fb923c;
+    --cyan: #22d3ee;
+    --pink: #f472b6;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+  header {
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #1a2235 0%, #111827 100%);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    position: sticky; top: 0; z-index: 100;
+  }
+  header .brand { display: flex; align-items: baseline; gap: 12px; }
+  header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+  header h1 .x1 { color: var(--accent); }
+  header .tag { color: var(--text-dim); font-size: 12px; }
+  header .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .preset-btn, .mode-btn {
+    background: var(--bg-card); color: var(--text); border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;
+    font-family: var(--sans); transition: all 0.15s;
+  }
+  .preset-btn:hover, .mode-btn:hover { background: var(--bg-hover); border-color: var(--border-strong); }
+  .preset-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
+  main {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 64px);
+  }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
+  aside#controls {
+    background: var(--bg-elev);
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    overflow-y: auto;
+    max-height: calc(100vh - 70px);
+    position: sticky;
+    top: 70px;
+  }
+  @media (max-width: 1100px) {
+    aside#controls { position: static; max-height: none; }
+  }
+  section#output { padding: 16px 24px 80px; min-width: 0; }
+  .control-group {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .control-group:last-child { border-bottom: none; }
+  .control-group h3 {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+  }
+  .control-group h3 .collapse-icon { color: var(--text-dim); font-size: 10px; }
+  .control-group.collapsed .control-body { display: none; }
+  .control-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    gap: 8px;
+  }
+  .control-row label { font-size: 12px; color: var(--text-dim); flex: 1; }
+  .control-row .value {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent-hi);
+    min-width: 70px;
+    text-align: right;
+    font-weight: 600;
+  }
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    height: 4px; background: var(--bg-card); border-radius: 2px; width: 100%;
+    cursor: pointer; margin: 4px 0;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; background: var(--accent);
+    border-radius: 50%; cursor: pointer; border: 2px solid var(--bg);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 14px; height: 14px; background: var(--accent);
+    border-radius: 50%; cursor: pointer; border: 2px solid var(--bg);
+  }
+  input[type="number"], input[type="text"], select {
+    background: var(--bg-card); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 4px 8px; font-family: var(--mono); font-size: 12px;
+    width: 80px; text-align: right;
+  }
+  input[type="number"]:focus, select:focus { outline: none; border-color: var(--accent); }
+  select { text-align: left; width: 100%; cursor: pointer; }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+  .toggle input { display: none; }
+  .toggle .switch {
+    width: 32px; height: 18px; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: 10px;
+    position: relative; transition: background 0.2s;
+  }
+  .toggle .switch::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 12px; height: 12px; background: var(--text-dim);
+    border-radius: 50%; transition: all 0.2s;
+  }
+  .toggle input:checked + .switch { background: var(--accent); border-color: var(--accent); }
+  .toggle input:checked + .switch::after { left: 17px; background: #000; }
+  .segmented {
+    display: flex; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 2px; width: 100%;
+  }
+  .segmented button {
+    flex: 1; background: transparent; color: var(--text-dim);
+    border: none; padding: 4px 6px; font-size: 11px;
+    cursor: pointer; border-radius: 4px; font-family: var(--sans);
+    transition: all 0.15s;
+  }
+  .segmented button.active { background: var(--accent); color: #000; font-weight: 600; }
+  .segmented button:hover:not(.active) { color: var(--text); }
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px; margin-bottom: 20px;
+  }
+  .kpi {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px; position: relative; overflow: hidden;
+  }
+  .kpi::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px; background: var(--accent);
+  }
+  .kpi.good::before { background: var(--green); }
+  .kpi.bad::before { background: var(--red); }
+  .kpi.warn::before { background: var(--orange); }
+  .kpi-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .kpi-value { font-family: var(--mono); font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+  .kpi-sub { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+  .kpi-value.good { color: var(--green); }
+  .kpi-value.bad { color: var(--red); }
+  .kpi-value.warn { color: var(--orange); }
+  .panel {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px; margin-bottom: 16px;
+  }
+  .panel h2 {
+    font-size: 13px; font-weight: 700; margin-bottom: 4px;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .panel h2 .panel-hint { font-size: 11px; font-weight: 400; color: var(--text-dim); }
+  .panel .panel-sub { font-size: 11px; color: var(--text-dim); margin-bottom: 12px; }
+  .chart-wrap { width: 100%; overflow-x: auto; }
+  svg.chart { width: 100%; max-width: 100%; display: block; }
+  svg.chart text { font-family: var(--sans); fill: var(--text-dim); font-size: 10px; }
+  svg.chart .axis-label { font-size: 11px; fill: var(--text); font-weight: 600; }
+  svg.chart .grid { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 3; }
+  svg.chart .axis-line { stroke: var(--border-strong); stroke-width: 1; }
+  svg.chart .bar { transition: opacity 0.15s; }
+  svg.chart .bar:hover { opacity: 0.85; cursor: pointer; }
+  svg.chart .line { fill: none; stroke-width: 2; }
+  svg.chart .point { stroke-width: 2; }
+  svg.chart .zero-line { stroke: var(--text-dim); stroke-width: 1; stroke-dasharray: 3 2; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px;
+    font-size: 11px; color: var(--text-dim);
+  }
+  .legend-item { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+  .legend-item .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .legend-item.off { opacity: 0.35; text-decoration: line-through; }
+  table.data {
+    width: 100%; border-collapse: collapse; font-size: 11px; font-family: var(--mono);
+  }
+  table.data th, table.data td {
+    padding: 6px 8px; border-bottom: 1px solid var(--border);
+    text-align: right; white-space: nowrap;
+  }
+  table.data th {
+    background: var(--bg-elev); color: var(--text-dim);
+    font-weight: 600; text-transform: uppercase;
+    font-size: 10px; letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border-strong);
+  }
+  table.data th:first-child, table.data td:first-child { text-align: left; }
+  table.data td.pos { color: var(--green); }
+  table.data td.neg { color: var(--red); }
+  table.data tr:hover td { background: var(--bg-hover); }
+  .models-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .model-card {
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px; cursor: pointer;
+    transition: all 0.15s; position: relative;
+  }
+  .model-card:hover { border-color: var(--border-strong); }
+  .model-card.active { border-color: var(--accent); background: linear-gradient(135deg, #1a2235 0%, #2a2015 100%); }
+  .model-card .emoji { font-size: 20px; }
+  .model-card h4 { font-size: 13px; font-weight: 700; margin: 4px 0; }
+  .model-card p { font-size: 11px; color: var(--text-dim); line-height: 1.4; }
+  .model-card .profit-line { margin-top: 8px; font-family: var(--mono); font-size: 12px; font-weight: 700; }
+  .model-card .profit-line.pos { color: var(--green); }
+  .model-card .profit-line.neg { color: var(--red); }
+  .tooltip {
+    position: fixed; background: var(--bg-elev);
+    border: 1px solid var(--border-strong);
+    padding: 8px 10px; border-radius: 6px;
+    font-size: 11px; font-family: var(--mono);
+    pointer-events: none; z-index: 1000;
+    opacity: 0; transition: opacity 0.1s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5); max-width: 260px;
+  }
+  .tooltip.active { opacity: 1; }
+  .note-box {
+    background: var(--bg-elev); border-left: 3px solid var(--accent);
+    padding: 10px 14px; margin: 12px 0;
+    border-radius: 4px; font-size: 12px; color: var(--text-dim);
+    line-height: 1.5;
+  }
+  .note-box.warn { border-left-color: var(--orange); }
+  .note-box.danger { border-left-color: var(--red); }
+  .note-box.good { border-left-color: var(--green); }
+  .note-box strong { color: var(--text); }
+  details.gap {
+    margin-bottom: 8px; background: var(--bg-elev);
+    border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+  }
+  details.gap summary {
+    padding: 10px 14px; cursor: pointer; user-select: none;
+    font-weight: 600; font-size: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  details.gap summary::before { content: '>'; font-size: 10px; color: var(--text-dim); transition: transform 0.15s; }
+  details.gap[open] summary::before { transform: rotate(90deg); }
+  details.gap .gap-body { padding: 0 14px 12px 30px; font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+  details.gap .gap-body .impact { color: var(--accent-hi); font-family: var(--mono); font-size: 11px; }
+  .gap-tag {
+    display: inline-block; padding: 1px 6px; border-radius: 3px;
+    font-size: 9px; font-family: var(--mono);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    background: var(--bg-card); color: var(--text-dim);
+  }
+  .gap-tag.high { background: #4a1515; color: var(--red); }
+  .gap-tag.med { background: #4a3815; color: var(--orange); }
+  .gap-tag.low { background: #1a3a15; color: var(--green); }
+  .help {
+    display: inline-block; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--bg-card); color: var(--text-dim);
+    font-size: 9px; text-align: center; line-height: 14px;
+    cursor: help; margin-left: 4px; border: 1px solid var(--border);
+  }
+  .help:hover { color: var(--accent); border-color: var(--accent); }
+  .section-title {
+    font-size: 16px; font-weight: 700; margin: 24px 0 12px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    color: var(--accent); letter-spacing: -0.02em;
+  }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--bg-card); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+  .prompt-box {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px;
+    font-family: var(--mono); font-size: 12px;
+    line-height: 1.6; color: var(--text);
+    white-space: pre-wrap; max-height: 320px; overflow-y: auto;
+  }
+  .copy-btn {
+    background: var(--accent); color: #000; border: none;
+    padding: 8px 14px; border-radius: 6px; font-size: 12px;
+    font-weight: 700; cursor: pointer; font-family: var(--sans);
+  }
+  .copy-btn:hover { background: var(--accent-hi); }
+  .copy-btn.copied { background: var(--green); }
+  .copy-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 12px; flex-wrap: wrap; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 10px; font-family: var(--mono);
+    background: var(--bg-card); color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .pill.good { color: var(--green); border-color: #1a3a15; background: #1a3a1511; }
+  .pill.bad { color: var(--red); border-color: #4a1515; background: #4a151511; }
+  .pill.warn { color: var(--orange); border-color: #4a3815; background: #4a381511; }
+  .muted { color: var(--text-faint); font-size: 11px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1><span class="x1">X+1</span> Business Model Explorer</h1>
+    <span class="tag">Interactive scenario planning - verified 2026 pricing</span>
+  </div>
+  <div class="actions">
+    <span class="muted" id="lastUpdate">Live</span>
+    <button class="preset-btn" onclick="applyPreset('conservative')">Conservative</button>
+    <button class="preset-btn active" onclick="applyPreset('realistic')">Realistic</button>
+    <button class="preset-btn" onclick="applyPreset('optimistic')">Optimistic</button>
+    <button class="preset-btn" onclick="applyPreset('tutor')">Replace-the-Tutor</button>
+    <button class="preset-btn" onclick="applyPreset('viral')">Viral Growth</button>
+  </div>
+</header>
+
+<main>
+<aside id="controls">
+
+  <div class="control-group">
+    <h3 onclick="toggleGroup(this)">(1) Business model <span class="collapse-icon">v</span></h3>
+    <div class="control-body">
+      <div class="control-row"><label>Primary model</label></div>
+      <select id="model" onchange="state.model = this.value; renderPricingControls(); updateAll()">
+        <option value="freemium">[Free] Freemium - Free tier + paid (Duolingo-style)</option>
+        <option value="sub_budget">[$$] Subscription-only - Budget ($9.99/mo)</option>
+        <option value="sub_standard" selected>[***] Subscription-only - Standard ($19.99/mo)</option>
+        <option value="sub_premium">[Pro] Subscription-only - Premium ($39.99/mo)</option>
+        <option value="sub_luxury">[VIP] Luxury - Replace-the-tutor ($79.99/mo)</option>
+        <option value="ads">[TV] Totally free + ads (AdMob/banner)</option>
+        <option value="credits">[Cred] Pay-per-use - Credit packs</option>
+        <option value="hybrid">[Mix] Hybrid - Cheap base + AI credits</option>
+        <option value="family">[Fam] Family plan (3-5 students)</option>
+        <option value="b2b">[B2B] School / district licensing</option>
+      </select>
+      <div class="muted" id="modelDesc" style="margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <div class="control-group" id="pricingGroup">
+    <h3 onclick="toggleGroup(this)">(2) Pricing <span class="collapse-icon">v</span></h3>
+    <div class="control-body" id="pricingControls"></div>
+  </div>
+
+  <div class="control-group">
+    <h3 onclick="toggleGroup(this)">(3) Scale and usage <span class="collapse-icon">v</span></h3>
+    <div class="control-body">
+      <div class="control-row">
+        <label>Total active users <span class="help" title="Monthly active users.">?</span></label>
+        <span class="value" id="userCountVal">1,000</span>
+      </div>
+      <input type="range" id="userCount" min="50" max="50000" value="1000" step="50" oninput="state.userCount = +this.value; updateAll()">
+
+      <div class="control-row" style="margin-top:12px;">
+        <label>Conversion rate (free-to-paid) <span class="help" title="EdTech avg 2-5%. Duolingo 8.8%.">?</span></label>
+        <span class="value" id="conversionVal">5.0%</span>
+      </div>
+      <input type="range" id="conversion" min="1" max="20" value="5" step="0.5" oninput="state.conversion = +this.value; updateAll()">
+
+      <div class="control-row" style="margin-top:12px;">
+        <label>Monthly churn rate <span class="help" title="EdTech avg 9.6%/mo. Below 5% is great.">?</span></label>
+        <span class="value" id="churnVal">8.0%</span>
+      </div>
+      <input type="range" id="churn" min="1" max="25" value="8" step="0.5" oninput="state.churn = +this.value; updateAll()">
+
+      <div class="control-row" style="margin-top:12px;">
+        <label>CAC per paid user <span class="help" title="Consumer EdTech avg ~$42 (FB/TikTok).">?</span></label>
+        <span class="value" id="cacVal">$42</span>
+      </div>
+      <input type="range" id="cac" min="0" max="500" value="42" step="1" oninput="state.cac = +this.value; updateAll()">
+
+      <div class="control-row" style="margin-top:12px;">
+        <label>% international users</label>
+        <span class="value" id="intlVal">40%</span>
+      </div>
+      <input type="range" id="intl" min="0" max="100" value="40" step="5" oninput="state.intlPct = +this.value; updateAll()">
+    </div>
+  </div>
+
+  <div class="control-group">
+    <h3 onclick="toggleGroup(this)">(4) User mix (among active) <span class="collapse-icon">v</span></h3>
+    <div class="control-body">
+      <div class="muted" style="margin-bottom:8px;">How much AI do they actually use?</div>
+
+      <div class="control-row">
+        <label>Tryers (1-2 uses/mo, ~$1.4 cost)</label>
+        <span class="value" id="mixTryersVal">30%</span>
+      </div>
+      <input type="range" id="mixTryers" min="0" max="100" value="30" step="5" oninput="state.mix.tryers = +this.value; rebalanceMix('tryers'); updateAll()">
+
+      <div class="control-row" style="margin-top:10px;">
+        <label>Light (casual, ~$4.6 cost)</label>
+        <span class="value" id="mixLightVal">35%</span>
+      </div>
+      <input type="range" id="mixLight" min="0" max="100" value="35" step="5" oninput="state.mix.light = +this.value; rebalanceMix('light'); updateAll()">
+
+      <div class="control-row" style="margin-top:10px;">
+        <label>Medium (regular, ~$14.3 cost)</label>
+        <span class="value" id="mixMediumVal">25%</span>
+      </div>
+      <input type="range" id="mixMedium" min="0" max="100" value="25" step="5" oninput="state.mix.medium = +this.value; rebalanceMix('medium'); updateAll()">
+
+      <div class="control-row" style="margin-top:10px;">
+        <label>Heavy (power, ~$33 cost)</label>
+        <span class="value" id="mixHeavyVal">10%</span>
+      </div>
+      <input type="range" id="mixHeavy" min="0" max="100" value="10" step="5" oninput="state.mix.heavy = +this.value; rebalanceMix('heavy'); updateAll()">
+
+      <div class="muted" id="mixTotal" style="margin-top:6px;text-align:right;">Total: 100%</div>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <h3 onclick="toggleGroup(this)">(5) Cost optimization <span class="collapse-icon">v</span></h3>
+    <div class="control-body">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <label class="toggle">
+          <input type="checkbox" id="optCache" onchange="state.opt.cache = this.checked; updateAll()">
+          <span class="switch"></span>
+          <span>Prompt caching <span class="muted">(-35% AI)</span></span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="optHaiku" onchange="state.opt.haiku = this.checked; updateAll()">
+          <span class="switch"></span>
+          <span>Haiku for chat/QA <span class="muted">(-15% AI)</span></span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="optBatch" onchange="state.opt.batch = this.checked; updateAll()">
+          <span class="switch"></span>
+          <span>Batch API (async) <span class="muted">(-10% AI)</span></span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="optStartup" onchange="state.opt.startup = this.checked; updateAll()">
+          <span class="switch"></span>
+          <span>Anthropic Startup credits <span class="muted">($25-100K free)</span></span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="optFreeLimit" checked onchange="state.opt.freeLimit = this.checked; updateAll()">
+          <span class="switch"></span>
+          <span>Free-tier daily limits <span class="muted">(-60% free cost)</span></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <h3 onclick="toggleGroup(this)">(6) Infra and overhead <span class="collapse-icon">v</span></h3>
+    <div class="control-body">
+      <div class="control-row"><label>Supabase tier</label></div>
+      <div class="segmented" id="supaTier">
+        <button data-val="auto" class="active" onclick="setSupa('auto')">Auto</button>
+        <button data-val="free" onclick="setSupa('free')">Free</button>
+        <button data-val="pro" onclick="setSupa('pro')">Pro</button>
+        <button data-val="team" onclick="setSupa('team')">Team</button>
+      </div>
+
+      <div class="control-row" style="margin-top:12px;"><label>Vercel tier</label></div>
+      <div class="segmented" id="vercelTier">
+        <button data-val="pro" class="active" onclick="setVercel('pro')">Pro ($20)</button>
+        <button data-val="enterprise" onclick="setVercel('enterprise')">Enterprise</button>
+      </div>
+
+      <div class="control-row" style="margin-top:12px;">
+        <label>Founder salary $/mo</label>
+        <span class="value" id="salaryVal">$0</span>
+      </div>
+      <input type="range" id="salary" min="0" max="15000" value="0" step="500" oninput="state.salary = +this.value; updateAll()">
+
+      <div class="control-row" style="margin-top:12px;">
+        <label>Marketing $/mo (beyond CAC)</label>
+        <span class="value" id="marketingVal">$500</span>
+      </div>
+      <input type="range" id="marketing" min="0" max="20000" value="500" step="100" oninput="state.marketing = +this.value; updateAll()">
+
+      <div class="control-row" style="margin-top:12px;">
+        <label>Support $/user/mo <span class="help" title="Scales with users.">?</span></label>
+        <span class="value" id="supportVal">$0.50</span>
+      </div>
+      <input type="range" id="support" min="0" max="500" value="50" step="5" oninput="state.support = +this.value/100; updateAll()">
+
+      <div class="control-row" style="margin-top:12px;">
+        <label>Legal/accounting/other $/mo</label>
+        <span class="value" id="overheadVal">$200</span>
+      </div>
+      <input type="range" id="overhead" min="0" max="5000" value="200" step="50" oninput="state.overhead = +this.value; updateAll()">
+    </div>
+  </div>
+
+  <div class="control-group">
+    <h3 onclick="toggleGroup(this)">(7) Display and categories <span class="collapse-icon">v</span></h3>
+    <div class="control-body">
+      <div class="control-row"><label>Timeframe</label></div>
+      <div class="segmented">
+        <button onclick="setTimeframe('monthly')" id="tf_monthly" class="active">Monthly</button>
+        <button onclick="setTimeframe('annual')" id="tf_annual">Annual</button>
+      </div>
+
+      <div class="control-row" style="margin-top:12px;"><label>Chart type</label></div>
+      <div class="segmented">
+        <button onclick="setChart('overview')" id="ch_overview" class="active">Overview</button>
+        <button onclick="setChart('stacked')" id="ch_stacked">Stacked</button>
+        <button onclick="setChart('profit')" id="ch_profit">Profit</button>
+        <button onclick="setChart('compare')" id="ch_compare">Compare</button>
+      </div>
+
+      <div class="muted" style="margin-top:12px;">Show/hide categories:</div>
+      <div id="categoryToggles" style="margin-top:6px;"></div>
+    </div>
+  </div>
+
+  <div class="control-group" id="compareGroup" style="display:none;">
+    <h3 onclick="toggleGroup(this)">(8) Compare side-by-side <span class="collapse-icon">v</span></h3>
+    <div class="control-body">
+      <div class="muted" style="margin-bottom:8px;">Select up to 5 models:</div>
+      <div id="compareSelectors"></div>
+    </div>
+  </div>
+
+</aside>
+
+<section id="output">
+
+  <div class="section-title">Headline metrics at <span id="kpiScale">1,000 users</span></div>
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="panel">
+    <h2>
+      Revenue vs Cost vs Profit - by user scale
+      <span class="panel-hint" id="chartHint">Hover bars/lines for details</span>
+    </h2>
+    <div class="panel-sub" id="chartSub">Showing how each component scales as your user base grows</div>
+    <div class="chart-wrap"><svg class="chart" id="mainChart" viewBox="0 0 900 420" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <div class="legend" id="mainLegend"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Full breakdown table</h2>
+    <div class="panel-sub">Every number behind the chart - verifiable line by line</div>
+    <div style="overflow-x:auto;"><table class="data" id="breakdownTable"></table></div>
+  </div>
+
+  <div class="panel">
+    <h2>Unit economics per user type</h2>
+    <div class="panel-sub">What each type of user costs you monthly (AI only)</div>
+    <div class="chart-wrap"><svg class="chart" id="unitChart" viewBox="0 0 900 260" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <div class="legend" id="unitLegend"></div>
+  </div>
+
+  <div class="panel" id="modelsPanel">
+    <h2>All models at a glance - at current user count</h2>
+    <div class="panel-sub">Click any card to switch the main model</div>
+    <div class="models-grid" id="modelsGrid"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Break-even analysis</h2>
+    <div class="panel-sub">How many users until you are profitable at current assumptions?</div>
+    <div class="chart-wrap"><svg class="chart" id="breakevenChart" viewBox="0 0 900 260" preserveAspectRatio="xMidYMid meet"></svg></div>
+  </div>
+
+  <div class="panel">
+    <h2>LTV, CAC and payback period</h2>
+    <div class="panel-sub">The real drivers of a sustainable business</div>
+    <div id="ltvSummary"></div>
+  </div>
+
+  <div class="section-title">Assumptions and sources - every number traceable</div>
+  <div class="panel">
+    <h2>Cost per AI action (verified from codebase)</h2>
+    <div class="panel-sub">Computed from real pipeline call counts x token sizes x verified 2026 pricing</div>
+    <div style="overflow-x:auto;"><table class="data" id="actionCostsTable"></table></div>
+  </div>
+
+  <div class="panel">
+    <h2>
+      Monthly usage per user type
+      <span class="panel-hint">Editable - type new numbers and everything recalculates live</span>
+    </h2>
+    <div class="panel-sub">Click any number below to edit. Shapes how much AI each user type consumes -> flows into all cost calculations above.</div>
+    <div class="copy-bar" style="margin-bottom:10px;">
+      <div class="row" style="gap:6px;">
+        <span class="muted" style="margin-right:4px;">Quick presets:</span>
+        <button class="preset-btn" onclick="applyUsagePreset('minimal')">Minimal users</button>
+        <button class="preset-btn" onclick="applyUsagePreset('default')">Default (research-based)</button>
+        <button class="preset-btn" onclick="applyUsagePreset('heavy_exam')">Exam-week heavy</button>
+        <button class="preset-btn" onclick="applyUsagePreset('hw_only')">Homework-only use</button>
+      </div>
+      <button class="preset-btn" onclick="resetUsage()" style="border-color:var(--orange);color:var(--orange);">Reset all to defaults</button>
+    </div>
+    <div style="overflow-x:auto;"><table class="data" id="usageTable"></table></div>
+    <div class="muted" style="margin-top:8px;font-size:11px;">Units = number of times per month a user performs that action. Unit cost = Claude API pipeline cost per action (from verified codebase analysis).</div>
+  </div>
+
+  <div class="panel">
+    <h2>Verified 2026 pricing sources</h2>
+    <ul style="font-size:12px;color:var(--text-dim);line-height:1.7;margin-left:16px;">
+      <li><strong>Claude Sonnet 4.6</strong>: $3/MTok in, $15/MTok out (Feb 17, 2026). Prompt caching up to -90% reads; Batch API -50%. <span class="pill">Official</span></li>
+      <li><strong>Claude Haiku 4.5</strong>: $1/$5 per MTok - used for chat/classification optimization.</li>
+      <li><strong>Recraft V3</strong>: $0.04/raster, $0.08/vector image (diagrams).</li>
+      <li><strong>Supabase</strong>: Free ($0, 500MB, 50K MAU, pauses after 7d) - Pro ($25/mo, 8GB, 100K MAU) - Team ($599/mo). Overage: $0.125/GB DB, $0.09/GB egress, $0.00325/extra MAU.</li>
+      <li><strong>Vercel</strong>: Hobby FREE (non-commercial only!) - Pro $20/user/mo (1TB bandwidth, $0.15/GB overage). Fluid Compute: $0.128/CPU-hr, $0.0106/GB-hr, $0.60/M invocations.</li>
+      <li><strong>Stripe</strong>: US 2.9%+$0.30 domestic, +1.5% intl card, +1% currency conv. UK 1.5%+0.20 pounds. EU 1.5%+0.25 euros.</li>
+      <li><strong>Resend</strong>: Free 3000/mo - Pro $20/mo (50K) - Scale $90/mo (100K) - Overage $0.90/1000.</li>
+      <li><strong>EdTech conversion</strong>: 2.6% avg, 5-8% good, 8.8% Duolingo (best-in-class, +176% over 5 years).</li>
+      <li><strong>EdTech churn</strong>: 9.6%/mo average (high); 8-10%/yr is "acceptable" for the sector.</li>
+      <li><strong>EdTech CAC</strong>: Consumer ~$42 (Facebook ads), payback 3.8mo. Higher-ed B2B ~$1,143.</li>
+      <li><strong>AdMob eCPM</strong>: Banner $0.35-$1.15, interstitial $3.75-$6.50 global, rewarded video $8-$30.</li>
+    </ul>
+  </div>
+
+  <div class="section-title">Things you might have missed - strategic gaps and risks</div>
+  <div class="panel">
+    <div class="panel-sub" style="margin-bottom:12px;">Expand each item. Every one can change the math materially.</div>
+    <div id="gapsList"></div>
+  </div>
+
+  <div class="section-title">Paste-back prompt - current scenario as natural language</div>
+  <div class="panel">
+    <div class="copy-bar">
+      <span class="muted">Copy this to Claude to continue the strategic conversation with full context.</span>
+      <button class="copy-btn" id="copyBtn" onclick="copyPrompt()">Copy prompt</button>
+    </div>
+    <div class="prompt-box" id="promptBox"></div>
+  </div>
+
+</section>
+</main>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+/* ==========================================================================
+   VERIFIED 2026 PRICING - every number traceable to an official source
+   ========================================================================== */
+
+const PRICING = {
+  sonnet_in:  3.0,   // Claude Sonnet 4.6 - $/Mtok input
+  sonnet_out: 15.0,  // Claude Sonnet 4.6 - $/Mtok output
+  haiku_in:  1.0,    // Claude Haiku 4.5
+  haiku_out: 5.0,
+  recraft:    0.04,  // Recraft V3 raster
+  stripe_domestic: 0.029,
+  stripe_intl:     0.044,
+  stripe_flat:     0.30,
+  stripe_fx:       0.01,
+  app_store:       0.15,
+  domain_mo:       1.25,
+};
+
+function apiCost(inTok, outTok, model) {
+  const ip = model === 'haiku' ? PRICING.haiku_in  : PRICING.sonnet_in;
+  const op = model === 'haiku' ? PRICING.haiku_out : PRICING.sonnet_out;
+  return (inTok / 1e6) * ip + (outTok / 1e6) * op;
+}
+
+// Costs from real X+1 pipeline (see docs/budget/build_accurate_budget.py)
+const ACTION_COST = {
+  course:      apiCost(6800,4096) + apiCost(8000,16384) + apiCost(6000,8192)*2,
+  expansion:   apiCost(4000,8192),
+  hw_check:    apiCost(7800,4096) + apiCost(5800,2048) + apiCost(6000,4096) + apiCost(3000,1024),
+  hw_smart:    0.349,
+  chat_c:      apiCost(4000,1024),
+  chat_p:      apiCost(7000,4096),
+  practice:    apiCost(6000,4000) + apiCost(3000,2048)*3,
+  exam:        apiCost(8000,2048) * 2.5,
+  walkthrough: apiCost(3000,4096),
+  diagram:     apiCost(1000,20) + apiCost(3000,8192) + PRICING.recraft,
+  srs:         apiCost(4000,1024),
+  guide:       apiCost(6000,16384),
+};
+const CHAT_AVG = (ACTION_COST.chat_c + ACTION_COST.chat_p) / 2;
+
+const DEFAULT_USAGE = {
+  tryers:  { course: 1,  expansion: 0,  hw_check: 2,  chat: 5,   practice: 1,  exam: 0, walkthrough: 0,  diagram: 0, srs: 0,  guide: 0 },
+  light:   { course: 2,  expansion: 2,  hw_check: 8,  chat: 15,  practice: 3,  exam: 0, walkthrough: 2,  diagram: 1, srs: 1,  guide: 0 },
+  medium:  { course: 5,  expansion: 8,  hw_check: 25, chat: 50,  practice: 8,  exam: 2, walkthrough: 8,  diagram: 3, srs: 3,  guide: 1 },
+  heavy:   { course: 10, expansion: 20, hw_check: 50, chat: 120, practice: 20, exam: 5, walkthrough: 20, diagram: 8, srs: 8,  guide: 3 },
+};
+// Live mutable copy - user can edit via the usage table below.
+// All cost calculations read from this object, so edits propagate everywhere.
+const USAGE = JSON.parse(JSON.stringify(DEFAULT_USAGE));
+
+function setUsage(type, feature, val) {
+  const n = Math.max(0, Number(val) || 0);
+  USAGE[type][feature] = n;
+  updateAll();
+}
+
+function resetUsage() {
+  Object.keys(DEFAULT_USAGE).forEach(function(t) {
+    Object.keys(DEFAULT_USAGE[t]).forEach(function(f) {
+      USAGE[t][f] = DEFAULT_USAGE[t][f];
+    });
+  });
+  renderAssumptions();
+  updateAll();
+}
+
+function applyUsagePreset(name) {
+  // Quick usage presets - set all tiers in one click
+  const presets = {
+    minimal: { // barely-use-it
+      tryers:  { course: 1, expansion: 0, hw_check: 1, chat: 3,  practice: 0, exam: 0, walkthrough: 0, diagram: 0, srs: 0, guide: 0 },
+      light:   { course: 1, expansion: 1, hw_check: 4, chat: 8,  practice: 1, exam: 0, walkthrough: 1, diagram: 0, srs: 0, guide: 0 },
+      medium:  { course: 2, expansion: 3, hw_check: 10, chat: 20, practice: 3, exam: 1, walkthrough: 3, diagram: 1, srs: 1, guide: 0 },
+      heavy:   { course: 4, expansion: 8, hw_check: 20, chat: 50, practice: 8, exam: 2, walkthrough: 8, diagram: 3, srs: 3, guide: 1 },
+    },
+    default: DEFAULT_USAGE,
+    heavy_exam: { // exam-week behavior
+      tryers:  { course: 2, expansion: 1, hw_check: 4, chat: 10, practice: 2, exam: 0, walkthrough: 1, diagram: 0, srs: 0, guide: 0 },
+      light:   { course: 4, expansion: 4, hw_check: 15, chat: 30, practice: 6, exam: 1, walkthrough: 4, diagram: 2, srs: 2, guide: 1 },
+      medium:  { course: 10, expansion: 15, hw_check: 45, chat: 100, practice: 15, exam: 4, walkthrough: 15, diagram: 6, srs: 6, guide: 2 },
+      heavy:   { course: 15, expansion: 30, hw_check: 70, chat: 200, practice: 30, exam: 10, walkthrough: 30, diagram: 15, srs: 12, guide: 5 },
+    },
+    hw_only: { // only homework help use case
+      tryers:  { course: 0, expansion: 0, hw_check: 3, chat: 2, practice: 0, exam: 0, walkthrough: 1, diagram: 0, srs: 0, guide: 0 },
+      light:   { course: 0, expansion: 0, hw_check: 12, chat: 6, practice: 0, exam: 0, walkthrough: 5, diagram: 1, srs: 0, guide: 0 },
+      medium:  { course: 0, expansion: 0, hw_check: 35, chat: 15, practice: 0, exam: 0, walkthrough: 15, diagram: 4, srs: 0, guide: 0 },
+      heavy:   { course: 0, expansion: 0, hw_check: 70, chat: 30, practice: 0, exam: 0, walkthrough: 30, diagram: 10, srs: 0, guide: 0 },
+    },
+  };
+  const p = presets[name];
+  if (!p) return;
+  Object.keys(p).forEach(function(t) {
+    Object.keys(p[t]).forEach(function(f) {
+      USAGE[t][f] = p[t][f];
+    });
+  });
+  renderAssumptions();
+  updateAll();
+}
+
+function computeUserCost(usage, opts) {
+  let c = 0;
+  c += (usage.course      || 0) * ACTION_COST.course;
+  c += (usage.expansion   || 0) * ACTION_COST.expansion;
+  c += (usage.hw_check    || 0) * ACTION_COST.hw_check;
+  c += (usage.chat        || 0) * CHAT_AVG;
+  c += (usage.practice    || 0) * ACTION_COST.practice;
+  c += (usage.exam        || 0) * ACTION_COST.exam;
+  c += (usage.walkthrough || 0) * ACTION_COST.walkthrough;
+  c += (usage.diagram     || 0) * ACTION_COST.diagram;
+  c += (usage.srs         || 0) * ACTION_COST.srs;
+  c += (usage.guide       || 0) * ACTION_COST.guide;
+  let mult = 1.0;
+  if (opts.cache)   mult *= 0.65;
+  if (opts.haiku)   mult *= 0.85;
+  if (opts.batch)   mult *= 0.90;
+  if (opts.startup) mult *= 0.0;
+  return c * mult;
+}
+
+/* ==========================================================================
+   BUSINESS MODELS
+   ========================================================================== */
+
+const MODELS = {
+  freemium: {
+    name: 'Freemium (Free + 2 tiers)', emoji: 'F',
+    desc: 'Free tier, Basic, Pro. Duolingo-style. Free users subsidized by paying users.',
+    controls: [
+      { id: 'basicPrice', label: 'Basic tier $/mo', min: 4.99, max: 29.99, step: 1, default: 9.99, fmt: 'money' },
+      { id: 'proPrice',   label: 'Pro tier $/mo',   min: 9.99, max: 79.99, step: 1, default: 19.99, fmt: 'money' },
+      { id: 'basicShare', label: '% of paid = Basic', min: 0, max: 100, step: 5, default: 60, fmt: 'pct' },
+    ],
+    compute: function(u, p, s) {
+      const paid = u * (s.conversion/100);
+      const nBasic = paid * (p.basicShare/100);
+      const nPro = paid - nBasic;
+      const nFree = u - paid;
+      const gross = nBasic * p.basicPrice + nPro * p.proPrice;
+      return { nFree: nFree, nBasic: nBasic, nPro: nPro, nPaid: paid, gross: gross, adsRev: 0 };
+    }
+  },
+  sub_budget: {
+    name: 'Subscription - Budget', emoji: '$',
+    desc: 'No free tier. Cheap monthly price. High volume, low ARPU.',
+    controls: [
+      { id: 'price', label: 'Price $/mo', min: 2.99, max: 14.99, step: 0.5, default: 9.99, fmt: 'money' },
+      { id: 'trialDays', label: 'Free trial days', min: 0, max: 30, step: 1, default: 7, fmt: 'int' },
+    ],
+    compute: function(u, p, s) {
+      const paid = u * (s.conversion/100);
+      const nFree = u - paid;
+      return { nFree: nFree, nBasic: paid, nPro: 0, nPaid: paid, gross: paid * p.price, adsRev: 0 };
+    }
+  },
+  sub_standard: {
+    name: 'Subscription - Standard', emoji: '*',
+    desc: 'Mid-price sub ($19.99). No ads, no free tier. Focused audience.',
+    controls: [
+      { id: 'price', label: 'Price $/mo', min: 9.99, max: 39.99, step: 1, default: 19.99, fmt: 'money' },
+      { id: 'trialDays', label: 'Free trial days', min: 0, max: 30, step: 1, default: 7, fmt: 'int' },
+    ],
+    compute: function(u, p, s) {
+      const paid = u * (s.conversion/100);
+      const nFree = u - paid;
+      return { nFree: nFree, nBasic: paid, nPro: 0, nPaid: paid, gross: paid * p.price, adsRev: 0 };
+    }
+  },
+  sub_premium: {
+    name: 'Subscription - Premium', emoji: 'P',
+    desc: 'Higher price ($39.99). Positioned against tutoring (still 90% cheaper).',
+    controls: [
+      { id: 'price', label: 'Price $/mo', min: 19.99, max: 59.99, step: 1, default: 39.99, fmt: 'money' },
+      { id: 'trialDays', label: 'Free trial days', min: 0, max: 30, step: 1, default: 7, fmt: 'int' },
+    ],
+    compute: function(u, p, s) {
+      const paid = u * (s.conversion/100);
+      const nFree = u - paid;
+      return { nFree: nFree, nBasic: paid, nPro: 0, nPaid: paid, gross: paid * p.price, adsRev: 0 };
+    }
+  },
+  sub_luxury: {
+    name: 'Luxury - Replace-the-Tutor', emoji: 'L',
+    desc: 'Parents pay $50-80/hr for tutors. At $79.99/mo we are still 90%+ cheaper.',
+    controls: [
+      { id: 'price', label: 'Price $/mo', min: 49.99, max: 149.99, step: 1, default: 79.99, fmt: 'money' },
+      { id: 'annualDiscount', label: 'Annual discount %', min: 0, max: 50, step: 5, default: 20, fmt: 'pct' },
+    ],
+    compute: function(u, p, s) {
+      const paid = u * (s.conversion/100);
+      const nFree = u - paid;
+      return { nFree: nFree, nBasic: paid, nPro: 0, nPaid: paid, gross: paid * p.price, adsRev: 0 };
+    }
+  },
+  ads: {
+    name: 'Totally free + ads', emoji: 'A',
+    desc: 'Every user uses AI freely; you earn via ad impressions. Hard to profit at low eCPM.',
+    controls: [
+      { id: 'ecpm',       label: 'Blended eCPM $', min: 0.5, max: 15, step: 0.1, default: 2.5, fmt: 'money' },
+      { id: 'impressions', label: 'Impressions/user/mo', min: 10, max: 500, step: 10, default: 80, fmt: 'int' },
+    ],
+    compute: function(u, p, s) {
+      const adsRev = u * p.impressions * p.ecpm / 1000;
+      return { nFree: u, nBasic: 0, nPro: 0, nPaid: 0, gross: 0, adsRev: adsRev };
+    }
+  },
+  credits: {
+    name: 'Pay-per-use - Credit packs', emoji: 'C',
+    desc: 'Users buy credit packs. Every action profitable. Needs volume.',
+    controls: [
+      { id: 'packPrice',    label: 'Avg pack $', min: 4.99, max: 99.99, step: 1, default: 29.99, fmt: 'money' },
+      { id: 'packsPerUser', label: 'Packs/buyer/mo', min: 0.5, max: 5, step: 0.5, default: 1, fmt: 'float' },
+    ],
+    compute: function(u, p, s) {
+      const buyers = u * (s.conversion/100);
+      const nFree = u - buyers;
+      const gross = buyers * p.packPrice * p.packsPerUser;
+      return { nFree: nFree, nBasic: buyers, nPro: 0, nPaid: buyers, gross: gross, adsRev: 0 };
+    }
+  },
+  hybrid: {
+    name: 'Hybrid - Base + Credits', emoji: 'H',
+    desc: 'Low sub ($9.99) with included credits; pay more for topups. Best of both.',
+    controls: [
+      { id: 'basePrice', label: 'Base sub $/mo', min: 2.99, max: 29.99, step: 1, default: 9.99, fmt: 'money' },
+      { id: 'topupPrice', label: 'Topup pack $', min: 4.99, max: 49.99, step: 1, default: 14.99, fmt: 'money' },
+      { id: 'topupRate',  label: '% subs buying topup', min: 0, max: 100, step: 5, default: 40, fmt: 'pct' },
+    ],
+    compute: function(u, p, s) {
+      const subs = u * (s.conversion/100);
+      const nFree = u - subs;
+      const topups = subs * (p.topupRate/100);
+      const gross = subs * p.basePrice + topups * p.topupPrice;
+      return { nFree: nFree, nBasic: subs, nPro: 0, nPaid: subs, gross: gross, adsRev: 0 };
+    }
+  },
+  family: {
+    name: 'Family plan', emoji: 'F',
+    desc: 'Higher ARPU per household (3-5 students). Typical for $35-75/mo.',
+    controls: [
+      { id: 'price', label: 'Family $/mo', min: 19.99, max: 149.99, step: 1, default: 54.99, fmt: 'money' },
+      { id: 'students', label: 'Students/family', min: 2, max: 6, step: 1, default: 3, fmt: 'int' },
+    ],
+    compute: function(u, p, s) {
+      const households = u / p.students;
+      const payingHouseholds = households * (s.conversion/100);
+      const payingStudents = payingHouseholds * p.students;
+      const freeStudents = u - payingStudents;
+      return {
+        nFree: freeStudents, nBasic: payingStudents, nPro: 0,
+        nPaid: payingHouseholds, gross: payingHouseholds * p.price, adsRev: 0
+      };
+    }
+  },
+  b2b: {
+    name: 'B2B - School licensing', emoji: 'B',
+    desc: 'Schools pay per student. Lower per-seat but huge volumes + budget cycles.',
+    controls: [
+      { id: 'perStudent', label: '$/student/mo', min: 1.99, max: 29.99, step: 0.5, default: 6.99, fmt: 'money' },
+      { id: 'adoptionRate', label: '% seats active', min: 10, max: 100, step: 5, default: 65, fmt: 'pct' },
+    ],
+    compute: function(u, p, s) {
+      const activeStudents = u * (p.adoptionRate/100);
+      const freeStudents = u - activeStudents;
+      return {
+        nFree: freeStudents, nBasic: activeStudents, nPro: 0,
+        nPaid: u, gross: u * p.perStudent, adsRev: 0
+      };
+    }
+  },
+};
+
+/* ==========================================================================
+   INFRA / OVERHEAD SCALING
+   ========================================================================== */
+
+function supaCost(users, tier) {
+  if (tier === 'free')  return 0;
+  if (tier === 'pro')   return 25;
+  if (tier === 'team')  return 599;
+  if (users <= 100) return 0;
+  if (users <= 50000) {
+    let extra = 0;
+    if (users > 100000) extra += (users - 100000) * 0.00325;
+    if (users > 8000)   extra += (users - 8000) * 0.002;
+    return 25 + extra;
+  }
+  return 599;
+}
+
+function vercelCost(users, tier) {
+  if (tier === 'enterprise') return 500;
+  let cost = 20;
+  const gbUsed = users * 0.05;
+  if (gbUsed > 1000) cost += (gbUsed - 1000) * 0.15;
+  if (users > 5000) cost += (users - 5000) * 0.002;
+  return cost;
+}
+
+function emailCost(users) {
+  const emailsPerUser = 3;
+  const total = users * emailsPerUser;
+  if (total <= 3000)   return 0;
+  if (total <= 50000)  return 20;
+  if (total <= 100000) return 90;
+  return 90 + ((total - 100000) / 1000) * 0.90;
+}
+
+function stripeCost(gross, transactions, intlPct) {
+  if (gross === 0 || transactions === 0) return 0;
+  const dom = 1 - intlPct/100;
+  const intl = intlPct/100;
+  const volPct = dom * PRICING.stripe_domestic + intl * (PRICING.stripe_intl + PRICING.stripe_fx);
+  return gross * volPct + transactions * PRICING.stripe_flat;
+}
+
+/* ==========================================================================
+   STATE
+   ========================================================================== */
+
+const state = {
+  model: 'sub_standard',
+  userCount: 1000,
+  conversion: 5.0,
+  churn: 8.0,
+  cac: 42,
+  intlPct: 40,
+  mix: { tryers: 30, light: 35, medium: 25, heavy: 10 },
+  opt: { cache: false, haiku: false, batch: false, startup: false, freeLimit: true },
+  supaTier: 'auto',
+  vercelTier: 'pro',
+  salary: 0,
+  marketing: 500,
+  support: 0.5,
+  overhead: 200,
+  timeframe: 'monthly',
+  chart: 'overview',
+  modelParams: {},
+  showCat: {
+    revSub: true, revAds: true, revCredits: true,
+    aiCost: true, infra: true, stripe: true, cac: true,
+    salary: true, marketing: true, support: true, overhead: true,
+  },
+  compareSet: ['freemium','sub_standard','sub_premium','ads'],
+};
+
+Object.keys(MODELS).forEach(function(key) {
+  state.modelParams[key] = {};
+  MODELS[key].controls.forEach(function(c) { state.modelParams[key][c.id] = c.default; });
+});
+
+/* ==========================================================================
+   CORE CALCULATION
+   ========================================================================== */
+
+function computeScenario(userCount, model) {
+  model = model || state.model;
+  const modelDef = MODELS[model];
+  const params   = state.modelParams[model];
+  const result   = modelDef.compute(userCount, params, state);
+
+  const freeMult = state.opt.freeLimit ? 0.4 : 1.0;
+  const optCost = {
+    tryers: computeUserCost(USAGE.tryers, state.opt),
+    light:  computeUserCost(USAGE.light,  state.opt),
+    medium: computeUserCost(USAGE.medium, state.opt),
+    heavy:  computeUserCost(USAGE.heavy,  state.opt),
+  };
+
+  const totMix = state.mix.tryers + state.mix.light + state.mix.medium + state.mix.heavy;
+  const mTry = state.mix.tryers / totMix;
+  const mLt  = state.mix.light  / totMix;
+  const mMd  = state.mix.medium / totMix;
+  const mHv  = state.mix.heavy  / totMix;
+  const freePerUser = (mTry*optCost.tryers + mLt*optCost.light + mMd*optCost.medium + mHv*optCost.heavy) * freeMult;
+  const paidPerUser = 0.3*optCost.medium + 0.7*optCost.heavy;
+  const proPaidPerUser = optCost.heavy;
+
+  const aiFree  = result.nFree  * freePerUser;
+  const aiBasic = result.nBasic * paidPerUser;
+  const aiPro   = result.nPro   * proPaidPerUser;
+  const aiCost  = aiFree + aiBasic + aiPro;
+
+  const supa   = supaCost(userCount, state.supaTier);
+  const vercel = vercelCost(userCount, state.vercelTier);
+  const email  = emailCost(userCount);
+  const domain = PRICING.domain_mo;
+  const infra  = supa + vercel + email + domain;
+
+  const transactions = result.nPaid;
+  const stripe = stripeCost(result.gross, transactions, state.intlPct);
+
+  const monthlyNewPaid = result.nPaid * (state.churn/100);
+  const cacCost = monthlyNewPaid * state.cac;
+
+  const support = userCount * state.support;
+  const salary = state.salary;
+  const marketing = state.marketing;
+  const overhead = state.overhead;
+
+  const subRev = result.gross;
+  const adsRev = result.adsRev;
+  const grossRev = subRev + adsRev;
+  const netRev = grossRev - stripe;
+
+  const totalCost = aiCost + infra + cacCost + support + salary + marketing + overhead;
+  const profit = netRev - totalCost;
+  const grossMargin = grossRev > 0 ? (grossRev - aiCost - infra - stripe) / grossRev : 0;
+
+  const arpu = grossRev / userCount;
+  const arppu = result.nPaid > 0 ? grossRev / result.nPaid : 0;
+  const ltv = state.churn > 0 ? arppu * Math.max(0, grossMargin) * (100 / state.churn) : 0;
+  const ltvCacRatio = state.cac > 0 ? ltv / state.cac : 99;
+  const denom = arppu * Math.max(0.001, grossMargin);
+  const paybackMo = denom > 0 ? state.cac / denom : 999;
+
+  return {
+    userCount: userCount, model: model,
+    nFree: result.nFree, nBasic: result.nBasic, nPro: result.nPro, nPaid: result.nPaid,
+    subRev: subRev, adsRev: adsRev, grossRev: grossRev, netRev: netRev, stripe: stripe,
+    aiCost: aiCost, aiFree: aiFree, aiBasic: aiBasic, aiPro: aiPro,
+    infra: infra, supa: supa, vercel: vercel, email: email, domain: domain,
+    cacCost: cacCost, support: support, salary: salary, marketing: marketing, overhead: overhead,
+    totalCost: totalCost, profit: profit, grossMargin: grossMargin,
+    arpu: arpu, arppu: arppu, ltv: ltv, ltvCacRatio: ltvCacRatio, paybackMo: paybackMo,
+    monthlyNewPaid: monthlyNewPaid, params: params,
+  };
+}
+
+/* ==========================================================================
+   FORMATTERS
+   ========================================================================== */
+
+function fmtMoney(n) {
+  if (n == null || isNaN(n)) return '-';
+  const a = Math.abs(n);
+  if (a >= 1e6)  return (n<0?'-':'') + '$' + (a/1e6).toFixed(2) + 'M';
+  if (a >= 1e3)  return (n<0?'-':'') + '$' + (a/1e3).toFixed(a>=10e3?0:1) + 'k';
+  return (n<0?'-':'') + '$' + a.toFixed(a<10?2:0);
+}
+function fmtMoneyFull(n) {
+  if (n == null || isNaN(n)) return '-';
+  const s = Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: Math.abs(n)<10?2:0 });
+  return (n<0?'-':'') + '$' + s;
+}
+function fmtInt(n)  { return (n||0).toLocaleString('en-US', { maximumFractionDigits:0 }); }
+function fmtPct(n)  { return (n*100).toFixed(1) + '%'; }
+function applyTf(n) { return state.timeframe === 'annual' ? n * 12 : n; }
+function esc(s)     { return String(s).replace(/[&<>"']/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+
+/* ==========================================================================
+   RENDER - KPI BAR
+   ========================================================================== */
+
+const SCALES = [50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000];
+
+function renderKPI() {
+  const s = computeScenario(state.userCount);
+  document.getElementById('kpiScale').textContent = fmtInt(state.userCount) + ' users - ' +
+    (state.timeframe === 'annual' ? 'Annual' : 'Monthly');
+
+  const profit = applyTf(s.profit);
+  const gm = s.grossMargin;
+  const paid = s.nPaid;
+
+  const kpis = [
+    { lbl: 'Revenue',        val: fmtMoneyFull(applyTf(s.netRev)), sub: 'after Stripe fees', cls: 'good' },
+    { lbl: 'Total cost',     val: fmtMoneyFull(applyTf(s.totalCost)), sub: 'AI + infra + CAC + ops', cls: 'bad' },
+    { lbl: 'Profit',         val: fmtMoneyFull(profit), sub: profit>=0?'In the black':'Burning cash', cls: profit>=0?'good':'bad' },
+    { lbl: 'Gross margin',   val: fmtPct(gm), sub: gm>0.7?'Healthy':gm>0.4?'OK':'Tight', cls: gm>0.7?'good':gm>0.4?'warn':'bad' },
+    { lbl: 'Paying users',   val: fmtInt(paid), sub: fmtPct(paid/state.userCount), cls: 'good' },
+    { lbl: 'ARPU',           val: fmtMoneyFull(s.arpu), sub: 'per active user', cls: '' },
+    { lbl: 'ARPPU',          val: fmtMoneyFull(s.arppu), sub: 'per paying user', cls: '' },
+    { lbl: 'LTV : CAC',      val: s.ltvCacRatio.toFixed(1)+'x', sub: s.ltvCacRatio>3?'Healthy':s.ltvCacRatio>1?'Risky':'Broken', cls: s.ltvCacRatio>3?'good':s.ltvCacRatio>1?'warn':'bad' },
+    { lbl: 'Payback period', val: s.paybackMo>99?'inf':s.paybackMo.toFixed(1)+'mo', sub: 'months to recover CAC', cls: s.paybackMo<6?'good':s.paybackMo<12?'warn':'bad' },
+  ];
+
+  const grid = document.getElementById('kpiGrid');
+  grid.innerHTML = '';
+  kpis.forEach(function(k) {
+    const div = document.createElement('div');
+    div.className = 'kpi ' + k.cls;
+    const lbl = document.createElement('div'); lbl.className = 'kpi-label'; lbl.textContent = k.lbl;
+    const val = document.createElement('div'); val.className = 'kpi-value ' + k.cls; val.textContent = k.val;
+    const sub = document.createElement('div'); sub.className = 'kpi-sub'; sub.textContent = k.sub;
+    div.appendChild(lbl); div.appendChild(val); div.appendChild(sub);
+    grid.appendChild(div);
+  });
+}
+
+/* ==========================================================================
+   RENDER - MAIN CHART
+   ========================================================================== */
+
+function renderMainChart() {
+  const svg = document.getElementById('mainChart');
+  const legend = document.getElementById('mainLegend');
+  const chartType = state.chart;
+
+  if (chartType === 'compare') {
+    renderCompareChart(svg, legend);
+    document.getElementById('chartHint').textContent = 'Comparing profit across models';
+    document.getElementById('chartSub').textContent = 'Each line is a different business model - same user scale, same assumptions';
+    return;
+  }
+
+  const scenarios = SCALES.map(function(n) { return computeScenario(n); });
+  const W = 900, H = 420, PAD_L = 72, PAD_R = 20, PAD_T = 20, PAD_B = 56;
+
+  let valueKeys, colors, labels, title;
+  if (chartType === 'overview') {
+    valueKeys = ['netRev', 'totalCost', 'profit'];
+    colors = ['#4ade80', '#f87171', '#c9a227'];
+    labels = ['Net revenue', 'Total cost', 'Profit'];
+    title = 'Revenue vs cost vs profit';
+  } else if (chartType === 'stacked') {
+    valueKeys = ['aiCost', 'infra', 'stripe', 'cacCost', 'support', 'salary', 'marketing', 'overhead'];
+    colors = ['#60a5fa','#a78bfa','#22d3ee','#fb923c','#f472b6','#c9a227','#4ade80','#f87171'];
+    labels = ['AI (Claude/Recraft)', 'Infra (Supa+Vercel+Email)', 'Stripe fees', 'CAC', 'Support', 'Salary', 'Marketing', 'Overhead'];
+    title = 'Cost breakdown (stacked)';
+  } else if (chartType === 'profit') {
+    valueKeys = ['profit'];
+    colors = ['#c9a227'];
+    labels = ['Profit'];
+    title = 'Profit curve';
+  }
+
+  document.getElementById('chartHint').textContent = title;
+  document.getElementById('chartSub').textContent = state.timeframe === 'annual'
+    ? 'Showing annualized figures (monthly x 12)'
+    : 'Showing monthly figures';
+
+  let allVals = [];
+  scenarios.forEach(function(s) {
+    if (chartType === 'stacked') {
+      let sum = 0;
+      valueKeys.forEach(function(k) { sum += applyTf(s[k]||0); });
+      allVals.push(sum);
+    } else {
+      valueKeys.forEach(function(k) { allVals.push(applyTf(s[k])); });
+    }
+  });
+  if (chartType === 'overview' || chartType === 'profit') allVals.push(0);
+  let yMin = Math.min.apply(null, allVals);
+  let yMax = Math.max.apply(null, allVals);
+  if (yMin === yMax) yMax = yMin + 1;
+  const pad = (yMax - yMin) * 0.08;
+  yMin -= pad; yMax += pad;
+
+  function xScale(i) { return PAD_L + i * (W - PAD_L - PAD_R) / (scenarios.length - 1); }
+  function yScale(v) { return PAD_T + (1 - (v - yMin)/(yMax - yMin)) * (H - PAD_T - PAD_B); }
+  const zeroY = yScale(0);
+
+  const parts = [];
+  const ns = 'http://www.w3.org/2000/svg';
+
+  function addLine(x1,y1,x2,y2,cls,stroke,extra) {
+    parts.push('<line class="'+(cls||'')+'" x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'"'+(stroke?' stroke="'+stroke+'"':'')+(extra||'')+' />');
+  }
+  function addText(x,y,text,anchor,extra) {
+    parts.push('<text x="'+x+'" y="'+y+'"'+(anchor?' text-anchor="'+anchor+'"':'')+(extra||'')+'>'+esc(text)+'</text>');
+  }
+  function addRect(x,y,w,h,fill,opacity,lbl) {
+    parts.push('<rect class="bar" x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" fill="'+fill+'" opacity="'+opacity+'" data-lbl="'+esc(lbl)+'" />');
+  }
+
+  // Grid
+  for (let i = 0; i <= 5; i++) {
+    const v = yMin + (yMax - yMin) * i / 5;
+    const y = yScale(v);
+    addLine(PAD_L, y, W-PAD_R, y, 'grid');
+    addText(PAD_L-8, y+3, fmtMoney(v), 'end');
+  }
+  if (chartType !== 'stacked' && yMin < 0 && yMax > 0) {
+    addLine(PAD_L, zeroY, W-PAD_R, zeroY, 'zero-line');
+  }
+  scenarios.forEach(function(s, i) {
+    addText(xScale(i), H-PAD_B+20, fmtInt(s.userCount), 'middle');
+  });
+  addText((PAD_L + W - PAD_R)/2, H-10, 'Total users', 'middle', ' class="axis-label"');
+  addText(15, (PAD_T + H - PAD_B)/2, (state.timeframe === 'annual' ? '$ (annual)' : '$ (monthly)'), 'middle', ' class="axis-label" transform="rotate(-90 15 '+((PAD_T+H-PAD_B)/2)+')"');
+
+  if (chartType === 'stacked') {
+    const barW = (W - PAD_L - PAD_R) / scenarios.length * 0.7;
+    scenarios.forEach(function(s, i) {
+      const x = xScale(i) - barW/2;
+      let yAcc = zeroY;
+      valueKeys.forEach(function(k, j) {
+        const catMap = { aiCost: 'aiCost', infra: 'infra', stripe: 'stripe', cacCost: 'cac',
+          support: 'support', salary: 'salary', marketing: 'marketing', overhead: 'overhead' };
+        if (!state.showCat[catMap[k] || k]) return;
+        const val = applyTf(s[k]);
+        if (val === 0) return;
+        const h = Math.abs(yScale(0) - yScale(val));
+        yAcc -= h;
+        addRect(x, yAcc, barW, h, colors[j], 0.85, labels[j] + ' @ ' + fmtInt(s.userCount) + 'u = ' + fmtMoneyFull(val));
+      });
+    });
+  } else if (chartType === 'overview') {
+    const groupW = (W - PAD_L - PAD_R) / scenarios.length * 0.7;
+    const bw = groupW / 2.5;
+    scenarios.forEach(function(s, i) {
+      const cx = xScale(i);
+      if (state.showCat.revSub || state.showCat.revAds) {
+        const rv = applyTf(s.netRev);
+        const rh = Math.abs(yScale(0) - yScale(rv));
+        const ry = rv >= 0 ? yScale(rv) : yScale(0);
+        addRect(cx - bw - 2, ry, bw, rh, colors[0], 0.8, 'Revenue @ ' + fmtInt(s.userCount) + 'u = ' + fmtMoneyFull(rv));
+      }
+      if (state.showCat.aiCost || state.showCat.infra) {
+        const cv = applyTf(s.totalCost);
+        const ch = Math.abs(yScale(0) - yScale(cv));
+        const cy = cv >= 0 ? yScale(cv) : yScale(0);
+        addRect(cx + 2, cy, bw, ch, colors[1], 0.8, 'Cost @ ' + fmtInt(s.userCount) + 'u = ' + fmtMoneyFull(cv));
+      }
+    });
+    const points = scenarios.map(function(s, i) { return xScale(i) + ',' + yScale(applyTf(s.profit)); }).join(' ');
+    parts.push('<polyline class="line" points="' + points + '" stroke="' + colors[2] + '" stroke-width="2.5" fill="none" />');
+    scenarios.forEach(function(s, i) {
+      const x = xScale(i), y = yScale(applyTf(s.profit));
+      parts.push('<circle class="point" cx="'+x+'" cy="'+y+'" r="4" fill="'+colors[2]+'" data-lbl="'+esc('Profit @ ' + fmtInt(s.userCount) + 'u = ' + fmtMoneyFull(applyTf(s.profit)))+'" />');
+    });
+  } else if (chartType === 'profit') {
+    const barW = (W - PAD_L - PAD_R) / scenarios.length * 0.7;
+    scenarios.forEach(function(s, i) {
+      const v = applyTf(s.profit);
+      const x = xScale(i) - barW/2;
+      const y = v >= 0 ? yScale(v) : yScale(0);
+      const h = Math.abs(yScale(0) - yScale(v));
+      const c = v >= 0 ? '#4ade80' : '#f87171';
+      addRect(x, y, barW, h, c, 0.85, 'Profit @ ' + fmtInt(s.userCount) + 'u = ' + fmtMoneyFull(v));
+      const txtY = v >= 0 ? y - 4 : y + h + 14;
+      addText(xScale(i), txtY, fmtMoney(v), 'middle', ' fill="'+c+'" font-weight="bold" font-size="10"');
+    });
+  }
+
+  svg.innerHTML = parts.join('');
+
+  // Legend
+  legend.innerHTML = '';
+  labels.forEach(function(lbl, i) {
+    const catMap = {
+      'AI (Claude/Recraft)': 'aiCost', 'Infra (Supa+Vercel+Email)': 'infra',
+      'Stripe fees': 'stripe', 'CAC': 'cac', 'Support': 'support',
+      'Salary': 'salary', 'Marketing': 'marketing', 'Overhead': 'overhead',
+      'Net revenue': 'revSub', 'Total cost': 'aiCost', 'Profit': null,
+    };
+    const key = catMap[lbl];
+    const isOff = key && !state.showCat[key];
+    const span = document.createElement('span');
+    span.className = 'legend-item' + (isOff?' off':'');
+    if (key) span.onclick = function() { toggleCat(key); };
+    const sw = document.createElement('span');
+    sw.className = 'swatch';
+    sw.style.background = colors[i];
+    span.appendChild(sw);
+    span.appendChild(document.createTextNode(lbl));
+    legend.appendChild(span);
+  });
+
+  bindBarTooltips();
+}
+
+/* ==========================================================================
+   RENDER - COMPARE CHART
+   ========================================================================== */
+
+function renderCompareChart(svg, legend) {
+  const models = state.compareSet;
+  const scenarios = models.map(function(m) { return SCALES.map(function(n) { return computeScenario(n, m); }); });
+  const W = 900, H = 420, PAD_L = 72, PAD_R = 20, PAD_T = 20, PAD_B = 56;
+
+  let allVals = [];
+  scenarios.forEach(function(arr) { arr.forEach(function(s) { allVals.push(applyTf(s.profit)); }); });
+  allVals.push(0);
+  let yMin = Math.min.apply(null, allVals), yMax = Math.max.apply(null, allVals);
+  if (yMin === yMax) yMax = yMin + 1;
+  const pad = (yMax - yMin) * 0.08;
+  yMin -= pad; yMax += pad;
+
+  function xScale(i) { return PAD_L + i * (W - PAD_L - PAD_R) / (SCALES.length - 1); }
+  function yScale(v) { return PAD_T + (1 - (v - yMin)/(yMax - yMin)) * (H - PAD_T - PAD_B); }
+  const colors = ['#c9a227', '#60a5fa', '#4ade80', '#f472b6', '#fb923c'];
+
+  const parts = [];
+  for (let i = 0; i <= 5; i++) {
+    const v = yMin + (yMax - yMin) * i / 5;
+    const y = yScale(v);
+    parts.push('<line class="grid" x1="'+PAD_L+'" y1="'+y+'" x2="'+(W-PAD_R)+'" y2="'+y+'" />');
+    parts.push('<text x="'+(PAD_L-8)+'" y="'+(y+3)+'" text-anchor="end">'+esc(fmtMoney(v))+'</text>');
+  }
+  if (yMin < 0 && yMax > 0) {
+    parts.push('<line class="zero-line" x1="'+PAD_L+'" y1="'+yScale(0)+'" x2="'+(W-PAD_R)+'" y2="'+yScale(0)+'" />');
+  }
+  SCALES.forEach(function(n, i) {
+    parts.push('<text x="'+xScale(i)+'" y="'+(H-PAD_B+20)+'" text-anchor="middle">'+esc(fmtInt(n))+'</text>');
+  });
+  parts.push('<text x="'+((PAD_L + W - PAD_R)/2)+'" y="'+(H-10)+'" text-anchor="middle" class="axis-label">Total users</text>');
+  parts.push('<text x="15" y="'+((PAD_T + H - PAD_B)/2)+'" text-anchor="middle" class="axis-label" transform="rotate(-90 15 '+((PAD_T+H-PAD_B)/2)+')">'+esc(state.timeframe === 'annual' ? 'Profit (annual)' : 'Profit (monthly)')+'</text>');
+
+  scenarios.forEach(function(arr, mi) {
+    const pts = arr.map(function(s, i) { return xScale(i) + ',' + yScale(applyTf(s.profit)); }).join(' ');
+    parts.push('<polyline class="line" points="'+pts+'" stroke="'+colors[mi]+'" stroke-width="2.5" fill="none" />');
+    arr.forEach(function(s, i) {
+      parts.push('<circle cx="'+xScale(i)+'" cy="'+yScale(applyTf(s.profit))+'" r="3.5" fill="'+colors[mi]+'" data-lbl="'+esc(MODELS[models[mi]].name + ' @ ' + fmtInt(s.userCount) + 'u = ' + fmtMoneyFull(applyTf(s.profit)))+'" />');
+    });
+  });
+
+  svg.innerHTML = parts.join('');
+
+  legend.innerHTML = '';
+  models.forEach(function(m, i) {
+    const span = document.createElement('span');
+    span.className = 'legend-item';
+    const sw = document.createElement('span');
+    sw.className = 'swatch';
+    sw.style.background = colors[i];
+    span.appendChild(sw);
+    span.appendChild(document.createTextNode('[' + MODELS[m].emoji + '] ' + MODELS[m].name));
+    legend.appendChild(span);
+  });
+
+  bindBarTooltips();
+}
+
+
+/* ==========================================================================
+   RENDER - BREAKDOWN TABLE
+   ========================================================================== */
+
+function renderBreakdown() {
+  const rows = SCALES.map(function(n) { return computeScenario(n); });
+  const fmt = function(v) { return fmtMoneyFull(applyTf(v)); };
+  const headers = ['Users','Free','Paid','AI','Infra','Stripe','CAC','Support','Fixed','TOTAL cost','Net rev','Profit','Margin'];
+  const tbl = document.getElementById('breakdownTable');
+  tbl.innerHTML = '';
+  const thead = document.createElement('thead');
+  const htr = document.createElement('tr');
+  headers.forEach(function(h) {
+    const th = document.createElement('th');
+    th.textContent = h;
+    htr.appendChild(th);
+  });
+  thead.appendChild(htr);
+  tbl.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  rows.forEach(function(r) {
+    const tr = document.createElement('tr');
+    const fixed = r.salary + r.marketing + r.overhead;
+    const cells = [
+      { v: fmtInt(r.userCount), cls: '' },
+      { v: fmtInt(r.nFree), cls: '' },
+      { v: fmtInt(r.nPaid), cls: '' },
+      { v: fmt(r.aiCost), cls: '' },
+      { v: fmt(r.infra), cls: '' },
+      { v: fmt(r.stripe), cls: '' },
+      { v: fmt(r.cacCost), cls: '' },
+      { v: fmt(r.support), cls: '' },
+      { v: fmt(fixed), cls: '' },
+      { v: fmt(r.totalCost), cls: '' },
+      { v: fmt(r.netRev), cls: 'pos' },
+      { v: fmt(r.profit), cls: r.profit>=0?'pos':'neg' },
+      { v: fmtPct(r.grossMargin), cls: r.grossMargin>0.4?'pos':'neg' },
+    ];
+    cells.forEach(function(c) {
+      const td = document.createElement('td');
+      td.className = c.cls;
+      td.textContent = c.v;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+}
+
+/* ==========================================================================
+   RENDER - UNIT ECONOMICS
+   ========================================================================== */
+
+function renderUnitEconomics() {
+  const svg = document.getElementById('unitChart');
+  const W = 900, H = 260, PAD_L = 140, PAD_R = 80, PAD_T = 30, PAD_B = 30;
+
+  const opt = state.opt;
+  const types = [
+    { key:'tryers', lbl:'Tryer (1-2 uses)',  use: USAGE.tryers },
+    { key:'light',  lbl:'Light (casual)',     use: USAGE.light  },
+    { key:'medium', lbl:'Medium (regular)',   use: USAGE.medium },
+    { key:'heavy',  lbl:'Heavy (power)',      use: USAGE.heavy  },
+  ];
+  types.forEach(function(t) { t.cost = computeUserCost(t.use, opt); });
+
+  const maxCost = Math.max.apply(null, types.map(function(t) { return t.cost; }));
+  const maxVal = Math.max(maxCost * 1.1, 40);
+
+  const parts = [];
+  const rowH = (H - PAD_T - PAD_B) / types.length;
+
+  const ticks = [0, 10, 20, 30, 40];
+  ticks.forEach(function(v) {
+    if (v > maxVal) return;
+    const x = PAD_L + (v / maxVal) * (W - PAD_L - PAD_R);
+    parts.push('<line class="grid" x1="'+x+'" y1="'+PAD_T+'" x2="'+x+'" y2="'+(H - PAD_B)+'" />');
+    parts.push('<text x="'+x+'" y="'+(H - PAD_B + 16)+'" text-anchor="middle">$'+v+'</text>');
+  });
+
+  types.forEach(function(t, i) {
+    const y = PAD_T + i * rowH + rowH * 0.2;
+    const w = (t.cost / maxVal) * (W - PAD_L - PAD_R);
+    parts.push('<text x="'+(PAD_L - 8)+'" y="'+(y + rowH*0.35)+'" text-anchor="end">'+esc(t.lbl)+'</text>');
+    parts.push('<rect class="bar" x="'+PAD_L+'" y="'+y+'" width="'+w+'" height="'+(rowH*0.6)+'" fill="#60a5fa" opacity="0.8" data-lbl="'+esc(t.lbl + ': $' + t.cost.toFixed(2) + '/mo AI cost')+'" />');
+    parts.push('<text x="'+(PAD_L + w + 8)+'" y="'+(y + rowH*0.4)+'" fill="#c9a227" font-family="ui-monospace" font-size="11">$'+t.cost.toFixed(2)+'</text>');
+  });
+
+  const pricePoints = [
+    { v: 9.99,  lbl: '$9.99 Basic', color: '#4ade80' },
+    { v: 19.99, lbl: '$19.99 Std',  color: '#22d3ee' },
+    { v: 39.99, lbl: '$39.99 Prem', color: '#a78bfa' },
+  ];
+  pricePoints.forEach(function(p) {
+    if (p.v > maxVal) return;
+    const x = PAD_L + (p.v / maxVal) * (W - PAD_L - PAD_R);
+    parts.push('<line x1="'+x+'" y1="'+PAD_T+'" x2="'+x+'" y2="'+(H - PAD_B)+'" stroke="'+p.color+'" stroke-dasharray="3 3" stroke-width="1" opacity="0.6" />');
+    parts.push('<text x="'+(x+2)+'" y="'+(PAD_T - 10)+'" text-anchor="start" fill="'+p.color+'" font-size="9">'+esc(p.lbl)+'</text>');
+  });
+
+  svg.innerHTML = parts.join('');
+
+  const legend = document.getElementById('unitLegend');
+  legend.innerHTML = '';
+  types.forEach(function(t) {
+    const coveredBy9 = t.cost <= 9.99;
+    const coveredBy20 = t.cost <= 19.99;
+    const cls = coveredBy9 ? 'good' : coveredBy20 ? 'warn' : 'bad';
+    const lbl = coveredBy9 ? '<=$9.99' : coveredBy20 ? '<=$19.99' : 'needs >$20';
+    const span = document.createElement('span');
+    span.className = 'pill ' + cls;
+    span.textContent = t.key + ': ' + lbl;
+    legend.appendChild(span);
+    legend.appendChild(document.createTextNode(' '));
+  });
+
+  bindBarTooltips();
+}
+
+/* ==========================================================================
+   RENDER - MODEL CARDS
+   ========================================================================== */
+
+function renderModelsGrid() {
+  const grid = document.getElementById('modelsGrid');
+  grid.innerHTML = '';
+  const u = state.userCount;
+  Object.keys(MODELS).forEach(function(key) {
+    const m = MODELS[key];
+    const s = computeScenario(u, key);
+    const p = applyTf(s.profit);
+    const cls = key === state.model ? 'active' : '';
+    const pCls = p >= 0 ? 'pos' : 'neg';
+    const div = document.createElement('div');
+    div.className = 'model-card ' + cls;
+    div.onclick = function() { selectModel(key); };
+
+    const e = document.createElement('div'); e.className = 'emoji'; e.textContent = '[' + m.emoji + ']';
+    const h = document.createElement('h4'); h.textContent = m.name;
+    const pp = document.createElement('p'); pp.textContent = m.desc;
+    const pl = document.createElement('div'); pl.className = 'profit-line ' + pCls;
+    pl.textContent = fmtMoneyFull(p) + (state.timeframe==='annual'?' /yr':' /mo');
+    const mt = document.createElement('div'); mt.className = 'muted';
+    mt.style.fontSize = '10px'; mt.style.marginTop = '4px';
+    mt.textContent = 'Rev ' + fmtMoney(applyTf(s.netRev)) + ' - Cost ' + fmtMoney(applyTf(s.totalCost)) + ' - ' + fmtInt(s.nPaid) + ' paying';
+
+    div.appendChild(e); div.appendChild(h); div.appendChild(pp); div.appendChild(pl); div.appendChild(mt);
+    grid.appendChild(div);
+  });
+}
+
+/* ==========================================================================
+   RENDER - BREAK-EVEN
+   ========================================================================== */
+
+function renderBreakeven() {
+  const svg = document.getElementById('breakevenChart');
+  const W = 900, H = 260, PAD_L = 72, PAD_R = 20, PAD_T = 20, PAD_B = 40;
+
+  const scales = [];
+  for (let n = 50; n <= 20000; n += 50) scales.push(n);
+  const profits = scales.map(function(n) { return computeScenario(n).profit; });
+
+  let breakEvenAt = null;
+  for (let i = 0; i < scales.length; i++) {
+    if (profits[i] >= 0) { breakEvenAt = scales[i]; break; }
+  }
+
+  let yMin = Math.min.apply(null, profits.concat([0]));
+  let yMax = Math.max.apply(null, profits.concat([0]));
+  if (yMin === yMax) yMax = yMin + 1;
+  const pad = (yMax - yMin) * 0.08;
+  yMin -= pad; yMax += pad;
+
+  function xScale(n) { return PAD_L + (n / 20000) * (W - PAD_L - PAD_R); }
+  function yScale(v) { return PAD_T + (1 - (v - yMin)/(yMax - yMin)) * (H - PAD_T - PAD_B); }
+
+  const parts = [];
+  for (let i = 0; i <= 4; i++) {
+    const v = yMin + (yMax - yMin) * i / 4;
+    const y = yScale(v);
+    parts.push('<line class="grid" x1="'+PAD_L+'" y1="'+y+'" x2="'+(W-PAD_R)+'" y2="'+y+'" />');
+    parts.push('<text x="'+(PAD_L-8)+'" y="'+(y+3)+'" text-anchor="end">'+esc(fmtMoney(v))+'</text>');
+  }
+  const zeroY = yScale(0);
+  parts.push('<line class="zero-line" x1="'+PAD_L+'" y1="'+zeroY+'" x2="'+(W-PAD_R)+'" y2="'+zeroY+'" />');
+  [1000, 5000, 10000, 15000, 20000].forEach(function(n) {
+    const x = xScale(n);
+    parts.push('<text x="'+x+'" y="'+(H-PAD_B+18)+'" text-anchor="middle">'+esc(fmtInt(n))+'</text>');
+  });
+
+  const pts = scales.map(function(n, i) { return xScale(n) + ',' + yScale(profits[i]); }).join(' ');
+  parts.push('<polyline points="'+pts+'" stroke="#c9a227" stroke-width="2" fill="none" />');
+
+  if (breakEvenAt !== null) {
+    const x = xScale(breakEvenAt);
+    parts.push('<line x1="'+x+'" y1="'+PAD_T+'" x2="'+x+'" y2="'+(H-PAD_B)+'" stroke="#4ade80" stroke-dasharray="4 3" stroke-width="2" />');
+    parts.push('<text x="'+(x+6)+'" y="'+(PAD_T+14)+'" fill="#4ade80" font-weight="bold">Break-even: '+esc(fmtInt(breakEvenAt))+' users</text>');
+  } else {
+    parts.push('<text x="'+(PAD_L + 20)+'" y="'+(PAD_T+14)+'" fill="#f87171" font-weight="bold">Does not break even within 20,000 users at these assumptions</text>');
+  }
+
+  svg.innerHTML = parts.join('');
+}
+
+/* ==========================================================================
+   RENDER - LTV block
+   ========================================================================== */
+
+function renderLTV() {
+  const s = computeScenario(state.userCount);
+  const ltv = s.ltv;
+  const cac = state.cac;
+  const ratio = s.ltvCacRatio;
+  const payback = s.paybackMo;
+  const churnAnnual = 1 - Math.pow(1 - state.churn/100, 12);
+  const retentionAnnual = 1 - churnAnnual;
+
+  const ratioColor = ratio >= 3 ? 'good' : ratio >= 1 ? 'warn' : 'bad';
+  const ratioText = ratio >= 3 ? 'Healthy - $1 CAC returns $'+ratio.toFixed(1) : ratio >= 1 ? 'Tight but OK' : 'BROKEN - losing money per user';
+
+  const paybackColor = payback < 6 ? 'good' : payback < 12 ? 'warn' : 'bad';
+  const paybackText = payback > 99 ? 'Never - unit economics broken' :
+                      payback < 6 ? 'Excellent - fast recovery' :
+                      payback < 12 ? 'Acceptable - industry avg' : 'Slow - needs runway';
+
+  const container = document.getElementById('ltvSummary');
+  container.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'kpi-grid';
+
+  const kpis = [
+    { lbl: 'LTV (lifetime value)', val: fmtMoneyFull(ltv), sub: 'ARPPU x margin x 1/churn', cls: '' },
+    { lbl: 'CAC (per paid user)', val: fmtMoneyFull(cac), sub: 'marketing + ads per signup', cls: '' },
+    { lbl: 'LTV : CAC ratio', val: ratio.toFixed(1)+'x', sub: ratioText, cls: ratioColor },
+    { lbl: 'Payback period', val: payback>99?'inf':payback.toFixed(1)+' mo', sub: paybackText, cls: paybackColor },
+    { lbl: 'Annual churn', val: (churnAnnual*100).toFixed(0)+'%', sub: 'only '+(retentionAnnual*100).toFixed(0)+'% retained y1', cls: '' },
+    { lbl: 'Monthly new paid', val: fmtInt(s.monthlyNewPaid), sub: 'to offset churn', cls: '' },
+  ];
+  kpis.forEach(function(k) {
+    const div = document.createElement('div');
+    div.className = 'kpi ' + k.cls;
+    const lbl = document.createElement('div'); lbl.className = 'kpi-label'; lbl.textContent = k.lbl;
+    const val = document.createElement('div'); val.className = 'kpi-value ' + k.cls; val.textContent = k.val;
+    const sub = document.createElement('div'); sub.className = 'kpi-sub'; sub.textContent = k.sub;
+    div.appendChild(lbl); div.appendChild(val); div.appendChild(sub);
+    grid.appendChild(div);
+  });
+  container.appendChild(grid);
+
+  const note = document.createElement('div');
+  note.className = 'note-box ' + (ratio>=3 && payback<12 ? 'good' : 'warn');
+  const b = document.createElement('strong');
+  b.textContent = 'How to read this: ';
+  note.appendChild(b);
+  note.appendChild(document.createTextNode('A healthy SaaS has LTV:CAC >= 3:1 and payback < 12 months. EdTech often runs tight on both because of high churn (students graduate, lose interest). If your payback > 12 mo, you need runway to survive before each cohort pays back. If LTV:CAC < 1, every new user is making you lose money - you cannot fix this by scaling.'));
+  container.appendChild(note);
+}
+
+
+/* ==========================================================================
+   RENDER - ASSUMPTIONS TABLES
+   ========================================================================== */
+
+function renderAssumptions() {
+  const actions = [
+    ['Course generation', '4-5', 'OCR -> structure -> 2 lesson batches', ACTION_COST.course],
+    ['Lesson expansion',  '1',   'Expand outline -> full lesson',         ACTION_COST.expansion],
+    ['Homework check',    '4',   'Solve -> Read -> Grade -> QA',         ACTION_COST.hw_check],
+    ['HW check (smart)',  '6-7', '+ Decompose + Compute-verify',          ACTION_COST.hw_smart],
+    ['Chat (course)',     '1',   'History + Q -> A',                      ACTION_COST.chat_c],
+    ['Chat (prepare)',    '1',   'Guide + Q -> A',                        ACTION_COST.chat_p],
+    ['Practice session',  '4',   'Generate Qs + tutor per answer',       ACTION_COST.practice],
+    ['Exam generation',   '2-3', 'Course data -> question batches',       ACTION_COST.exam],
+    ['Walkthrough',       '1',   'Problem -> step-by-step',               ACTION_COST.walkthrough],
+    ['Diagram (+Recraft)','3-4', 'Classify -> Schema -> Generate',        ACTION_COST.diagram],
+    ['SRS card batch',    '1-2', 'Course -> flashcards',                  ACTION_COST.srs],
+    ['Prepare guide',     '1',   'Content -> full study guide',           ACTION_COST.guide],
+  ];
+  const tbl1 = document.getElementById('actionCostsTable');
+  tbl1.innerHTML = '';
+  const thead = document.createElement('thead');
+  const htr = document.createElement('tr');
+  ['Feature','Calls','What happens','Cost'].forEach(function(h) {
+    const th = document.createElement('th'); th.textContent = h; htr.appendChild(th);
+  });
+  thead.appendChild(htr);
+  tbl1.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  actions.forEach(function(a) {
+    const tr = document.createElement('tr');
+    [a[0], a[1], a[2], fmtMoneyFull(a[3])].forEach(function(v, i) {
+      const td = document.createElement('td');
+      if (i === 2) td.style.textAlign = 'left';
+      if (i === 2) td.style.color = 'var(--text-dim)';
+      td.textContent = v;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  tbl1.appendChild(tbody);
+
+  // Usage table
+  const actionKeys = ['course','expansion','hw_check','chat','practice','exam','walkthrough','diagram','srs','guide'];
+  const typeKeys = ['tryers','light','medium','heavy'];
+  const typeLabels = { tryers:'Tryer', light:'Light', medium:'Medium', heavy:'Heavy' };
+
+  const tbl2 = document.getElementById('usageTable');
+  tbl2.innerHTML = '';
+  const thead2 = document.createElement('thead');
+  const htr2 = document.createElement('tr');
+  const headers = ['Action'].concat(typeKeys.map(function(t){return typeLabels[t];})).concat(['Unit cost','Subtotal (medium)']);
+  headers.forEach(function(h) {
+    const th = document.createElement('th'); th.textContent = h; htr2.appendChild(th);
+  });
+  thead2.appendChild(htr2);
+  tbl2.appendChild(thead2);
+  const tbody2 = document.createElement('tbody');
+
+  // Friendly action labels + tooltips
+  const actionLabels = {
+    course: 'Course generation',
+    expansion: 'Lesson expansion',
+    hw_check: 'Homework check',
+    chat: 'Chat message',
+    practice: 'Practice session',
+    exam: 'Exam generation',
+    walkthrough: 'Walkthrough',
+    diagram: 'Diagram',
+    srs: 'SRS cards',
+    guide: 'Prepare guide',
+  };
+
+  actionKeys.forEach(function(k) {
+    const tr = document.createElement('tr');
+    const costKey = k === 'chat' ? null : k;
+    const unitCost = k === 'chat' ? CHAT_AVG : ACTION_COST[costKey];
+
+    // Action label cell
+    const tdLbl = document.createElement('td');
+    tdLbl.textContent = actionLabels[k] || k;
+    tdLbl.style.fontWeight = '600';
+    tr.appendChild(tdLbl);
+
+    // Editable cells per tier
+    typeKeys.forEach(function(t) {
+      const td = document.createElement('td');
+      td.style.padding = '2px 4px';
+      const inp = document.createElement('input');
+      inp.type = 'number';
+      inp.min = '0';
+      inp.max = '1000';
+      inp.step = '1';
+      inp.value = USAGE[t][k] || 0;
+      inp.style.width = '60px';
+      inp.style.textAlign = 'center';
+      inp.style.padding = '3px 4px';
+      inp.setAttribute('data-type', t);
+      inp.setAttribute('data-feature', k);
+      inp.addEventListener('input', function() {
+        setUsage(t, k, this.value);
+      });
+      td.appendChild(inp);
+      tr.appendChild(td);
+    });
+
+    // Unit cost cell (read-only)
+    const tdUnit = document.createElement('td');
+    tdUnit.textContent = fmtMoneyFull(unitCost);
+    tdUnit.style.color = 'var(--text-dim)';
+    tr.appendChild(tdUnit);
+
+    // Subtotal for medium user (editable usage * unit cost) - helps see where money goes
+    const tdSub = document.createElement('td');
+    const subtotal = (USAGE.medium[k] || 0) * unitCost;
+    tdSub.textContent = fmtMoneyFull(subtotal);
+    tdSub.style.color = subtotal > 1 ? 'var(--orange)' : 'var(--text-dim)';
+    tdSub.setAttribute('data-subtotal-row', k);
+    tr.appendChild(tdSub);
+
+    tbody2.appendChild(tr);
+  });
+  // Totals row - raw (no optimization)
+  const trTot = document.createElement('tr');
+  trTot.style.borderTop = '2px solid var(--border-strong)';
+  trTot.style.fontWeight = 'bold';
+  const noOpt = { cache:false, haiku:false, batch:false, startup:false };
+  const rawTotals = typeKeys.map(function(t) { return computeUserCost(USAGE[t], noOpt); });
+  const cells1 = ['TOTAL $/user/mo (raw)'].concat(rawTotals.map(fmtMoneyFull)).concat(['-','-']);
+  cells1.forEach(function(v) {
+    const td = document.createElement('td'); td.textContent = v; trTot.appendChild(td);
+  });
+  tbody2.appendChild(trTot);
+
+  // Totals row - with all optimizations
+  const trOpt = document.createElement('tr');
+  trOpt.style.fontWeight = 'bold'; trOpt.style.color = 'var(--green)';
+  const withOpt = { cache:true, haiku:true, batch:true, startup:false };
+  const optTotals = typeKeys.map(function(t) { return computeUserCost(USAGE[t], withOpt); });
+  const cells2 = ['With cache+Haiku+batch'].concat(optTotals.map(fmtMoneyFull)).concat(['-','-']);
+  cells2.forEach(function(v) {
+    const td = document.createElement('td'); td.textContent = v; trOpt.appendChild(td);
+  });
+  tbody2.appendChild(trOpt);
+
+  // Covered-by-price row: at $19.99 sub, which tiers are profitable?
+  const trCov = document.createElement('tr');
+  trCov.style.fontSize = '10px';
+  const netAtPrice = 19.99 * 0.965 - 0.30;  // after typical Stripe
+  const covCells = ['Covered by $19.99 sub (after Stripe)?'].concat(typeKeys.map(function(t, i) {
+    const raw = rawTotals[i];
+    const opt = optTotals[i];
+    if (opt <= netAtPrice && raw <= netAtPrice) return 'YES (raw too)';
+    if (opt <= netAtPrice) return 'YES (only with opt)';
+    return 'NO (-' + (opt - netAtPrice).toFixed(2) + '/user loss)';
+  })).concat(['','']);
+  covCells.forEach(function(v, i) {
+    const td = document.createElement('td');
+    td.textContent = v;
+    if (v.indexOf('YES (raw') === 0) td.style.color = 'var(--green)';
+    else if (v.indexOf('YES (only') === 0) td.style.color = 'var(--accent-hi)';
+    else if (v.indexOf('NO') === 0) td.style.color = 'var(--red)';
+    trCov.appendChild(td);
+  });
+  tbody2.appendChild(trCov);
+
+  tbl2.appendChild(tbody2);
+}
+
+/* ==========================================================================
+   GAPS - Things you might have missed
+   ========================================================================== */
+
+const GAPS = [
+  { tag: 'high', tit: 'Who actually pays? You target minors - minors cannot use credit cards.',
+    body: 'Most of your users are students 12-18. The payer is the parent or the student using the parent card. ' +
+    'You need a parent dashboard + parent-facing value prop. You have parent_email in the DB but no parent UI. ' +
+    'Marketing must target BOTH students (discovery) and parents (conversion). ' +
+    'Impact: +50-100% effective conversion if parents are engaged, -40% if you ignore them.' },
+
+  { tag: 'high', tit: 'Apple/Google App Store fees eat 15-30% of mobile revenue',
+    body: 'If you ship native iOS/Android apps, Apple & Google take 15% in year 1, 30% after on EVERY sub or IAP. ' +
+    'Web-based subs (Stripe) avoid this BUT retention is lower (less convenient). ' +
+    'For web-only: you keep ~97% after Stripe. For Apple IAP: you keep 70-85%. ' +
+    'Impact: -15 to -30% revenue if going native. Plan accordingly.' },
+
+  { tag: 'high', tit: 'Israel VAT (17%) on digital services',
+    body: 'You are based in Israel. Digital services to Israeli consumers include 17% VAT. ' +
+    'Register for VAT once you cross ~107K NIS/yr. EU: separate MOSS VAT. US: sales tax varies by state. ' +
+    'If you advertise $19.99, Israeli users pay $23.39. EU users pay EUR 23+ depending on country. ' +
+    'Impact: Must adjust pricing display & add 15-20% to international prices to match domestic margins.' },
+
+  { tag: 'high', tit: 'COPPA / GDPR / Israeli Privacy Law compliance for minors',
+    body: 'Users under 13 (US COPPA) or 16 (EU GDPR) require verified parental consent. ' +
+    'Cannot target ads to under-13. Must store and expose child data. ' +
+    'Legal risk is existential - a COPPA violation can be $43K per child. ' +
+    'Most EdTech startups handle this by restricting signups to 13+ or requiring a verified-parent flow. ' +
+    'Impact: Legal setup $2-5K upfront. Ongoing: ~$500/mo in compliance tooling.' },
+
+  { tag: 'high', tit: 'Refunds & chargebacks: budget 1-3% of revenue',
+    body: 'EdTech sees 2-4% refund rate and 0.5-1% chargeback rate. ' +
+    'Stripe chargeback fee: $15 per dispute (win or lose). Chargebacks >1% get your Stripe account flagged. ' +
+    'Annual plans = bigger chargeback exposure. ' +
+    'Impact: -1 to -3% net revenue. Higher for new accounts.' },
+
+  { tag: 'med', tit: 'Seasonality: summer / winter break dead months',
+    body: 'Students do not study 12 months/year. Real active months: 8-9. ' +
+    'Summer: usage drops 60-80%. Winter break: 30-50%. Exam weeks: spike 3-4x. ' +
+    'Annual-plan users: still paying but not using = pure margin. Monthly plan users: churn spikes before summer. ' +
+    'Impact: Average monthly revenue is 25-35% lower than peak-month revenue.' },
+
+  { tag: 'med', tit: 'Anthropic Startup Program - free $25K-$100K credits',
+    body: 'Anthropic offers startup credits. At 16 with 800-1000h in, you qualify. ' +
+    'Apply at claude.com/startups. AWS/GCP also offer $10K-$100K. Vercel startup program: $60K credits. ' +
+    'Supabase has one too. Apply to ALL - total runway boost: $100K-$250K of free infra. ' +
+    'Impact: Makes the first 12-18 months effectively AI-free. Huge.' },
+
+  { tag: 'med', tit: 'Insurance you need - but startups forget',
+    body: 'Once you have paying customers: E&O (errors & omissions) ~$1-3K/yr. Cyber liability ~$2-5K/yr. ' +
+    'General liability ~$500-1K/yr. D&O (once you have investors) ~$3-8K/yr. ' +
+    'Miami investors will require these before they wire money. ' +
+    'Impact: $400-1200/mo in insurance once operational.' },
+
+  { tag: 'med', tit: 'Israeli Bagrut is a unique moat - and a unique tax',
+    body: 'The Bagrut covers ~12 subjects with specific national curricula. ' +
+    'Israeli parents spend NIS 10K-30K/yr on private tutoring. High urgency. ' +
+    'But: must localize (Hebrew + Arabic), cover Israeli-specific curricula, NIS-USD currency risk. ' +
+    'Israeli wages ~60% of US - pricing power 20-30% lower. ' +
+    'Impact: Lower ARPU but much lower CAC (word of mouth works in Israel).' },
+
+  { tag: 'med', tit: 'Annual vs monthly pricing - the cashflow lever',
+    body: 'Annual @ 20% off = you get 12mo cash upfront at 80% yield. Churn effectively resets to ~1%/mo. ' +
+    'But: bigger chargeback risk, bigger refund ask, higher CAC friction. ' +
+    'Parents prefer annual (one decision). Students prefer monthly (low commitment). ' +
+    'Recommendation: offer BOTH. Price annual at 10x monthly (not 12x) for obvious savings. ' +
+    'Impact: 15-30% of paid users pick annual = 2-3x cash runway per cohort.' },
+
+  { tag: 'med', tit: 'Referral / viral loops - EdTech best acquisition channel',
+    body: 'Duolingo growth: 80% organic/viral. Your product has built-in sharing: ' +
+    'Student shares notes - friend wants to try. "My study buddy got a 95 thanks to X+1" testimonials. ' +
+    'Israeli WhatsApp groups are huge. Give 1 month free per referral (costs ~$5, acquires $100 LTV user). ' +
+    'Without viral: $42 CAC. With viral: 30-60% of acquisitions free. ' +
+    'Impact: Can cut effective CAC by 40-60%.' },
+
+  { tag: 'med', tit: 'NRR (Net Revenue Retention) - the metric VCs actually care about',
+    body: 'NRR = (Starting MRR - Churn MRR + Expansion MRR) / Starting MRR. ' +
+    'NRR > 100% = expansion > churn. EdTech avg NRR: 85-95% poor, 110-120% great. ' +
+    'Achieved via upsells (Basic -> Pro), add-ons (tutor hours), family plans. ' +
+    'Your levers: Exam Pass, subject packs, tutor chat. ' +
+    'Impact: Each 10% NRR improvement = ~2x terminal valuation.' },
+
+  { tag: 'low', tit: 'Regional pricing (purchasing power parity)',
+    body: '$19.99 feels very different in Sao Paulo vs SF. Brazil PPP: $7-9 equivalent. India: $3-5. ' +
+    'Israel: $14-17. Spotify, Netflix, Duolingo all do this. ' +
+    'Trade-off: revenue per user drops BUT conversion rises 3-5x in low-PPP markets. ' +
+    'Impact: Opens India/LATAM markets. +20-40% total users, -30% average ARPU.' },
+
+  { tag: 'low', tit: 'Founder agreement - you are 16 solo with investors coming',
+    body: 'You are 16, in Israel, 800-1000h solo, Miami investors coming. You need: ' +
+    'Founder agreement (covers IP, "what if I bring someone on"). ' +
+    'Israeli or Delaware C-corp formation. IP assignment. Vesting (4yr, 1yr cliff). Cap table (Carta/Pulley). ' +
+    'Investors will refuse to fund unincorporated. Do this BEFORE they wire. ' +
+    'Impact: $3-8K legal. Without: risk losing control.' },
+
+  { tag: 'low', tit: 'Content moderation & safety for K-12',
+    body: 'Students can upload homework images. Some will try inappropriate content. ' +
+    'Need: image moderation (Claude can do this, or AWS Rekognition). Text filters. Reporting queue. ' +
+    'COPPA-safe ad partners. Mental health safety language (students stressed about grades). ' +
+    'Budget: $100-300/mo for moderation APIs + staff time for reviews. ' +
+    'Impact: Minor $ cost, but a missed issue can be PR-ending.' },
+
+  { tag: 'low', tit: 'Customer support scales faster than you think',
+    body: 'At 100 users: occasional ticket. At 1000: ~20/week (2-3 hrs/day). At 10K: full-time job. ' +
+    'Options: self-serve FAQ (40%). AI chatbot L1 (30%). Human $20-40/hr (remote Portugal/Mexico/Philippines). ' +
+    'Escalation to you for technical. Budget: $0.30-$1 per user per month at maturity. ' +
+    'Impact: Set the Support slider realistically.' },
+
+  { tag: 'low', tit: 'A/B testing & analytics tooling - not in your costs yet',
+    body: 'PostHog free 1M events/mo. Beyond: PostHog paid ~$50-200/mo. Mixpanel similar. ' +
+    'Segment data pipeline $120+/mo. Amplitude free 50K MTU then $$. Hotjar $32-99/mo. ' +
+    'Pricing/feature A/B tests need ~$200-500/mo at scale. ' +
+    'Impact: +$200-700/mo overhead at scale. Add to overhead slider.' },
+
+  { tag: 'low', tit: 'CDN, image optimization, ongoing perf tuning',
+    body: 'Vercel gives CDN + image optimization - but at scale: image transforms $5/1000 beyond free. ' +
+    'ISR counts as invocations. Edge functions metered. Video: Mux ($.002/min) or Cloudflare Stream. ' +
+    'Image-heavy app (X+1 shows diagrams): 5-10GB egress/mo/1000 users. ' +
+    'Impact: +$50-300/mo at 5K+ users depending on media density.' },
+
+  { tag: 'low', tit: 'Anchor pricing - $79.99 "luxury" tier changes how $19.99 feels',
+    body: 'Having a premium tier nobody buys makes the middle tier feel cheap. ' +
+    'Apple does this with $159 AirPods Max vs $249 MagSafe Duo. SaaS offers "Enterprise" at $$$. ' +
+    'Your $79.99 tier - makes $19.99 feel trivial. 3-tier pricing converts 30% higher than 2-tier. ' +
+    'Do not market $79.99 hard - just have it visible. ' +
+    'Impact: +15-30% conversion on standard tier via contrast effect.' },
+
+  { tag: 'low', tit: 'Cashflow != profit: you can be profitable and bankrupt',
+    body: 'Monthly profit does not tell you if you will survive. Watch: ' +
+    'Cash runway (bank / monthly burn) - want 12-18 months. Stripe payout lag 2-7 days. ' +
+    'Refund reserve (5-10% held if risk flags). Annual plans = cash upfront but 12mo deferred. ' +
+    'Payment failures 5-10%/mo - need dunning (retry logic). ' +
+    'Impact: ~3-8% revenue locked up in transit/reserves at any time.' },
+];
+
+function renderGaps() {
+  const list = document.getElementById('gapsList');
+  list.innerHTML = '';
+  GAPS.forEach(function(g, i) {
+    const d = document.createElement('details');
+    d.className = 'gap';
+    if (i < 3) d.open = true;
+    const s = document.createElement('summary');
+    s.textContent = g.tit + ' ';
+    const tag = document.createElement('span');
+    tag.className = 'gap-tag ' + g.tag;
+    tag.textContent = g.tag === 'high' ? 'HIGH IMPACT' : g.tag === 'med' ? 'MEDIUM' : 'CONSIDER';
+    s.appendChild(tag);
+    d.appendChild(s);
+    const body = document.createElement('div');
+    body.className = 'gap-body';
+    body.textContent = g.body;
+    d.appendChild(body);
+    list.appendChild(d);
+  });
+}
+
+/* ==========================================================================
+   RENDER - CATEGORY TOGGLES & COMPARE SELECTORS
+   ========================================================================== */
+
+const CATEGORY_LABELS = {
+  aiCost: 'AI costs',
+  infra: 'Infra',
+  stripe: 'Stripe',
+  cac: 'CAC',
+  salary: 'Salary',
+  marketing: 'Marketing',
+  support: 'Support',
+  overhead: 'Overhead',
+};
+
+function renderCategoryToggles() {
+  const c = document.getElementById('categoryToggles');
+  c.innerHTML = '';
+  Object.keys(CATEGORY_LABELS).forEach(function(k) {
+    const label = document.createElement('label');
+    label.className = 'toggle';
+    label.style.display = 'flex';
+    label.style.marginBottom = '4px';
+    const inp = document.createElement('input');
+    inp.type = 'checkbox';
+    inp.checked = !!state.showCat[k];
+    inp.onchange = function() { state.showCat[k] = this.checked; updateAll(); };
+    const sw = document.createElement('span'); sw.className = 'switch';
+    const txt = document.createElement('span'); txt.style.fontSize = '11px'; txt.textContent = CATEGORY_LABELS[k];
+    label.appendChild(inp); label.appendChild(sw); label.appendChild(txt);
+    c.appendChild(label);
+  });
+}
+
+function toggleCat(key) {
+  if (state.showCat[key] !== undefined) {
+    state.showCat[key] = !state.showCat[key];
+    renderCategoryToggles();
+    updateAll();
+  }
+}
+
+function renderCompareSelectors() {
+  const c = document.getElementById('compareSelectors');
+  c.innerHTML = '';
+  Object.keys(MODELS).forEach(function(k) {
+    const label = document.createElement('label');
+    label.className = 'toggle';
+    label.style.display = 'flex';
+    label.style.marginBottom = '4px';
+    const inp = document.createElement('input');
+    inp.type = 'checkbox';
+    inp.checked = state.compareSet.indexOf(k) >= 0;
+    inp.onchange = function() { toggleCompare(k, this.checked); };
+    const sw = document.createElement('span'); sw.className = 'switch';
+    const txt = document.createElement('span'); txt.style.fontSize = '11px';
+    txt.textContent = '[' + MODELS[k].emoji + '] ' + MODELS[k].name;
+    label.appendChild(inp); label.appendChild(sw); label.appendChild(txt);
+    c.appendChild(label);
+  });
+}
+
+function toggleCompare(key, checked) {
+  if (checked) {
+    if (state.compareSet.length >= 5) { alert('Max 5 models'); return; }
+    if (state.compareSet.indexOf(key) < 0) state.compareSet.push(key);
+  } else {
+    state.compareSet = state.compareSet.filter(function(k) { return k !== key; });
+  }
+  updateAll();
+}
+
+/* ==========================================================================
+   RENDER - PRICING CONTROLS (per model)
+   ========================================================================== */
+
+function renderPricingControls() {
+  const m = MODELS[state.model];
+  document.getElementById('modelDesc').textContent = m.desc;
+
+  const p = state.modelParams[state.model];
+  const c = document.getElementById('pricingControls');
+  c.innerHTML = '';
+  m.controls.forEach(function(ctl) {
+    const val = p[ctl.id];
+    const row = document.createElement('div');
+    row.className = 'control-row';
+    const label = document.createElement('label');
+    label.textContent = ctl.label;
+    const value = document.createElement('span');
+    value.className = 'value';
+    value.id = 'pc_' + ctl.id + '_val';
+    value.textContent = formatCtl(ctl, val);
+    row.appendChild(label); row.appendChild(value);
+    c.appendChild(row);
+
+    const inp = document.createElement('input');
+    inp.type = 'range';
+    inp.min = ctl.min;
+    inp.max = ctl.max;
+    inp.step = ctl.step;
+    inp.value = val;
+    inp.id = 'pc_' + ctl.id;
+    inp.oninput = (function(id, ctl) {
+      return function() { setModelParam(id, +this.value, ctl); };
+    })(ctl.id, ctl);
+    c.appendChild(inp);
+  });
+}
+
+function formatCtl(ctl, val) {
+  if (ctl.fmt === 'money') return '$' + val.toFixed(2);
+  if (ctl.fmt === 'pct')   return val + '%';
+  if (ctl.fmt === 'float') return val.toFixed(1);
+  return fmtInt(val);
+}
+
+function setModelParam(id, val, ctl) {
+  state.modelParams[state.model][id] = val;
+  const span = document.getElementById('pc_' + id + '_val');
+  if (span) span.textContent = formatCtl(ctl, val);
+  updateAll();
+}
+
+/* ==========================================================================
+   RENDER - PROMPT
+   ========================================================================== */
+
+function updatePrompt() {
+  const s = computeScenario(state.userCount);
+  const mdl = MODELS[state.model];
+  const p = state.modelParams[state.model];
+
+  const pricing = mdl.controls.map(function(c) {
+    const v = p[c.id];
+    if (c.fmt === 'money') return c.label + ' $' + v.toFixed(2);
+    if (c.fmt === 'pct')   return c.label + ' ' + v + '%';
+    return c.label + ' ' + v;
+  }).join(', ');
+
+  const opts = [];
+  if (state.opt.cache)   opts.push('prompt caching');
+  if (state.opt.haiku)   opts.push('Haiku for chat/QA');
+  if (state.opt.batch)   opts.push('Batch API');
+  if (state.opt.startup) opts.push('Anthropic Startup credits (AI free)');
+  if (state.opt.freeLimit) opts.push('free-tier daily limits');
+  const optText = opts.length ? 'Optimizations enabled: ' + opts.join(', ') + '. ' : 'No cost optimizations enabled. ';
+
+  const mixText = 'User mix: ' + state.mix.tryers + '% tryers, ' + state.mix.light + '% light, ' +
+                  state.mix.medium + '% medium, ' + state.mix.heavy + '% heavy.';
+
+  const tf = state.timeframe === 'annual' ? 'annual' : 'monthly';
+  const mul = state.timeframe === 'annual' ? 12 : 1;
+
+  const text =
+    'X+1 business model scenario - [' + mdl.emoji + '] ' + mdl.name + ' @ ' + fmtInt(state.userCount) + ' ' + tf + ' active users.\n\n' +
+    'Pricing: ' + pricing + '.\n' +
+    optText + mixText + '\n' +
+    'Assumed conversion ' + state.conversion + '%, monthly churn ' + state.churn + '%, CAC $' + state.cac + ', ' + state.intlPct + '% international users.\n' +
+    'Infra: Supabase ' + state.supaTier + ', Vercel ' + state.vercelTier + '. Founder salary $' + state.salary + '/mo, marketing $' + state.marketing + '/mo, overhead $' + state.overhead + '/mo, support $' + (state.support*1000).toFixed(0) + '/1000 users/mo.\n\n' +
+    'Result (' + tf + '):\n' +
+    '- Net revenue: ' + fmtMoneyFull(s.netRev * mul) + '\n' +
+    '- Total cost: ' + fmtMoneyFull(s.totalCost * mul) + '  (AI ' + fmtMoney(s.aiCost*mul) + ' + infra ' + fmtMoney(s.infra*mul) + ' + Stripe ' + fmtMoney(s.stripe*mul) + ' + CAC ' + fmtMoney(s.cacCost*mul) + ' + support ' + fmtMoney(s.support*mul) + ' + fixed ' + fmtMoney((s.salary+s.marketing+s.overhead)*mul) + ')\n' +
+    '- Profit: ' + fmtMoneyFull(s.profit * mul) + '  (gross margin ' + fmtPct(s.grossMargin) + ')\n' +
+    '- ' + fmtInt(s.nPaid) + ' paying users (' + fmtPct(s.nPaid/state.userCount) + '), ' + fmtInt(s.nFree) + ' free.\n' +
+    '- LTV ' + fmtMoneyFull(s.ltv) + ', LTV:CAC ' + s.ltvCacRatio.toFixed(1) + 'x, payback ' + (s.paybackMo>99?'infinite':s.paybackMo.toFixed(1)+' mo') + '.\n\n' +
+    'What should I do next - which model, which price, which optimization to prioritize?';
+
+  document.getElementById('promptBox').textContent = text;
+}
+
+function copyPrompt() {
+  const text = document.getElementById('promptBox').textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function() {
+      btn.textContent = 'Copy prompt';
+      btn.classList.remove('copied');
+    }, 1200);
+  }).catch(function() {
+    alert('Copy failed - please select the text manually');
+  });
+}
+
+/* ==========================================================================
+   UI HELPERS
+   ========================================================================== */
+
+function toggleGroup(el) {
+  el.parentElement.classList.toggle('collapsed');
+  const icon = el.querySelector('.collapse-icon');
+  if (icon) icon.textContent = el.parentElement.classList.contains('collapsed') ? '>' : 'v';
+}
+
+function selectModel(key) {
+  state.model = key;
+  document.getElementById('model').value = key;
+  renderPricingControls();
+  updateAll();
+}
+
+function setSupa(v) {
+  state.supaTier = v;
+  const btns = document.querySelectorAll('#supaTier button');
+  btns.forEach(function(b) { b.classList.toggle('active', b.dataset.val === v); });
+  updateAll();
+}
+function setVercel(v) {
+  state.vercelTier = v;
+  const btns = document.querySelectorAll('#vercelTier button');
+  btns.forEach(function(b) { b.classList.toggle('active', b.dataset.val === v); });
+  updateAll();
+}
+function setTimeframe(v) {
+  state.timeframe = v;
+  document.getElementById('tf_monthly').classList.toggle('active', v === 'monthly');
+  document.getElementById('tf_annual').classList.toggle('active', v === 'annual');
+  updateAll();
+}
+function setChart(v) {
+  state.chart = v;
+  ['overview','stacked','profit','compare'].forEach(function(k) {
+    document.getElementById('ch_'+k).classList.toggle('active', v === k);
+  });
+  document.getElementById('compareGroup').style.display = v === 'compare' ? 'block' : 'none';
+  updateAll();
+}
+
+function rebalanceMix(changed) {
+  const total = state.mix.tryers + state.mix.light + state.mix.medium + state.mix.heavy;
+  if (Math.abs(total - 100) < 1) return;
+  const others = ['tryers','light','medium','heavy'].filter(function(k) { return k !== changed; });
+  const otherSum = others.reduce(function(a, k) { return a + state.mix[k]; }, 0);
+  const target = 100 - state.mix[changed];
+  if (otherSum > 0 && target >= 0) {
+    const ratio = target / otherSum;
+    others.forEach(function(k) { state.mix[k] = Math.max(0, Math.round(state.mix[k] * ratio / 5) * 5); });
+    const diff = 100 - state.mix[changed] - others.reduce(function(a, k) { return a + state.mix[k]; }, 0);
+    if (diff !== 0 && others.length) state.mix[others[0]] = Math.max(0, state.mix[others[0]] + diff);
+  }
+  ['tryers','light','medium','heavy'].forEach(function(k) {
+    const slider = document.getElementById('mix' + k.charAt(0).toUpperCase() + k.slice(1));
+    if (slider) slider.value = state.mix[k];
+  });
+}
+
+/* ==========================================================================
+   PRESETS
+   ========================================================================== */
+
+function applyPreset(name) {
+  const presets = {
+    conservative: {
+      model: 'sub_standard',
+      conversion: 3, churn: 12, cac: 60, intlPct: 40,
+      mix: { tryers: 40, light: 35, medium: 20, heavy: 5 },
+      opt: { cache: false, haiku: false, batch: false, startup: false, freeLimit: true },
+      marketing: 500, salary: 0, support: 0.5, overhead: 300,
+    },
+    realistic: {
+      model: 'sub_standard',
+      conversion: 5, churn: 8, cac: 42, intlPct: 40,
+      mix: { tryers: 30, light: 35, medium: 25, heavy: 10 },
+      opt: { cache: true, haiku: false, batch: false, startup: false, freeLimit: true },
+      marketing: 1000, salary: 0, support: 0.5, overhead: 300,
+    },
+    optimistic: {
+      model: 'freemium',
+      conversion: 8.8, churn: 4, cac: 30, intlPct: 40,
+      mix: { tryers: 20, light: 40, medium: 30, heavy: 10 },
+      opt: { cache: true, haiku: true, batch: true, startup: true, freeLimit: true },
+      marketing: 2000, salary: 0, support: 0.3, overhead: 500,
+    },
+    tutor: {
+      model: 'sub_luxury',
+      conversion: 4, churn: 5, cac: 150, intlPct: 40,
+      mix: { tryers: 15, light: 25, medium: 40, heavy: 20 },
+      opt: { cache: true, haiku: true, batch: true, startup: false, freeLimit: false },
+      marketing: 3000, salary: 4000, support: 1.0, overhead: 800,
+    },
+    viral: {
+      model: 'freemium',
+      conversion: 6, churn: 6, cac: 15, intlPct: 50,
+      mix: { tryers: 25, light: 40, medium: 25, heavy: 10 },
+      opt: { cache: true, haiku: true, batch: true, startup: true, freeLimit: true },
+      marketing: 5000, salary: 0, support: 0.4, overhead: 400,
+    },
+  };
+  const preset = presets[name];
+  if (!preset) return;
+  Object.keys(preset).forEach(function(k) { state[k] = preset[k]; });
+
+  document.getElementById('model').value = state.model;
+  document.getElementById('conversion').value = state.conversion;
+  document.getElementById('churn').value = state.churn;
+  document.getElementById('cac').value = state.cac;
+  document.getElementById('intl').value = state.intlPct;
+  document.getElementById('mixTryers').value = state.mix.tryers;
+  document.getElementById('mixLight').value = state.mix.light;
+  document.getElementById('mixMedium').value = state.mix.medium;
+  document.getElementById('mixHeavy').value = state.mix.heavy;
+  document.getElementById('optCache').checked = state.opt.cache;
+  document.getElementById('optHaiku').checked = state.opt.haiku;
+  document.getElementById('optBatch').checked = state.opt.batch;
+  document.getElementById('optStartup').checked = state.opt.startup;
+  document.getElementById('optFreeLimit').checked = state.opt.freeLimit;
+  document.getElementById('salary').value = state.salary;
+  document.getElementById('marketing').value = state.marketing;
+  document.getElementById('support').value = state.support * 100;
+  document.getElementById('overhead').value = state.overhead;
+
+  document.querySelectorAll('.preset-btn').forEach(function(b) { b.classList.remove('active'); });
+  const btns = document.querySelectorAll('.preset-btn');
+  for (let i = 0; i < btns.length; i++) {
+    if (btns[i].textContent.toLowerCase().indexOf(name.substring(0,4)) >= 0 ||
+        btns[i].textContent.toLowerCase().indexOf(name) >= 0) {
+      btns[i].classList.add('active');
+      break;
+    }
+  }
+
+  renderPricingControls();
+  updateAll();
+}
+
+/* ==========================================================================
+   TOOLTIP BINDING
+   ========================================================================== */
+
+function bindBarTooltips() {
+  const tt = document.getElementById('tooltip');
+  document.querySelectorAll('[data-lbl]').forEach(function(el) {
+    el.addEventListener('mousemove', function(e) {
+      tt.textContent = el.dataset.lbl;
+      tt.classList.add('active');
+      tt.style.left = (e.clientX + 12) + 'px';
+      tt.style.top = (e.clientY + 12) + 'px';
+    });
+    el.addEventListener('mouseleave', function() { tt.classList.remove('active'); });
+  });
+}
+
+/* ==========================================================================
+   VALUE LABEL SYNC
+   ========================================================================== */
+
+function syncLabels() {
+  document.getElementById('userCountVal').textContent = fmtInt(state.userCount);
+  document.getElementById('conversionVal').textContent = state.conversion.toFixed(1) + '%';
+  document.getElementById('churnVal').textContent = state.churn.toFixed(1) + '%';
+  document.getElementById('cacVal').textContent = '$' + state.cac;
+  document.getElementById('intlVal').textContent = state.intlPct + '%';
+  document.getElementById('mixTryersVal').textContent = state.mix.tryers + '%';
+  document.getElementById('mixLightVal').textContent = state.mix.light + '%';
+  document.getElementById('mixMediumVal').textContent = state.mix.medium + '%';
+  document.getElementById('mixHeavyVal').textContent = state.mix.heavy + '%';
+  const tot = state.mix.tryers + state.mix.light + state.mix.medium + state.mix.heavy;
+  const mixEl = document.getElementById('mixTotal');
+  mixEl.textContent = 'Total: ' + tot + '% ' + (tot === 100 ? '(OK)' : '(adjust)');
+  mixEl.style.color = tot === 100 ? 'var(--green)' : 'var(--orange)';
+  document.getElementById('salaryVal').textContent = '$' + fmtInt(state.salary);
+  document.getElementById('marketingVal').textContent = '$' + fmtInt(state.marketing);
+  document.getElementById('supportVal').textContent = '$' + state.support.toFixed(2);
+  document.getElementById('overheadVal').textContent = '$' + fmtInt(state.overhead);
+  document.getElementById('lastUpdate').textContent = 'Updated ' + new Date().toLocaleTimeString();
+}
+
+/* ==========================================================================
+   MAIN UPDATE
+   ========================================================================== */
+
+function updateAll() {
+  syncLabels();
+  renderKPI();
+  renderMainChart();
+  renderBreakdown();
+  renderUnitEconomics();
+  renderModelsGrid();
+  renderBreakeven();
+  renderLTV();
+  updatePrompt();
+}
+
+function init() {
+  renderPricingControls();
+  renderCompareSelectors();
+  renderCategoryToggles();
+  renderAssumptions();
+  renderGaps();
+  updateAll();
+}
+
+init();
+</script>
+</body>
+</html>

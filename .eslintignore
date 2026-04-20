@@ -1,0 +1,19 @@
+# Build output
+.next/
+out/
+dist/
+
+# Dependencies
+node_modules/
+
+# Docs helper scripts (presentations, budgets) — not production code
+docs/budget/
+docs/business-plan/
+docs/**/*.js
+scripts/*.mjs
+scripts/*.js
+
+# Generated files
+*.min.js
+public/sw.js
+public/workbox-*.js

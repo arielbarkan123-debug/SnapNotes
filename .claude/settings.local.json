@@ -37,7 +37,10 @@
       "WebFetch(domain:ai.google.dev)",
       "Bash(source /Users/curvalux/NoteSnap/.env.local)",
       "Skill(ralph-wiggum:ralph-loop)",
-      "Bash(npx vercel:*)"
+      "Bash(npx vercel:*)",
+      "Bash(kill 18819 18824)",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('/Users/curvalux/.claude/settings.json'\\)\\); print\\('JSON valid ✓'\\); print\\('serena@claude-plugins-official =', d['enabledPlugins']['serena@claude-plugins-official']\\)\")",
+      "Bash(kill 2301 2713 3538 3586 10924 11289 19228 19237)"
     ],
     "deny": [],
     "ask": []

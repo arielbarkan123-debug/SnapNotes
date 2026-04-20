@@ -37,13 +37,11 @@ AS $$
     ) AS last_course_title
   FROM user_learning_profile ulp
   JOIN auth.users au ON au.id = ulp.user_id
+  -- JOIN user_progress so we can aggregate updated_at in SELECT/HAVING
+  JOIN user_progress up ON up.user_id = ulp.user_id
   -- Must have at least one course
   WHERE EXISTS (
     SELECT 1 FROM courses c WHERE c.user_id = ulp.user_id
-  )
-  -- Must have some study progress to be inactive (not brand-new users with no activity)
-  AND EXISTS (
-    SELECT 1 FROM user_progress up WHERE up.user_id = ulp.user_id
   )
   -- Not nudged recently
   AND (ulp.last_nudge_sent_at IS NULL OR ulp.last_nudge_sent_at < nudge_cooloff_cutoff)

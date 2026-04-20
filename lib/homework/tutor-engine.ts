@@ -860,7 +860,7 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
-    system: systemPrompt,
+    system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: prompt }],
   })
 
@@ -1185,7 +1185,7 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
-    system: chatSystemPrompt,
+    system: [{ type: 'text', text: chatSystemPrompt, cache_control: { type: 'ephemeral' } }],
     messages,
   })
 
