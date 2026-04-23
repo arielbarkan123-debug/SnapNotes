@@ -63,44 +63,51 @@ export default function PrepareUploadModal({ isOpen, onClose, onGenerated }: Pre
     return () => { document.body.style.overflow = '' }
   }, [isOpen])
 
-  const handleFileSelection = useCallback((newFiles: File[]) => {
-    if (newFiles.length === 0) return
+  const handleFileSelection = useCallback((incoming: File[]) => {
+    if (incoming.length === 0) return
     setError(null)
 
-    const images = newFiles.filter(isImageFile)
-    const docs = newFiles.filter(isDocFile)
-    const unknown = newFiles.filter(f => !isImageFile(f) && !isDocFile(f))
+    setFiles(prev => {
+      // Merge with existing selection, deduplicate by name+size+lastModified
+      const merged = [...prev]
+      const seen = new Set(prev.map(f => `${f.name}|${f.size}|${f.lastModified}`))
+      for (const f of incoming) {
+        const key = `${f.name}|${f.size}|${f.lastModified}`
+        if (!seen.has(key)) {
+          merged.push(f)
+          seen.add(key)
+        }
+      }
 
-    if (unknown.length > 0) {
-      setError(`Unsupported files: ${unknown.map(f => f.name).join(', ')}. Use images (JPG, PNG, HEIC) or documents (DOCX, PPTX).`)
-      return
-    }
+      const images = merged.filter(isImageFile)
+      const docs = merged.filter(isDocFile)
+      const unknown = merged.filter(f => !isImageFile(f) && !isDocFile(f))
 
-    if (images.length > 0 && docs.length > 0) {
-      setError('Please upload either images OR a document, not both.')
-      return
-    }
+      if (unknown.length > 0) {
+        setError(`Unsupported files: ${unknown.map(f => f.name).join(', ')}. Use images (JPG, PNG, HEIC) or documents (DOCX, PPTX).`)
+        return prev
+      }
 
-    if (docs.length > 1) {
-      setError('Please upload one document at a time.')
-      return
-    }
+      for (const file of images) {
+        const v = validateImageFile(file)
+        if (!v.valid) { setError(`${file.name}: ${v.error}`); return prev }
+      }
+      for (const file of docs) {
+        const v = validateFile(file)
+        if (!v.valid) { setError(`${file.name}: ${v.error}`); return prev }
+      }
 
-    for (const file of images) {
-      const v = validateImageFile(file)
-      if (!v.valid) { setError(`${file.name}: ${v.error}`); return }
-    }
-    for (const file of docs) {
-      const v = validateFile(file)
-      if (!v.valid) { setError(`${file.name}: ${v.error}`); return }
-    }
+      if (images.length > 10) {
+        setError('Maximum 10 images allowed.')
+        return prev
+      }
+      if (docs.length > 5) {
+        setError('Maximum 5 documents allowed per guide.')
+        return prev
+      }
 
-    if (images.length > 10) {
-      setError('Maximum 10 images allowed.')
-      return
-    }
-
-    setFiles(newFiles)
+      return merged
+    })
   }, [])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -227,12 +234,20 @@ export default function PrepareUploadModal({ isOpen, onClose, onGenerated }: Pre
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Please log in to continue.')
 
-      if (isImageFile(files[0])) {
-        // Image upload flow
-        const batchId = generateCourseId()
-        setStatusMessage('Uploading images...')
+      const imageFiles = files.filter(isImageFile)
+      const docFiles = files.filter(isDocFile)
 
-        const results = await uploadImagesToStorage(files, user.id, batchId, (current, total) => {
+      let imageUrls: string[] | undefined
+      let combinedText = ''
+      let firstDocumentUrl: string | undefined
+      let primarySourceType: 'image' | 'pdf' | 'pptx' | 'docx' | 'text' = 'text'
+
+      // 1. Upload + sign images (if any)
+      if (imageFiles.length > 0) {
+        const batchId = generateCourseId()
+        setStatusMessage(`Uploading ${imageFiles.length} image${imageFiles.length !== 1 ? 's' : ''}...`)
+
+        const results = await uploadImagesToStorage(imageFiles, user.id, batchId, (current, total) => {
           setStatusMessage(`Uploading image ${current}/${total}...`)
         })
 
@@ -248,55 +263,75 @@ export default function PrepareUploadModal({ isOpen, onClose, onGenerated }: Pre
 
         if (!signRes.ok) throw new Error('Failed to process images')
         const signData = await signRes.json()
-        const imageUrls = signData.images.map((img: { url: string }) => img.url)
-
-        await startGeneration({
-          content: `[${files.length} uploaded images]`,
-          sourceType: 'image',
-          imageUrls,
-        })
-      } else {
-        // Document upload flow
-        setStatusMessage('Uploading document...')
-        const { storagePath, fileType } = await uploadFileToStorage(files[0], user.id)
-
-        setStage('processing')
-        setStatusMessage('Extracting text from document...')
-
-        const processRes = await fetch('/api/process-document', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            storagePath,
-            fileName: files[0].name,
-            fileType,
-          }),
-        })
-
-        if (!processRes.ok) throw new Error('Failed to process document')
-        const processData = await processRes.json()
-
-        let extractedText = ''
-        if (processData.extractedContent?.sections) {
-          extractedText = processData.extractedContent.sections
-            .map((s: { title?: string; content: string }) =>
-              s.title ? `## ${s.title}\n${s.content}` : s.content
-            )
-            .join('\n\n')
-        } else if (typeof processData.extractedContent === 'string') {
-          extractedText = processData.extractedContent
-        }
-
-        if (!extractedText || extractedText.length < 20) {
-          throw new Error('Could not extract enough text from the document. Try uploading photos of the pages instead.')
-        }
-
-        await startGeneration({
-          content: extractedText,
-          sourceType: fileType,
-          documentUrl: storagePath,
-        })
+        imageUrls = signData.images.map((img: { url: string }) => img.url)
+        primarySourceType = 'image'
       }
+
+      // 2. Upload + extract each document (if any)
+      if (docFiles.length > 0) {
+        setStage('processing')
+        const sections: string[] = []
+
+        for (let i = 0; i < docFiles.length; i++) {
+          const docFile = docFiles[i]
+          setStatusMessage(`Uploading document ${i + 1}/${docFiles.length}: ${docFile.name}`)
+          const { storagePath, fileType } = await uploadFileToStorage(docFile, user.id)
+          if (i === 0) {
+            firstDocumentUrl = storagePath
+            if (imageFiles.length === 0) {
+              primarySourceType = fileType
+            }
+          }
+
+          setStatusMessage(`Extracting text from ${docFile.name} (${i + 1}/${docFiles.length})...`)
+          const processRes = await fetch('/api/process-document', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              storagePath,
+              fileName: docFile.name,
+              fileType,
+            }),
+          })
+
+          if (!processRes.ok) throw new Error(`Failed to process ${docFile.name}`)
+          const processData = await processRes.json()
+
+          let docText = ''
+          if (processData.extractedContent?.sections) {
+            docText = processData.extractedContent.sections
+              .map((s: { title?: string; content: string }) =>
+                s.title ? `## ${s.title}\n${s.content}` : s.content
+              )
+              .join('\n\n')
+          } else if (typeof processData.extractedContent === 'string') {
+            docText = processData.extractedContent
+          }
+
+          if (docText && docText.trim().length > 0) {
+            const header = docFiles.length > 1 ? `# ${docFile.name}\n\n` : ''
+            sections.push(`${header}${docText.trim()}`)
+          }
+        }
+
+        combinedText = sections.join('\n\n---\n\n')
+
+        if (imageFiles.length === 0 && (!combinedText || combinedText.length < 20)) {
+          throw new Error('Could not extract enough text from the document(s). Try uploading photos of the pages instead.')
+        }
+      }
+
+      // 3. Call generation with combined payload
+      const content = combinedText.length > 0
+        ? combinedText
+        : `[${imageFiles.length} uploaded image${imageFiles.length !== 1 ? 's' : ''}]`
+
+      await startGeneration({
+        content,
+        sourceType: primarySourceType,
+        imageUrls,
+        documentUrl: firstDocumentUrl,
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
       setStage('idle')
@@ -414,11 +449,11 @@ export default function PrepareUploadModal({ isOpen, onClose, onGenerated }: Pre
                     <div className="text-4xl mb-3">{files.length > 0 ? '✅' : '📎'}</div>
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       {files.length > 0
-                        ? `${files.length} file${files.length !== 1 ? 's' : ''} selected — click or drop to change`
-                        : 'Drop files here or click to browse'}
+                        ? `${files.length} file${files.length !== 1 ? 's' : ''} selected — click or drop to add more`
+                        : 'Drop files here or click to browse (select multiple)'}
                     </p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                      Images (JPG, PNG, HEIC) or Documents (DOCX, PPTX)
+                      Images (JPG, PNG, HEIC) &amp; Documents (DOCX, PPTX) — mix allowed
                     </p>
                   </div>
 
