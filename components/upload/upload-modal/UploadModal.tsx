@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import Button from '@/components/ui/Button'
 import { useToast } from '@/contexts/ToastContext'
@@ -44,7 +43,6 @@ import { validateFile, getErrorMessage, generateFileId } from './helpers'
  */
 export default function UploadModal({ isOpen, onClose, mode = 'create', courseId, courseTitle, onMaterialAdded }: UploadModalProps) {
   const isAddMode = mode === 'addToCourse'
-  const router = useRouter()
   const t = useTranslations('upload')
   const { error: showError } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -345,7 +343,7 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
 
       if (courseId) {
         onClose()
-        router.push(`/processing?courseId=${courseId}`)
+        window.location.href = `/processing?courseId=${courseId}`
       }
     } catch (err) {
       setError({ message: err instanceof Error ? err.message : ty('error'), isRetryable: true })
@@ -395,7 +393,7 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
         if (title.trim()) params.set('title', title.trim())
         params.set('intensityMode', intensityMode)
 
-        router.push(`/processing?${params.toString()}`)
+        window.location.href = `/processing?${params.toString()}`
         return
       } catch (err) {
         const errorInfo = getErrorMessage(err)
@@ -562,7 +560,11 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
         if (supplementaryText.trim()) params.set('supplementaryText', supplementaryText.trim())
         params.set('intensityMode', intensityMode)
 
-        router.push(`/processing?${params.toString()}`)
+        // Full-page navigation (not SPA) so the browser always fetches the
+        // freshest processing-page bundle. Critical after the 413 fix —
+        // router.push reuses the currently-loaded JS, which for returning
+        // users is often the pre-fix bundle and still inlines documentContent.
+        window.location.href = `/processing?${params.toString()}`
         return
       }
 
@@ -665,7 +667,7 @@ export default function UploadModal({ isOpen, onClose, mode = 'create', courseId
       if (supplementaryText.trim()) params.set('supplementaryText', supplementaryText.trim())
       params.set('intensityMode', intensityMode)
 
-      router.push(`/processing?${params.toString()}`)
+      window.location.href = `/processing?${params.toString()}`
     } catch (err) {
       const errorInfo = getErrorMessage(err)
       setError(errorInfo)
