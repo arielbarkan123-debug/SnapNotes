@@ -273,10 +273,18 @@ function ProcessingContent() {
 
   // Determine source type and whether we have valid input
   const sourceType: SourceType = sourceTypeParam || (documentContent?.type as SourceType) || 'image'
-  const isDocumentSource = sourceType !== 'image' && sourceType !== 'text' && documentContent !== null
+  // A document source is anything with a documentUrl (storage path) — we no
+  // longer need sessionStorage documentContent to proceed, since the server
+  // re-extracts from storage directly (avoids Vercel's 4.5MB body limit).
+  const isDocumentSource =
+    sourceType !== 'image' &&
+    sourceType !== 'text' &&
+    (documentContent !== null || !!documentUrl)
   const isTextSource = sourceType === 'text' && textContent !== null && textContent.length > 0
-  // For documents, we need to wait for content to load from sessionStorage
-  const isWaitingForDocumentContent = documentId && !documentContent
+  // Only wait on sessionStorage when we don't have a storage path to fall
+  // back on. With a storage path, the server can re-extract without any
+  // client-side content.
+  const isWaitingForDocumentContent = documentId && !documentContent && !documentUrl
   const hasValidInput = isTextSource || isDocumentSource || imageUrl || (imageUrls && imageUrls.length > 0)
 
   // Select progress stages based on source type
@@ -469,23 +477,25 @@ function ProcessingContent() {
       if (textContent) {
         // Text-based request
         requestBody.textContent = textContent
+      } else if (
+        documentUrl &&
+        sourceTypeParam &&
+        sourceTypeParam !== 'image' &&
+        sourceTypeParam !== 'text'
+      ) {
+        // Document-based request — prefer the storage path so the server
+        // re-extracts from Supabase directly. This keeps the request body
+        // tiny regardless of document size (Vercel has a 4.5MB body limit).
+        requestBody.documentStoragePath = documentUrl
+        requestBody.documentFileType = sourceTypeParam
+        requestBody.documentFileName =
+          documentContent?.title ||
+          (documentUrl.split('/').pop() ?? `document.${sourceTypeParam}`)
       } else if (documentContent) {
-        // Document-based request.
-        //
-        // Prefer sending only the storage path so the server re-extracts on
-        // its own — inline `documentContent` can easily exceed Vercel's 4.5MB
-        // serverless body limit for medium/large PPTX/DOCX files (the source
-        // of the previous HTTP 413 / NS-CRS-050 bug).
-        if (documentUrl) {
-          requestBody.documentStoragePath = documentUrl
-          requestBody.documentFileType = documentContent.type
-          requestBody.documentFileName =
-            documentContent.title ||
-            (documentUrl.split('/').pop() ?? `document.${documentContent.type}`)
-        } else {
-          // Fallback: no storage path known, send inline content.
-          requestBody.documentContent = documentContent
-        }
+        // Legacy fallback when we have inline content but no storage path.
+        // This branch is a last resort — large documents will 413.
+        requestBody.documentContent = documentContent
+        requestBody.documentUrl = documentUrl || undefined
       } else if (imageUrls && imageUrls.length > 0) {
         // Multiple images
         requestBody.imageUrls = imageUrls
