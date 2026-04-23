@@ -300,14 +300,20 @@ function ProcessingContent() {
   const hasStartedRef = useRef(false)
   const autoRetryCountRef = useRef(0)
 
-  // Generate a unique key for this processing session
+  // Generate a unique key for this processing session.
+  //
+  // IMPORTANT: prefer `documentUrl`/`documentId` over `documentContent.title`
+  // for document uploads. The storage path contains a fresh timestamp per
+  // upload, while the title is often identical across uploads (e.g. the
+  // PPTX's built-in title "New Topic: ..."). Using the title led to stale
+  // `started` flags from a previous hung attempt blocking every retry of
+  // the same file forever — the fetch silently short-circuited.
   const processingKey = useMemo(() => {
     if (textContent) {
-      // Use a hash of the text content for uniqueness
       return `processing_text_${textContent.slice(0, 50).replace(/\s+/g, '_')}_${Date.now()}`
     }
-    if (documentContent) {
-      return `processing_doc_${documentContent.title || documentUrl || Date.now()}`
+    if (documentContent || documentUrl) {
+      return `processing_doc_${documentUrl || documentId || documentContent?.title || Date.now()}`
     }
     if (imageUrls && imageUrls.length > 0) {
       return `processing_${imageUrls[0]}`
@@ -316,7 +322,39 @@ function ProcessingContent() {
       return `processing_${imageUrl}`
     }
     return null
-  }, [textContent, documentContent, documentUrl, imageUrls, imageUrl])
+  }, [textContent, documentContent, documentUrl, documentId, imageUrls, imageUrl])
+
+  // Clear any stale `processing_*` flags from previous hung attempts on
+  // mount. Without this, a fetch that never completed (e.g., timed out
+  // without firing the abort handler) leaves its flag behind and blocks
+  // future retries of the same document.
+  useEffect(() => {
+    try {
+      const now = Date.now()
+      const STALE_MS = 10 * 60 * 1000 // 10 minutes
+      for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const key = sessionStorage.key(i)
+        if (!key?.startsWith('processing_')) continue
+        const stored = sessionStorage.getItem(key)
+        // Stored format used to be just 'started'. Treat any such marker
+        // as stale — it only matters while the current attempt is in
+        // flight, and that guard is also enforced by hasStartedRef.
+        if (stored === 'started') {
+          sessionStorage.removeItem(key)
+          continue
+        }
+        // Parse `started:<timestamp>` style markers for age-based cleanup.
+        if (stored?.startsWith('started:')) {
+          const ts = Number(stored.slice('started:'.length))
+          if (!Number.isFinite(ts) || now - ts > STALE_MS) {
+            sessionStorage.removeItem(key)
+          }
+        }
+      }
+    } catch {
+      // sessionStorage not available — nothing to clean up
+    }
+  }, [])
 
   // Redirect if no valid input (but wait for document content to potentially load)
   useEffect(() => {
