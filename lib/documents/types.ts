@@ -11,10 +11,19 @@
 
 /**
  * ExtractedImage - An image extracted from a document
+ *
+ * An image may be in one of two states:
+ * - Raw (fresh from extraction): `data` holds base64-encoded bytes, `url` is unset
+ * - Uploaded: `url` holds a signed Supabase URL, `data` is unset (stripped to keep
+ *   request payloads under Vercel's 4.5MB serverless body limit)
  */
 export interface ExtractedImage {
-  /** Base64 encoded image data */
-  data: string
+  /** Base64 encoded image data (present only before upload to storage) */
+  data?: string
+  /** Signed URL to access the uploaded image (present after upload) */
+  url?: string
+  /** Supabase storage path (present after upload) */
+  storagePath?: string
   /** MIME type of the image */
   mimeType: string
   /** Original filename in the document */

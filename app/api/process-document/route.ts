@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { type NextRequest, NextResponse } from 'next/server'
 import { processDocument, type ExtractedDocument } from '@/lib/documents'
+import { uploadExtractedImages } from '@/lib/images'
 import { ErrorCodes, createErrorResponse, logError } from '@/lib/api/errors'
 import { createLogger } from '@/lib/logger'
 
@@ -174,7 +175,64 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return createErrorResponse(ErrorCodes.DOCUMENT_PROCESSING_FAILED, 'Failed to process document')
     }
 
-    // 9. Return success response
+    // 9. Upload extracted images to storage and strip base64 data from the response.
+    //
+    // Base64-encoded images can easily push the JSON response — and the
+    // subsequent POST to /api/generate-course that re-sends the extracted
+    // content — past Vercel's 4.5MB serverless body limit (error: HTTP 413).
+    // Upload once here, keep only URLs in the response.
+    if (extractedContent.images && extractedContent.images.length > 0) {
+      // Use the upload session's storage path as a stable folder scope, so the
+      // extracted images live alongside the source document under the user's
+      // storage tree.
+      const uploadFolderId = storagePath.split('/').slice(1).join('/') || 'extracted'
+
+      try {
+        const uploadResults = await uploadExtractedImages(
+          extractedContent.images,
+          user.id,
+          uploadFolderId,
+        )
+
+        extractedContent.images = uploadResults.map((result, index) => {
+          const source = extractedContent.images![index]
+          if (result.success) {
+            return {
+              url: result.url,
+              storagePath: result.storagePath,
+              mimeType: source.mimeType,
+              filename: source.filename,
+              pageNumber: source.pageNumber,
+              alt: source.alt,
+            }
+          }
+          // Drop failed uploads — we still strip base64 so the response stays
+          // well under the 4.5MB limit.
+          return {
+            mimeType: source.mimeType,
+            filename: source.filename,
+            pageNumber: source.pageNumber,
+            alt: source.alt,
+          }
+        })
+
+        log.debug({
+          total: uploadResults.length,
+          succeeded: uploadResults.filter((r) => r.success).length,
+        }, 'Extracted images uploaded')
+      } catch (uploadError) {
+        log.error({ err: uploadError }, 'Failed to upload extracted images')
+        // Strip base64 data regardless — keeping it risks the 4.5MB limit.
+        extractedContent.images = extractedContent.images.map((img) => ({
+          mimeType: img.mimeType,
+          filename: img.filename,
+          pageNumber: img.pageNumber,
+          alt: img.alt,
+        }))
+      }
+    }
+
+    // 10. Return success response
     const response: ProcessDocumentSuccessResponse = {
       success: true,
       type: 'document',

@@ -71,6 +71,27 @@ export async function uploadExtractedImages(
     const image = imagesToUpload[i]
     const filename = image.filename || `image-${i}.jpg`
 
+    // Skip images that are already uploaded (have a URL but no base64 data)
+    if (image.url && !image.data) {
+      results.push({
+        url: image.url,
+        storagePath: image.storagePath || '',
+        filename,
+        success: true,
+      })
+      continue
+    }
+
+    // Skip images missing base64 data (nothing to upload)
+    if (!image.data) {
+      results.push({
+        filename,
+        error: 'Image has no base64 data to upload',
+        success: false,
+      })
+      continue
+    }
+
     try {
       // Convert base64 to buffer
       const buffer = Buffer.from(image.data, 'base64')

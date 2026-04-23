@@ -400,19 +400,35 @@ export async function POST(request: NextRequest): Promise<Response> {
 
           sendMessage({ type: 'progress', stage: 'Processing document', percent: 30 })
 
-          // If document has extracted images, upload them to storage
+          // If document has extracted images, collect their URLs.
+          // Images uploaded to storage in /api/process-document already have
+          // `url`; legacy payloads with base64 `data` are uploaded here for
+          // backward compatibility.
           if (documentContent.images && documentContent.images.length > 0) {
             try {
-              sendMessage({ type: 'progress', stage: 'Uploading images', percent: 35 })
-              const uploadResults = await uploadExtractedImages(
-                documentContent.images,
-                user.id,
-                tempCourseId
+              const alreadyUploaded = documentContent.images
+                .filter((img) => img.url)
+                .map((img) => img.url as string)
+
+              const needsUpload = documentContent.images.filter(
+                (img) => !img.url && img.data,
               )
-              // Filter successful uploads and get URLs
-              imageUrls = uploadResults
-                .filter((r) => r.success)
-                .map((r) => (r as { url: string }).url)
+
+              if (needsUpload.length > 0) {
+                sendMessage({ type: 'progress', stage: 'Uploading images', percent: 35 })
+                const uploadResults = await uploadExtractedImages(
+                  needsUpload,
+                  user.id,
+                  tempCourseId,
+                )
+                const freshlyUploaded = uploadResults
+                  .filter((r) => r.success)
+                  .map((r) => (r as { url: string }).url)
+                imageUrls = [...alreadyUploaded, ...freshlyUploaded]
+              } else {
+                imageUrls = alreadyUploaded
+              }
+
               _courseImageUrls = imageUrls
             } catch (uploadError) {
               logError('GenerateCourse:imageUpload', uploadError)
