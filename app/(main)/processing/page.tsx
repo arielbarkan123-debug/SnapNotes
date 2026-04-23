@@ -483,25 +483,43 @@ function ProcessingContent() {
       if (textContent) {
         // Text-based request
         requestBody.textContent = textContent
+      } else if (documentContent) {
+        // Document-based request. /api/process-document has already uploaded
+        // the extracted images to Supabase and stripped their base64 `data`
+        // field, so the ExtractedDocument in sessionStorage is tiny (just
+        // text + image URLs). Prefer sending this directly — the server
+        // avoids re-downloading + re-extracting + re-uploading the file.
+        //
+        // If for some reason the payload still has base64 images (legacy
+        // /api/process-document response), fall back to sending the storage
+        // path so the server does it fresh. Either way we stay well under
+        // Vercel's 4.5MB body limit.
+        const hasBase64Images =
+          !!documentContent.images &&
+          documentContent.images.some((img) => !!img.data)
+
+        if (hasBase64Images && documentUrl && sourceTypeParam && sourceTypeParam !== 'image' && sourceTypeParam !== 'text') {
+          requestBody.documentStoragePath = documentUrl
+          requestBody.documentFileType = sourceTypeParam
+          requestBody.documentFileName =
+            documentContent.title ||
+            (documentUrl.split('/').pop() ?? `document.${sourceTypeParam}`)
+        } else {
+          requestBody.documentContent = documentContent
+          requestBody.documentUrl = documentUrl || undefined
+        }
       } else if (
         documentUrl &&
         sourceTypeParam &&
         sourceTypeParam !== 'image' &&
         sourceTypeParam !== 'text'
       ) {
-        // Document-based request — prefer the storage path so the server
-        // re-extracts from Supabase directly. This keeps the request body
-        // tiny regardless of document size (Vercel has a 4.5MB body limit).
+        // No in-memory content (e.g. sessionStorage was cleared). Fall back
+        // to server-side re-extraction using only the storage path.
         requestBody.documentStoragePath = documentUrl
         requestBody.documentFileType = sourceTypeParam
         requestBody.documentFileName =
-          documentContent?.title ||
-          (documentUrl.split('/').pop() ?? `document.${sourceTypeParam}`)
-      } else if (documentContent) {
-        // Legacy fallback when we have inline content but no storage path.
-        // This branch is a last resort — large documents will 413.
-        requestBody.documentContent = documentContent
-        requestBody.documentUrl = documentUrl || undefined
+          documentUrl.split('/').pop() ?? `document.${sourceTypeParam}`
       } else if (imageUrls && imageUrls.length > 0) {
         // Multiple images
         requestBody.imageUrls = imageUrls
