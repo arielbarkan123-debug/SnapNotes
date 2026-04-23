@@ -432,6 +432,13 @@ function ProcessingContent() {
 
   // API call with streaming support
   const generateCourse = useCallback(async () => {
+    // VERSION MARKER v3 (2026-04-23): client posts only documentStoragePath
+    // for document uploads — no inline documentContent — to avoid Vercel's
+    // 4.5MB serverless body limit. If you're seeing this log but the
+    // request payload still contains `documentContent`, your browser is
+    // running stale JS.
+    // eslint-disable-next-line no-console
+    console.log('[X+1] processing page version: 2026-04-23-v3-storagePathOnly')
     log.debug({ hasValidInput, processingKey, autoRetry: autoRetryCountRef.current }, 'generateCourse called')
     if (!hasValidInput || !processingKey) {
       log.debug('Early return - no valid input or key')
