@@ -29,7 +29,7 @@ import {
   getExplicitToggleFlag,
   clearExplicitToggleFlag,
 } from '@/lib/ai/language'
-import type { ExtractedDocument } from '@/lib/documents'
+import { processDocument, type ExtractedDocument } from '@/lib/documents'
 import {
   ErrorCodes,
   logError,
@@ -66,10 +66,21 @@ interface GenerateCourseRequest {
   imageUrl?: string
   /** Array of image URLs (new multi-image support) */
   imageUrls?: string[]
-  /** Extracted document content (for PDF, PPTX, DOCX) */
+  /**
+   * Extracted document content (for PDF, PPTX, DOCX).
+   * @deprecated Prefer sending `documentStoragePath` + `documentFileName` so
+   *   the server can re-extract on its own. Large documents as inline content
+   *   blow past Vercel's 4.5MB request body limit (HTTP 413).
+   */
   documentContent?: ExtractedDocument
   /** URL to stored document in Supabase Storage */
   documentUrl?: string
+  /** Supabase storage path (bucket: documents). Preferred over documentContent. */
+  documentStoragePath?: string
+  /** Original file name for the stored document (used to infer file type). */
+  documentFileName?: string
+  /** File type hint (optional; inferred from filename if absent) */
+  documentFileType?: 'pdf' | 'pptx' | 'docx'
   /** Plain text content for text-based course generation */
   textContent?: string
   /** Optional user-provided course title */
@@ -80,6 +91,28 @@ interface GenerateCourseRequest {
   supplementaryText?: string
   /** Whether to generate engine diagrams for diagram steps (default: true) */
   enableDiagrams?: boolean
+}
+
+// MIME map for re-extracting documents from Supabase storage when the client
+// only passes a storage path (the preferred flow — inline documentContent can
+// exceed Vercel's 4.5MB serverless body limit).
+const DOCUMENT_MIME_BY_EXTENSION: Record<string, string> = {
+  pdf: 'application/pdf',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+}
+
+function inferDocumentMime(fileName?: string, fileType?: 'pdf' | 'pptx' | 'docx'): { mime: string; ext: 'pdf' | 'pptx' | 'docx' } | null {
+  if (fileType && DOCUMENT_MIME_BY_EXTENSION[fileType]) {
+    return { mime: DOCUMENT_MIME_BY_EXTENSION[fileType], ext: fileType }
+  }
+  if (fileName) {
+    const ext = (fileName.split('.').pop() || '').toLowerCase() as 'pdf' | 'pptx' | 'docx'
+    if (DOCUMENT_MIME_BY_EXTENSION[ext]) {
+      return { mime: DOCUMENT_MIME_BY_EXTENSION[ext], ext }
+    }
+  }
+  return null
 }
 
 type SourceType = 'image' | 'pdf' | 'pptx' | 'docx' | 'text'
@@ -263,7 +296,67 @@ export async function POST(request: NextRequest): Promise<Response> {
         return
       }
 
-      const { imageUrl, imageUrls, documentContent, documentUrl, textContent, supplementaryText, title, intensityMode, enableDiagrams = true } = body
+      const { imageUrl, imageUrls, documentUrl, documentStoragePath, documentFileName, documentFileType, textContent, supplementaryText, title, intensityMode, enableDiagrams = true } = body
+      // `documentContent` may come inline (legacy, risks 413) or be re-extracted
+      // server-side from Supabase storage when the client passes only a path.
+      let documentContent = body.documentContent
+
+      // When the client passes a storage path instead of inlining the extracted
+      // document, re-download and re-extract on the server. This avoids ever
+      // putting multi-MB extracted text/images in the request body (Vercel's
+      // serverless body limit is 4.5MB).
+      if (!documentContent && documentStoragePath) {
+        const mimeInfo = inferDocumentMime(documentFileName, documentFileType)
+        if (!mimeInfo) {
+          sendMessage({
+            type: 'error',
+            error: 'Could not determine document type. Please re-upload your file.',
+            code: ErrorCodes.INVALID_INPUT,
+            retryable: false,
+          })
+          stopHeartbeat()
+          closeStream()
+          return
+        }
+
+        if (!documentStoragePath.startsWith(`${user.id}/`)) {
+          sendMessage({
+            type: 'error',
+            error: 'Access denied to this document',
+            code: ErrorCodes.FORBIDDEN,
+            retryable: false,
+          })
+          stopHeartbeat()
+          closeStream()
+          return
+        }
+
+        try {
+          sendMessage({ type: 'progress', stage: 'Fetching document', percent: 20 })
+          const { data: fileData, error: downloadError } = await supabase.storage
+            .from('documents')
+            .download(documentStoragePath)
+
+          if (downloadError || !fileData) {
+            throw downloadError || new Error('File not found in storage')
+          }
+
+          const buffer = Buffer.from(await fileData.arrayBuffer())
+          sendMessage({ type: 'progress', stage: 'Extracting document', percent: 25 })
+          documentContent = await processDocument(buffer, mimeInfo.mime, documentFileName)
+        } catch (extractError) {
+          log.error({ err: extractError }, 'Server-side document re-extraction failed')
+          sendMessage({
+            type: 'error',
+            error: 'Could not read your document. Please re-upload and try again.',
+            code: ErrorCodes.AI_PROCESSING_FAILED,
+            retryable: true,
+          })
+          stopHeartbeat()
+          closeStream()
+          return
+        }
+      }
 
       // 3. Determine source type and validate input
       let sourceType: SourceType = 'image'

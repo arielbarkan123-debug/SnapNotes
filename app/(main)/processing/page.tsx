@@ -470,9 +470,22 @@ function ProcessingContent() {
         // Text-based request
         requestBody.textContent = textContent
       } else if (documentContent) {
-        // Document-based request
-        requestBody.documentContent = documentContent
-        requestBody.documentUrl = documentUrl || undefined
+        // Document-based request.
+        //
+        // Prefer sending only the storage path so the server re-extracts on
+        // its own — inline `documentContent` can easily exceed Vercel's 4.5MB
+        // serverless body limit for medium/large PPTX/DOCX files (the source
+        // of the previous HTTP 413 / NS-CRS-050 bug).
+        if (documentUrl) {
+          requestBody.documentStoragePath = documentUrl
+          requestBody.documentFileType = documentContent.type
+          requestBody.documentFileName =
+            documentContent.title ||
+            (documentUrl.split('/').pop() ?? `document.${documentContent.type}`)
+        } else {
+          // Fallback: no storage path known, send inline content.
+          requestBody.documentContent = documentContent
+        }
       } else if (imageUrls && imageUrls.length > 0) {
         // Multiple images
         requestBody.imageUrls = imageUrls
