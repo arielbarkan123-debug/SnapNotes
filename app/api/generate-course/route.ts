@@ -286,6 +286,12 @@ export async function POST(request: NextRequest): Promise<Response> {
       }
 
       // 2. Parse request body
+      const contentLengthHeader = request.headers.get('content-length')
+      log.info({
+        contentLength: contentLengthHeader,
+        userId: user.id,
+      }, 'generate-course request received')
+
       let body: GenerateCourseRequest
       try {
         body = await request.json()
@@ -295,6 +301,17 @@ export async function POST(request: NextRequest): Promise<Response> {
         closeStream()
         return
       }
+
+      log.info({
+        hasTextContent: !!body.textContent,
+        hasDocumentContent: !!body.documentContent,
+        hasDocumentStoragePath: !!body.documentStoragePath,
+        hasDocumentUrl: !!body.documentUrl,
+        hasImageUrls: Array.isArray(body.imageUrls) && body.imageUrls.length > 0,
+        hasImageUrl: !!body.imageUrl,
+        documentFileType: body.documentFileType,
+        documentFileName: body.documentFileName,
+      }, 'generate-course body shape')
 
       const { imageUrl, imageUrls, documentUrl, documentStoragePath, documentFileName, documentFileType, textContent, supplementaryText, title, intensityMode, enableDiagrams = true } = body
       // `documentContent` may come inline (legacy, risks 413) or be re-extracted
