@@ -2,9 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { type SubQuestion } from '@/types'
-import { formatMathInText } from '@/lib/utils/math-format'
+import dynamic from 'next/dynamic'
+import { MathText } from '@/components/ui/MathRenderer'
 import { type QuestionRendererProps } from './types'
 import { normalizeAnswer, checkTextAnswer } from './utils'
+
+const MarkdownWithMath = dynamic(() => import('@/components/prepare/MarkdownWithMath'), { ssr: false })
 
 interface SubQuestionProps {
   subQuestion: SubQuestion
@@ -68,7 +71,7 @@ function SubQuestionMultipleChoice({
 
   return (
     <div className="space-y-2">
-      <p className="font-medium text-gray-900 dark:text-white">{formatMathInText(subQuestion.question_text)}</p>
+      <p className="font-medium text-gray-900 dark:text-white"><MathText>{subQuestion.question_text}</MathText></p>
       <div className="space-y-2">
         {validOptions.map((option, index) => (
           <button
@@ -77,7 +80,7 @@ function SubQuestionMultipleChoice({
             disabled={showResults}
             className={getOptionStyle(option)}
           >
-            {formatMathInText(option)}
+            <MathText>{option}</MathText>
           </button>
         ))}
       </div>
@@ -132,7 +135,7 @@ function SubQuestionTrueFalse({
 
   return (
     <div className="space-y-2">
-      <p className="font-medium text-gray-900 dark:text-white">{formatMathInText(subQuestion.question_text)}</p>
+      <p className="font-medium text-gray-900 dark:text-white"><MathText>{subQuestion.question_text}</MathText></p>
       <div className="flex gap-3">
         <button
           onClick={() => handleClick('True')}
@@ -168,7 +171,7 @@ function SubQuestionFillBlank({
 
   return (
     <div className="space-y-2">
-      <p className="font-medium text-gray-900 dark:text-white">{formatMathInText(subQuestion.question_text)}</p>
+      <p className="font-medium text-gray-900 dark:text-white"><MathText>{subQuestion.question_text}</MathText></p>
       <input
         type="text"
         value={userAnswer || ''}
@@ -185,7 +188,7 @@ function SubQuestionFillBlank({
       />
       {showResults && !isCorrect && subQuestion.correct_answer && (
         <p className="text-sm text-red-600 dark:text-red-400">
-          Correct: <span className="font-semibold">{formatMathInText(subQuestion.correct_answer)}</span>
+          Correct: <span className="font-semibold"><MathText>{subQuestion.correct_answer}</MathText></span>
         </p>
       )}
     </div>
@@ -243,9 +246,9 @@ export default function PassageBasedRenderer({
         <p className="text-sm font-medium text-amber-700 dark:text-amber-400 mb-2">
           Read the passage:
         </p>
-        <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
-          {formatMathInText(question.passage || '')}
-        </p>
+        <MarkdownWithMath className="text-gray-800 dark:text-gray-200 leading-relaxed [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold dark:[&_strong]:text-white [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:my-0.5 [&_code]:bg-amber-100 dark:[&_code]:bg-amber-900/40 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded">
+          {question.passage || ''}
+        </MarkdownWithMath>
       </div>
 
       {/* Sub-questions */}

@@ -1,7 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { type CourseSection } from '@/types'
+import { MathText } from '@/components/ui/MathRenderer'
+
+const MarkdownWithMath = dynamic(() => import('@/components/prepare/MarkdownWithMath'), { ssr: false })
 
 interface CourseContentProps {
   sections: CourseSection[]
@@ -98,7 +102,7 @@ function SectionCard({ section, index, isExpanded, onToggle, totalSections }: Se
           </span>
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {section.title}
+              <MathText>{section.title}</MathText>
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               Section {index + 1} of {totalSections}
@@ -127,9 +131,9 @@ function SectionCard({ section, index, isExpanded, onToggle, totalSections }: Se
         <div className="px-5 pb-6 space-y-6 border-t border-gray-100 dark:border-gray-700">
           {/* Explanation */}
           <div className="pt-5">
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+            <MarkdownWithMath className="text-gray-700 dark:text-gray-300 leading-relaxed [&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold dark:[&_strong]:text-white [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:my-1 [&_code]:bg-gray-200 dark:[&_code]:bg-gray-700 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded">
               {section.explanation}
-            </p>
+            </MarkdownWithMath>
           </div>
 
           {/* Original Notes Quote */}
@@ -165,7 +169,7 @@ function SectionCard({ section, index, isExpanded, onToggle, totalSections }: Se
                     <span className="flex-shrink-0 w-5 h-5 mt-0.5 flex items-center justify-center bg-green-200 dark:bg-green-800 text-green-700 dark:text-green-300 rounded-full text-xs font-medium">
                       {i + 1}
                     </span>
-                    <span>{point}</span>
+                    <span><MathText>{point}</MathText></span>
                   </li>
                 ))}
               </ul>
@@ -187,12 +191,12 @@ function SectionCard({ section, index, isExpanded, onToggle, totalSections }: Se
                     key={i}
                     className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600"
                   >
-                    <code className="block text-lg text-violet-600 dark:text-violet-400 font-mono mb-2 overflow-x-auto">
-                      {formula.formula}
-                    </code>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <div className="block text-lg text-violet-600 dark:text-violet-400 mb-2 overflow-x-auto">
+                      <MathText>{formula.formula}</MathText>
+                    </div>
+                    <MarkdownWithMath className="text-sm text-gray-600 dark:text-gray-400 [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold dark:[&_strong]:text-white [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:my-0.5 [&_code]:bg-gray-200 dark:[&_code]:bg-gray-700 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded">
                       {formula.explanation}
-                    </p>
+                    </MarkdownWithMath>
                   </div>
                 ))}
               </div>
@@ -214,12 +218,15 @@ function SectionCard({ section, index, isExpanded, onToggle, totalSections }: Se
                     key={i}
                     className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-100 dark:border-blue-800"
                   >
-                    <p className="font-medium text-blue-900 dark:text-blue-200 mb-1">
+                    <MarkdownWithMath className="font-medium text-blue-900 dark:text-blue-200 mb-1 [&_p]:my-0 [&_strong]:font-semibold [&_em]:italic">
                       {diagram.description}
-                    </p>
-                    <p className="text-sm text-blue-700 dark:text-blue-300">
-                      <span className="font-medium">Significance:</span> {diagram.significance}
-                    </p>
+                    </MarkdownWithMath>
+                    <div className="text-sm text-blue-700 dark:text-blue-300">
+                      <span className="font-medium">Significance:</span>{' '}
+                      <MarkdownWithMath className="inline [&_p]:inline [&_p]:my-0 [&_strong]:font-semibold [&_em]:italic">
+                        {diagram.significance}
+                      </MarkdownWithMath>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -245,7 +252,7 @@ function SectionCard({ section, index, isExpanded, onToggle, totalSections }: Se
                       <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center bg-purple-200 dark:bg-purple-800 text-purple-700 dark:text-purple-300 rounded-lg text-xs font-bold">
                         {i + 1}
                       </span>
-                      <span>{example}</span>
+                      <span><MathText>{example}</MathText></span>
                     </li>
                   ))}
                 </ul>

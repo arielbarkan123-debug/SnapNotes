@@ -1,8 +1,12 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
+import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import type { BatchWorksheetItem } from '@/lib/homework/types'
+import { MathText } from '@/components/ui/MathRenderer'
+
+const MarkdownWithMath = dynamic(() => import('@/components/prepare/MarkdownWithMath'), { ssr: false })
 
 interface WorksheetDetailProps {
   item: BatchWorksheetItem
@@ -31,7 +35,7 @@ export default function WorksheetDetail({ item, isVisible, onPractice, isPractic
                 {t('problemNumber', { number: item.problemNumber })}
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {item.problemText}
+                <MathText>{item.problemText}</MathText>
               </p>
             </div>
 
@@ -41,16 +45,16 @@ export default function WorksheetDetail({ item, isVisible, onPractice, isPractic
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                   {t('studentWrote')}
                 </p>
-                <p className={`text-sm font-mono ${item.isCorrect === false ? 'text-red-600 dark:text-red-400 line-through' : 'text-gray-900 dark:text-white'}`}>
-                  {item.studentAnswer || '\u2014'}
+                <p className={`text-sm ${item.isCorrect === false ? 'text-red-600 dark:text-red-400 line-through' : 'text-gray-900 dark:text-white'}`}>
+                  {item.studentAnswer ? <MathText>{item.studentAnswer}</MathText> : '\u2014'}
                 </p>
               </div>
               <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
                 <p className="text-xs font-medium text-green-600 dark:text-green-400 mb-1">
                   {t('correctAnswerIs')}
                 </p>
-                <p className="text-sm font-mono text-green-700 dark:text-green-300">
-                  {item.correctAnswer}
+                <p className="text-sm text-green-700 dark:text-green-300">
+                  <MathText>{item.correctAnswer}</MathText>
                 </p>
               </div>
             </div>
@@ -61,9 +65,9 @@ export default function WorksheetDetail({ item, isVisible, onPractice, isPractic
                 <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">
                   {t('errorExplanation')}
                 </p>
-                <p className="text-sm text-blue-700 dark:text-blue-300">
+                <MarkdownWithMath className="text-sm text-blue-700 dark:text-blue-300 [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold dark:[&_strong]:text-blue-200 [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:my-0.5 [&_code]:bg-blue-100 dark:[&_code]:bg-blue-900/40 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded">
                   {item.explanation}
-                </p>
+                </MarkdownWithMath>
               </div>
             )}
 

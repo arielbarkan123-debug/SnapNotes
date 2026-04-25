@@ -1,8 +1,12 @@
 'use client'
 
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import type { MistakeItem } from './MistakeReview'
+import { MathText } from '@/components/ui/MathRenderer'
+
+const MarkdownWithMath = dynamic(() => import('@/components/prepare/MarkdownWithMath'), { ssr: false })
 
 // =============================================================================
 // Props
@@ -25,7 +29,7 @@ export default function MistakeCard({ mistake, namespace = 'practice' }: Mistake
       {/* Question */}
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
         <p className="text-sm font-medium text-gray-900 dark:text-white leading-relaxed">
-          {mistake.question}
+          <MathText>{mistake.question}</MathText>
         </p>
         {mistake.cardType && (
           <span className="mt-1 inline-block text-xs text-gray-400 dark:text-gray-400 uppercase tracking-wide">
@@ -47,7 +51,7 @@ export default function MistakeCard({ mistake, namespace = 'practice' }: Mistake
             <div>
               <span className="text-xs text-gray-500 dark:text-gray-300">{t('yourAnswerLabel')}</span>
               <p className="text-sm text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 rounded px-2 py-1 mt-0.5">
-                {mistake.userAnswer}
+                <MathText>{mistake.userAnswer}</MathText>
               </p>
             </div>
           </div>
@@ -63,7 +67,7 @@ export default function MistakeCard({ mistake, namespace = 'practice' }: Mistake
           <div>
             <span className="text-xs text-gray-500 dark:text-gray-300">{t('correctAnswerLabel')}</span>
             <p className="text-sm text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 rounded px-2 py-1 mt-0.5">
-              {mistake.correctAnswer}
+              <MathText>{mistake.correctAnswer}</MathText>
             </p>
           </div>
         </div>
@@ -75,9 +79,9 @@ export default function MistakeCard({ mistake, namespace = 'practice' }: Mistake
           {mistake.explanation && (
             <div className="mb-2">
               <span className="text-xs font-medium text-gray-500 dark:text-gray-300">{t('explanationLabel')}</span>
-              <p className="text-sm text-gray-700 dark:text-gray-200 mt-0.5">
+              <MarkdownWithMath className="text-sm text-gray-700 dark:text-gray-200 mt-0.5 [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold dark:[&_strong]:text-white [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:my-0.5 [&_code]:bg-gray-200 dark:[&_code]:bg-gray-700 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs">
                 {mistake.explanation}
-              </p>
+              </MarkdownWithMath>
             </div>
           )}
           {mistake.courseId && mistake.lessonIndex !== undefined && (

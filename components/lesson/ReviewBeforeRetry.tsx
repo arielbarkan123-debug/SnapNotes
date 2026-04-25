@@ -1,7 +1,11 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { type Step } from '@/types'
+import { MathText } from '@/components/ui/MathRenderer'
+
+const MarkdownWithMath = dynamic(() => import('@/components/prepare/MarkdownWithMath'), { ssr: false })
 
 interface ReviewBeforeRetryProps {
   questionStep: Step
@@ -68,9 +72,9 @@ export default function ReviewBeforeRetry({
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                   {t('theKeyConcept')}
                 </h2>
-                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                <MarkdownWithMath className="text-gray-700 dark:text-gray-300 leading-relaxed [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold dark:[&_strong]:text-white [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:my-0.5 [&_code]:bg-gray-200 dark:[&_code]:bg-gray-700 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded">
                   {questionStep.explanation}
-                </p>
+                </MarkdownWithMath>
               </div>
             </div>
           </div>
@@ -89,12 +93,12 @@ export default function ReviewBeforeRetry({
               >
                 {step.title && (
                   <h4 className="font-medium text-gray-900 dark:text-white mb-2">
-                    {step.title}
+                    <MathText>{step.title}</MathText>
                   </h4>
                 )}
-                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                <MarkdownWithMath className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold dark:[&_strong]:text-white [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:my-0.5 [&_code]:bg-gray-200 dark:[&_code]:bg-gray-700 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs">
                   {step.content}
-                </p>
+                </MarkdownWithMath>
               </div>
             ))}
           </div>

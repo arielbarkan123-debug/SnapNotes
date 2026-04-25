@@ -1,8 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import type { DetectedGap, GapSeverity } from '@/lib/concepts/types'
+
+const MarkdownWithMath = dynamic(() => import('@/components/prepare/MarkdownWithMath'), { ssr: false })
 
 // Inline SVG Icons
 const AlertTriangle = ({ className }: { className?: string }) => (
@@ -117,15 +120,15 @@ export function PrerequisiteCheck({
             </div>
 
             {gap.explanation && (
-              <p className="text-sm text-muted-foreground mt-1">
+              <MarkdownWithMath className="text-sm text-muted-foreground mt-1 [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:my-0.5 [&_code]:bg-gray-200 dark:[&_code]:bg-gray-700 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs">
                 {gap.explanation}
-              </p>
+              </MarkdownWithMath>
             )}
 
             {gap.remediation && (
-              <p className="text-xs text-muted-foreground mt-1 italic">
-                Suggestion: {gap.remediation}
-              </p>
+              <MarkdownWithMath className="text-xs text-muted-foreground mt-1 italic [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_em]:italic">
+                {`Suggestion: ${gap.remediation}`}
+              </MarkdownWithMath>
             )}
 
             {gap.gapType && (

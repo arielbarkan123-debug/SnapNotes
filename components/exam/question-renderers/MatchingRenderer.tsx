@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { type MatchingPair } from '@/types'
-import { formatMathInText } from '@/lib/utils/math-format'
+import { MathText } from '@/components/ui/MathRenderer'
 import { type QuestionRendererProps } from './types'
 import { normalizeAnswer } from './utils'
 
@@ -192,7 +192,7 @@ export default function MatchingRenderer({
   return (
     <div className="space-y-4">
       <p className="text-lg font-semibold text-gray-900 dark:text-white leading-relaxed">
-        {formatMathInText(question.question_text)}
+        <MathText>{question.question_text}</MathText>
       </p>
 
       {!showResults && (
@@ -221,7 +221,7 @@ export default function MatchingRenderer({
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-bold">
                     {index + 1}
                   </span>
-                  <span>{formatMathInText(pair.left)}</span>
+                  <span><MathText>{pair.left}</MathText></span>
                 </span>
               </button>
             ) : null
@@ -244,7 +244,7 @@ export default function MatchingRenderer({
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-bold">
                   {String.fromCharCode(65 + index)}
                 </span>
-                <span>{formatMathInText(def.text)}</span>
+                <span><MathText>{def.text}</MathText></span>
               </span>
             </button>
           ))}
@@ -269,9 +269,9 @@ export default function MatchingRenderer({
             {correctPairs.map((pair, index) => (
               pair?.left && pair?.right ? (
                 <div key={index} className="flex items-center gap-2 text-sm">
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{formatMathInText(pair.left)}</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-300"><MathText>{pair.left}</MathText></span>
                   <span className="text-gray-400">→</span>
-                  <span className="text-green-600 dark:text-green-400">{formatMathInText(pair.right)}</span>
+                  <span className="text-green-600 dark:text-green-400"><MathText>{pair.right}</MathText></span>
                 </div>
               ) : null
             ))}

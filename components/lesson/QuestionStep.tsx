@@ -7,7 +7,9 @@ import { type Step, type HelpContext } from '@/types'
 import { generateHint, type HintContext as HintCtx, type Hint } from '@/lib/adaptive/hints'
 import HintBubble, { HintButton } from './HintBubble'
 import HelpModal from '@/components/help/HelpModal'
-import MathText from '@/components/ui/MathText'
+import { MathText } from '@/components/ui/MathRenderer'
+
+const MarkdownWithMath = dynamic(() => import('@/components/prepare/MarkdownWithMath'), { ssr: false })
 import { useConceptMastery, useAdaptiveDifficulty, useResponseTimer } from '@/hooks'
 
 // Lazy load PracticeMore since it's only shown after wrong answers
@@ -451,9 +453,13 @@ export default function QuestionStep({
 
           {/* Explanation */}
           {explanation && (
-            <p
+            <MarkdownWithMath
               className={`
                 text-sm leading-relaxed
+                [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0
+                [&_strong]:font-semibold [&_em]:italic
+                [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:my-0.5
+                [&_code]:bg-black/10 dark:[&_code]:bg-white/10 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs
                 ${isCorrect
                   ? 'text-green-700 dark:text-green-300'
                   : 'text-red-700 dark:text-red-300'
@@ -461,13 +467,13 @@ export default function QuestionStep({
               `}
             >
               {explanation}
-            </p>
+            </MarkdownWithMath>
           )}
 
           {/* Show correct answer if wrong */}
           {!isCorrect && (
             <p className="mt-3 text-sm font-medium text-red-800 dark:text-red-200">
-              {t('correctAnswerWas')} <span className="font-bold">{options[correct_answer]}</span>
+              {t('correctAnswerWas')} <span className="font-bold"><MathText>{options[correct_answer]}</MathText></span>
             </p>
           )}
 

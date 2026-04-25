@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { type Hint } from '@/lib/adaptive/hints'
+
+const MarkdownWithMath = dynamic(() => import('@/components/prepare/MarkdownWithMath'), { ssr: false })
 
 interface HintBubbleProps {
   hint: Hint
@@ -119,9 +122,9 @@ export default function HintBubble({
           </p>
 
           {/* Hint text */}
-          <p className={`text-sm ${getTextColor()} leading-relaxed`}>
+          <MarkdownWithMath className={`text-sm ${getTextColor()} leading-relaxed [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:my-0.5 [&_code]:bg-black/10 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs`}>
             {hint.content}
-          </p>
+          </MarkdownWithMath>
 
           {/* Feedback buttons */}
           {showFeedback && (

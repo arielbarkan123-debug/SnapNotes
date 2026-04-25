@@ -1,9 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { formatMathInText } from '@/lib/utils/math-format'
+import dynamic from 'next/dynamic'
+import { MathText } from '@/components/ui/MathRenderer'
 import { type QuestionRendererProps } from './types'
 import { checkTextAnswer } from './utils'
+
+const MarkdownWithMath = dynamic(() => import('@/components/prepare/MarkdownWithMath'), { ssr: false })
 
 export default function FillBlankRenderer({
   question,
@@ -36,7 +39,7 @@ export default function FillBlankRenderer({
     if (parts.length === 1) {
       return (
         <p className="text-lg font-semibold text-gray-900 dark:text-white leading-relaxed mb-4">
-          {formatMathInText(question.question_text)}
+          <MathText>{question.question_text}</MathText>
         </p>
       )
     }
@@ -45,7 +48,7 @@ export default function FillBlankRenderer({
       <p className="text-lg font-semibold text-gray-900 dark:text-white leading-relaxed mb-4">
         {parts.map((part, index) => (
           <span key={index}>
-            {formatMathInText(part)}
+            <MathText>{part}</MathText>
             {index < parts.length - 1 && (
               <span
                 className={`inline-block min-w-[100px] mx-1 px-2 py-1 rounded-lg border-2 border-dashed ${
@@ -56,7 +59,7 @@ export default function FillBlankRenderer({
                     : 'border-violet-400 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300'
                 }`}
               >
-                {formatMathInText(inputValue) || '___'}
+                {inputValue ? <MathText>{inputValue}</MathText> : '___'}
               </span>
             )}
           </span>
@@ -94,7 +97,7 @@ export default function FillBlankRenderer({
         <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
           <p className="text-red-600 dark:text-red-400">
             Correct answer:{' '}
-            <span className="font-semibold">{formatMathInText(question.correct_answer)}</span>
+            <span className="font-semibold"><MathText>{question.correct_answer}</MathText></span>
           </p>
         </div>
       )}
@@ -102,7 +105,9 @@ export default function FillBlankRenderer({
       {showResults && question.explanation && (
         <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Explanation</p>
-          <p className="text-gray-700 dark:text-gray-300">{formatMathInText(question.explanation)}</p>
+          <MarkdownWithMath className="text-gray-700 dark:text-gray-300 [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold dark:[&_strong]:text-white [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:my-0.5 [&_code]:bg-gray-200 dark:[&_code]:bg-gray-700 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm">
+            {question.explanation}
+          </MarkdownWithMath>
         </div>
       )}
     </div>

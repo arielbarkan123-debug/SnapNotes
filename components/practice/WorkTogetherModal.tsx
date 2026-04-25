@@ -15,6 +15,9 @@ import {
   type DiagramState,
   getLatestDiagram,
 } from '@/components/homework/diagram'
+import { MathText } from '@/components/ui/MathRenderer'
+
+const MarkdownWithMath = dynamic(() => import('@/components/prepare/MarkdownWithMath'), { ssr: false })
 
 // ============================================================================
 // Error Boundary
@@ -237,7 +240,13 @@ function MessageBubble({
             }
           `}
         >
-          <p className="whitespace-pre-wrap">{message.content}</p>
+          {isTutor ? (
+            <MarkdownWithMath className="[&>p]:my-1.5 [&>p:first-child]:mt-0 [&>p:last-child]:mb-0 [&_strong]:font-semibold [&_strong]:text-violet-700 dark:[&_strong]:text-violet-300 [&_em]:italic [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:my-1.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:my-1.5 [&_li]:my-0.5 [&_code]:bg-gray-100 dark:[&_code]:bg-gray-700 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs">
+              {message.content}
+            </MarkdownWithMath>
+          ) : (
+            <p className="whitespace-pre-wrap">{message.content}</p>
+          )}
         </div>
       </div>
     </article>
@@ -690,11 +699,12 @@ export default function WorkTogetherModal({
             {/* Question Banner */}
             <div id="work-together-question" className="px-4 py-3 bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-800" role="region" aria-label={isRTL ? 'השאלה' : 'The question'}>
               <p className="text-sm font-medium text-violet-800 dark:text-violet-200">
-                {question.question}
+                <MathText>{question.question}</MathText>
               </p>
               {wasCorrect === false && userAnswer && (
                 <p className="mt-1 text-xs text-violet-600 dark:text-violet-400">
-                  {isRTL ? `התשובה שלך: ${userAnswer}` : `Your answer: ${userAnswer}`}
+                  {isRTL ? 'התשובה שלך: ' : 'Your answer: '}
+                  <MathText>{userAnswer}</MathText>
                 </p>
               )}
             </div>

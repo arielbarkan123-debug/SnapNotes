@@ -3,6 +3,7 @@
 import { type Step } from '@/types'
 import Image from 'next/image'
 import { createLogger } from '@/lib/logger'
+import { MathText } from '@/components/ui/MathRenderer'
 
 const log = createLogger('ui:step-content')
 import { useState, useCallback } from 'react'
@@ -20,6 +21,7 @@ const DiagramRenderer = dynamic(
 
 const AnnotationButton = dynamic(() => import('@/components/course/AnnotationButton'))
 const DepthExpansion = dynamic(() => import('./DepthExpansion'), { ssr: false })
+const MarkdownWithMath = dynamic(() => import('@/components/prepare/MarkdownWithMath'), { ssr: false })
 
 interface StepContentProps {
   step: Step
@@ -219,9 +221,9 @@ interface ImageStepProps {
 function ExplanationStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, imageCreditUrl, t }: ImageStepProps) {
   return (
     <div className="animate-fadeIn">
-      <p className="text-lg sm:text-xl text-gray-800 dark:text-gray-200 leading-relaxed">
+      <MarkdownWithMath className="text-lg sm:text-xl text-gray-800 dark:text-gray-200 leading-relaxed [&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_strong]:text-gray-900 dark:[&_strong]:text-white [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:my-1 [&_code]:bg-gray-100 dark:[&_code]:bg-gray-700 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-base">
         {content}
-      </p>
+      </MarkdownWithMath>
       {imageUrl && <StepImage url={imageUrl} alt={imageAlt} caption={imageCaption} credit={imageCredit} creditUrl={imageCreditUrl} t={t} />}
     </div>
   )
@@ -247,9 +249,9 @@ function KeyPointStep({ content, t }: KeyPointStepProps) {
             <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
               {t('keyPointType')}
             </span>
-            <p className="mt-2 text-lg font-semibold text-gray-900 dark:text-white leading-relaxed">
+            <MarkdownWithMath className="mt-2 text-lg font-semibold text-gray-900 dark:text-white leading-relaxed [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold dark:[&_strong]:text-white [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:my-0.5 [&_code]:bg-amber-100 dark:[&_code]:bg-amber-900/40 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-base">
               {content}
-            </p>
+            </MarkdownWithMath>
           </div>
         </div>
       </div>
@@ -276,16 +278,16 @@ function FormulaStep({ content, explanation, t }: FormulaStepProps) {
             {t('formulaType')}
           </span>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 font-mono text-lg sm:text-xl text-center text-gray-900 dark:text-white border border-blue-100 dark:border-blue-900">
-          {content}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-lg sm:text-xl text-center text-gray-900 dark:text-white border border-blue-100 dark:border-blue-900">
+          <MathText>{content}</MathText>
         </div>
       </div>
 
       {/* Explanation */}
       {explanation && (
-        <p className="text-gray-600 dark:text-gray-400 leading-relaxed ps-2 border-s-2 border-blue-300 dark:border-blue-700">
+        <MarkdownWithMath className="text-gray-600 dark:text-gray-400 leading-relaxed ps-2 border-s-2 border-blue-300 dark:border-blue-700 [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_strong]:text-gray-900 dark:[&_strong]:text-white [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:my-0.5 [&_code]:bg-gray-100 dark:[&_code]:bg-gray-700 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded">
           {explanation}
-        </p>
+        </MarkdownWithMath>
       )}
     </div>
   )
@@ -335,9 +337,9 @@ function DiagramStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, i
             {isValidDiagramData ? t('interactiveDiagram') : imageUrl ? t('diagramType') : t('diagramReferenceType')}
           </span>
         </div>
-        <p className="text-gray-800 dark:text-gray-200 leading-relaxed mb-4">
+        <MarkdownWithMath className="text-gray-800 dark:text-gray-200 leading-relaxed mb-4 [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_strong]:text-gray-900 dark:[&_strong]:text-white [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:my-0.5 [&_code]:bg-purple-100 dark:[&_code]:bg-purple-900/40 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded">
           {content}
-        </p>
+        </MarkdownWithMath>
 
         {/* Interactive Diagram */}
         {isValidDiagramData && !diagramError && (
@@ -421,9 +423,9 @@ function ExampleStep({ content, imageUrl, imageAlt, imageCaption, imageCredit, i
             {t('exampleLabel')}
           </span>
         </div>
-        <p className="text-gray-800 dark:text-gray-200 leading-relaxed">
+        <MarkdownWithMath className="text-gray-800 dark:text-gray-200 leading-relaxed [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_strong]:text-gray-900 dark:[&_strong]:text-white [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:my-0.5 [&_code]:bg-green-100 dark:[&_code]:bg-green-900/40 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded">
           {content}
-        </p>
+        </MarkdownWithMath>
         {imageUrl && <StepImage url={imageUrl} alt={imageAlt || t('exampleLabel')} caption={imageCaption} credit={imageCredit} creditUrl={imageCreditUrl} t={t} />}
       </div>
     </div>
@@ -470,14 +472,14 @@ function SummaryStep({ content, lessonTitle, t }: SummaryStepProps) {
                 <span className="flex-shrink-0 w-6 h-6 bg-violet-100 dark:bg-violet-900/40 rounded-full flex items-center justify-center text-xs font-bold text-violet-600 dark:text-violet-400">
                   {index + 1}
                 </span>
-                <span className="text-gray-800 dark:text-gray-200">{point}</span>
+                <span className="text-gray-800 dark:text-gray-200"><MathText>{point}</MathText></span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-gray-800 dark:text-gray-200 leading-relaxed">
+          <MarkdownWithMath className="text-gray-800 dark:text-gray-200 leading-relaxed [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold dark:[&_strong]:text-white [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:my-0.5 [&_code]:bg-violet-100 dark:[&_code]:bg-violet-900/40 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded">
             {content}
-          </p>
+          </MarkdownWithMath>
         )}
       </div>
     </div>

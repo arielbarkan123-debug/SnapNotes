@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { useLocale } from 'next-intl'
+import dynamic from 'next/dynamic'
 import { isRTL, type Locale } from '@/i18n/config'
 import { useStudyPlanChat } from '@/hooks/useStudyPlanChat'
 import { ChatInput } from './ChatInput'
@@ -10,136 +11,10 @@ import { ChatActionCard } from './ChatActionCard'
 import { SuggestedPrompts } from './SuggestedPrompts'
 import type { ChatAction } from '@/types'
 
+const MarkdownWithMath = dynamic(() => import('@/components/prepare/MarkdownWithMath'), { ssr: false })
+
 interface StudyPlanChatProps {
   onActionApplied?: (actions: ChatAction[]) => void
-}
-
-// Simple inline markdown: bold, italic, inline code, bullet lists, numbered lists
-function renderMarkdown(text: string): React.ReactNode[] {
-  const lines = text.split('\n')
-  const elements: React.ReactNode[] = []
-  let listItems: React.ReactNode[] = []
-  let listType: 'ul' | 'ol' | null = null
-
-  const flushList = () => {
-    if (listItems.length > 0 && listType) {
-      const Tag = listType
-      elements.push(
-        <Tag
-          key={`list-${elements.length}`}
-          className={`${
-            listType === 'ul' ? 'list-disc' : 'list-decimal'
-          } pl-4 my-1 space-y-0.5`}
-        >
-          {listItems}
-        </Tag>
-      )
-      listItems = []
-      listType = null
-    }
-  }
-
-  const formatInline = (str: string): React.ReactNode => {
-    // Process bold (**text**), italic (*text*), inline code (`text`)
-    const parts: React.ReactNode[] = []
-    let remaining = str
-    let key = 0
-
-    while (remaining.length > 0) {
-      // Bold
-      const boldMatch = remaining.match(/\*\*(.+?)\*\*/)
-      // Inline code
-      const codeMatch = remaining.match(/`(.+?)`/)
-      // Italic (single * but not **)
-      const italicMatch = remaining.match(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/)
-
-      // Find the earliest match
-      type MatchInfo = { match: RegExpMatchArray; type: 'bold' | 'code' | 'italic' }
-      const matches: MatchInfo[] = []
-      if (boldMatch?.index !== undefined) matches.push({ match: boldMatch, type: 'bold' })
-      if (codeMatch?.index !== undefined) matches.push({ match: codeMatch, type: 'code' })
-      if (italicMatch?.index !== undefined) matches.push({ match: italicMatch, type: 'italic' })
-
-      if (matches.length === 0) {
-        parts.push(remaining)
-        break
-      }
-
-      matches.sort((a, b) => (a.match.index ?? 0) - (b.match.index ?? 0))
-      const earliest = matches[0]
-      const idx = earliest.match.index ?? 0
-
-      if (idx > 0) {
-        parts.push(remaining.slice(0, idx))
-      }
-
-      const content = earliest.match[1]
-      if (earliest.type === 'bold') {
-        parts.push(
-          <strong key={`b-${key++}`} className="font-semibold">
-            {content}
-          </strong>
-        )
-      } else if (earliest.type === 'code') {
-        parts.push(
-          <code
-            key={`c-${key++}`}
-            className="bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded text-xs"
-          >
-            {content}
-          </code>
-        )
-      } else {
-        parts.push(
-          <em key={`i-${key++}`}>{content}</em>
-        )
-      }
-
-      remaining = remaining.slice(idx + earliest.match[0].length)
-    }
-
-    return parts.length === 1 ? parts[0] : <>{parts}</>
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-
-    // Bullet list
-    const bulletMatch = line.match(/^[-*]\s+(.+)/)
-    if (bulletMatch) {
-      if (listType !== 'ul') flushList()
-      listType = 'ul'
-      listItems.push(<li key={`li-${i}`}>{formatInline(bulletMatch[1])}</li>)
-      continue
-    }
-
-    // Numbered list
-    const numMatch = line.match(/^\d+\.\s+(.+)/)
-    if (numMatch) {
-      if (listType !== 'ol') flushList()
-      listType = 'ol'
-      listItems.push(<li key={`li-${i}`}>{formatInline(numMatch[1])}</li>)
-      continue
-    }
-
-    flushList()
-
-    // Empty line = spacer
-    if (line.trim() === '') {
-      elements.push(<div key={`sp-${i}`} className="h-2" />)
-      continue
-    }
-
-    // Regular paragraph
-    elements.push(
-      <p key={`p-${i}`} className="my-0.5">
-        {formatInline(line)}
-      </p>
-    )
-  }
-
-  flushList()
-  return elements
 }
 
 export function StudyPlanChat({ onActionApplied }: StudyPlanChatProps) {
@@ -306,9 +181,9 @@ export function StudyPlanChat({ onActionApplied }: StudyPlanChatProps) {
                   {isUser ? (
                     <p className="whitespace-pre-wrap">{msg.content}</p>
                   ) : (
-                    <div className="[&>p]:my-0.5 [&>p:first-child]:mt-0 [&>p:last-child]:mb-0">
-                      {renderMarkdown(msg.content)}
-                    </div>
+                    <MarkdownWithMath className="[&>p]:my-0.5 [&>p:first-child]:mt-0 [&>p:last-child]:mb-0 [&_strong]:font-semibold [&_em]:italic [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:my-1 [&_li]:my-0.5 [&_code]:bg-gray-200 dark:[&_code]:bg-gray-700 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs">
+                      {msg.content}
+                    </MarkdownWithMath>
                   )}
                 </div>
               </div>

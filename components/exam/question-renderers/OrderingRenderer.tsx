@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { formatMathInText } from '@/lib/utils/math-format'
+import { MathText } from '@/components/ui/MathRenderer'
 import { type QuestionRendererProps } from './types'
 import { normalizeAnswer } from './utils'
 
@@ -87,7 +87,7 @@ export default function OrderingRenderer({
   return (
     <div className="space-y-4">
       <p className="text-lg font-semibold text-gray-900 dark:text-white leading-relaxed">
-        {formatMathInText(question.question_text)}
+        <MathText>{question.question_text}</MathText>
       </p>
 
       {!showResults && (
@@ -113,7 +113,7 @@ export default function OrderingRenderer({
             </span>
 
             {/* Item Text */}
-            <span className="flex-1">{formatMathInText(item)}</span>
+            <span className="flex-1"><MathText>{item}</MathText></span>
 
             {/* Up/Down Buttons */}
             {!showResults && (
@@ -166,7 +166,7 @@ export default function OrderingRenderer({
                 <span className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center font-bold text-xs">
                   {index + 1}
                 </span>
-                <span className="text-gray-700 dark:text-gray-300">{formatMathInText(item)}</span>
+                <span className="text-gray-700 dark:text-gray-300"><MathText>{item}</MathText></span>
               </li>
             ))}
           </ol>

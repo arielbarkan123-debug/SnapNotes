@@ -21,6 +21,9 @@ import ShortAnswer from '@/components/practice/ShortAnswer'
 import Matching from '@/components/practice/Matching'
 import Sequence from '@/components/practice/Sequence'
 import MultiSelect from '@/components/practice/MultiSelect'
+import { MathText } from '@/components/ui/MathRenderer'
+
+const MarkdownWithMath = dynamic(() => import('@/components/prepare/MarkdownWithMath'), { ssr: false })
 
 // =============================================================================
 // Types
@@ -219,7 +222,7 @@ export default function ReviewCard({ card, onShowAnswer, isAnswerShown, onAnswer
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <p dir="auto" className="text-xl sm:text-2xl font-medium text-gray-900 dark:text-white leading-relaxed">
-                {card.front}
+                <MathText>{card.front}</MathText>
               </p>
             </div>
           </div>
@@ -281,24 +284,32 @@ function formatAnswer(back: string, cardType: CardType): React.ReactNode {
           if (part.startsWith('**Formula:**')) {
             const formula = part.replace('**Formula:**', '').trim()
             return (
-              <div key={i} className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 font-mono text-lg">
-                {formula}
+              <div key={i} className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 text-lg">
+                <MathText>{formula}</MathText>
               </div>
             )
           }
           if (part.startsWith('**Explanation:**')) {
             const explanation = part.replace('**Explanation:**', '').trim()
             return (
-              <p key={i} className="text-gray-600 dark:text-gray-400">
+              <MarkdownWithMath key={i} className="text-gray-600 dark:text-gray-400 [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_em]:italic">
                 {explanation}
-              </p>
+              </MarkdownWithMath>
             )
           }
-          return <p key={i}>{part}</p>
+          return (
+            <MarkdownWithMath key={i} className="[&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_em]:italic">
+              {part}
+            </MarkdownWithMath>
+          )
         })}
       </div>
     )
   }
 
-  return back
+  return (
+    <MarkdownWithMath className="[&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:my-0.5 [&_code]:bg-gray-200 dark:[&_code]:bg-gray-700 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded">
+      {back}
+    </MarkdownWithMath>
+  )
 }

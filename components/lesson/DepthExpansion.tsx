@@ -1,8 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslations } from 'next-intl'
+import { MathText } from '@/components/ui/MathRenderer'
+
+const MarkdownWithMath = dynamic(() => import('@/components/prepare/MarkdownWithMath'), { ssr: false })
 
 interface SubStep {
   title: string
@@ -111,11 +115,11 @@ function SubStepCard({ subStep, index, depth }: { subStep: SubStep; index: numbe
         </span>
         <div className="flex-1 min-w-0">
           <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-            {subStep.title}
+            <MathText>{subStep.title}</MathText>
           </h4>
-          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+          <MarkdownWithMath className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold dark:[&_strong]:text-white [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:my-0.5 [&_code]:bg-gray-200 dark:[&_code]:bg-gray-700 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs">
             {subStep.content}
-          </p>
+          </MarkdownWithMath>
 
           {/* Example badge */}
           {subStep.hasExample && (
@@ -154,7 +158,7 @@ function QuickCheckInline({ question, answer }: { question: string; answer: stri
       <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">
         {t('quickCheck')}
       </p>
-      <p className="text-sm text-gray-800 dark:text-gray-200 mb-2">{question}</p>
+      <p className="text-sm text-gray-800 dark:text-gray-200 mb-2"><MathText>{question}</MathText></p>
 
       {!checked ? (
         <div className="flex gap-2">

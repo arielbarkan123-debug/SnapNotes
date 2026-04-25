@@ -1,8 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { type LessonStep } from '@/types'
+import { MathText } from '@/components/ui/MathRenderer'
+
+const MarkdownWithMath = dynamic(() => import('@/components/prepare/MarkdownWithMath'), { ssr: false })
 
 // =============================================================================
 // Types
@@ -223,14 +227,14 @@ function RecapCard({ item, index, t }: RecapCardProps) {
       {/* Title */}
       {item.title && (
         <h3 className="text-xl font-bold text-white mb-3">
-          {item.title}
+          <MathText>{item.title}</MathText>
         </h3>
       )}
 
       {/* Content */}
-      <div className="text-white/90 leading-relaxed whitespace-pre-wrap">
+      <MarkdownWithMath className="text-white/90 leading-relaxed [&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_strong]:text-white [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:my-1 [&_code]:bg-white/20 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded">
         {item.content}
-      </div>
+      </MarkdownWithMath>
     </div>
   )
 }
