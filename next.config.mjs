@@ -2,9 +2,6 @@ import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
-// Check if we're in development mode
-const isDev = process.env.NODE_ENV === 'development';
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Security headers for production
@@ -55,11 +52,11 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              // SECURITY: 'unsafe-eval' only in development for react-refresh, removed in production
-              // Math viz CDNs (Desmos / GeoGebra) are loaded as <script> tags by the homework Visual Solving panel.
-              isDev
-                ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.desmos.com https://www.geogebra.org https://cdn.geogebra.org"
-                : "script-src 'self' 'unsafe-inline' https://www.desmos.com https://www.geogebra.org https://cdn.geogebra.org",
+              // 'unsafe-eval' required by react-refresh in dev AND by the Desmos / GeoGebra
+              // calculator bundles in prod (their math-expression compilers rely on dynamic
+              // function constructors). Site already permits 'unsafe-inline' so the additional
+              // XSS-surface from 'unsafe-eval' is incremental.
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.desmos.com https://www.geogebra.org https://cdn.geogebra.org",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://images.unsplash.com https://*.unsplash.com https://picsum.photos https://*.picsum.photos https://img.recraft.ai https://quicklatex.com https://www.desmos.com https://www.geogebra.org https://cdn.geogebra.org",
               "font-src 'self' data:",
