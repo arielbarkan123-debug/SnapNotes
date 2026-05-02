@@ -1,7 +1,7 @@
 'use client'
 
 import { useLocale } from 'next-intl'
-import { type DiagramState, getDiagramTypeName } from './types'
+import { type DiagramState, getDiagramTypeName, isHybridDiagram } from './types'
 import DiagramRenderer from './DiagramRenderer'
 
 interface InlineDiagramProps {
@@ -31,6 +31,13 @@ export default function InlineDiagram({
   const locale = useLocale()
   const lang = language || (locale as 'en' | 'he')
   const { width, height } = SIZE_MAP[size]
+
+  // Hybrid diagram types (Desmos/GeoGebra/Recharts/Mermaid) render in the
+  // VisualSolvingPanel side panel only — DiagramRenderer would show an
+  // "unsupported" placeholder. The side panel auto-opens for visual updates.
+  if (isHybridDiagram(diagram)) {
+    return null
+  }
 
   return (
     <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">

@@ -22,6 +22,34 @@ export interface DiagramState {
 // Engine-generated image types (E2B/TikZ/Recraft pipeline)
 export const ENGINE_DIAGRAM_TYPES = ['engine_image', 'step_sequence']
 
+// Hybrid (client-side) diagram types — rendered by VisualSolvingPanel via
+// DesmosEmbed / GeoGebraEmbed / RechartsRenderer / MermaidRenderer.
+// Kept in sync with lib/diagram-engine/router.ts hybrid type lists.
+// (Hard-coded here because router.ts is server-only — imports @anthropic-ai/sdk.)
+export const HYBRID_DIAGRAM_TYPES = new Set<string>([
+  // Desmos
+  'coordinate_plane', 'function_graph', 'linear_equation', 'quadratic_graph',
+  'inequality_graph', 'system_of_equations', 'scatter_plot_regression',
+  'trigonometric_graph', 'piecewise_function', 'parametric_curve', 'polar_graph',
+  // GeoGebra
+  'triangle', 'circle_geometry', 'angle_measurement', 'parallel_lines',
+  'polygon', 'transformation', 'congruence', 'similarity',
+  'pythagorean_theorem', 'circle_theorems', 'construction',
+  // Recharts
+  'box_plot', 'histogram', 'dot_plot', 'bar_chart', 'pie_chart',
+  'line_chart', 'stem_leaf_plot', 'frequency_table',
+  // Mermaid
+  'tree_diagram', 'flowchart', 'sequence_diagram', 'factor_tree', 'probability_tree',
+])
+
+/**
+ * Check if diagram is a hybrid client-side type (Desmos/GeoGebra/Recharts/Mermaid).
+ * These render via VisualSolvingPanel only — not inline in chat messages.
+ */
+export function isHybridDiagram(diagram: DiagramState): boolean {
+  return HYBRID_DIAGRAM_TYPES.has(diagram.type)
+}
+
 // Components that manage their own step controls
 // engine_image and step_sequence both manage their own navigation
 export const SELF_MANAGING_DIAGRAM_TYPES = new Set([

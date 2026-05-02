@@ -56,11 +56,14 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               // SECURITY: 'unsafe-eval' only in development for react-refresh, removed in production
-              isDev ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'" : "script-src 'self' 'unsafe-inline'",
+              // Math viz CDNs (Desmos / GeoGebra) are loaded as <script> tags by the homework Visual Solving panel.
+              isDev
+                ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.desmos.com https://www.geogebra.org https://cdn.geogebra.org"
+                : "script-src 'self' 'unsafe-inline' https://www.desmos.com https://www.geogebra.org https://cdn.geogebra.org",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://images.unsplash.com https://*.unsplash.com https://picsum.photos https://*.picsum.photos https://img.recraft.ai https://quicklatex.com",
+              "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://images.unsplash.com https://*.unsplash.com https://picsum.photos https://*.picsum.photos https://img.recraft.ai https://quicklatex.com https://www.desmos.com https://www.geogebra.org https://cdn.geogebra.org",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co https://*.supabase.in https://api.anthropic.com https://generativelanguage.googleapis.com",
+              "connect-src 'self' https://*.supabase.co https://*.supabase.in https://api.anthropic.com https://generativelanguage.googleapis.com https://www.desmos.com https://www.geogebra.org https://cdn.geogebra.org",
               // Allow Web Workers from same origin and blob URLs (needed for heic2any, PDF.js, etc.)
               "worker-src 'self' blob:",
               "frame-ancestors 'none'",
