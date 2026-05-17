@@ -288,6 +288,7 @@ Return ONLY the pipeline name, nothing else.`;
  */
 export async function routeQuestionWithAI(question: string): Promise<Pipeline> {
   try {
+    const startedAt = Date.now()
     const msg = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 20,
@@ -297,7 +298,7 @@ export async function routeQuestionWithAI(question: string): Promise<Pipeline> {
       }],
     });
 
-    aiLogger.llmUsage('diagram', msg.usage, { fn: 'routeQuestionWithAI', model: 'claude-sonnet-4-20250514' });
+    aiLogger.llmUsage('diagram', msg.usage, { fn: 'routeQuestionWithAI', model: 'claude-sonnet-4-20250514', durationMs: Date.now() - startedAt });
     const text = msg.content[0]?.type === 'text' ? msg.content[0].text.trim().toLowerCase() : '';
     const valid: Pipeline[] = ['recraft', 'tikz', 'e2b-matplotlib', 'e2b-latex'];
     const matched = valid.find(p => text.includes(p));

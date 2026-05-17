@@ -634,7 +634,7 @@ async function generateWalkthroughSolutionOnce(
   }
   log.info({ durationMs: Date.now() - tCall, stopReason: message.stop_reason }, 'Claude API call completed')
 
-  aiLogger.llmUsage('walkthrough', message.usage)
+  aiLogger.llmUsage('walkthrough', message.usage, { durationMs: Date.now() - tCall })
   // Extract text response
   const textBlock = message.content.find(b => b.type === 'text')
   if (!textBlock || textBlock.type !== 'text') {

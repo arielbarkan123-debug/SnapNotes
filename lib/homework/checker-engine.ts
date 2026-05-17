@@ -458,6 +458,7 @@ Respond ONLY with valid JSON matching this exact schema:
   ]
 }`
 
+  const startedAt = Date.now()
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
@@ -472,7 +473,7 @@ Respond ONLY with valid JSON matching this exact schema:
       },
     ],
   })
-  aiLogger.llmUsage('homework-check', response.usage)
+  aiLogger.llmUsage('homework-check', response.usage, { durationMs: Date.now() - startedAt })
 
   const text = response.content
     .filter((block): block is Anthropic.TextBlock => block.type === 'text')
@@ -600,13 +601,14 @@ Respond ONLY with valid JSON:
     { type: 'text' as const, text: 'Check this homework before submission. Do NOT reveal answers. Return JSON.' },
   ]
 
+  const startedAt = Date.now()
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
     system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: messageContent }],
   })
-  aiLogger.llmUsage('homework-check', response.usage)
+  aiLogger.llmUsage('homework-check', response.usage, { durationMs: Date.now() - startedAt })
 
   const text = response.content
     .filter((block): block is Anthropic.TextBlock => block.type === 'text')
@@ -687,6 +689,7 @@ Respond ONLY with valid JSON:
   "totalPossible": number
 }`
 
+  const rubricStartedAt = Date.now()
   const rubricResponse = await client.messages.create({
     model: AI_MODEL,
     max_tokens: 2048,
@@ -699,7 +702,7 @@ Respond ONLY with valid JSON:
       ],
     }],
   })
-  aiLogger.llmUsage('homework-check', rubricResponse.usage)
+  aiLogger.llmUsage('homework-check', rubricResponse.usage, { durationMs: Date.now() - rubricStartedAt })
 
   const rubricText = rubricResponse.content
     .filter((b): b is Anthropic.TextBlock => b.type === 'text')
@@ -753,6 +756,7 @@ Respond ONLY with valid JSON:
   "estimatedGrade": "A/B/C/D/F or equivalent"
 }`
 
+  const gradingStartedAt = Date.now()
   const gradingResponse = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
@@ -765,7 +769,7 @@ Respond ONLY with valid JSON:
       ],
     }],
   })
-  aiLogger.llmUsage('homework-check', gradingResponse.usage)
+  aiLogger.llmUsage('homework-check', gradingResponse.usage, { durationMs: Date.now() - gradingStartedAt })
 
   const gradingText = gradingResponse.content
     .filter((b): b is Anthropic.TextBlock => b.type === 'text')
@@ -1438,12 +1442,13 @@ If the calculator couldn't properly parse the problem, confirm your original ans
 Respond with ONLY JSON:
 { "correctAnswer": "the verified correct answer", "solutionSteps": ["step1", "step2", ...] }`
 
+  const startedAt = Date.now()
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: 512,
     messages: [{ role: 'user', content: prompt }],
   })
-  aiLogger.llmUsage('homework-check', response.usage)
+  aiLogger.llmUsage('homework-check', response.usage, { durationMs: Date.now() - startedAt })
 
   const textContent = response.content.find(b => b.type === 'text')
   if (!textContent || textContent.type !== 'text') return null
@@ -1800,6 +1805,7 @@ async function streamWithRetry(
 ): Promise<Anthropic.Message> {
   let response: Anthropic.Message | null = null
   let lastError: Error | null = null
+  const startedAt = Date.now()
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -1815,7 +1821,7 @@ async function streamWithRetry(
 
       response = await stream.finalMessage()
       log.info({ detail: response.usage?.output_tokens }, `Response received (attempt ${attempt}), tokens`)
-      aiLogger.llmUsage('homework-check', response.usage)
+      aiLogger.llmUsage('homework-check', response.usage, { durationMs: Date.now() - startedAt })
       break
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
@@ -2112,6 +2118,7 @@ Return your analysis as JSON in this exact format:
   // Use text-only API (cheaper than Vision)
   let response: Anthropic.Message | null = null
   let lastError: Error | null = null
+  const startedAt = Date.now()
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -2127,7 +2134,7 @@ Return your analysis as JSON in this exact format:
 
       response = await stream.finalMessage()
       log.info({ detail: response.usage?.output_tokens }, 'Response received, tokens used')
-      aiLogger.llmUsage('homework-check', response.usage)
+      aiLogger.llmUsage('homework-check', response.usage, { durationMs: Date.now() - startedAt })
       break
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))

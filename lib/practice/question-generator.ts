@@ -510,12 +510,13 @@ export async function generatePracticeQuestions(
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set')
   const anthropic = new Anthropic({ apiKey })
 
+  const startedAt = Date.now()
   const response = await anthropic.messages.create({
     model: AI_MODEL,
     max_tokens: 4000,
     messages: [{ role: 'user', content: prompt }],
   })
-  aiLogger.llmUsage('practice-session', response.usage)
+  aiLogger.llmUsage('practice-session', response.usage, { durationMs: Date.now() - startedAt })
 
   // Parse response
   const responseText =

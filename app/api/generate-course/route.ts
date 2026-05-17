@@ -197,10 +197,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     cancel() {
       stopHeartbeat()
     }
-  })
+  });
 
   // Process the request asynchronously
-  ;(async () => {
+  (async () => {
     try {
       // Start heartbeat immediately
       startHeartbeat()
@@ -563,7 +563,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           }
 
           // Store progressive generation metadata for continuation
-          ;(generatedCourse as GeneratedCourseWithMetadata)._progressiveMetadata = {
+          (generatedCourse as GeneratedCourseWithMetadata)._progressiveMetadata = {
             lessonOutline: result.lessonOutline,
             documentSummary: result.documentSummary,
             totalLessons: result.totalLessons,

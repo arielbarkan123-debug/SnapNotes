@@ -130,13 +130,14 @@ Return JSON:
   "workedExample": null | "The worked example if this is level 3"
 }`
 
+  const startedAt = Date.now()
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
     messages: [{ role: 'user', content: prompt }],
   })
 
-  aiLogger.llmUsage('practice-session', response.usage)
+  aiLogger.llmUsage('practice-session', response.usage, { durationMs: Date.now() - startedAt })
   return parseHintResponse(response, requestedLevel, topicType)
 }
 

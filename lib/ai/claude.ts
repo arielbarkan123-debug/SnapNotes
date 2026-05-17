@@ -8,6 +8,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
+import { INITIAL_COURSE_TOOL, InitialCourseOutputSchema } from './tools/initial-course-tool'
 import {
   getImageAnalysisPrompt,
   getMultiPageImageAnalysisPrompt,
@@ -76,6 +77,7 @@ const FN_TO_ACTION: Readonly<Record<string, AIAction>> = {
 function logLLMUsage(
   fn: string,
   usage: { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null },
+  durationMs?: number,
   ctx: { user_id?: string; route?: string } = {}
 ) {
   const cacheRead  = usage.cache_read_input_tokens  ?? 0
@@ -99,11 +101,12 @@ function logLLMUsage(
     cache_creation_input_tokens: cacheWrite,
     total_tokens:                usage.input_tokens + usage.output_tokens,
     estimated_cost_usd:          cost,
+    duration_ms:                 durationMs,
     ...ctx,
   }, `📊 LLM usage — ${fn}: ${usage.input_tokens} in / ${usage.output_tokens} out (~$${cost})`)
 
   const action = FN_TO_ACTION[fn] ?? 'course-generation'
-  aiLogger.llmUsage(action, usage, { model: AI_MODEL, fn, ...ctx })
+  aiLogger.llmUsage(action, usage, { model: AI_MODEL, fn, durationMs, ...ctx })
 }
 
 // Initialize Anthropic client (singleton)
@@ -196,6 +199,42 @@ function isAnthropicErrorRetryable(error: unknown): boolean {
 }
 
 /**
+ * Executes a non-streaming Anthropic API call with retry logic.
+ * Use for tool_use calls that require messages.create (not messages.stream).
+ */
+async function withNonStreamRetry<T>(
+  fn: () => Promise<T>,
+  operationName: string
+): Promise<T> {
+  let lastError: Error | undefined
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+
+      const shouldRetry = isAnthropicErrorRetryable(error) ||
+        (error instanceof ClaudeAPIError && error.retryable)
+
+      if (!shouldRetry || attempt === MAX_RETRIES) {
+        if (error instanceof ClaudeAPIError) throw error
+        throw ClaudeAPIError.fromAnthropicError(error)
+      }
+
+      const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1)
+      log.warn(
+        { attempt, maxRetries: MAX_RETRIES, error: lastError.message, delayMs: delay },
+        `${operationName} attempt failed, retrying`
+      )
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
+
+  throw lastError || new ClaudeAPIError('Unknown retry error', 'API_ERROR')
+}
+
+/**
  * Executes a streaming operation with retry logic for Safari reliability.
  * Wraps the stream creation and consumption with automatic retry on transient errors.
  *
@@ -279,62 +318,62 @@ function extractJsonFromResponse(text: string): string {
   return cleaned
 }
 
-/**
- * Attempts to repair truncated JSON by closing open brackets and braces.
- * This handles cases where AI response is cut off due to max_tokens.
- */
-function repairTruncatedJson(json: string): string {
-  let repaired = json.trim()
+// /**
+//  * Attempts to repair truncated JSON by closing open brackets and braces.
+//  * This handles cases where AI response is cut off due to max_tokens.
+//  */
+// function repairTruncatedJson(json: string): string {
+//   let repaired = json.trim()
 
-  // Count open brackets and braces
-  let openBraces = 0
-  let openBrackets = 0
-  let inString = false
-  let escape = false
+//   // Count open brackets and braces
+//   let openBraces = 0
+//   let openBrackets = 0
+//   let inString = false
+//   let escape = false
 
-  for (const char of repaired) {
-    if (escape) {
-      escape = false
-      continue
-    }
-    if (char === '\\') {
-      escape = true
-      continue
-    }
-    if (char === '"') {
-      inString = !inString
-      continue
-    }
-    if (inString) continue
+//   for (const char of repaired) {
+//     if (escape) {
+//       escape = false
+//       continue
+//     }
+//     if (char === '\\') {
+//       escape = true
+//       continue
+//     }
+//     if (char === '"') {
+//       inString = !inString
+//       continue
+//     }
+//     if (inString) continue
 
-    if (char === '{') openBraces++
-    else if (char === '}') openBraces--
-    else if (char === '[') openBrackets++
-    else if (char === ']') openBrackets--
-  }
+//     if (char === '{') openBraces++
+//     else if (char === '}') openBraces--
+//     else if (char === '[') openBrackets++
+//     else if (char === ']') openBrackets--
+//   }
 
-  // If we're in a string, try to close it
-  if (inString) {
-    repaired += '"'
-  }
+//   // If we're in a string, try to close it
+//   if (inString) {
+//     repaired += '"'
+//   }
 
-  // Remove trailing comma if present (common in truncated arrays/objects)
-  repaired = repaired.replace(/,\s*$/, '')
+//   // Remove trailing comma if present (common in truncated arrays/objects)
+//   repaired = repaired.replace(/,\s*$/, '')
 
-  // Close open brackets and braces
-  while (openBrackets > 0) {
-    repaired += ']'
-    openBrackets--
-  }
-  while (openBraces > 0) {
-    repaired += '}'
-    openBraces--
-  }
+//   // Close open brackets and braces
+//   while (openBrackets > 0) {
+//     repaired += ']'
+//     openBrackets--
+//   }
+//   while (openBraces > 0) {
+//     repaired += '}'
+//     openBraces--
+//   }
 
-  log.debug({ addedChars: json.length !== repaired.length ? repaired.length - json.length : 0 }, 'Repaired truncated JSON')
+//   log.debug({ addedChars: json.length !== repaired.length ? repaired.length - json.length : 0 }, 'Repaired truncated JSON')
 
-  return repaired
-}
+//   return repaired
+// }
 
 // ============================================================================
 // Parallel Web Image Fetching
@@ -867,6 +906,7 @@ export async function analyzeNotebookImage(imageUrl: string): Promise<AnalysisRe
     // Use streaming WITH RETRY to prevent mobile connection timeouts
     log.debug('Starting streaming request with retry for notebook image analysis')
 
+    const startedAt = Date.now()
     const rawText = await withStreamRetry(
       () => client.messages.stream({
         model: AI_MODEL,
@@ -911,7 +951,7 @@ export async function analyzeNotebookImage(imageUrl: string): Promise<AnalysisRe
         }
 
         const finalMessage = await stream.finalMessage()
-        logLLMUsage('analyzeNotebookImage', finalMessage.usage)
+        logLLMUsage('analyzeNotebookImage', finalMessage.usage, Date.now() - startedAt)
         if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
           log.warn({ stopReason: finalMessage.stop_reason }, '⚠️ analyzeNotebookImage stream ended unexpectedly')
         }
@@ -1027,6 +1067,7 @@ export async function generateStudyCourse(
     // Streaming keeps the connection alive and collects response incrementally
     log.debug('Starting streaming request with retry for course generation')
 
+    const startedAt = Date.now()
     const { rawText, stopReason } = await withStreamRetry(
       () => client.messages.stream({
         model: AI_MODEL,
@@ -1068,7 +1109,7 @@ export async function generateStudyCourse(
 
         // Ensure the stream completed successfully
         const finalMessage = await stream.finalMessage()
-        logLLMUsage('generateStudyCourse', finalMessage.usage)
+        logLLMUsage('generateStudyCourse', finalMessage.usage, Date.now() - startedAt)
         const stopReason = finalMessage.stop_reason
 
         log.debug({ chars: rawText.length }, 'generateStudyCourse streaming complete')
@@ -1191,6 +1232,7 @@ export async function generateCourseFromImageSingleCall(
     // Use streaming WITH RETRY to prevent mobile connection timeouts
     log.debug('Starting streaming request with retry for single-call course generation')
 
+    const startedAt = Date.now()
     const rawText = await withStreamRetry(
       () => client.messages.stream({
         model: AI_MODEL,
@@ -1235,7 +1277,7 @@ export async function generateCourseFromImageSingleCall(
         }
 
         const finalMessage = await stream.finalMessage()
-        logLLMUsage('generateCourseFromImageSingleCall', finalMessage.usage)
+        logLLMUsage('generateCourseFromImageSingleCall', finalMessage.usage, Date.now() - startedAt)
         if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
           log.warn({ stopReason: finalMessage.stop_reason }, '⚠️ generateCourseFromImageSingleCall stream ended unexpectedly')
         }
@@ -1398,6 +1440,7 @@ async function analyzeImageBatch(imageUrls: string[]): Promise<AnalysisResult> {
     // Use streaming WITH RETRY to prevent mobile connection timeouts
     log.debug({ imageCount: imageUrls.length }, 'Starting streaming request with retry for image batch')
 
+    const startedAt = Date.now()
     const rawText = await withStreamRetry(
       () => client.messages.stream({
         model: AI_MODEL,
@@ -1429,7 +1472,7 @@ async function analyzeImageBatch(imageUrls: string[]): Promise<AnalysisResult> {
         }
 
         const finalMessage = await stream.finalMessage()
-        logLLMUsage('analyzeImageBatch', finalMessage.usage)
+        logLLMUsage('analyzeImageBatch', finalMessage.usage, Date.now() - startedAt)
         if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
           log.warn({ stopReason: finalMessage.stop_reason }, '⚠️ analyzeImageBatch stream ended unexpectedly')
         }
@@ -1776,6 +1819,7 @@ export async function generateCourseFromDocument(
     // Use streaming WITH RETRY to prevent mobile connection timeouts
     log.debug('Starting streaming request with retry for document course generation')
 
+    const startedAt = Date.now()
     const { rawText, stopReason } = await withStreamRetry(
       () => client.messages.stream({
         model: AI_MODEL,
@@ -1809,7 +1853,7 @@ export async function generateCourseFromDocument(
 
         // Verify stream completed successfully
         const finalMessage = await stream.finalMessage()
-        logLLMUsage('generateCourseFromDocument', finalMessage.usage)
+        logLLMUsage('generateCourseFromDocument', finalMessage.usage, Date.now() - startedAt)
         const stopReason = finalMessage.stop_reason
 
         log.debug({ chars: rawText.length }, 'generateCourseFromDocument streaming complete')
@@ -1941,6 +1985,7 @@ export async function generateCourseFromText(
     // Use streaming WITH RETRY to prevent mobile connection timeouts
     log.debug('Starting streaming request with retry for text course generation')
 
+    const startedAt = Date.now()
     const { rawText, stopReason } = await withStreamRetry(
       () => client.messages.stream({
         model: AI_MODEL,
@@ -1973,7 +2018,7 @@ export async function generateCourseFromText(
 
         // Verify stream completed successfully
         const finalMessage = await stream.finalMessage()
-        logLLMUsage('generateCourseFromText', finalMessage.usage)
+        logLLMUsage('generateCourseFromText', finalMessage.usage, Date.now() - startedAt)
         const stopReason = finalMessage.stop_reason
 
         log.debug({ chars: rawText.length }, 'generateCourseFromText streaming complete')
@@ -2231,105 +2276,66 @@ export async function generateInitialCourse(
     intensityMode
   )
 
-  log.info('Starting fast initial course generation')
+  log.info('Starting initial course generation (tool_use + prompt caching)')
 
   try {
-    // Use streaming with retry to handle transient Safari/network issues
-    const { rawText, stopReason } = await withStreamRetry(
-      () => client.messages.stream({
+    // Use tool_use to force structured output — eliminates JSON parsing/repair
+    const startedAt = Date.now()
+    const response = await withNonStreamRetry(
+      () => client.messages.create({
         model: AI_MODEL,
-        max_tokens: 16384, // Enough for 2 lessons + full outline + summary
-        system: systemPrompt,
+        max_tokens: MAX_TOKENS_GENERATION,
+        system: [
+          {
+            type: 'text',
+            text: systemPrompt,
+            cache_control: { type: 'ephemeral' }, // prompt caching: ~10× cheaper on cache hits
+          }
+        ],
+        tools: [INITIAL_COURSE_TOOL],
+        tool_choice: { type: 'tool', name: 'emit_course_structure' },
         messages: [{ role: 'user', content: userPrompt }],
       }),
-      async (stream) => {
-        // Collect the full response text from the stream
-        let rawText = ''
-        let lastLogTime = Date.now()
-        const LOG_INTERVAL_MS = 15000
-
-        for await (const event of stream) {
-          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-            rawText += event.delta.text
-          }
-
-          const now = Date.now()
-          if (now - lastLogTime > LOG_INTERVAL_MS) {
-            log.debug({ chars: rawText.length }, 'generateInitialCourse streaming in progress')
-            lastLogTime = now
-          }
-        }
-
-        const finalMessage = await stream.finalMessage()
-        logLLMUsage('generateInitialCourse', finalMessage.usage)
-        const stopReason = finalMessage.stop_reason
-
-        log.debug({ chars: rawText.length, stopReason }, 'generateInitialCourse streaming complete')
-        return { rawText, stopReason }
-      },
       'generateInitialCourse'
     )
 
-    if (!rawText || rawText.trim().length === 0) {
-      throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
+    logLLMUsage('generateInitialCourse', response.usage, Date.now() - startedAt)
+
+    // Extract tool_use block — schema compliance is enforced by the API
+    const toolUse = response.content.find(
+      (b): b is Anthropic.ToolUseBlock =>
+        b.type === 'tool_use' && b.name === 'emit_course_structure'
+    )
+    if (!toolUse) {
+      throw new ClaudeAPIError('No tool_use block in response', 'PARSE_ERROR')
     }
 
-    // Check if response was truncated
-    if (stopReason === 'max_tokens') {
-      log.warn('generateInitialCourse response was truncated due to max_tokens')
-    }
-
-    let jsonText = extractJsonFromResponse(rawText)
-
-    // Try to repair truncated JSON by closing open brackets
-    if (stopReason === 'max_tokens' || !jsonText.trim().endsWith('}')) {
-      log.debug('Attempting JSON repair for generateInitialCourse')
-      jsonText = repairTruncatedJson(jsonText)
-    }
-    let parsed: {
-      title: string
-      overview: string
-      learningObjectives?: string[]
-      documentSummary: string
-      lessonOutline: LessonOutline[]
-      lessons: RawLesson[]
-    }
-
-    try {
-      parsed = JSON.parse(jsonText)
-    } catch (parseError) {
-      log.error({ err: parseError instanceof Error ? parseError : undefined }, 'generateInitialCourse JSON parse error')
+    // Zod validation — typed parse with field-level error messages
+    const validation = InitialCourseOutputSchema.safeParse(toolUse.input)
+    if (!validation.success) {
+      log.error({ issues: validation.error.issues }, 'generateInitialCourse schema validation failed')
       throw new ClaudeAPIError(
-        'Failed to parse initial course as JSON',
+        `Schema validation failed: ${validation.error.issues[0]?.message ?? 'unknown'}`,
         'PARSE_ERROR'
       )
     }
 
-    // Validate required fields
-    if (!parsed.title || !parsed.overview || !parsed.lessons || !parsed.lessonOutline || !parsed.documentSummary) {
-      throw new ClaudeAPIError(
-        'Initial course response missing required fields (title, overview, lessons, lessonOutline, documentSummary)',
-        'PARSE_ERROR'
-      )
-    }
+    const parsed = validation.data
 
     // Build partial GeneratedCourse with only first 2 lessons
     const partialCourse: GeneratedCourse = {
       title: safeTitle || parsed.title,
       overview: parsed.overview,
-      lessons: parsed.lessons.map((lesson: RawLesson) => ({
-        title: lesson.title || 'Untitled Lesson',
-        steps: (lesson.steps || []).map((step: RawStep) => {
-          const rawAnswer = step.correctIndex ?? step.correct_answer
-          return {
-            type: (step.type || 'explanation') as StepType,
-            content: step.type === 'question' ? (step.question || step.content || '') : (step.content || ''),
-            title: step.title,
-            options: step.options,
-            correct_answer: typeof rawAnswer === 'string' ? parseInt(rawAnswer, 10) : rawAnswer,
-            explanation: step.explanation,
-          }
-        }),
+      lessons: parsed.lessons.map(lesson => ({
+        title: lesson.title,
+        steps: lesson.steps.map(step => ({
+          type: step.type as StepType,
+          content: step.content,
+          title: step.title,
+          options: step.options,
+          correct_answer: step.correctIndex,
+          explanation: step.explanation,
+        })),
       })),
       learningObjectives: parsed.learningObjectives as LearningObjective[] | undefined,
     }
@@ -2344,7 +2350,7 @@ export async function generateInitialCourse(
       lessonOutline: parsed.lessonOutline,
       documentSummary: parsed.documentSummary,
       totalLessons: parsed.lessonOutline.length,
-      generationRawText: rawText,
+      generationRawText: '', // tool_use has no raw text; field kept for interface compat
     }
   } catch (error) {
     if (error instanceof ClaudeAPIError) {
@@ -2386,6 +2392,7 @@ export async function generateContinuationLessons(
 
   try {
     // Use streaming WITH RETRY to prevent mobile connection timeouts
+    const startedAt = Date.now()
     const rawText = await withStreamRetry(
       () => client.messages.stream({
         model: AI_MODEL,
@@ -2412,7 +2419,7 @@ export async function generateContinuationLessons(
         }
 
         const finalMessage = await stream.finalMessage()
-        logLLMUsage('generateContinuationLessons', finalMessage.usage)
+        logLLMUsage('generateContinuationLessons', finalMessage.usage, Date.now() - startedAt)
         if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
           log.warn({ stopReason: finalMessage.stop_reason }, '⚠️ generateContinuationLessons stream ended unexpectedly')
         }

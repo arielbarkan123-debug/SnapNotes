@@ -292,12 +292,13 @@ Return JSON array like: [{"index": 0, "question": "..."}, {"index": 1, "question
 
   try {
     const client = new Anthropic({ apiKey })
+    const startedAt = Date.now()
     const response = await client.messages.create({
       model: AI_MODEL,
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
     })
-    aiLogger.llmUsage('flashcard-batch', response.usage, { model: AI_MODEL })
+    aiLogger.llmUsage('flashcard-batch', response.usage, { model: AI_MODEL, durationMs: Date.now() - startedAt })
 
     const text = response.content.find(b => b.type === 'text')
     if (!text || text.type !== 'text') return result
@@ -360,6 +361,7 @@ export async function regenerateCardQuestion(
         : 'a clear understanding question')
 
     const client = new Anthropic({ apiKey })
+    const startedAt = Date.now()
     const response = await client.messages.create({
       model: AI_MODEL,
       max_tokens: 200,
@@ -374,7 +376,7 @@ Answer/content: "${back.slice(0, 500)}"
 Return ONLY the new question text, nothing else.`,
       }],
     })
-    aiLogger.llmUsage('flashcard-batch', response.usage, { model: AI_MODEL })
+    aiLogger.llmUsage('flashcard-batch', response.usage, { model: AI_MODEL, durationMs: Date.now() - startedAt })
 
     const text = response.content.find(b => b.type === 'text')
     if (!text || text.type !== 'text') return null

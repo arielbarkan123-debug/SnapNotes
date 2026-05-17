@@ -858,6 +858,7 @@ ${si.anticipatedMisconceptions.length > 0 ? `Common mistakes: ${si.anticipatedMi
 ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisiteGaps.slice(0, 5).join(', ')}` : ''}`
   }
 
+  const startedAt = Date.now()
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
@@ -865,7 +866,7 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     messages: [{ role: 'user', content: prompt }],
   })
 
-  aiLogger.llmUsage('chat-course', response.usage)
+  aiLogger.llmUsage('chat-course', response.usage, { durationMs: Date.now() - startedAt })
   const tutorResponse = parseTutorResponse(response)
 
   // Strip any ASCII diagrams from the AI response (we use the engine diagram instead)
@@ -1184,6 +1185,7 @@ ${si.anticipatedMisconceptions.length > 0 ? `Common mistakes: ${si.anticipatedMi
 ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisiteGaps.slice(0, 5).join(', ')}` : ''}`
   }
 
+  const startedAt = Date.now()
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: MAX_TOKENS,
@@ -1191,7 +1193,7 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     messages,
   })
 
-  aiLogger.llmUsage('chat-course', response.usage)
+  aiLogger.llmUsage('chat-course', response.usage, { durationMs: Date.now() - startedAt })
   const tutorResponse = parseTutorResponse(response)
 
   // Strip any ASCII diagrams from the AI response
@@ -1320,13 +1322,14 @@ Has the student correctly solved the problem or arrived at the right understandi
 
 Return JSON: {"solved": true/false, "feedback": "brief feedback on their answer"}`
 
+  const startedAt = Date.now()
   const response = await client.messages.create({
     model: AI_MODEL,
     max_tokens: 500,
     messages: [{ role: 'user', content: prompt }],
   })
 
-  aiLogger.llmUsage('chat-course', response.usage)
+  aiLogger.llmUsage('chat-course', response.usage, { durationMs: Date.now() - startedAt })
   const textContent = response.content.find((b) => b.type === 'text')
   if (!textContent || textContent.type !== 'text') {
     return { solved: false, feedback: 'Could not evaluate response' }

@@ -232,6 +232,7 @@ export async function POST(
 
     // Call AI
     const client = getAnthropicClient()
+    const startedAt = Date.now()
     const response = await client.messages.create({
       model: AI_MODEL,
       max_tokens: MAX_TOKENS,
@@ -243,7 +244,7 @@ export async function POST(
       messages,
     })
 
-    aiLogger.llmUsage('chat-prepare', response.usage)
+    aiLogger.llmUsage('chat-prepare', response.usage, { durationMs: Date.now() - startedAt })
     const content = response.content[0]
     if (content.type !== 'text') {
       throw new Error('Unexpected response type')

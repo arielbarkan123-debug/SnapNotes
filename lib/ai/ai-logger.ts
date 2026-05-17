@@ -60,6 +60,19 @@ const ACTION_LABEL: Record<AIAction, string> = {
   'flashcard-batch':      'Flashcard Batch',
 }
 
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms} ms`
+  const totalSec = Math.floor(ms / 1000)
+  const hrs  = Math.floor(totalSec / 3600)
+  const mins = Math.floor((totalSec % 3600) / 60)
+  const secs = totalSec % 60
+  const parts: string[] = []
+  if (hrs  > 0) parts.push(`${hrs} hr`)
+  if (mins > 0) parts.push(`${mins} min`)
+  if (secs > 0 || parts.length === 0) parts.push(`${secs} sec`)
+  return parts.join(' ')
+}
+
 const LEVEL_ORDER = { debug: 0, info: 1, warn: 2, error: 3 } as const
 type LevelName = keyof typeof LEVEL_ORDER
 
@@ -220,7 +233,7 @@ class Logger {
       row('Total tokens',  n(total)),
       `${dim}[${ts}]${rst}     ${mid}`,
       row('Est. cost USD', `$${cost.toFixed(6)}`),
-      ...(durationMs != null ? [row('Duration', `${n(durationMs)} ms`)] : []),
+      ...(durationMs != null ? [row('Duration', formatDuration(durationMs))] : []),
       `${dim}[${ts}]${rst}     ${bot}`,
       `${dim}[${ts}]${rst} ${bar}`,
     ]

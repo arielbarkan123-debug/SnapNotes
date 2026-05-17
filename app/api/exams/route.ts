@@ -509,13 +509,14 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
 
     log.info({ courseTitle: course.title }, 'Generating questions')
 
+    const startedAt = Date.now()
     const message = await anthropic.messages.create({
       model: AI_MODEL,
       max_tokens: 8000,
       system: langInstruction,
       messages: [{ role: 'user', content: prompt }],
     })
-    aiLogger.llmUsage('exam-generation', message.usage)
+    aiLogger.llmUsage('exam-generation', message.usage, { durationMs: Date.now() - startedAt })
 
     const textBlock = message.content.find(block => block.type === 'text')
     if (!textBlock || textBlock.type !== 'text') {

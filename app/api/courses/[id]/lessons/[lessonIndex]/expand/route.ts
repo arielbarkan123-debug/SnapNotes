@@ -123,6 +123,7 @@ export async function POST(
     const subject = generatedCourse?.subject || course.title || 'General'
     const gradeLevel = generatedCourse?.gradeLevel || 'Not specified'
 
+    const startedAt = Date.now()
     const message = await anthropic.messages.create({
       model: AI_MODEL,
       max_tokens: 1500,
@@ -148,7 +149,7 @@ Return ONLY valid JSON, no markdown fences:
       }],
     })
 
-    aiLogger.llmUsage('lesson-expansion', message.usage)
+    aiLogger.llmUsage('lesson-expansion', message.usage, { durationMs: Date.now() - startedAt })
     // Parse response
     const responseText = message.content[0].type === 'text' ? message.content[0].text : ''
     let parsed: { subSteps: SubStep[] }

@@ -198,6 +198,7 @@ ${curriculumSection ? '9. When relevant, mention how topics connect to exam expe
 Remember: You're a tutor, not just an answer machine. Help them understand, don't just give answers.`
 
     // Call Claude API
+    const startedAt = Date.now()
     const response = await getAnthropicClient().messages.create({
       model: AI_MODEL,
       max_tokens: 1024,
@@ -208,7 +209,7 @@ Remember: You're a tutor, not just an answer machine. Help them understand, don'
       ],
     })
 
-    aiLogger.llmUsage('chat-course', response.usage)
+    aiLogger.llmUsage('chat-course', response.usage, { durationMs: Date.now() - startedAt })
     // Extract response text with proper validation
     if (!response.content || response.content.length === 0) {
       log.error('Empty response from AI')

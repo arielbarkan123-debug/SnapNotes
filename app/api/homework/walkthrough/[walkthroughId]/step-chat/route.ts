@@ -152,6 +152,7 @@ RULES:
   }))
 
   try {
+    const startedAt = Date.now()
     const response = await anthropic.messages.create({
       model: AI_MODEL,
       max_tokens: 1024,
@@ -159,7 +160,7 @@ RULES:
       messages,
     })
 
-    aiLogger.llmUsage('walkthrough', response.usage)
+    aiLogger.llmUsage('walkthrough', response.usage, { durationMs: Date.now() - startedAt })
     const textBlock = response.content.find(b => b.type === 'text')
     const tutorResponse = textBlock?.type === 'text' ? textBlock.text : 'Sorry, I could not generate a response.'
 

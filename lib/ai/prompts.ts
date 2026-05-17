@@ -2540,15 +2540,6 @@ const INITIAL_COURSE_GENERATION_SYSTEM_PROMPT = `You are an expert educator crea
 
 This allows users to start learning immediately while remaining lessons generate in background.
 
-## Output Structure
-
-You MUST return:
-- Course title and overview
-- Learning objectives
-- **lessonOutline**: Array with ALL lessons (title, description, topics for each)
-- **lessons**: Array with ONLY first 2 lessons (full content)
-- **documentSummary**: 500-word summary capturing key content for continuation
-
 ## Lesson Design Rules
 - Each lesson: 8-12 steps, 2-3 minutes to complete
 - Include 2-3 questions per lesson (after teaching content)
@@ -2598,66 +2589,14 @@ ${document.sections.map(s => `### ${s.title} (Page ${s.pageNumber})\n${s.content
 ## Instructions:
 ${titleInstruction}
 
-Return JSON with this EXACT structure:
-
-{
-  "title": "Course title",
-  "overview": "2-3 paragraph course overview",
-  "learningObjectives": [
-    {"id": "lo_1", "objective": "...", "bloomLevel": "remember|understand|apply|analyze|evaluate|create", "actionVerb": "..."}
-  ],
-  "documentSummary": "A 400-600 word summary of the entire document content. Include all key concepts, formulas, and important details. This will be used to generate remaining lessons later.",
-  "lessonOutline": [
-    {
-      "index": 0,
-      "title": "Lesson 1 title",
-      "description": "2-3 sentences describing what this lesson covers",
-      "estimatedSteps": 10,
-      "topics": ["topic1", "topic2", "topic3"]
-    },
-    {
-      "index": 1,
-      "title": "Lesson 2 title",
-      "description": "...",
-      "estimatedSteps": 10,
-      "topics": ["topic4", "topic5"]
-    },
-    {
-      "index": 2,
-      "title": "Lesson 3 title (outline only)",
-      "description": "...",
-      "estimatedSteps": 8,
-      "topics": ["topic6", "topic7"]
-    }
-  ],
-  "lessons": [
-    {
-      "title": "Lesson 1 title",
-      "steps": [
-        {"type": "explanation", "content": "100-150 words introducing the concept..."},
-        {"type": "key_point", "content": "Important fact to remember"},
-        {"type": "example", "content": "Worked example with full solution..."},
-        {"type": "question", "question": "...", "options": ["A", "B", "C", "D"], "correctIndex": 0, "explanation": "..."},
-        {"type": "explanation", "content": "More detail..."},
-        {"type": "question", "question": "...", "options": ["A", "B", "C", "D"], "correctIndex": 2, "explanation": "..."},
-        {"type": "summary", "content": "Key takeaways..."}
-      ]
-    },
-    {
-      "title": "Lesson 2 title",
-      "steps": [...]
-    }
-  ]
-}
-
 ## CRITICAL:
 1. **lessonOutline** must include ALL planned lessons (typically 4-8)
-2. **lessons** array must contain ONLY first 2 lessons with FULL content
+2. **lessons** array must contain ONLY the first 2 lessons with FULL content
 3. **documentSummary** must be comprehensive (400-600 words) for later use
 4. Each lesson: 8-12 steps with 2-3 questions distributed throughout
 5. **Mathematical notation**: Self-contained computations → pure notation ("2x + 5 = 13, x = ?"). Context-dependent problems → words are fine.
 
-Return ONLY the JSON object.`
+Use the emit_course_structure tool to return your response.`
 }
 
 /**

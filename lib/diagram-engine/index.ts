@@ -85,6 +85,7 @@ async function qaCheckDiagram(
       }
     }
 
+    const startedAt = Date.now()
     const qaMessage = await anthropic.messages.create({
       model: AI_MODEL,
       max_tokens: 300,
@@ -105,7 +106,7 @@ async function qaCheckDiagram(
       ],
     });
 
-    aiLogger.llmUsage('diagram', qaMessage.usage, { fn: 'qaCheckDiagram', model: AI_MODEL });
+    aiLogger.llmUsage('diagram', qaMessage.usage, { fn: 'qaCheckDiagram', model: AI_MODEL, durationMs: Date.now() - startedAt });
     const textBlock = qaMessage.content.find((b) => b.type === 'text');
     if (!textBlock || textBlock.type !== 'text') {
       return { pass: true, issues: '' };
@@ -141,6 +142,7 @@ async function qaCheckDiagram(
  */
 async function planMatplotlibDiagram(question: string): Promise<string | null> {
   try {
+    const startedAt = Date.now()
     const response = await anthropic.messages.create({
       model: AI_MODEL,
       max_tokens: 500,
@@ -160,7 +162,7 @@ Reply in 5-7 lines. Numbers only, no prose.`,
       }],
     });
 
-    aiLogger.llmUsage('diagram', response.usage, { fn: 'planMatplotlibDiagram', model: AI_MODEL });
+    aiLogger.llmUsage('diagram', response.usage, { fn: 'planMatplotlibDiagram', model: AI_MODEL, durationMs: Date.now() - startedAt });
     const textBlock = response.content.find((b) => b.type === 'text');
     return textBlock && textBlock.type === 'text' ? textBlock.text.trim() : null;
   } catch (err) {
@@ -209,6 +211,7 @@ async function generateE2BCode(
     }
   }
 
+  const startedAt = Date.now()
   const response = await anthropic.messages.create({
     model: AI_MODEL,
     max_tokens: 8192,
@@ -216,7 +219,7 @@ async function generateE2BCode(
     messages: [{ role: 'user', content: userMessage }],
   });
 
-  aiLogger.llmUsage('diagram', response.usage, { fn: 'generateE2BCode', model: AI_MODEL });
+  aiLogger.llmUsage('diagram', response.usage, { fn: 'generateE2BCode', model: AI_MODEL, durationMs: Date.now() - startedAt });
   const textBlock = response.content.find((block) => block.type === 'text');
   if (!textBlock || textBlock.type !== 'text') {
     throw new Error('No text response from Claude');

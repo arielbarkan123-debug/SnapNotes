@@ -387,6 +387,7 @@ export async function generateGuide(options: GuideGenerationOptions): Promise<Ge
   }
 
   let lastError: Error | null = null
+  const startedAt = Date.now()
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -423,7 +424,7 @@ export async function generateGuide(options: GuideGenerationOptions): Promise<Ge
 
       log.info(`Stream complete: ${rawText.length} chars, stop_reason: ${stopReason}`)
       const finalMsg = await stream.finalMessage()
-      aiLogger.llmUsage('prepare-guide', finalMsg.usage)
+      aiLogger.llmUsage('prepare-guide', finalMsg.usage, { durationMs: Date.now() - startedAt })
 
       if (!rawText) {
         throw new Error('No text response from AI')
