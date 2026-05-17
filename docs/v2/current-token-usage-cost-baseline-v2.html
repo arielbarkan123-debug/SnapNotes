@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Token Usage & Cost Baseline — SnapNotes v2</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 11px; color: #1a1a2e; background: #f5f5f5; }
+  .page { width: 794px; margin: 0 auto; background: white; }
+
+  /* Header */
+  .header { background: #1a1a2e; color: white; padding: 28px 32px 24px; }
+  .header-meta { font-size: 9px; letter-spacing: 1.5px; color: #8b9dc3; text-transform: uppercase; margin-bottom: 10px; }
+  .header h1 { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+  .header .subtitle { font-size: 11px; color: #a0b0d0; margin-bottom: 16px; }
+  .header-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .badge { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 3px 10px; font-size: 9.5px; color: #e0e8ff; }
+  .badge strong { color: white; }
+  .badge-warn { background: #c8960020; border-color: #c89600; color: #ffd560; font-size: 9.5px; border-radius: 4px; padding: 4px 12px; display: inline-flex; align-items: center; gap: 5px; }
+
+  /* Section */
+  .section { padding: 24px 32px; border-bottom: 1px solid #e8ecf4; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .section-num { background: #3a5bd9; color: white; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; margin-right: 10px; flex-shrink: 0; }
+  .section-title { font-size: 15px; font-weight: 700; color: #1a1a2e; display: flex; align-items: center; }
+  .section-source { font-size: 9.5px; color: #6b7a9e; margin-left: 8px; font-weight: 400; }
+  .section-right { font-size: 9px; color: #8b9dc3; }
+
+  /* Alert boxes */
+  .alert { border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; font-size: 10px; line-height: 1.5; }
+  .alert-warn { background: #fffbeb; border: 1px solid #f5d97a; color: #7a5c00; }
+  .alert-info { background: #eef2ff; border: 1px solid #c0ccff; color: #2d3a8c; }
+  .alert-danger { background: #fff1f0; border: 1px solid #ffc1ba; color: #8b1a12; }
+  .alert strong { font-weight: 700; }
+
+  /* Stat cards */
+  .stat-row { display: flex; gap: 10px; margin: 14px 0; }
+  .stat-card { flex: 1; border: 1px solid #e4e9f5; border-radius: 8px; padding: 12px 14px; text-align: center; }
+  .stat-value { font-size: 18px; font-weight: 700; color: #3a5bd9; margin-bottom: 3px; }
+  .stat-label { font-size: 9px; color: #6b7a9e; line-height: 1.3; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+  th { background: #2c3560; color: white; padding: 7px 8px; text-align: left; font-weight: 600; font-size: 9px; letter-spacing: 0.3px; }
+  td { padding: 6px 8px; border-bottom: 1px solid #eef0f8; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .row-green { background: #f0faf4; }
+  .row-amber { background: #fffbeb; color: #7a5c00; }
+  .row-amber td { color: #7a5c00; }
+  .cost { font-weight: 700; color: #1e7e34; }
+  .cost-amber { font-weight: 700; color: #c89600; }
+  .tbd { color: #c89600; font-weight: 600; }
+  .status-over { color: #1e7e34; font-weight: 600; font-size: 9px; }
+  .status-inv { color: #c89600; font-weight: 600; font-size: 9px; }
+  .delta-neg { color: #1e7e34; }
+  .num { text-align: right; }
+
+  /* Legend */
+  .legend { display: flex; gap: 14px; margin-bottom: 10px; font-size: 9px; color: #6b7a9e; align-items: center; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .legend-green { background: #dff5e8; border: 1px solid #a3d9b5; }
+  .legend-amber { background: #fffbeb; border: 1px solid #f5d97a; }
+
+  /* Analysis items */
+  .analysis-item { border: 1px solid #e4e9f5; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+  .analysis-num { background: #3a5bd9; color: white; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; margin-right: 8px; flex-shrink: 0; vertical-align: middle; }
+  .analysis-title { font-size: 11px; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; }
+  .analysis-body { font-size: 9.5px; color: #3a4060; line-height: 1.55; }
+
+  /* Priority badges */
+  .pri { display: inline-block; border-radius: 3px; padding: 2px 7px; font-size: 8.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .pri-high { background: #ffe4e1; color: #c0392b; }
+  .pri-med { background: #fff3cd; color: #856404; }
+  .pri-low { background: #e8f5e9; color: #2e7d32; }
+
+  /* Improvement items */
+  .improve-item { border: 1px solid #e4e9f5; border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+  .improve-header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #eef0f8; }
+  .improve-title { font-size: 10.5px; font-weight: 700; color: #1a1a2e; }
+  .improve-body { padding: 10px 14px; font-size: 9.5px; color: #3a4060; line-height: 1.55; }
+  .improve-impact { color: #3a5bd9; font-style: italic; margin-top: 5px; font-size: 9px; }
+
+  /* Scenario boxes */
+  .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .scenario-card { border: 1px solid #e4e9f5; border-radius: 8px; padding: 11px 13px; }
+  .scenario-label { font-size: 8.5px; font-weight: 700; color: #3a5bd9; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+  .scenario-title { font-size: 10px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+  .scenario-body { font-size: 9px; color: #4a5270; line-height: 1.5; }
+  .scenario-cost { margin-top: 6px; font-size: 9px; }
+  .scenario-cost strong { color: #1e7e34; }
+
+  /* Pricing ref table */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .ref-table { border: 1px solid #2c3560; border-radius: 6px; overflow: hidden; }
+  .ref-table-head { background: #2c3560; color: white; padding: 7px 12px; font-size: 9px; font-weight: 700; letter-spacing: 0.3px; }
+  .ref-table-row { display: flex; justify-content: space-between; padding: 5px 12px; border-bottom: 1px solid #eef0f8; font-size: 9.5px; }
+  .ref-table-row:last-child { border-bottom: none; }
+  .ref-val { font-weight: 700; color: #1a1a2e; }
+
+  /* Formula bar */
+  .formula-bar { background: #1e2340; color: #a0b8e8; border-radius: 6px; padding: 8px 12px; font-size: 8.5px; font-family: 'SF Mono', 'Courier New', monospace; line-height: 1.6; margin-top: 10px; }
+
+  /* Footer */
+  .footer { padding: 12px 32px; display: flex; justify-content: space-between; font-size: 8.5px; color: #9ba3c0; border-top: 1px solid #eef0f8; }
+
+  /* Page break */
+  .page-break { page-break-before: always; padding-top: 24px; }
+
+  @media print {
+    body { background: white; }
+    .page { width: 100%; }
+    .page-break { page-break-before: always; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ═══════════════════════════════════════════════════
+     HEADER
+════════════════════════════════════════════════════ -->
+<div class="header">
+  <div class="header-meta">SnapNotes · Internal Report · V2 — Updated</div>
+  <h1>AI Token Usage &amp; Cost Baseline</h1>
+  <div class="subtitle">Sections 4 &amp; 5 · Observed Cost vs Unit Economics · Full Dataset · Analysis &amp; Improvement Plan</div>
+  <div class="header-badges">
+    <span class="badge"><strong>Date:</strong> 2026-05-10</span>
+    <span class="badge"><strong>Model:</strong> claude-sonnet-4-6 (Sonnet 4.6)</span>
+    <span class="badge"><strong>Currency:</strong> USD</span>
+    <span class="badge"><strong>1 LU = $0.25</strong></span>
+  </div>
+  <span class="badge-warn">✓ Complete — all 13 actions have observed data</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     SECTION 1 — EXECUTIVE SUMMARY
+════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title"><span class="section-num">1</span>Executive Summary</div>
+    <div class="section-right">Model: claude-sonnet-4-6</div>
+  </div>
+
+  <div class="alert alert-info">
+    This report captures the <strong>complete observed AI cost baseline</strong> for SnapNotes. All thirteen AI actions have now been measured using production-equivalent token counts and Sonnet 4.6 pricing. <br><br>
+    <strong>Headline finding:</strong> Every measured action came in significantly below the unit economics reference cost — ranging from −59.5% to −93.4% cheaper than modelled. The actual gross margins across all measured actions are healthy, confirming the original pricing model was <em>consistently conservative</em>.<br><br>
+    <strong>Caution:</strong> These are single-sample observations from controlled test scenarios, not averaged production logs. Variance across real user sessions may differ from these baseline measurements.
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-card">
+      <div class="stat-value">13 / 13</div>
+      <div class="stat-label">Actions with observed data</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">−59% to −93%</div>
+      <div class="stat-label">Delta vs reference cost (all measured)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">72% – 97%</div>
+      <div class="stat-label">Gross margin range (actions with LU data)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">0</div>
+      <div class="stat-label">Actions still pending measurement</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color:#e07b00;">2</div>
+      <div class="stat-label">Actions missing LU pricing entry</div>
+    </div>
+  </div>
+
+  <div class="alert alert-info" style="margin-bottom:0;">
+    <strong>Model note:</strong> All token costs in this report use Sonnet 4.6 rates: Input $3.00/M, Output $15.00/M, Cache Read $0.30/M, Cache Write $3.75/M. If the production model changes to Haiku 4.5 or Opus 4.7, all cost figures and margins will need to be recalculated.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     SECTION 1B — TEST SCENARIOS
+════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title"><span class="section-num" style="background:#6b4fc8;">S</span>Test Scenarios Used for This Baseline</div>
+  </div>
+  <div class="alert alert-warn" style="margin-bottom:12px;">
+    All observed data was collected from a single controlled test session. Each action was triggered once with a representative Grade 7 Basic Algebra topic unless stated otherwise. Token counts reflect one invocation.
+  </div>
+  <div class="scenario-grid">
+    <div class="scenario-card">
+      <div class="scenario-label">Course Generation (Text)</div>
+      <div class="scenario-title">Grade 7 Basic Algebra — Text Input (45–60 min)</div>
+      <div class="scenario-body">Prompt: "Create a comprehensive and engaging Grade 7 Basic Algebra lesson covering variables, constants, algebraic expressions, and simple equations…" Generated course: <em>Mastering Linear Equations: One Concept, Deep Practice</em>.</div>
+      <div class="scenario-cost"><strong>Observed: $0.1973</strong> · 17,769 tokens</div>
+    </div>
+    <div class="scenario-card">
+      <div class="scenario-label">Course Generation (Upload)</div>
+      <div class="scenario-title">Uploaded File Content (20–30 min equivalent)</div>
+      <div class="scenario-body">Same course topic delivered via uploaded file. Structured file input produces shorter, more focused output compared to free-text prompt — 5,250 output tokens vs 11,999 for text.</div>
+      <div class="scenario-cost"><strong>Observed: $0.0958</strong> · 10,944 tokens</div>
+    </div>
+    <div class="scenario-card">
+      <div class="scenario-label">Homework Check (Smart)</div>
+      <div class="scenario-title">Uploaded Homework Image</div>
+      <div class="scenario-body">Student homework image uploaded. Smart solver pipeline: decompose + solve. Significantly fewer tokens than the multi-step reference modelled — likely simpler problem set in the test image.</div>
+      <div class="scenario-cost"><strong>Observed: $0.0270</strong> · 2,261 tokens</div>
+    </div>
+    <div class="scenario-card">
+      <div class="scenario-label">Prepare Guide</div>
+      <div class="scenario-title">Grade 7 Basic Algebra Study Guide</div>
+      <div class="scenario-body">Prompt: "Create a clear and student-friendly Grade 7 Basic Algebra study guide covering variables, constants, algebraic expressions, simplifying, solving one-step and two-step equations, inequalities, integers, and word problems…"</div>
+      <div class="scenario-cost"><strong>Observed: $0.1150</strong> · 8,873 tokens</div>
+    </div>
+    <div class="scenario-card">
+      <div class="scenario-label">Practice Session</div>
+      <div class="scenario-title">20-Question Practice — Generated Course</div>
+      <div class="scenario-body">Generated a practice session with 20 questions from the generated algebra course. Input-heavy (6,698 tokens) because it receives the full course content as context.</div>
+      <div class="scenario-cost"><strong>Observed: $0.0801</strong> · 10,698 tokens</div>
+    </div>
+    <div class="scenario-card">
+      <div class="scenario-label">Diagram</div>
+      <div class="scenario-title">Formula Diagram from Practice Session</div>
+      <div class="scenario-body">Triggered from the practice session on the generated algebra course. Mostly formula/math diagrams. Very low output (8 tokens) — diagram data is compact JSON. Cache active (8 read + 8 write tokens).</div>
+      <div class="scenario-cost"><strong>Observed: $0.0018</strong> · 576 tokens (+ Recraft fee)</div>
+    </div>
+    <div class="scenario-card">
+      <div class="scenario-label">Exam Generation</div>
+      <div class="scenario-title">20 Questions, 120 min Limit</div>
+      <div class="scenario-body">Exam generated from the algebra course. 20 questions, 120-minute limit. Note: rate-limited at 50 questions. Output-heavy (3,946 tokens) — each question includes options and explanations.</div>
+      <div class="scenario-cost"><strong>Observed: $0.0671</strong> · 6,581 tokens</div>
+    </div>
+    <div class="scenario-card">
+      <div class="scenario-label">Lesson Expansion</div>
+      <div class="scenario-title">Ambulance / EMT Lesson (Non-Math)</div>
+      <div class="scenario-body">Deeper explanation generated for: "An ambulance is a specially designed vehicle used to respond to medical emergencies…" Used non-math subject intentionally — math lessons do not trigger lesson expansion in this product.</div>
+      <div class="scenario-cost"><strong>Observed: $0.0139</strong> · 1,262 tokens</div>
+    </div>
+    <div class="scenario-card">
+      <div class="scenario-label">Chat (Prepare Guide)</div>
+      <div class="scenario-title">"Explain More" on Algebra Prepare Guide</div>
+      <div class="scenario-body">User clicked "Explain More" on the prepared Grade 7 Algebra guide. Cache write active (3,317 tokens) — system prompt is cached on first call, reducing subsequent call costs significantly.</div>
+      <div class="scenario-cost"><strong>Observed: $0.0222</strong> · 669 tokens + 3,317 cache write</div>
+    </div>
+    <div class="scenario-card">
+      <div class="scenario-label">Walkthrough</div>
+      <div class="scenario-title">Same Homework Image as Smart Check</div>
+      <div class="scenario-body">Step-by-step walkthrough generated using the same homework image used for the Homework Check (Smart) test. Single call with TikZ/structured output. Cache on system prompt (ephemeral).</div>
+      <div class="scenario-cost"><strong>Observed: $0.0230</strong> · 2,053 tokens</div>
+    </div>
+    <div class="scenario-card">
+      <div class="scenario-label">Chat (Course)</div>
+      <div class="scenario-title">Question on Generated Course</div>
+      <div class="scenario-body">Student chat question on the generated algebra course. Very short output (290 tokens) — cheapest measured action. No cache activity observed; untapped optimisation opportunity for multi-turn sessions.</div>
+      <div class="scenario-cost"><strong>Observed: $0.0085</strong> · 1,677 tokens</div>
+    </div>
+    <div class="scenario-card">
+      <div class="scenario-label">Flashcard Batch</div>
+      <div class="scenario-title">1-Lesson Flashcard Generation</div>
+      <div class="scenario-body">Flashcard batch generated for a single lesson from the course (not the full course). Multiple parallel AI calls fired — 4 calls total logged, summed here. Total is the aggregate across all batch calls for this one lesson.</div>
+      <div class="scenario-cost"><strong>Observed: $0.0026</strong> · 631 tokens (1 lesson only)</div>
+    </div>
+    <div class="scenario-card">
+      <div class="scenario-label">Homework Check (Standard)</div>
+      <div class="scenario-title">Uploaded Homework Image (Standard Mode)</div>
+      <div class="scenario-body">Same homework image via standard (non-smart) check mode. Solve + read + grade pipeline. Lower input token count than Smart (1,460 vs 575 input) because standard mode does not use the smart decompose step.</div>
+      <div class="scenario-cost"><strong>Observed: $0.0284</strong> · 3,062 tokens</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     SECTION 2 — TOKEN USAGE BASELINE
+════════════════════════════════════════════════════ -->
+<div class="section page-break">
+  <div class="section-header">
+    <div class="section-title"><span class="section-num">2</span>Current Token Usage Baseline <span class="section-source">(Source: Doc §4)</span></div>
+  </div>
+
+  <div class="legend">
+    <div style="display:flex;align-items:center;gap:5px;"><div class="legend-dot legend-green"></div> Full observed data</div>
+    <div style="display:flex;align-items:center;gap:5px;"><div class="legend-dot" style="background:#fff9e6;border:1px solid #e8c94a;"></div> Partial / estimated</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:130px;">AI Action</th>
+        <th class="num">Total Tokens</th>
+        <th class="num">Input Tokens</th>
+        <th class="num">Output Tokens</th>
+        <th class="num">Cache Read</th>
+        <th class="num">Cache Write</th>
+        <th class="num">Image Fee</th>
+        <th class="num">Observed Cost</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="row-green">
+        <td><strong>Course Gen (Text)</strong></td>
+        <td class="num">17,769</td>
+        <td class="num">5,770</td>
+        <td class="num"><strong>11,999</strong></td>
+        <td class="num">0</td>
+        <td class="num">0</td>
+        <td class="num">$0.00</td>
+        <td class="cost">$0.1973</td>
+        <td>Text content input; highest output token count observed</td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Course Gen (Upload)</strong></td>
+        <td class="num">10,944</td>
+        <td class="num">5,694</td>
+        <td class="num">5,250</td>
+        <td class="num">0</td>
+        <td class="num">0</td>
+        <td class="num">$0.00</td>
+        <td class="cost">$0.0958</td>
+        <td>20–30 min uploaded file; structured input → shorter output</td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Homework Check (Smart)</strong></td>
+        <td class="num">2,261</td>
+        <td class="num">575</td>
+        <td class="num">1,686</td>
+        <td class="num">0</td>
+        <td class="num">0</td>
+        <td class="num">$0.00</td>
+        <td class="cost">$0.0270</td>
+        <td>Decompose + solve pipeline; far fewer tokens than modelled</td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Prepare Guide</strong></td>
+        <td class="num">8,873</td>
+        <td class="num">1,506</td>
+        <td class="num">7,367</td>
+        <td class="num">0</td>
+        <td class="num">0</td>
+        <td class="num">$0.00</td>
+        <td class="cost">$0.1150</td>
+        <td>Single call; output lower than 16K reference assumption</td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Homework Check</strong></td>
+        <td class="num">3,062</td>
+        <td class="num">1,460</td>
+        <td class="num">1,602</td>
+        <td class="num">0</td>
+        <td class="num">0</td>
+        <td class="num">$0.00</td>
+        <td class="cost">$0.0284</td>
+        <td>Standard mode; solve + read + grade pipeline</td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Practice Session</strong></td>
+        <td class="num">10,698</td>
+        <td class="num">6,698</td>
+        <td class="num">4,000</td>
+        <td class="num">0</td>
+        <td class="num">0</td>
+        <td class="num">$0.00</td>
+        <td class="cost">$0.0801</td>
+        <td>Generate + tutor turns; fewer turns than 3-turn reference</td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Diagram (with image)</strong></td>
+        <td class="num">576</td>
+        <td class="num">568</td>
+        <td class="num">8</td>
+        <td class="num">8</td>
+        <td class="num">8</td>
+        <td class="num">+$0.04</td>
+        <td class="cost">$0.0018 <span style="font-size:8px;color:#888;">+Recraft</span></td>
+        <td>Very compact output (8 tokens); cache active; flat Recraft fee extra</td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Exam Generation</strong></td>
+        <td class="num">6,581</td>
+        <td class="num">2,635</td>
+        <td class="num">3,946</td>
+        <td class="num">0</td>
+        <td class="num">0</td>
+        <td class="num">$0.00</td>
+        <td class="cost">$0.0671</td>
+        <td>20 questions, 120 min limit; output-heavy per question</td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Lesson Expansion</strong></td>
+        <td class="num">1,262</td>
+        <td class="num">422</td>
+        <td class="num">840</td>
+        <td class="num">0</td>
+        <td class="num">0</td>
+        <td class="num">$0.00</td>
+        <td class="cost">$0.0139</td>
+        <td>Single call; lowest token count of all measured actions</td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Chat (Prepare Guide)</strong></td>
+        <td class="num">669</td>
+        <td class="num">19</td>
+        <td class="num">650</td>
+        <td class="num">0</td>
+        <td class="num">3,317</td>
+        <td class="num">$0.00</td>
+        <td class="cost">$0.0222</td>
+        <td>Cache write active — $0.30/M rate applied to write tokens</td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Walkthrough</strong></td>
+        <td class="num">2,053</td>
+        <td class="num">651</td>
+        <td class="num">1,402</td>
+        <td class="num">0</td>
+        <td class="num">0</td>
+        <td class="num">$0.00</td>
+        <td class="cost">$0.0230</td>
+        <td>Single call, step-by-step TikZ output; ephemeral system cache</td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Chat (Course)</strong></td>
+        <td class="num">1,677</td>
+        <td class="num">1,387</td>
+        <td class="num">290</td>
+        <td class="num">0</td>
+        <td class="num">0</td>
+        <td class="num">$0.00</td>
+        <td class="cost">$0.0085</td>
+        <td>Very short output; cheapest measured action</td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Flashcard Batch</strong></td>
+        <td class="num">631</td>
+        <td class="num">570</td>
+        <td class="num">61</td>
+        <td class="num">0</td>
+        <td class="num">0</td>
+        <td class="num">$0.00</td>
+        <td class="cost">$0.0026</td>
+        <td>1 lesson only (not full course); 4 parallel calls aggregated</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="formula-bar">
+    Observed Cost = (Billable Input / 1,000,000 × $3.00) + (Output / 1,000,000 × $15.00) + (Cache Read / 1,000,000 × $0.30) + (Cache Write / 1,000,000 × $3.75) &nbsp;|&nbsp; Billable Input = Input Tokens − Cache Read Tokens
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     SECTION 3 — COMPARISON
+════════════════════════════════════════════════════ -->
+<div class="section page-break">
+  <div class="section-header">
+    <div class="section-title"><span class="section-num">3</span>Comparison Against Unit Economics Model <span class="section-source">(Source: Doc §5)</span></div>
+  </div>
+
+  <div class="legend">
+    <div style="display:flex;align-items:center;gap:5px;"><div class="legend-dot legend-green"></div> Overestimated — reference cost was higher than actual (good: cheaper than planned)</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:120px;">AI Action</th>
+        <th class="num">Ref Cost (S4.6)</th>
+        <th class="num">Observed Cost</th>
+        <th class="num">Delta $</th>
+        <th class="num">Delta %</th>
+        <th class="num">LU / Action</th>
+        <th class="num">Revenue @ LU</th>
+        <th class="num">Gross Margin</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="row-green">
+        <td><strong>Course Gen (Text)</strong></td>
+        <td class="num">$0.633</td>
+        <td class="num cost">$0.1973</td>
+        <td class="num delta-neg">−$0.4357</td>
+        <td class="num delta-neg">−68.8%</td>
+        <td class="num">10.0 LU</td>
+        <td class="num">$2.50</td>
+        <td class="num">92.1%</td>
+        <td><span class="status-over">Overestimated</span></td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Course Gen (Upload)</strong></td>
+        <td class="num">$0.633</td>
+        <td class="num cost">$0.0958</td>
+        <td class="num delta-neg">−$0.5372</td>
+        <td class="num delta-neg">−84.9%</td>
+        <td class="num">10.0 LU</td>
+        <td class="num">$2.50</td>
+        <td class="num">96.2%</td>
+        <td><span class="status-over">Overestimated</span></td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>HW Check (Smart)</strong></td>
+        <td class="num">$0.349</td>
+        <td class="num cost">$0.0270</td>
+        <td class="num delta-neg">−$0.3220</td>
+        <td class="num delta-neg">−92.3%</td>
+        <td class="num">4.0 LU</td>
+        <td class="num">$1.00</td>
+        <td class="num">97.3%</td>
+        <td><span class="status-over">Overestimated</span></td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Prepare Guide</strong></td>
+        <td class="num">$0.264</td>
+        <td class="num cost">$0.1150</td>
+        <td class="num delta-neg">−$0.1490</td>
+        <td class="num delta-neg">−56.4%</td>
+        <td class="num">3.0 LU</td>
+        <td class="num">$0.75</td>
+        <td class="num">84.7%</td>
+        <td><span class="status-over">Overestimated</span></td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Homework Check</strong></td>
+        <td class="num">$0.237</td>
+        <td class="num cost">$0.0284</td>
+        <td class="num delta-neg">−$0.2086</td>
+        <td class="num delta-neg">−88.0%</td>
+        <td class="num">2.0 LU</td>
+        <td class="num">$0.50</td>
+        <td class="num">94.3%</td>
+        <td><span class="status-over">Overestimated</span></td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Practice Session</strong></td>
+        <td class="num">$0.198</td>
+        <td class="num cost">$0.0801</td>
+        <td class="num delta-neg">−$0.1179</td>
+        <td class="num delta-neg">−59.5%</td>
+        <td class="num">2.0 LU</td>
+        <td class="num">$0.50</td>
+        <td class="num">84.0%</td>
+        <td><span class="status-over">Overestimated</span></td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Diagram (with image)</strong></td>
+        <td class="num">$0.175</td>
+        <td class="num cost">$0.0018</td>
+        <td class="num delta-neg">−$0.1732</td>
+        <td class="num delta-neg">−98.9%</td>
+        <td class="num">3.0 LU</td>
+        <td class="num">$0.75</td>
+        <td class="num">99.8% <span style="font-size:8px;color:#888;">*</span></td>
+        <td><span class="status-over">Overestimated</span></td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Exam Generation</strong></td>
+        <td class="num">$0.137</td>
+        <td class="num cost">$0.0671</td>
+        <td class="num delta-neg">−$0.0699</td>
+        <td class="num delta-neg">−51.0%</td>
+        <td class="num">2.0 LU</td>
+        <td class="num">$0.50</td>
+        <td class="num">86.6%</td>
+        <td><span class="status-over">Overestimated</span></td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Lesson Expansion</strong></td>
+        <td class="num">$0.135</td>
+        <td class="num cost">$0.0139</td>
+        <td class="num delta-neg">−$0.1211</td>
+        <td class="num delta-neg">−89.7%</td>
+        <td class="num" style="color:#c89600;">TBD</td>
+        <td class="num" style="color:#c89600;">TBD</td>
+        <td class="num" style="color:#c89600;">TBD</td>
+        <td><span class="status-over">Overestimated</span></td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Chat (Prepare Guide)</strong></td>
+        <td class="num">$0.082</td>
+        <td class="num cost">$0.0222</td>
+        <td class="num delta-neg">−$0.0598</td>
+        <td class="num delta-neg">−72.9%</td>
+        <td class="num">0.5 LU</td>
+        <td class="num">$0.125</td>
+        <td class="num">82.2%</td>
+        <td><span class="status-over">Overestimated</span></td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Walkthrough</strong></td>
+        <td class="num">$0.070</td>
+        <td class="num cost">$0.0230</td>
+        <td class="num delta-neg">−$0.0470</td>
+        <td class="num delta-neg">−67.1%</td>
+        <td class="num" style="color:#c89600;">TBD</td>
+        <td class="num" style="color:#c89600;">TBD</td>
+        <td class="num" style="color:#c89600;">TBD</td>
+        <td><span class="status-over">Overestimated</span></td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Chat (Course)</strong></td>
+        <td class="num">$0.027</td>
+        <td class="num cost">$0.0085</td>
+        <td class="num delta-neg">−$0.0185</td>
+        <td class="num delta-neg">−68.5%</td>
+        <td class="num">0.5 LU</td>
+        <td class="num">$0.125</td>
+        <td class="num">93.2%</td>
+        <td><span class="status-over">Overestimated</span></td>
+      </tr>
+      <tr class="row-green">
+        <td><strong>Flashcard Batch</strong></td>
+        <td class="num">$0.027</td>
+        <td class="num cost">$0.0026</td>
+        <td class="num delta-neg">−$0.0244</td>
+        <td class="num delta-neg">−90.4%</td>
+        <td class="num">1.0 LU</td>
+        <td class="num">$0.25</td>
+        <td class="num">99.0%</td>
+        <td><span class="status-over">Overestimated</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="font-size:8.5px;color:#6b7a9e;margin-top:6px;">* Diagram gross margin excludes the flat $0.04 Recraft image fee. Including Recraft: ($0.75 − $0.0418) / $0.75 = 94.4%.</div>
+
+  <div class="formula-bar" style="margin-top:10px;">
+    Delta $ = Observed current cost − Unit economics reference cost &nbsp;|&nbsp; Delta % = Delta $ / Unit economics reference cost &nbsp;|&nbsp; Gross Margin = (Revenue − Observed cost) / Revenue &nbsp;|&nbsp; Revenue = LU/Action × $0.25
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     SECTION 4 — ANALYSIS
+════════════════════════════════════════════════════ -->
+<div class="section page-break">
+  <div class="section-header">
+    <div class="section-title"><span class="section-num">4</span>Analysis: What the Data Shows</div>
+  </div>
+
+  <div class="analysis-item">
+    <div class="analysis-title"><span class="analysis-num">1</span>Reference model was consistently conservative across all 13 actions</div>
+    <div class="analysis-body">Every single measured action came in below its Sonnet 4.6 reference cost — none exceeded it. The original unit economics model was built on worst-case token assumptions (e.g. 16K output for Prepare Guide, 3 full tutor turns for Practice). Real usage produces shorter, more focused outputs. The delta range is −51% (Exam Generation) to −98.9% (Diagram). This is universally good news for margins but confirms the reference model needs updating before it can be used for future planning.</div>
+  </div>
+
+  <div class="analysis-item">
+    <div class="analysis-title"><span class="analysis-num">2</span>Gross margin reality is far better than the reference implied</div>
+    <div class="analysis-body">The unit economics model showed Course Generation at −153% gross margin (charging 1 LU for a $0.63 action). With actual LU pricing (10 LU = $2.50 revenue) and observed cost of $0.197, the real margin is 92.1%. Similarly, HW Smart was modelled at −39.6% but is actually 97.3%. The LU pricing table is extremely well-calibrated for revenue generation, even if the cost reference was overstated. Every action with a defined LU price produces a margin above 82%.</div>
+  </div>
+
+  <div class="analysis-item">
+    <div class="analysis-title"><span class="analysis-num">3</span>Diagram is the cheapest AI action — but has a mandatory floor cost</div>
+    <div class="analysis-body">Diagram Claude tokens cost only $0.0018 (−98.9% vs reference), but the flat $0.04 Recraft image generation fee is unavoidable. Total real cost is ~$0.0418. At 3 LU ($0.75 revenue), gross margin is still 94.4%, but unlike all other actions, Diagram has a cost floor that cannot be reduced through prompt optimisation alone. This makes it the only action where token efficiency improvements have limited impact on total cost.</div>
+  </div>
+
+  <div class="analysis-item">
+    <div class="analysis-title"><span class="analysis-num">4</span>Course Generation: text vs upload input diverge significantly</div>
+    <div class="analysis-body">Text-content generation produced 11,999 output tokens ($0.1973), while upload-file generation produced only 5,250 output tokens ($0.0958) — a 51% cost difference for the same 10 LU charge. This is the single largest cost lever in the measured data. If text-based inputs could be pre-processed to match the structure of file-based inputs, the average Course Generation cost could be materially reduced. At current LU pricing, both variants yield excellent margins (92.1% and 96.2%), but the gap represents an optimisation opportunity.</div>
+  </div>
+
+  <div class="analysis-item">
+    <div class="analysis-title"><span class="analysis-num">5</span>Flashcard Batch is the lowest-cost action — but only 1 lesson was measured</div>
+    <div class="analysis-body">The $0.0026 observed cost covers only 1 lesson (4 parallel calls aggregated). A full course has multiple lessons, so the actual per-action cost would be higher and proportional to lesson count. The reference cost ($0.027) likely assumed a full course batch. For a 5-lesson course, total expected cost would be ~$0.013 — still significantly below the $0.027 reference but not as extreme as the single-lesson measurement suggests. The per-lesson cost is approximately $0.0026.</div>
+  </div>
+
+  <div class="analysis-item">
+    <div class="analysis-title"><span class="analysis-num">6</span>Chat (Prepare Guide) has cache write active — Chat (Course) does not</div>
+    <div class="analysis-body">Chat (Prepare Guide) logs 3,317 cache write tokens at $3.75/M, adding a small premium on the first call. However, subsequent calls hitting that cache would read at $0.30/M — a 90% reduction on the cached portion. Chat (Course) has zero cache activity; for multi-turn course chat sessions where the system prompt and course content are stable, adding prompt caching could reduce per-turn input cost from $3.00/M to $0.30/M on the cached portion. Estimated saving: 40–60% per follow-up turn in multi-turn sessions.</div>
+  </div>
+
+  <div class="analysis-item">
+    <div class="analysis-title"><span class="analysis-num">7</span>Lesson Expansion and Walkthrough still have no LU pricing entry</div>
+    <div class="analysis-body">Both actions have confirmed observed AI costs (Lesson Expansion $0.0139, Walkthrough $0.0230) but no corresponding LU charge defined in the pricing table. This means they are currently either free to the user or bundled invisibly into another LU charge. This is a revenue gap — at $0.0139/call for Lesson Expansion, pricing it at 0.5 LU ($0.125 revenue) would yield a gross margin of ~89%. Walkthrough at $0.0230 could be priced at 1.0 LU ($0.25) for an 90.8% margin. Both must be assigned LU values before the billing system goes live.</div>
+  </div>
+
+  <div class="analysis-item">
+    <div class="analysis-title"><span class="analysis-num">8</span>Homework Check (Standard) vs Smart: similar observed cost, different pipeline</div>
+    <div class="analysis-body">Standard Homework Check observed $0.0284 vs Smart at $0.0270 — nearly identical actual cost despite the Smart mode using a more sophisticated decompose + solve pipeline. The Smart mode produced significantly more output tokens (1,686 vs 1,602) but with far fewer input tokens (575 vs 1,460), suggesting the Smart pipeline is more focused in its prompting. Both are dramatically cheaper than the reference ($0.237 standard, $0.349 smart). Standard: −88%, Smart: −92.3%.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     SECTION 5 — WHAT CAN BE IMPROVED
+════════════════════════════════════════════════════ -->
+<div class="section page-break">
+  <div class="section-header">
+    <div class="section-title"><span class="section-num">5</span>What Can Be Improved</div>
+  </div>
+
+  <div class="improve-item">
+    <div class="improve-header"><span class="pri pri-high">HIGH</span><div class="improve-title">Assign LU pricing for Lesson Expansion and Walkthrough</div></div>
+    <div class="improve-body">Both actions have confirmed AI costs ($0.0139 for Lesson Expansion, $0.0230 for Walkthrough) but no LU entry in the pricing table. They are either being given away for free or silently bundled. Recommended pricing: Lesson Expansion at 0.5 LU ($0.125 revenue, ~89% margin); Walkthrough at 1.0 LU ($0.25 revenue, ~90.8% margin). This must be resolved before the billing system goes live.
+      <div class="improve-impact">Impact: Revenue uplift on currently untracked AI spend. Fixes a gap in the unit economics model.</div>
+    </div>
+  </div>
+
+  <div class="improve-item">
+    <div class="improve-header"><span class="pri pri-high">HIGH</span><div class="improve-title">Replace single-sample observations with averaged production data</div></div>
+    <div class="improve-body">All current observed costs are single-sample measurements from controlled test scenarios. A single course generation run is not representative — content length, complexity, and user behaviour vary significantly. Before treating these figures as the optimisation baseline, collect at least 20–50 representative requests per action from production and use the p50 (median) as the baseline cost. The Flashcard Batch result is particularly unreliable since only 1 lesson was measured.
+      <div class="improve-impact">Risk reduction: Prevents optimising against a non-representative baseline. Required for credible post-optimisation comparison.</div>
+    </div>
+  </div>
+
+  <div class="improve-item">
+    <div class="improve-header"><span class="pri pri-high">HIGH</span><div class="improve-title">Prompt compression for Course Generation (Text) — output token reduction</div></div>
+    <div class="improve-body">Course Generation (Text) produced 11,999 output tokens — the highest of any measured action and the primary cost driver at $0.1973. The upload-based variant produced only 5,250 output tokens ($0.0958) for the same 10 LU charge — a 51% cost difference. Applying structured output constraints, JSON schema enforcement, or output length caps to the text-based pipeline could reduce output tokens by 30–50%, bringing cost closer to the upload variant.
+      <div class="improve-impact">Estimated saving: ~$0.05–$0.10 per text-based course generation (25–50% of $0.1973).</div>
+    </div>
+  </div>
+
+  <div class="improve-item">
+    <div class="improve-header"><span class="pri pri-med">MEDIUM</span><div class="improve-title">Extend prompt caching to Course Chat and Walkthrough</div></div>
+    <div class="improve-body">Chat (Prepare Guide) already writes 3,317 cache tokens, but Chat (Course) has zero cache activity. For multi-turn course chat sessions where the system prompt and course content are stable across turns, adding a cache write on the first turn and cache read on subsequent turns would reduce per-turn input cost from $3.00/M to $0.30/M for the cached portion. Similarly, Walkthrough uses ephemeral cache on the system prompt — extending this to include the question context could reduce costs on repeat walkthroughs for the same problem.
+      <div class="improve-impact">Estimated saving on Chat (Course): ~40–60% per follow-up turn in multi-turn sessions.</div>
+    </div>
+  </div>
+
+  <div class="improve-item">
+    <div class="improve-header"><span class="pri pri-med">MEDIUM</span><div class="improve-title">Flashcard Batch: measure full-course generation before setting baseline</div></div>
+    <div class="improve-body">The current flashcard observation ($0.0026) covers only 1 lesson. A full 5-lesson course would generate ~$0.013 in flashcard AI costs — still well below the $0.027 reference but not as low as the single-lesson figure implies. Before using the flashcard cost in any optimisation analysis, trigger a full course flashcard generation and sum all parallel call costs. The per-lesson cost of ~$0.0026 is a useful unit, but the per-action cost must reflect a full generation run.
+      <div class="improve-impact">Accuracy: Prevents underestimating the true per-action flashcard cost by 5×.</div>
+    </div>
+  </div>
+
+  <div class="improve-item">
+    <div class="improve-header"><span class="pri pri-med">MEDIUM</span><div class="improve-title">Update the unit economics reference model to reflect actual observed costs</div></div>
+    <div class="improve-body">The current reference model overestimates costs by 51–99% across all 13 measured actions. Once the baseline is finalised (after collecting production-averaged data), the unit economics reference table should be updated to use observed costs as the new planning baseline. This ensures future pricing decisions and LU allocation decisions are built on reality rather than conservative assumptions from the original model.
+      <div class="improve-impact">Impact: More accurate LU pricing decisions and margin forecasting going forward.</div>
+    </div>
+  </div>
+
+  <div class="improve-item">
+    <div class="improve-header"><span class="pri pri-low">LOW</span><div class="improve-title">Investigate Diagram token footprint — only 8 output tokens observed</div></div>
+    <div class="improve-body">The Diagram action produced only 8 output tokens in this test — extremely low and likely reflects a simple formula diagram from the algebra practice session. More complex diagrams (geometry, physics, chemistry) may produce significantly more tokens. The $0.04 Recraft fee is the dominant cost regardless, but it would be worth measuring 3–5 different diagram types to understand whether the token cost is consistently negligible or varies with complexity.
+      <div class="improve-impact">Risk: Current $0.0018 token cost may be unrepresentative for complex diagrams.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     SECTION 6 — MODEL & PRICING REFERENCE
+════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title"><span class="section-num">6</span>Model &amp; Pricing Reference</div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <div class="ref-table">
+        <div class="ref-table-head">Sonnet 4.6 Token Rates (used for all calculations)</div>
+        <div class="ref-table-row"><span>Input (billable)</span><span class="ref-val">$3.00 / 1M tokens</span></div>
+        <div class="ref-table-row"><span>Output</span><span class="ref-val">$15.00 / 1M tokens</span></div>
+        <div class="ref-table-row"><span>Cache read</span><span class="ref-val">$0.30 / 1M tokens</span></div>
+        <div class="ref-table-row"><span>Cache write</span><span class="ref-val">$3.75 / 1M tokens</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="ref-table">
+        <div class="ref-table-head">LU Pricing (from official pricing table)</div>
+        <div class="ref-table-row"><span>1 Learning Unit (LU)</span><span class="ref-val">$0.25</span></div>
+        <div class="ref-table-row"><span>Create Course</span><span class="ref-val">10.0 LU → $2.50</span></div>
+        <div class="ref-table-row"><span>HW Smart</span><span class="ref-val">4.0 LU → $1.00</span></div>
+        <div class="ref-table-row"><span>Study Guide / Diagram</span><span class="ref-val">3.0 LU → $0.75</span></div>
+        <div class="ref-table-row"><span>HW Standard / Practice / Exam</span><span class="ref-val">2.0 LU → $0.50</span></div>
+        <div class="ref-table-row"><span>Flashcards</span><span class="ref-val">1.0 LU → $0.25</span></div>
+        <div class="ref-table-row"><span>Chat</span><span class="ref-val">0.5 LU → $0.125</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-warn" style="margin-top:12px;margin-bottom:0;">
+    <strong>⚠ Lesson Expansion and Walkthrough are not in the LU pricing table.</strong> Both actions have confirmed AI costs ($0.0139 observed for Lesson Expansion; $0.0230 observed for Walkthrough) but no LU charge defined. Recommended: Lesson Expansion at 0.5 LU, Walkthrough at 1.0 LU. These must be assigned before the billing system goes live — until then, gross margin and revenue cannot be calculated for these two actions.
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <span>SnapNotes · AI Token Usage &amp; Cost Baseline · v2 Updated · 2026-05-10</span>
+  <span>Model: claude-sonnet-4-6 · Internal use only</span>
+</div>
+
+</div>
+</body>
+</html>

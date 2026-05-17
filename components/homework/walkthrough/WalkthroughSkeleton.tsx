@@ -1,19 +1,36 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
+
+interface WalkthroughSkeletonProps {
+  state?: 'generating' | 'compiling'
+  onCancel?: () => void
+}
 
 /**
  * Skeleton loading state for the walkthrough view.
  * Shows animated placeholders for diagram, step text, and navigation.
  */
-export default function WalkthroughSkeleton() {
+export default function WalkthroughSkeleton({ state = 'generating', onCancel }: WalkthroughSkeletonProps) {
   const t = useTranslations('homework.walkthrough')
+  const [showCancel, setShowCancel] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowCancel(true), 30_000)
+    return () => clearTimeout(timer)
+  }, [])
+
   const shimmer = {
     initial: { opacity: 0.4 },
     animate: { opacity: 1 },
     transition: { duration: 0.8, repeat: Infinity, repeatType: 'reverse' as const },
   }
+
+  const statusText = state === 'compiling'
+    ? (t('compilingDiagrams') || 'Compiling diagrams...')
+    : (t('generatingSolution') || 'Generating solution...')
 
   return (
     <div className="w-full max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-lg">
@@ -52,9 +69,22 @@ export default function WalkthroughSkeleton() {
           {...shimmer}
           className="w-full h-48 sm:h-64 rounded-xl bg-gray-100 dark:bg-gray-700/50 flex items-center justify-center"
         >
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs text-gray-400 dark:text-gray-500">{t('generatingSolution')}</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">{statusText}</span>
+            {showCancel && onCancel && (
+              <div className="flex flex-col items-center gap-1 mt-1">
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  {t('takingTooLong') || 'Taking longer than expected…'}
+                </span>
+                <button
+                  onClick={onCancel}
+                  className="text-xs text-violet-500 hover:text-violet-600 dark:text-violet-400 dark:hover:text-violet-300 underline underline-offset-2 transition-colors"
+                >
+                  {t('cancelAndRetry') || 'Cancel'}
+                </button>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

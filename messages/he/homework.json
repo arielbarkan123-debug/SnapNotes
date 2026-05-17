@@ -256,6 +256,9 @@
     "retryDiagram": "נסה שוב",
     "tapToZoom": "הקש להגדלה",
     "generatingSolution": "מייצר פתרון...",
+    "compilingDiagrams": "מקמפל תרשימים...",
+    "takingTooLong": "לוקח יותר מהצפוי…",
+    "cancelAndRetry": "ביטול",
     "errorTitle": "אירעה שגיאה",
     "errorMessage": "לא ניתן ליצור את ההדרכה",
     "tryAgain": "נסה שוב"

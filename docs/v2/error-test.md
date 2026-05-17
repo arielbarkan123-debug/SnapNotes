@@ -1,0 +1,3 @@
+When generating a diagram
+
+{"level":"error","time":"2026-05-11T07:58:26.892Z","pid":38296,"hostname":"MacBook-Air-3.local","module":"diagram:integration","error":"TikZ compilation failed after 3 attempts. Last error: QuickLaTeX compilation timed out (>15s). The TikZ code is too complex. Simplify: remove decorative elements, use fewer plot points, pre-compute all coordinates as numbers.","pipeline":"tikz","msg":"Generation failed"}

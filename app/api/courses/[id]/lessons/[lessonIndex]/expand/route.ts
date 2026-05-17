@@ -5,6 +5,7 @@ import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from 
 import Anthropic from '@anthropic-ai/sdk'
 import { getContentLanguage, buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { aiLogger } from '@/lib/ai/ai-logger'
 
 // Allow 60 seconds for AI generation
 export const maxDuration = 60
@@ -147,6 +148,7 @@ Return ONLY valid JSON, no markdown fences:
       }],
     })
 
+    aiLogger.llmUsage('lesson-expansion', message.usage)
     // Parse response
     const responseText = message.content[0].type === 'text' ? message.content[0].text : ''
     let parsed: { subSteps: SubStep[] }

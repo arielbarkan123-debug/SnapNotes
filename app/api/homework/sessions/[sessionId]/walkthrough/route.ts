@@ -40,13 +40,16 @@ export async function POST(
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
   const { sessionId } = await params
+  log.info({ sessionId }, '>>> POST /walkthrough received')
 
   // Auth check
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
+    log.warn({ sessionId }, '>>> POST /walkthrough — unauthorized')
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
   }
+  log.info({ sessionId, userId: user.id }, '>>> POST /walkthrough — auth ok')
 
   // Verify session belongs to user
   const { data: session, error: sessionError } = await supabase
@@ -72,39 +75,52 @@ export async function POST(
     .limit(1)
     .single()
 
-  if (existing && (existing.generation_status === 'complete' || existing.generation_status === 'partial')) {
-    // Check if this is a diagram-capable walkthrough with no images (broken cache).
-    // If the solution has tikzCode but no step images were rendered, delete the cached
-    // record and regenerate — this handles cases where compilation failed or the topic
-    // classifier was too aggressive in setting text-only mode.
-    const hasTikz = existing.solution?.tikzCode && existing.solution.tikzCode.includes('\\begin{tikzpicture}')
-    const hasImages = Array.isArray(existing.step_images) && existing.step_images.some((img: string) => !!img)
-    const isTextOnly = existing.solution?.mode === 'text-only'
+  if (existing) {
+    const status = existing.generation_status
 
-    if (!hasImages && !isTextOnly) {
-      // Cached walkthrough with no rendered images — either:
-      // 1. TikZ compilation failed (hasTikz=true but no images)
-      // 2. Text-only result for a diagram-worthy question (hasTikz=false)
-      // Delete the stale record and regenerate with the updated prompt/budgets.
-      log.info({ walkthroughId: existing.id, hasTikz }, 'Deleting stale walkthrough (no images) to allow regeneration')
+    if (status === 'complete' || status === 'partial') {
+      // Check if this is a diagram-capable walkthrough with no images (broken cache).
+      // If the solution has tikzCode but no step images were rendered, delete the cached
+      // record and regenerate — this handles cases where compilation failed or the topic
+      // classifier was too aggressive in setting text-only mode.
+      const hasTikz = existing.solution?.tikzCode && existing.solution.tikzCode.includes('\\begin{tikzpicture}')
+      const hasImages = Array.isArray(existing.step_images) && existing.step_images.some((img: string) => !!img)
+      const isTextOnly = existing.solution?.mode === 'text-only'
+
+      if (!hasImages && !isTextOnly) {
+        // Cached walkthrough with no rendered images — either:
+        // 1. TikZ compilation failed (hasTikz=true but no images)
+        // 2. Text-only result for a diagram-worthy question (hasTikz=false)
+        // Delete the stale record and regenerate with the updated prompt/budgets.
+        log.info({ walkthroughId: existing.id, hasTikz }, 'Deleting stale walkthrough (no images) to allow regeneration')
+        await serviceClient
+          .from('walkthrough_sessions')
+          .delete()
+          .eq('id', existing.id)
+      } else {
+        // Return existing walkthrough data
+        return new Response(JSON.stringify({
+          type: 'existing',
+          walkthroughId: existing.id,
+          solution: existing.solution,
+          stepImages: existing.step_images,
+          generationStatus: existing.generation_status,
+          stepsRendered: existing.steps_rendered,
+          totalSteps: existing.total_steps,
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+    } else if (status === 'generating' || status === 'failed') {
+      // Stale record left by a prior request that crashed or timed out mid-stream.
+      // Delete it so this request can generate a fresh walkthrough.
+      log.info({ walkthroughId: existing.id, status }, 'Deleting stale walkthrough record to allow regeneration')
       await serviceClient
         .from('walkthrough_sessions')
         .delete()
         .eq('id', existing.id)
-    } else {
-      // Return existing walkthrough data
-      return new Response(JSON.stringify({
-        type: 'existing',
-        walkthroughId: existing.id,
-        solution: existing.solution,
-        stepImages: existing.step_images,
-        generationStatus: existing.generation_status,
-        stepsRendered: existing.steps_rendered,
-        totalSteps: existing.total_steps,
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
+      // Fall through to generate a new one
     }
   }
 
@@ -126,6 +142,7 @@ export async function POST(
       }, 2000)
 
       let walkthroughId: string | null = null
+      const t0 = Date.now()
 
       try {
         // ─── Step 1: Route question to best pipeline ─────────────────
@@ -135,7 +152,7 @@ export async function POST(
         // The AI router is for inline chat diagrams (Recraft "Detailed diagram" mode).
         // Only 'text-only' topics (pure algebra, proofs) skip diagrams entirely.
         const walkthroughTopic = classifyWalkthroughTopic(questionText)
-        log.info({ walkthroughTopic }, 'Walkthrough topic classified (always uses TikZ)')
+        log.info({ walkthroughTopic, sessionId }, 'Walkthrough topic classified (always uses TikZ)')
 
         // Resolve language for the walkthrough content
         const userLanguage = await getContentLanguage(supabase, user.id)
@@ -147,12 +164,14 @@ export async function POST(
         }
 
         // ─── Step 2: Generate solution with TikZ ──────────
+        log.info({ topic: walkthroughTopic, model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6' }, 'Calling generateWalkthroughSolution — may make up to 3 Claude calls sequentially...')
+        const t1 = Date.now()
         const { solution, topicClassified, validationErrors } = await generateWalkthroughSolution(
           questionText,
           session.question_image_url ? [session.question_image_url] : undefined,
           language,
         )
-        log.info({ steps: solution.steps.length, mode: solution.mode || 'diagram', topic: topicClassified }, 'Solution generated')
+        log.info({ steps: solution.steps.length, mode: solution.mode || 'diagram', topic: topicClassified, durationMs: Date.now() - t1 }, 'Claude API response received — solution generated')
 
         // ─── Step 3: Create walkthrough session in DB ─────────────────
         const isTextOnly = solution.mode === 'text-only' || !solution.tikzCode || !solution.tikzCode.includes('\\begin{tikzpicture}')
@@ -182,9 +201,21 @@ export async function POST(
         send({ type: 'session_created', walkthroughId: walkthroughId! })
         send({ type: 'solution_ready', solution, totalSteps: solution.steps.length })
 
+        // Text-only walkthroughs have no TikZ to compile — send complete immediately
+        if (isTextOnly) {
+          send({
+            type: 'complete',
+            stepsRendered: solution.steps.length,
+            totalSteps: solution.steps.length,
+          })
+          log.info({ steps: solution.steps.length, totalMs: Date.now() - t0 }, 'Text-only walkthrough complete')
+          return
+        }
+
         // ─── Step 4: Compile TikZ step images ────────────────────────
         if (!isTextOnly) {
-          log.info({ steps: solution.steps.length }, 'Compiling TikZ step images')
+          const t2 = Date.now()
+          log.info({ steps: solution.steps.length }, 'Starting TikZ compilation...')
 
           const parsed = parseTikzLayers(solution.tikzCode)
           const alignment = validateLayerStepAlignment(parsed, solution.steps.length)
@@ -244,11 +275,21 @@ export async function POST(
             totalSteps: solution.steps.length,
           })
 
-          log.info({ rendered: finalRendered, total: solution.steps.length }, 'TikZ walkthrough complete')
+          log.info({ rendered: finalRendered, total: solution.steps.length, compilationMs: Date.now() - t2, totalMs: Date.now() - t0 }, 'TikZ walkthrough complete')
         }
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : 'Unknown error'
-        log.error({ err: error }, 'Walkthrough error')
+        const errName = error instanceof Error ? error.name : 'UnknownError'
+        const elapsedMs = Date.now() - t0
+        log.error({
+          err: error,
+          errName,
+          errMsg,
+          elapsedMs,
+          sessionId,
+          walkthroughId,
+          phase: walkthroughId ? 'compilation' : 'generation',
+        }, `Walkthrough failed after ${elapsedMs}ms — ${errName}: ${errMsg}`)
 
         // Update DB status to failed
         if (walkthroughId) {

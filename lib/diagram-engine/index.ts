@@ -13,7 +13,8 @@ import { captureSteps } from './step-capture';
 import type { StepImage } from '@/components/homework/diagram/types';
 import Anthropic from '@anthropic-ai/sdk';
 import { AI_MODEL } from '@/lib/ai/claude';
-import { createLogger } from '@/lib/logger'
+import { createLogger } from '@/lib/logger';
+import { aiLogger } from '@/lib/ai/ai-logger';
 
 const log = createLogger('diagram-engine')
 
@@ -104,6 +105,7 @@ async function qaCheckDiagram(
       ],
     });
 
+    aiLogger.llmUsage('diagram', qaMessage.usage, { fn: 'qaCheckDiagram', model: AI_MODEL });
     const textBlock = qaMessage.content.find((b) => b.type === 'text');
     if (!textBlock || textBlock.type !== 'text') {
       return { pass: true, issues: '' };
@@ -158,6 +160,7 @@ Reply in 5-7 lines. Numbers only, no prose.`,
       }],
     });
 
+    aiLogger.llmUsage('diagram', response.usage, { fn: 'planMatplotlibDiagram', model: AI_MODEL });
     const textBlock = response.content.find((b) => b.type === 'text');
     return textBlock && textBlock.type === 'text' ? textBlock.text.trim() : null;
   } catch (err) {
@@ -213,6 +216,7 @@ async function generateE2BCode(
     messages: [{ role: 'user', content: userMessage }],
   });
 
+  aiLogger.llmUsage('diagram', response.usage, { fn: 'generateE2BCode', model: AI_MODEL });
   const textBlock = response.content.find((block) => block.type === 'text');
   if (!textBlock || textBlock.type !== 'text') {
     throw new Error('No text response from Claude');

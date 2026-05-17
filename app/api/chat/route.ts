@@ -8,6 +8,7 @@ import { createErrorResponse, ErrorCodes, mapClaudeAPIError } from '@/lib/api/er
 import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 import { getStudentContext, generateDirectives } from '@/lib/student-context'
 import { createLogger } from '@/lib/logger'
+import { aiLogger } from '@/lib/ai/ai-logger'
 
 const log = createLogger('api:chat')
 
@@ -207,6 +208,7 @@ Remember: You're a tutor, not just an answer machine. Help them understand, don'
       ],
     })
 
+    aiLogger.llmUsage('chat-course', response.usage)
     // Extract response text with proper validation
     if (!response.content || response.content.length === 0) {
       log.error('Empty response from AI')

@@ -5,6 +5,7 @@ import { getContentLanguage, buildLanguageInstruction as buildLangInstruction } 
 import { ErrorCodes, createErrorResponse } from '@/lib/api/errors'
 import { getFilteredDiagramSchemaPrompt, DIAGRAM_SCHEMAS } from '@/lib/diagram-schemas'
 import { AI_MODEL } from '@/lib/ai/claude'
+import { aiLogger } from '@/lib/ai/ai-logger'
 import { tryEngineDiagram, shouldUseEngine, type EngineResult } from '@/lib/diagram-engine/integration'
 import { createLogger } from '@/lib/logger'
 
@@ -242,6 +243,7 @@ export async function POST(
       messages,
     })
 
+    aiLogger.llmUsage('chat-prepare', response.usage)
     const content = response.content[0]
     if (content.type !== 'text') {
       throw new Error('Unexpected response type')

@@ -29,6 +29,7 @@ import type { ExtractedDocument } from '@/lib/documents'
 import { type GeneratedCourse, type Lesson, type LessonOutline, type LessonIntensityMode, type StepType, type LearningObjective } from '@/types'
 import { filterForbiddenContent } from './course-validator'
 import { createLogger } from '@/lib/logger'
+import { aiLogger, type AIAction } from './ai-logger'
 
 const log = createLogger('ai:claude')
 
@@ -56,6 +57,53 @@ export function getAIModel(): string {
  */
 export function getAIModelFast(): string {
   return AI_MODEL_FAST
+}
+
+// Sonnet 4.6 pricing ($/1M tokens) — update if model changes (keep in sync with ai-logger.ts)
+const LLM_PRICE = { input: 3.00, output: 15.00, cache_read: 0.30, cache_write: 3.75 }
+
+const FN_TO_ACTION: Readonly<Record<string, AIAction>> = {
+  analyzeNotebookImage:              'course-generation',
+  generateStudyCourse:               'course-generation',
+  generateCourseFromImageSingleCall: 'course-generation',
+  analyzeImageBatch:                 'course-generation',
+  generateCourseFromDocument:        'course-generation',
+  generateCourseFromText:            'course-generation',
+  generateInitialCourse:             'course-generation',
+  generateContinuationLessons:       'lesson-expansion',
+} as const
+
+function logLLMUsage(
+  fn: string,
+  usage: { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null },
+  ctx: { user_id?: string; route?: string } = {}
+) {
+  const cacheRead  = usage.cache_read_input_tokens  ?? 0
+  const cacheWrite = usage.cache_creation_input_tokens ?? 0
+  const billable   = usage.input_tokens - cacheRead
+
+  const cost = +(
+    (billable              / 1_000_000) * LLM_PRICE.input +
+    (usage.output_tokens   / 1_000_000) * LLM_PRICE.output +
+    (cacheRead             / 1_000_000) * LLM_PRICE.cache_read +
+    (cacheWrite            / 1_000_000) * LLM_PRICE.cache_write
+  ).toFixed(6)
+
+  log.info({
+    event:                       '💰 llm_usage',
+    fn,
+    model:                       AI_MODEL,
+    input_tokens:                usage.input_tokens,
+    output_tokens:               usage.output_tokens,
+    cache_read_input_tokens:     cacheRead,
+    cache_creation_input_tokens: cacheWrite,
+    total_tokens:                usage.input_tokens + usage.output_tokens,
+    estimated_cost_usd:          cost,
+    ...ctx,
+  }, `📊 LLM usage — ${fn}: ${usage.input_tokens} in / ${usage.output_tokens} out (~$${cost})`)
+
+  const action = FN_TO_ACTION[fn] ?? 'course-generation'
+  aiLogger.llmUsage(action, usage, { model: AI_MODEL, fn, ...ctx })
 }
 
 // Initialize Anthropic client (singleton)
@@ -863,8 +911,9 @@ export async function analyzeNotebookImage(imageUrl: string): Promise<AnalysisRe
         }
 
         const finalMessage = await stream.finalMessage()
+        logLLMUsage('analyzeNotebookImage', finalMessage.usage)
         if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
-          log.warn({ stopReason: finalMessage.stop_reason }, 'analyzeNotebookImage stream ended unexpectedly')
+          log.warn({ stopReason: finalMessage.stop_reason }, '⚠️ analyzeNotebookImage stream ended unexpectedly')
         }
 
         log.debug({ chars: rawText.length }, 'analyzeNotebookImage complete')
@@ -1019,6 +1068,7 @@ export async function generateStudyCourse(
 
         // Ensure the stream completed successfully
         const finalMessage = await stream.finalMessage()
+        logLLMUsage('generateStudyCourse', finalMessage.usage)
         const stopReason = finalMessage.stop_reason
 
         log.debug({ chars: rawText.length }, 'generateStudyCourse streaming complete')
@@ -1185,8 +1235,9 @@ export async function generateCourseFromImageSingleCall(
         }
 
         const finalMessage = await stream.finalMessage()
+        logLLMUsage('generateCourseFromImageSingleCall', finalMessage.usage)
         if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
-          log.warn({ stopReason: finalMessage.stop_reason }, 'generateCourseFromImageSingleCall stream ended unexpectedly')
+          log.warn({ stopReason: finalMessage.stop_reason }, '⚠️ generateCourseFromImageSingleCall stream ended unexpectedly')
         }
 
         log.debug({ chars: rawText.length }, 'generateCourseFromImageSingleCall complete')
@@ -1378,8 +1429,9 @@ async function analyzeImageBatch(imageUrls: string[]): Promise<AnalysisResult> {
         }
 
         const finalMessage = await stream.finalMessage()
+        logLLMUsage('analyzeImageBatch', finalMessage.usage)
         if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
-          log.warn({ stopReason: finalMessage.stop_reason }, 'analyzeImageBatch stream ended unexpectedly')
+          log.warn({ stopReason: finalMessage.stop_reason }, '⚠️ analyzeImageBatch stream ended unexpectedly')
         }
 
         log.debug({ chars: rawText.length }, 'analyzeImageBatch complete')
@@ -1757,6 +1809,7 @@ export async function generateCourseFromDocument(
 
         // Verify stream completed successfully
         const finalMessage = await stream.finalMessage()
+        logLLMUsage('generateCourseFromDocument', finalMessage.usage)
         const stopReason = finalMessage.stop_reason
 
         log.debug({ chars: rawText.length }, 'generateCourseFromDocument streaming complete')
@@ -1920,6 +1973,7 @@ export async function generateCourseFromText(
 
         // Verify stream completed successfully
         const finalMessage = await stream.finalMessage()
+        logLLMUsage('generateCourseFromText', finalMessage.usage)
         const stopReason = finalMessage.stop_reason
 
         log.debug({ chars: rawText.length }, 'generateCourseFromText streaming complete')
@@ -2207,6 +2261,7 @@ export async function generateInitialCourse(
         }
 
         const finalMessage = await stream.finalMessage()
+        logLLMUsage('generateInitialCourse', finalMessage.usage)
         const stopReason = finalMessage.stop_reason
 
         log.debug({ chars: rawText.length, stopReason }, 'generateInitialCourse streaming complete')
@@ -2357,8 +2412,9 @@ export async function generateContinuationLessons(
         }
 
         const finalMessage = await stream.finalMessage()
+        logLLMUsage('generateContinuationLessons', finalMessage.usage)
         if (finalMessage.stop_reason !== 'end_turn' && finalMessage.stop_reason !== 'stop_sequence') {
-          log.warn({ stopReason: finalMessage.stop_reason }, 'generateContinuationLessons stream ended unexpectedly')
+          log.warn({ stopReason: finalMessage.stop_reason }, '⚠️ generateContinuationLessons stream ended unexpectedly')
         }
 
         log.debug({ chars: rawText.length }, 'generateContinuationLessons streaming complete')

@@ -10,6 +10,7 @@
  */
 
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
+import { aiLogger } from '@/lib/ai/ai-logger'
 import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 import { getAdvancedGuidance } from '@/lib/diagram-engine/tikz/advanced-fallback'
 import { parseTikzLayers } from '@/lib/diagram-engine/tikz-layer-parser'
@@ -611,18 +612,29 @@ async function generateWalkthroughSolutionOnce(
   const langInstruction = options?.language ? buildLanguageInstruction(options.language) : ''
   const systemPrompt = buildWalkthroughSystemPrompt(questionText, topic) + (langInstruction ? '\n\n' + langInstruction : '')
 
-  const message = await anthropic.messages.create({
-    model: AI_MODEL,
-    max_tokens: 4096,
-    system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
-    messages: [
-      {
-        role: 'user',
-        content: userContent as Anthropic.Messages.ContentBlockParam[],
-      },
-    ],
-  })
+  log.info({ topic, attempt: options?.simplify ? 'simplify' : options?.validationFixes ? 'retry' : 'first' }, 'Sending walkthrough request to Claude...')
+  const tCall = Date.now()
+  let message: Awaited<ReturnType<typeof anthropic.messages.create>>
+  try {
+    message = await anthropic.messages.create({
+      model: AI_MODEL,
+      max_tokens: 4096,
+      system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+      messages: [
+        {
+          role: 'user',
+          content: userContent as Anthropic.Messages.ContentBlockParam[],
+        },
+      ],
+    })
+  } catch (err) {
+    const durationMs = Date.now() - tCall
+    log.error({ err, topic, durationMs }, `Claude API call failed after ${durationMs}ms`)
+    throw err
+  }
+  log.info({ durationMs: Date.now() - tCall, stopReason: message.stop_reason }, 'Claude API call completed')
 
+  aiLogger.llmUsage('walkthrough', message.usage)
   // Extract text response
   const textBlock = message.content.find(b => b.type === 'text')
   if (!textBlock || textBlock.type !== 'text') {

@@ -26,6 +26,7 @@ import { classifyTopicType, inferDifficultyFromTopic, resolveEffectiveLanguageLe
 
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
 import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
+import { aiLogger } from '@/lib/ai/ai-logger'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('homework:tutor')
@@ -864,6 +865,7 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     messages: [{ role: 'user', content: prompt }],
   })
 
+  aiLogger.llmUsage('chat-course', response.usage)
   const tutorResponse = parseTutorResponse(response)
 
   // Strip any ASCII diagrams from the AI response (we use the engine diagram instead)
@@ -1189,6 +1191,7 @@ ${si.knownPrerequisiteGaps.length > 0 ? `Known weak areas: ${si.knownPrerequisit
     messages,
   })
 
+  aiLogger.llmUsage('chat-course', response.usage)
   const tutorResponse = parseTutorResponse(response)
 
   // Strip any ASCII diagrams from the AI response
@@ -1323,6 +1326,7 @@ Return JSON: {"solved": true/false, "feedback": "brief feedback on their answer"
     messages: [{ role: 'user', content: prompt }],
   })
 
+  aiLogger.llmUsage('chat-course', response.usage)
   const textContent = response.content.find((b) => b.type === 'text')
   if (!textContent || textContent.type !== 'text') {
     return { solved: false, feedback: 'Could not evaluate response' }

@@ -1,6 +1,7 @@
 import { detectTopic } from './tikz';
 import Anthropic from '@anthropic-ai/sdk';
 import { createLogger } from '@/lib/logger';
+import { aiLogger } from '@/lib/ai/ai-logger';
 
 const log = createLogger('diagram:router');
 
@@ -296,6 +297,7 @@ export async function routeQuestionWithAI(question: string): Promise<Pipeline> {
       }],
     });
 
+    aiLogger.llmUsage('diagram', msg.usage, { fn: 'routeQuestionWithAI', model: 'claude-sonnet-4-20250514' });
     const text = msg.content[0]?.type === 'text' ? msg.content[0].text.trim().toLowerCase() : '';
     const valid: Pipeline[] = ['recraft', 'tikz', 'e2b-matplotlib', 'e2b-latex'];
     const matched = valid.find(p => text.includes(p));

@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
 import { getContentLanguage, buildLanguageInstruction } from '@/lib/ai/language'
+import { aiLogger } from '@/lib/ai/ai-logger'
 import type { WalkthroughSolution } from '@/types/walkthrough'
 import { createLogger } from '@/lib/logger'
 
@@ -158,6 +159,7 @@ RULES:
       messages,
     })
 
+    aiLogger.llmUsage('walkthrough', response.usage)
     const textBlock = response.content.find(b => b.type === 'text')
     const tutorResponse = textBlock?.type === 'text' ? textBlock.text : 'Sorry, I could not generate a response.'
 

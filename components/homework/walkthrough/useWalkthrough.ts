@@ -60,6 +60,7 @@ export function useWalkthrough(): UseWalkthroughReturn {
   const [isAutoPlaying, setIsAutoPlaying] = useState(false)
 
   const abortRef = useRef<AbortController | null>(null)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Ref to always hold the latest handleStreamEvent without adding it to
   // startWalkthrough's dep array (which would recreate the function on every
   // solution state change, causing AbortController issues).
@@ -128,9 +129,23 @@ export function useWalkthrough(): UseWalkthroughReturn {
     if (abortRef.current) {
       abortRef.current.abort()
     }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
 
     const controller = new AbortController()
     abortRef.current = controller
+
+    // 150s client-side safety net — covers up to 3 sequential Claude calls (worst case ~135s)
+    timeoutRef.current = setTimeout(() => {
+      // eslint-disable-next-line no-console
+      console.error('[walkthrough] client timeout fired after 150s — aborting')
+      controller.abort()
+      setError('Generation timed out. Please try again.')
+      setState('error')
+      timeoutRef.current = null
+    }, 150_000)
 
     setState('generating')
     setError(null)
@@ -144,6 +159,8 @@ export function useWalkthrough(): UseWalkthroughReturn {
     setWalkthroughId(null)
 
     try {
+      // eslint-disable-next-line no-console
+      console.log('[walkthrough] POST /walkthrough — starting request', { sessionId })
       const res = await fetch(
         `/api/homework/sessions/${sessionId}/walkthrough`,
         {
@@ -152,8 +169,13 @@ export function useWalkthrough(): UseWalkthroughReturn {
         }
       )
 
+      // eslint-disable-next-line no-console
+      console.log('[walkthrough] POST /walkthrough — response received', { status: res.status, ok: res.ok })
+
       if (!res.ok) {
         const data = await res.json().catch(() => ({ error: 'Request failed' }))
+        // eslint-disable-next-line no-console
+        console.error('[walkthrough] POST /walkthrough — error response', { status: res.status, error: data.error })
         throw new Error(data.error || `HTTP ${res.status}`)
       }
 
@@ -209,10 +231,23 @@ export function useWalkthrough(): UseWalkthroughReturn {
         }
       }
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') return
+      if (err instanceof Error && err.name === 'AbortError') {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+          timeoutRef.current = null
+        }
+        return
+      }
       const msg = err instanceof Error ? err.message : 'Unknown error'
+      // eslint-disable-next-line no-console
+      console.error('[walkthrough] stream error', { msg, err })
       setError(msg)
       setState('error')
+    } finally {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
     }
   }, [])
 
@@ -232,6 +267,10 @@ export function useWalkthrough(): UseWalkthroughReturn {
         setStepImages(new Array(event.totalSteps).fill(''))
         // For text-only walkthroughs, skip compiling state
         if (event.solution.mode === 'text-only') {
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current)
+            timeoutRef.current = null
+          }
           setState('ready')
         } else {
           setState('compiling')
@@ -256,6 +295,10 @@ export function useWalkthrough(): UseWalkthroughReturn {
         break
 
       case 'complete':
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+          timeoutRef.current = null
+        }
         setStepsRendered(event.stepsRendered)
         setState('ready')
         break
@@ -278,11 +321,15 @@ export function useWalkthrough(): UseWalkthroughReturn {
     handleStreamEventRef.current = handleStreamEvent
   }, [handleStreamEvent])
 
-  // Cleanup on unmount
+  // Cleanup on unmount — clear the safety-net timer only.
+  // Do NOT abort the controller here: React 18 StrictMode runs cleanup on every
+  // simulated unmount/remount cycle in development, which would kill the in-flight
+  // fetch immediately. The controller is aborted explicitly by startWalkthrough
+  // (when a new request starts) and by the cancel button (via onClose).
   useEffect(() => {
     return () => {
-      if (abortRef.current) {
-        abortRef.current.abort()
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
       }
     }
   }, [])

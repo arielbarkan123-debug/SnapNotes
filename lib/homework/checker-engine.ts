@@ -13,6 +13,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
+import { aiLogger } from '@/lib/ai/ai-logger'
 import type {
   HomeworkFeedback,
   GradeLevel,
@@ -471,6 +472,7 @@ Respond ONLY with valid JSON matching this exact schema:
       },
     ],
   })
+  aiLogger.llmUsage('homework-check', response.usage)
 
   const text = response.content
     .filter((block): block is Anthropic.TextBlock => block.type === 'text')
@@ -604,6 +606,7 @@ Respond ONLY with valid JSON:
     system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: messageContent }],
   })
+  aiLogger.llmUsage('homework-check', response.usage)
 
   const text = response.content
     .filter((block): block is Anthropic.TextBlock => block.type === 'text')
@@ -696,6 +699,7 @@ Respond ONLY with valid JSON:
       ],
     }],
   })
+  aiLogger.llmUsage('homework-check', rubricResponse.usage)
 
   const rubricText = rubricResponse.content
     .filter((b): b is Anthropic.TextBlock => b.type === 'text')
@@ -761,6 +765,7 @@ Respond ONLY with valid JSON:
       ],
     }],
   })
+  aiLogger.llmUsage('homework-check', gradingResponse.usage)
 
   const gradingText = gradingResponse.content
     .filter((b): b is Anthropic.TextBlock => b.type === 'text')
@@ -1438,6 +1443,7 @@ Respond with ONLY JSON:
     max_tokens: 512,
     messages: [{ role: 'user', content: prompt }],
   })
+  aiLogger.llmUsage('homework-check', response.usage)
 
   const textContent = response.content.find(b => b.type === 'text')
   if (!textContent || textContent.type !== 'text') return null
@@ -1809,6 +1815,7 @@ async function streamWithRetry(
 
       response = await stream.finalMessage()
       log.info({ detail: response.usage?.output_tokens }, `Response received (attempt ${attempt}), tokens`)
+      aiLogger.llmUsage('homework-check', response.usage)
       break
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
@@ -2120,6 +2127,7 @@ Return your analysis as JSON in this exact format:
 
       response = await stream.finalMessage()
       log.info({ detail: response.usage?.output_tokens }, 'Response received, tokens used')
+      aiLogger.llmUsage('homework-check', response.usage)
       break
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))

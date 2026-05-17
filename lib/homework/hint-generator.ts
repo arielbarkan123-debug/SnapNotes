@@ -8,6 +8,7 @@ import type Anthropic from '@anthropic-ai/sdk'
 import type { HintResponse, HintContext, HintLevel } from './types'
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
 import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
+import { aiLogger } from '@/lib/ai/ai-logger'
 
 // ============================================================================
 // Configuration
@@ -135,6 +136,7 @@ Return JSON:
     messages: [{ role: 'user', content: prompt }],
   })
 
+  aiLogger.llmUsage('practice-session', response.usage)
   return parseHintResponse(response, requestedLevel, topicType)
 }
 

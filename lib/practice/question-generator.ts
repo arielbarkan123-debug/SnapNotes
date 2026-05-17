@@ -26,6 +26,7 @@ import { isQuestionQualityAcceptable } from '@/lib/srs'
 import { AI_MODEL } from '@/lib/ai/claude'
 import { buildLanguageInstruction, type ContentLanguage } from '@/lib/ai/language'
 import { createLogger } from '@/lib/logger'
+import { aiLogger } from '@/lib/ai/ai-logger'
 
 const log = createLogger('practice:question-generator')
 
@@ -514,6 +515,7 @@ export async function generatePracticeQuestions(
     max_tokens: 4000,
     messages: [{ role: 'user', content: prompt }],
   })
+  aiLogger.llmUsage('practice-session', response.usage)
 
   // Parse response
   const responseText =

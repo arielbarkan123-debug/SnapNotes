@@ -10,6 +10,7 @@ import type { UserLearningContext } from '@/lib/ai/prompts'
 import { AI_MODEL, getAnthropicClient } from '@/lib/ai/claude'
 import { buildLanguageInstruction } from '@/lib/ai/language'
 import { createLogger } from '@/lib/logger'
+import { aiLogger } from '@/lib/ai/ai-logger'
 
 const log = createLogger('prepare:guide-generator')
 const MAX_TOKENS = 8000
@@ -421,6 +422,8 @@ export async function generateGuide(options: GuideGenerationOptions): Promise<Ge
       }
 
       log.info(`Stream complete: ${rawText.length} chars, stop_reason: ${stopReason}`)
+      const finalMsg = await stream.finalMessage()
+      aiLogger.llmUsage('prepare-guide', finalMsg.usage)
 
       if (!rawText) {
         throw new Error('No text response from AI')

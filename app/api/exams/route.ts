@@ -13,6 +13,7 @@ import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from 
 import { AI_MODEL } from '@/lib/ai/claude'
 import { getStudentContext, generateDirectives } from '@/lib/student-context'
 import { createLogger } from '@/lib/logger'
+import { aiLogger } from '@/lib/ai/ai-logger'
 
 const log = createLogger('api:exams')
 
@@ -514,6 +515,7 @@ DO NOT include any text outside the JSON. Only output valid JSON.`
       system: langInstruction,
       messages: [{ role: 'user', content: prompt }],
     })
+    aiLogger.llmUsage('exam-generation', message.usage)
 
     const textBlock = message.content.find(block => block.type === 'text')
     if (!textBlock || textBlock.type !== 'text') {

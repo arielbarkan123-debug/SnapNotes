@@ -10,6 +10,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
+import { aiLogger } from '@/lib/ai/ai-logger'
 import type {
   GeneratedCourse,
   Formula,
@@ -296,6 +297,7 @@ Return JSON array like: [{"index": 0, "question": "..."}, {"index": 1, "question
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
     })
+    aiLogger.llmUsage('flashcard-batch', response.usage, { model: AI_MODEL })
 
     const text = response.content.find(b => b.type === 'text')
     if (!text || text.type !== 'text') return result
@@ -372,6 +374,7 @@ Answer/content: "${back.slice(0, 500)}"
 Return ONLY the new question text, nothing else.`,
       }],
     })
+    aiLogger.llmUsage('flashcard-batch', response.usage, { model: AI_MODEL })
 
     const text = response.content.find(b => b.type === 'text')
     if (!text || text.type !== 'text') return null

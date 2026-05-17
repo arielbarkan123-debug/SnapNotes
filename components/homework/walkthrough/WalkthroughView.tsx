@@ -52,6 +52,8 @@ export default function WalkthroughView({
   useEffect(() => {
     if (!hasStarted.current) {
       hasStarted.current = true
+      // eslint-disable-next-line no-console
+      console.log('[WalkthroughView] mounted — calling startWalkthrough', { sessionId })
       startWalkthrough(sessionId)
     }
   }, [sessionId, startWalkthrough])
@@ -78,7 +80,7 @@ export default function WalkthroughView({
   if (state === 'idle' || (state === 'generating' && !solution)) {
     return (
       <div dir={isHe ? 'rtl' : 'ltr'}>
-        <WalkthroughSkeleton />
+        <WalkthroughSkeleton state="generating" onCancel={onClose} />
       </div>
     )
   }

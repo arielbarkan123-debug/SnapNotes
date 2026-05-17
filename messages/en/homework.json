@@ -256,6 +256,9 @@
     "retryDiagram": "Retry diagram",
     "tapToZoom": "Tap to zoom",
     "generatingSolution": "Generating solution...",
+    "compilingDiagrams": "Compiling diagrams...",
+    "takingTooLong": "Taking longer than expected…",
+    "cancelAndRetry": "Cancel",
     "errorTitle": "Something went wrong",
     "errorMessage": "Could not generate the walkthrough",
     "tryAgain": "Try Again"
