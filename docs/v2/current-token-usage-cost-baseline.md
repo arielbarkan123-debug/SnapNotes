@@ -83,21 +83,21 @@ This section should be filled using production logs, analytics exports, or provi
 **Currency:** USD
 
 
-| AI Action                               | Total Tokens | Input Tokens | Output Tokens | Cache Read Tokens | Cache Write Tokens | Image / Tool Fees | Observed Cost | Cost per Request | Current Charged LU | Revenue at $0.25/LU | Gross Margin | Notes                                                       |
-| --------------------------------------- | ------------ | ------------ | ------------- | ----------------- | ------------------ | ----------------- | ------------- | ---------------- | ------------------ | ------------------- | ------------ | ----------------------------------------------------------- |
-| Course Generation (Text content)        | 17,769       | 5,770        | 11,999        | 0                 | 0                  | 0                 | 0.197295      | TBD              | TBD                | TBD                 | TBD          | This is based on text content with 45-60 mins               |
-| Course Generation (Upload file content) | 10,944       | 5,694        | 5,250         | 0                 | 0                  | 0                 | 0.0958        | TBD              | TBD                | TBD                 | TBD          | 20-30min uploaded file; structured output -> shorter output |
-| Homework Check (Smart)                  | 2,261        | 575          | 1,686         | 0                 | 0                  | 0                 | 0.027015      | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
-| Prepare Guide                           | 8,873        | 1,506        | 7,367         | 0                 | 0                  | 0                 | 0.115023      | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
-| Homework Check                          | 3,062        | 1,460        | 1,602         | 0                 | 0                  | 0                 | 0.028410      | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
-| Practice Session                        | 10,698       | 6,698        | 4,000         | 0                 | 0                  | 0                 | 0.080094      | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
-| Diagram (with image)                    | 576          | 568          | 8             | 8                 | 8                  | 8                 | 0.001824      | TBD              | TBD                | TBD                 | TBD          |                                                             |
-| Exam Generation                         | 6,581        | 2,635        | 3,946         | 0                 | 0                  | 0                 | 0.067095      | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
-| Lesson Expansion                        | 1,262        | 422          | 840           | 0                 | 0                  | 0                 | 0.013866      | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
-| Chat (Prepare Guide)                    | 669          | 19           | 650           | 0                 | 3,317              | 0                 | 0.022246      | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
-| Walkthrough                             | 2,053        | 651          | 1,402         | 0                 | 0                  | 0                 | 0.022983      | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
-| Chat (Course)                           | 1,677        | 1,387        | 290           | 0                 | 0                  | 0                 | 0.008511      | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
-| Flashcard Batch                         | 631          | 570          | 61            | 0                 | 0                  | 0                 | 0.002625      | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
+| AI Action                               | Total Tokens | Input Tokens | Output Tokens | Cache Read Tokens | Cache Write Tokens | Image / Tool Fees | Observed Cost | Cost per Request | Latency          | Current Charged LU | Revenue at $0.25/LU | Gross Margin | Notes                                                       |
+| --------------------------------------- | ------------ | ------------ | ------------- | ----------------- | ------------------ | ----------------- | ------------- | ---------------- | ---------------- | ------------------ | ------------------- | ------------ | ----------------------------------------------------------- |
+| Course Generation (Text content)        | 17,769       | 5,770        | 11,999        | 0                 | 0                  | 0                 | 0.197295      | TBD              | 3mins 48 seconds | TBD                | TBD                 | TBD          | This is based on text content with 45-60 mins               |
+| Course Generation (Upload file content) | 10,944       | 5,694        | 5,250         | 0                 | 0                  | 0                 | 0.0958        | TBD              | TBD              | TBD                | TBD                 | TBD          | 20-30min uploaded file; structured output -> shorter output |
+| Homework Check (Smart)                  | 2,261        | 575          | 1,686         | 0                 | 0                  | 0                 | 0.027015      | TBD              | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
+| Prepare Guide                           | 8,873        | 1,506        | 7,367         | 0                 | 0                  | 0                 | 0.115023      | TBD              | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
+| Homework Check                          | 3,062        | 1,460        | 1,602         | 0                 | 0                  | 0                 | 0.028410      | TBD              | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
+| Practice Session                        | 10,698       | 6,698        | 4,000         | 0                 | 0                  | 0                 | 0.080094      | TBD              | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
+| Diagram (with image)                    | 576          | 568          | 8             | 8                 | 8                  | 8                 | 0.001824      | TBD              | TBD              | TBD                | TBD                 | TBD          |                                                             |
+| Exam Generation                         | 6,581        | 2,635        | 3,946         | 0                 | 0                  | 0                 | 0.067095      | TBD              | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
+| Lesson Expansion                        | 1,262        | 422          | 840           | 0                 | 0                  | 0                 | 0.013866      | TBD              | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
+| Chat (Prepare Guide)                    | 669          | 19           | 650           | 0                 | 3,317              | 0                 | 0.022246      | TBD              | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
+| Walkthrough                             | 2,053        | 651          | 1,402         | 0                 | 0                  | 0                 | 0.022983      | TBD              | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
+| Chat (Course)                           | 1,677        | 1,387        | 290           | 0                 | 0                  | 0                 | 0.008511      | TBD              | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
+| Flashcard Batch                         | 631          | 570          | 61            | 0                 | 0                  | 0                 | 0.002625      | TBD              | TBD              | TBD                | TBD                 | TBD          | TBD                                                         |
 
 
 **Formulae used:**
@@ -122,6 +122,67 @@ This section should be filled using production logs, analytics exports, or provi
 | Cache read       | $0.30                |
 | Cache write      | $3.75                |
 
+
+---
+
+## 4b. Post-Change Token Usage Baseline
+
+**Date:** `TBD — fill after testing new code changes`  
+**Change description:** `TBD — describe what changed (e.g. prompt refactor, caching, model routing)`  
+**Environment:** `TBD`  
+**Model(s):** `TBD`  
+**Data source:** `TBD`  
+**Currency:** USD
+
+
+| AI Action                               | Total Tokens | Input Tokens | Output Tokens | Cache Read Tokens | Cache Write Tokens | Image / Tool Fees | Observed Cost | Cost per Request | Latency    | Current Charged LU | Revenue at $0.25/LU | Gross Margin | Notes |
+| --------------------------------------- | ------------ | ------------ | ------------- | ----------------- | ------------------ | ----------------- | ------------- | ---------------- | ---------- | ------------------ | ------------------- | ------------ | ----- |
+| Course Generation (Text content)        | 11,827       | 2,477        | 9,350         | TBD               | TBD                | TBD               | 0.147681      | TBD              | 2min 7 sec | TBD                | TBD                 | TBD          | TBD   |
+| Course Generation (Upload file content) | TBD          | TBD          | TBD           | TBD               | TBD                | TBD               | TBD           | TBD              | TBD        | TBD                | TBD                 | TBD          | TBD   |
+| Homework Check (Smart)                  | TBD          | TBD          | TBD           | TBD               | TBD                | TBD               | TBD           | TBD              | TBD        | TBD                | TBD                 | TBD          | TBD   |
+| Prepare Guide                           | TBD          | TBD          | TBD           | TBD               | TBD                | TBD               | TBD           | TBD              | TBD        | TBD                | TBD                 | TBD          | TBD   |
+| Homework Check                          | TBD          | TBD          | TBD           | TBD               | TBD                | TBD               | TBD           | TBD              | TBD        | TBD                | TBD                 | TBD          | TBD   |
+| Practice Session                        | TBD          | TBD          | TBD           | TBD               | TBD                | TBD               | TBD           | TBD              | TBD        | TBD                | TBD                 | TBD          | TBD   |
+| Diagram (with image)                    | TBD          | TBD          | TBD           | TBD               | TBD                | TBD               | TBD           | TBD              | TBD        | TBD                | TBD                 | TBD          | TBD   |
+| Exam Generation                         | TBD          | TBD          | TBD           | TBD               | TBD                | TBD               | TBD           | TBD              | TBD        | TBD                | TBD                 | TBD          | TBD   |
+| Lesson Expansion                        | 6,240        | 2,187        | 4,053         | TBD               | TBD                | TBD               | 0.067356      | 52 sec           | TBD        | TBD                | TBD                 | TBD          | TBD   |
+| Chat (Prepare Guide)                    | TBD          | TBD          | TBD           | TBD               | TBD                | TBD               | TBD           | TBD              | TBD        | TBD                | TBD                 | TBD          | TBD   |
+| Walkthrough                             | TBD          | TBD          | TBD           | TBD               | TBD                | TBD               | TBD           | TBD              | TBD        | TBD                | TBD                 | TBD          | TBD   |
+| Chat (Course)                           | TBD          | TBD          | TBD           | TBD               | TBD                | TBD               | TBD           | TBD              | TBD        | TBD                | TBD                 | TBD          | TBD   |
+| Flashcard Batch                         | 1,851        | 1,557        | 294           | TBD               | TBD                | TBD               | 0.009081      | 4 sec            | TBD        | TBD                | TBD                 | TBD          | TBD   |
+
+
+Same formulae and token pricing as Section 4 apply.
+
+---
+
+## 4c. Before vs After Comparison
+
+Fill this table once Section 4b is populated.
+
+
+| AI Action                               | Pre-Change Cost | Post-Change Cost | Delta $ | Delta % | Pre-Change Latency | Post-Change Latency | Latency Change | Pre-Change Gross Margin | Post-Change Gross Margin | Margin Change | Notes |
+| --------------------------------------- | --------------- | ---------------- | ------- | ------- | ------------------ | ------------------- | -------------- | ----------------------- | ------------------------ | ------------- | ----- |
+| Course Generation (Text content)        | $0.197295       | TBD              | TBD     | TBD     | TBD                | TBD                 | TBD            | TBD                     | TBD                      | TBD           | TBD   |
+| Course Generation (Upload file content) | $0.095800       | TBD              | TBD     | TBD     | TBD                | TBD                 | TBD            | TBD                     | TBD                      | TBD           | TBD   |
+| Homework Check (Smart)                  | $0.027015       | TBD              | TBD     | TBD     | TBD                | TBD                 | TBD            | TBD                     | TBD                      | TBD           | TBD   |
+| Prepare Guide                           | $0.115023       | TBD              | TBD     | TBD     | TBD                | TBD                 | TBD            | TBD                     | TBD                      | TBD           | TBD   |
+| Homework Check                          | TBD             | TBD              | TBD     | TBD     | TBD                | TBD                 | TBD            | TBD                     | TBD                      | TBD           | TBD   |
+| Practice Session                        | $0.080094       | TBD              | TBD     | TBD     | TBD                | TBD                 | TBD            | TBD                     | TBD                      | TBD           | TBD   |
+| Diagram (with image)                    | $0.001824       | TBD              | TBD     | TBD     | TBD                | TBD                 | TBD            | TBD                     | TBD                      | TBD           | TBD   |
+| Exam Generation                         | $0.067095       | TBD              | TBD     | TBD     | TBD                | TBD                 | TBD            | TBD                     | TBD                      | TBD           | TBD   |
+| Lesson Expansion                        | $0.013866       | TBD              | TBD     | TBD     | TBD                | TBD                 | TBD            | TBD                     | TBD                      | TBD           | TBD   |
+| Chat (Prepare Guide)                    | $0.022246       | TBD              | TBD     | TBD     | TBD                | TBD                 | TBD            | TBD                     | TBD                      | TBD           | TBD   |
+| Walkthrough                             | $0.022983       | TBD              | TBD     | TBD     | TBD                | TBD                 | TBD            | TBD                     | TBD                      | TBD           | TBD   |
+| Chat (Course)                           | $0.008511       | TBD              | TBD     | TBD     | TBD                | TBD                 | TBD            | TBD                     | TBD                      | TBD           | TBD   |
+| Flashcard Batch                         | $0.002625       | TBD              | TBD     | TBD     | TBD                | TBD                 | TBD            | TBD                     | TBD                      | TBD           | TBD   |
+
+
+```text
+Delta $ = Post-change cost − Pre-change cost
+Delta % = Delta $ / Pre-change cost
+Margin Change = Post-change gross margin − Pre-change gross margin
+```
 
 ---
 

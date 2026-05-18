@@ -9,6 +9,7 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import { INITIAL_COURSE_TOOL, InitialCourseOutputSchema } from './tools/initial-course-tool'
+import { TEXT_COURSE_TOOL, TextCourseOutputSchema } from './tools/text-course-tool'
 import {
   getImageAnalysisPrompt,
   getMultiPageImageAnalysisPrompt,
@@ -30,108 +31,26 @@ import type { ExtractedDocument } from '@/lib/documents'
 import { type GeneratedCourse, type Lesson, type LessonOutline, type LessonIntensityMode, type StepType, type LearningObjective } from '@/types'
 import { filterForbiddenContent } from './course-validator'
 import { createLogger } from '@/lib/logger'
-import { aiLogger, type AIAction } from './ai-logger'
+import {
+  AI_MODEL,
+  MAX_TOKENS_EXTRACTION,
+  MAX_TOKENS_GENERATION,
+  MAX_IMAGES_PER_REQUEST,
+  getAnthropicClient,
+  logLLMUsage,
+  ClaudeAPIError,
+} from './client'
+
+export {
+  AI_MODEL,
+  getAIModel,
+  getAIModelFast,
+  getAnthropicClient,
+  ClaudeAPIError,
+} from './client'
+export type { ClaudeErrorCode } from './client'
 
 const log = createLogger('ai:claude')
-
-// ============================================================================
-// Configuration
-// ============================================================================
-
-// AI model with environment variable fallback
-const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'
-const AI_MODEL_FAST = process.env.ANTHROPIC_MODEL_FAST || 'claude-sonnet-4-6'
-const MAX_TOKENS_EXTRACTION = 4096
-const MAX_TOKENS_GENERATION = 16384  // Increased for large documents (31 slides needs more tokens)
-const MAX_IMAGES_PER_REQUEST = 5 // Claude's recommended limit for optimal performance
-const API_TIMEOUT_MS = 180000 // 3 minute timeout - matches client timeout for Safari compatibility
-
-/**
- * Get the default AI model for standard operations
- */
-export function getAIModel(): string {
-  return AI_MODEL
-}
-
-/**
- * Get the fast AI model for quick responses
- */
-export function getAIModelFast(): string {
-  return AI_MODEL_FAST
-}
-
-// Sonnet 4.6 pricing ($/1M tokens) — update if model changes (keep in sync with ai-logger.ts)
-const LLM_PRICE = { input: 3.00, output: 15.00, cache_read: 0.30, cache_write: 3.75 }
-
-const FN_TO_ACTION: Readonly<Record<string, AIAction>> = {
-  analyzeNotebookImage:              'course-generation',
-  generateStudyCourse:               'course-generation',
-  generateCourseFromImageSingleCall: 'course-generation',
-  analyzeImageBatch:                 'course-generation',
-  generateCourseFromDocument:        'course-generation',
-  generateCourseFromText:            'course-generation',
-  generateInitialCourse:             'course-generation',
-  generateContinuationLessons:       'lesson-expansion',
-} as const
-
-function logLLMUsage(
-  fn: string,
-  usage: { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null },
-  durationMs?: number,
-  ctx: { user_id?: string; route?: string } = {}
-) {
-  const cacheRead  = usage.cache_read_input_tokens  ?? 0
-  const cacheWrite = usage.cache_creation_input_tokens ?? 0
-  const billable   = usage.input_tokens - cacheRead
-
-  const cost = +(
-    (billable              / 1_000_000) * LLM_PRICE.input +
-    (usage.output_tokens   / 1_000_000) * LLM_PRICE.output +
-    (cacheRead             / 1_000_000) * LLM_PRICE.cache_read +
-    (cacheWrite            / 1_000_000) * LLM_PRICE.cache_write
-  ).toFixed(6)
-
-  log.info({
-    event:                       '💰 llm_usage',
-    fn,
-    model:                       AI_MODEL,
-    input_tokens:                usage.input_tokens,
-    output_tokens:               usage.output_tokens,
-    cache_read_input_tokens:     cacheRead,
-    cache_creation_input_tokens: cacheWrite,
-    total_tokens:                usage.input_tokens + usage.output_tokens,
-    estimated_cost_usd:          cost,
-    duration_ms:                 durationMs,
-    ...ctx,
-  }, `📊 LLM usage — ${fn}: ${usage.input_tokens} in / ${usage.output_tokens} out (~$${cost})`)
-
-  const action = FN_TO_ACTION[fn] ?? 'course-generation'
-  aiLogger.llmUsage(action, usage, { model: AI_MODEL, fn, durationMs, ...ctx })
-}
-
-// Initialize Anthropic client (singleton)
-let anthropicClient: Anthropic | null = null
-
-/**
- * Get the shared Anthropic client singleton (180s default timeout).
- * For longer operations, pass { timeout } in individual API call options.
- */
-export function getAnthropicClient(): Anthropic {
-  if (!anthropicClient) {
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      throw new ClaudeAPIError(
-        'ANTHROPIC_API_KEY environment variable is not set',
-        'CONFIG_ERROR'
-      )
-    }
-    anthropicClient = new Anthropic({
-      apiKey,
-      timeout: API_TIMEOUT_MS,
-    })
-  }
-  return anthropicClient
-}
 
 // ============================================================================
 // Types
@@ -160,16 +79,6 @@ export interface FullPipelineResult {
   extractionRawText: string
   generationRawText: string
 }
-
-export type ClaudeErrorCode =
-  | 'RATE_LIMIT'
-  | 'INVALID_IMAGE'
-  | 'PARSE_ERROR'
-  | 'NETWORK_ERROR'
-  | 'API_ERROR'
-  | 'CONFIG_ERROR'
-  | 'EMPTY_CONTENT'
-  | 'TIMEOUT'
 
 // ============================================================================
 // Retry Logic with Exponential Backoff
@@ -461,135 +370,6 @@ function sanitizeUserInput(input: string | undefined, maxLength: number = 200): 
     .replace(/```/g, '') // Remove code blocks that could inject prompts
     .replace(/\n{3,}/g, '\n\n') // Limit consecutive newlines
     .trim()
-}
-
-// ============================================================================
-// Custom Error Class
-// ============================================================================
-
-export class ClaudeAPIError extends Error {
-  code: ClaudeErrorCode
-  retryable: boolean
-  statusCode?: number
-
-  constructor(message: string, code: ClaudeErrorCode, statusCode?: number) {
-    super(message)
-    this.name = 'ClaudeAPIError'
-    this.code = code
-    this.statusCode = statusCode
-    // Retry on transient errors: rate limits, network issues, timeouts
-    this.retryable = code === 'RATE_LIMIT' || code === 'NETWORK_ERROR' || code === 'TIMEOUT'
-  }
-
-  static fromAnthropicError(error: unknown): ClaudeAPIError {
-    // Log the actual error for debugging
-    log.error({ err: error instanceof Error ? error : undefined, rawError: !(error instanceof Error) ? error : undefined }, 'Raw error')
-
-    if (error instanceof Anthropic.APIError) {
-      log.error({ status: error.status, message: error.message, name: error.name }, 'Anthropic API error')
-
-      if (error.status === 429) {
-        return new ClaudeAPIError(
-          'API rate limit exceeded. Please wait a moment and try again.',
-          'RATE_LIMIT',
-          429
-        )
-      }
-      if (error.status === 400) {
-        // Check actual error message to determine type
-        const errorMessage = error.message || ''
-        const errorMessageLower = errorMessage.toLowerCase()
-
-        // Check for API usage limits error (comes as 400, not 429)
-        if (errorMessageLower.includes('api usage limit') ||
-            errorMessageLower.includes('usage limit') ||
-            errorMessageLower.includes('you have reached your')) {
-          return new ClaudeAPIError(
-            '[CLAUDE] Out of credits. The Claude AI budget has run out. The app cannot function until credits are added at console.anthropic.com/settings/billing.',
-            'RATE_LIMIT',
-            400
-          )
-        }
-
-        const isImageError = errorMessageLower.includes('image') ||
-                            errorMessageLower.includes('media')
-
-        if (isImageError) {
-          return new ClaudeAPIError(
-            'Could not process the image. The image may be corrupted or in an unsupported format.',
-            'INVALID_IMAGE',
-            400
-          )
-        }
-
-        // For other 400 errors, return a clean message without raw JSON
-        return new ClaudeAPIError(
-          'Invalid request. Please try again.',
-          'API_ERROR',
-          400
-        )
-      }
-      if (error.status === 401 || error.status === 403) {
-        return new ClaudeAPIError(
-          'API authentication failed. Please check your API key configuration.',
-          'CONFIG_ERROR',
-          error.status
-        )
-      }
-      // Handle transient server errors with specific messages
-      if (error.status === 529 || error.status === 503) {
-        // API overloaded or service unavailable - these are retryable
-        return new ClaudeAPIError(
-          'AI service is temporarily busy. Please wait a moment and try again.',
-          'RATE_LIMIT', // Use RATE_LIMIT code to make it retryable
-          error.status
-        )
-      }
-      if (error.status === 500 || error.status === 502) {
-        // Internal server error or bad gateway - temporary issue
-        return new ClaudeAPIError(
-          'AI service encountered a temporary issue. Please try again.',
-          'RATE_LIMIT', // Use RATE_LIMIT code to make it retryable
-          error.status
-        )
-      }
-      if (error.status === 408 || error.status === 504) {
-        // Request timeout or gateway timeout
-        return new ClaudeAPIError(
-          'Request timed out. Please try again with a smaller file.',
-          'TIMEOUT',
-          error.status
-        )
-      }
-      // Don't expose raw error messages to users - they may contain JSON/technical details
-      return new ClaudeAPIError(
-        'Something went wrong. Please try again.',
-        'API_ERROR',
-        error.status
-      )
-    }
-
-    if (error instanceof Error) {
-      if (error.message.includes('fetch') || error.message.includes('network')) {
-        return new ClaudeAPIError(
-          'Network error. Please check your connection and try again.',
-          'NETWORK_ERROR'
-        )
-      }
-      if (error.message.includes('timeout') || error.name === 'AbortError') {
-        return new ClaudeAPIError(
-          'The request took too long. Please try again with a smaller file.',
-          'TIMEOUT'
-        )
-      }
-      // Don't expose raw error messages - they may contain technical details
-      // Log it for debugging but return a user-friendly message
-      log.error({ err: error }, 'Unexpected error')
-      return new ClaudeAPIError('Something went wrong. Please try again.', 'API_ERROR')
-    }
-
-    return new ClaudeAPIError('An unknown error occurred', 'API_ERROR')
-  }
 }
 
 // ============================================================================
@@ -1980,82 +1760,45 @@ export async function generateCourseFromText(
     : getTextCoursePrompt(textContent, safeTitle, userContext, undefined, intensityMode)
 
   log.debug({ promptType: isExam ? 'EXAM' : 'TEXT', intensityMode: intensityMode || 'standard' }, 'Using prompt for text course generation')
-
+  log.debug({ systemPrompt, userPrompt }, 'Text course generation prompt')
+  
   try {
-    // Use streaming WITH RETRY to prevent mobile connection timeouts
-    log.debug('Starting streaming request with retry for text course generation')
-
+    log.debug('Starting tool_use request for text course generation')
     const startedAt = Date.now()
-    const { rawText, stopReason } = await withStreamRetry(
-      () => client.messages.stream({
+
+    const response = await withNonStreamRetry(
+      () => client.messages.create({
         model: AI_MODEL,
         max_tokens: MAX_TOKENS_GENERATION,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt,
-          },
-        ],
+        system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+        tools: [TEXT_COURSE_TOOL],
+        tool_choice: { type: 'tool', name: 'emit_text_course' },
+        messages: [{ role: 'user', content: userPrompt }],
       }),
-      async (stream) => {
-        // Collect the full response text from the stream
-        let rawText = ''
-        let lastLogTime = Date.now()
-        const LOG_INTERVAL_MS = 15000
-
-        for await (const event of stream) {
-          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-            rawText += event.delta.text
-          }
-
-          const now = Date.now()
-          if (now - lastLogTime > LOG_INTERVAL_MS) {
-            log.debug({ chars: rawText.length }, 'generateCourseFromText streaming in progress')
-            lastLogTime = now
-          }
-        }
-
-        // Verify stream completed successfully
-        const finalMessage = await stream.finalMessage()
-        logLLMUsage('generateCourseFromText', finalMessage.usage, Date.now() - startedAt)
-        const stopReason = finalMessage.stop_reason
-
-        log.debug({ chars: rawText.length }, 'generateCourseFromText streaming complete')
-        return { rawText, stopReason }
-      },
       'generateCourseFromText'
     )
 
-    if (stopReason !== 'end_turn' && stopReason !== 'stop_sequence') {
-      log.warn({ stopReason }, 'generateCourseFromText stream ended unexpectedly')
+    logLLMUsage('generateCourseFromText', response.usage, Date.now() - startedAt)
+
+    const toolUse = response.content.find(
+      (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use' && b.name === 'emit_text_course'
+    )
+    if (!toolUse) {
+      throw new ClaudeAPIError('No tool_use block in AI response', 'PARSE_ERROR')
     }
 
-    if (!rawText || rawText.trim().length === 0) {
-      throw new ClaudeAPIError('No text content in AI response', 'PARSE_ERROR')
+    const parsed = TextCourseOutputSchema.safeParse(toolUse.input)
+    if (!parsed.success) {
+      log.warn({ errors: parsed.error.issues }, 'generateCourseFromText Zod validation failed')
+      throw new ClaudeAPIError('Generated course failed schema validation', 'PARSE_ERROR')
     }
 
-    // Parse JSON response
-    const jsonText = cleanJsonResponse(rawText)
-    let course: GeneratedCourse
-
-    try {
-      course = JSON.parse(jsonText)
-    } catch {
-      throw new ClaudeAPIError(
-        'Failed to parse course structure as JSON. The AI response format was unexpected.',
-        'PARSE_ERROR'
-      )
-    }
-
-    // Validate required fields (AI may return "sections" or "lessons")
-    const courseWithSections = course as GeneratedCourse & { sections?: Lesson[] }
-    const hasLessons = course.lessons || courseWithSections.sections
-    if (!course.title || !course.overview || !hasLessons) {
-      throw new ClaudeAPIError(
-        'Generated course is missing required fields',
-        'PARSE_ERROR'
-      )
+    const rawOutput = parsed.data
+    let course: GeneratedCourse = {
+      title: rawOutput.title,
+      overview: rawOutput.overview,
+      lessons: rawOutput.sections as unknown as Lesson[],
+      learningObjectives: rawOutput.learningObjectives,
     }
 
     // Apply user title if provided
@@ -2063,17 +1806,15 @@ export async function generateCourseFromText(
       course.title = userTitle.trim()
     }
 
-    // Ensure optional arrays exist
-    const { normalizedCourse, webImageQueries } = normalizeGeneratedCourse(course)
+    const { normalizedCourse,  } = normalizeGeneratedCourse(course)
     course = normalizedCourse
 
-    // Fetch web images in parallel (much faster than sequential)
-    const subject = course.title.split(':')[0].trim()
-    await fetchWebImagesParallel(webImageQueries, course, subject)
+    // const subject = course.title.split(':')[0].trim()
+    // await fetchWebImagesParallel(webImageQueries, course, subject)
 
     return {
       generatedCourse: course,
-      generationRawText: rawText,
+      generationRawText: JSON.stringify(rawOutput),
     }
   } catch (error) {
     if (error instanceof ClaudeAPIError) {
@@ -2257,6 +1998,9 @@ export interface ContinuationResult {
  * @param intensityMode - Lesson intensity mode (quick, standard, deep_practice)
  * @returns Partial course (2 lessons), full outline, and document summary
  */
+// Step 1 of 2 in progressive generation: 2 lessons + full outline (~30-40s).
+// Step 2: client triggers /api/generate-course/continue → generateContinuationLessons() in batches.
+// Diagrams (generateDiagramsForSteps) run as post-processing in both steps.
 export async function generateInitialCourse(
   document: ExtractedDocument,
   userTitle?: string,
@@ -2277,6 +2021,7 @@ export async function generateInitialCourse(
   )
 
   log.info('Starting initial course generation (tool_use + prompt caching)')
+  log.info({ systemPrompt, userPrompt }, 'Initial course generation prompt')
 
   try {
     // Use tool_use to force structured output — eliminates JSON parsing/repair
@@ -2489,4 +2234,3 @@ export async function generateContinuationLessons(
 // ============================================================================
 
 export type { ExtractedContent, ExtractedDocument }
-export { AI_MODEL }

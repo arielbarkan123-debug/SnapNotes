@@ -2029,104 +2029,6 @@ ${titleInstruction}
 
 IMPORTANT: The text above may be brief topic lists or outlines. You should EXPAND each topic into comprehensive educational content using standard curriculum knowledge. Don't just repeat the topics - teach them fully.
 
-Create a structured course that transforms these topics into complete study material with interactive questions. Return a JSON object with this exact structure:
-
-{
-  "title": "Clear, descriptive course title",
-  "overview": "A 2-3 paragraph overview explaining what this course covers, why it's important, and what the student will learn. Make it engaging and informative.",
-  "learningObjectives": [
-    {
-      "id": "lo_1",
-      "objective": "Define the key components and terminology of [main topic]",
-      "bloomLevel": "remember",
-      "actionVerb": "define"
-    },
-    {
-      "id": "lo_2",
-      "objective": "Explain the relationship between [concept A] and [concept B]",
-      "bloomLevel": "understand",
-      "actionVerb": "explain"
-    },
-    {
-      "id": "lo_3",
-      "objective": "Apply [method/formula] to solve [type of problem]",
-      "bloomLevel": "apply",
-      "actionVerb": "apply"
-    }
-  ],
-  "keyConcepts": ["Array of 5-10 key terms, concepts, or vocabulary that students should know"],
-  "sections": [
-    {
-      "title": "Section/Lesson title",
-      "originalNotes": "The relevant portion from the user's input that this section covers",
-      "steps": [
-        {
-          "type": "explanation",
-          "content": "A paragraph introducing or explaining a concept. Start with the big picture."
-        },
-        {
-          "type": "key_point",
-          "content": "A specific, memorable key point to remember."
-        },
-        {
-          "type": "explanation",
-          "content": "Another paragraph elaborating on the concept with more detail."
-        },
-        {
-          "type": "question",
-          "question": "What is the main purpose of [concept just taught]?",
-          "options": [
-            "Correct answer that accurately describes the concept",
-            "Plausible wrong answer based on common misconception",
-            "Another plausible wrong answer using similar vocabulary",
-            "Third wrong answer that a confused student might choose"
-          ],
-          "correctIndex": 0,
-          "explanation": "Brief explanation of why the correct answer is right."
-        },
-        {
-          "type": "key_point",
-          "content": "Another important point about this topic."
-        },
-        {
-          "type": "explanation",
-          "content": "Further elaboration with examples or applications."
-        },
-        {
-          "type": "question",
-          "question": "If [scenario], what would happen?",
-          "options": [
-            "Wrong answer A",
-            "Wrong answer B",
-            "Correct answer explaining the outcome",
-            "Wrong answer C"
-          ],
-          "correctIndex": 2,
-          "explanation": "This is correct because..."
-        },
-        {
-          "type": "summary",
-          "content": "Brief recap of the key takeaways from this section."
-        }
-      ],
-      "formulas": [
-        {
-          "formula": "The formula in clear notation",
-          "explanation": "What this formula means and when/how to use it"
-        }
-      ],
-      "diagrams": []
-    }
-  ],
-  "connections": "A paragraph explaining how the different concepts in this course connect to each other.",
-  "summary": "A concise 1-2 paragraph summary of the entire course.",
-  "furtherStudy": [
-    "Suggested topic or resource 1 for deeper learning",
-    "Suggested topic or resource 2",
-    "Suggested topic or resource 3"
-  ]
-}
-
 ## CRITICAL Requirements:
 
 1. **EXPAND the topics** - Don't just list what the user provided. Create full educational content for each topic.
@@ -2145,11 +2047,9 @@ Create a structured course that transforms these topics into complete study mate
 
 8. **Create multiple sections** based on the topics provided. Each major topic should be its own section.
 
-8. **Include formulas** if the topics are mathematical or scientific in nature.
+9. **Include formulas** if the topics are mathematical or scientific in nature.
 
-9. **Be thorough** - this should feel like a complete mini-course covering all the topics mentioned.
-
-Return ONLY the JSON object, no additional text, markdown formatting, or code blocks.`
+10. **Be thorough** - this should feel like a complete mini-course covering all the topics mentioned.`
 }
 
 /**

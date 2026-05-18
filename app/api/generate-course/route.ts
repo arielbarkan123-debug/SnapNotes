@@ -1,4 +1,4 @@
-import { type NextRequest } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { type CourseInsert, type LessonIntensityMode, type GeneratedCourse, type LessonOutline } from '@/types'
 
@@ -16,11 +16,11 @@ import {
   generateCourseFromImage,
   generateCourseFromMultipleImagesProgressive,
   generateCourseFromDocument as _generateCourseFromDocument,
-  generateCourseFromText,
   generateInitialCourse,
   ClaudeAPIError,
   getUserFriendlyError,
 } from '@/lib/ai'
+import { CourseValidationError } from '@/lib/ai/course-validator'
 import type { UserLearningContext } from '@/lib/ai'
 import {
   getContentLanguage,
@@ -35,16 +35,15 @@ import {
   logError,
 } from '@/lib/api/errors'
 import { generateCardsFromCourse } from '@/lib/srs'
-import { uploadExtractedImages, searchEducationalImages } from '@/lib/images'
+import { uploadExtractedImages } from '@/lib/images'
 import { generateCourseImage } from '@/lib/ai/image-generation'
 import { extractAndStoreConcepts } from '@/lib/concepts'
 import { buildCurriculumContext, formatContextForPrompt } from '@/lib/curriculum/context-builder'
 import type { StudySystem } from '@/lib/curriculum/types'
-import { checkRateLimit, RATE_LIMITS, getIdentifier } from '@/lib/rate-limit'
+import { checkRateLimit, RATE_LIMITS, getIdentifier, getRateLimitHeaders } from '@/lib/rate-limit'
 import { validateLearningObjectives, type LearningObjective } from '@/lib/curriculum/learning-objectives'
 import { scoreExtraction, type ExtractionConfidence } from '@/lib/extraction/confidence-scorer'
 import { generateDiagramsForSteps } from '@/lib/diagram-engine/integration'
-import { getStudentContext, generateDirectives } from '@/lib/student-context'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('api:generate-course')
@@ -129,6 +128,27 @@ type StreamMessage =
 // ============================================================================
 
 export async function POST(request: NextRequest): Promise<Response> {
+  // ── Pre-stream: auth + rate limit (fast-fail before opening a stream) ────────
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return NextResponse.json(
+      { error: 'Please log in to generate a course', code: ErrorCodes.UNAUTHORIZED },
+      { status: 401 },
+    )
+  }
+
+  const rateLimitId = getIdentifier(user.id, request)
+  const rateLimit = await checkRateLimit(rateLimitId, RATE_LIMITS.generateCourse)
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please wait before generating another course.', code: 'RATE_LIMITED' },
+      { status: 429, headers: getRateLimitHeaders(rateLimit) },
+    )
+  }
+
+  // ── Stream setup ──────────────────────────────────────────────────────────────
   // Detect Safari and iOS for more aggressive heartbeat interval
   const userAgent = request.headers.get('user-agent') || ''
   const isSafari = userAgent.includes('Safari') && !userAgent.includes('Chrome') && !userAgent.includes('Chromium')
@@ -206,31 +226,8 @@ export async function POST(request: NextRequest): Promise<Response> {
       startHeartbeat()
       sendMessage({ type: 'progress', stage: 'Starting', percent: 5 })
 
-      // 1. Verify authentication
-      const supabase = await createClient()
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser()
-
-      if (authError || !user) {
-        sendMessage({ type: 'error', error: 'Please log in to generate a course', code: ErrorCodes.UNAUTHORIZED, retryable: false })
-        stopHeartbeat()
-        closeStream()
-        return
-      }
-
-      // 1.5. Check rate limit
-      const rateLimitId = getIdentifier(user.id, request)
-      const rateLimit = await checkRateLimit(rateLimitId, RATE_LIMITS.generateCourse)
-
-      if (!rateLimit.allowed) {
-        sendMessage({ type: 'error', error: 'Too many requests. Please wait before generating another course.', code: 'RATE_LIMITED', retryable: true })
-        stopHeartbeat()
-        closeStream()
-        return
-      }
-
+      // Auth and rate limit already verified before stream opened (fast-fail path above)
+      // supabase client re-used from outer scope
       sendMessage({ type: 'progress', stage: 'Authenticated', percent: 10 })
 
       // 1.6. Fetch user learning profile for personalization
@@ -270,20 +267,20 @@ export async function POST(request: NextRequest): Promise<Response> {
       }
 
       // 1.7. Load student intelligence for adaptive lesson pacing
-      try {
-        const studentCtx = await getStudentContext(supabase, user.id)
-        if (studentCtx && userContext) {
-          const directives = generateDirectives(studentCtx)
-          userContext.lessonPacing = {
-            pacing: directives.lessons.pacing,
-            skipWorkedExamples: directives.lessons.skipWorkedExamples,
-            extraPracticeSteps: directives.lessons.extraPracticeSteps,
-            contentFormat: directives.lessons.contentFormat,
-          }
-        }
-      } catch {
-        // Continue without lesson pacing — non-critical
-      }
+      // try {
+      //   const studentCtx = await getStudentContext(supabase, user.id)
+      //   if (studentCtx && userContext) {
+      //     const directives = generateDirectives(studentCtx)
+      //     userContext.lessonPacing = {
+      //       pacing: directives.lessons.pacing,
+      //       skipWorkedExamples: directives.lessons.skipWorkedExamples,
+      //       extraPracticeSteps: directives.lessons.extraPracticeSteps,
+      //       contentFormat: directives.lessons.contentFormat,
+      //     }
+      //   }
+      // } catch {
+      //   // Continue without lesson pacing — non-critical
+      // }
 
       // 2. Parse request body
       const contentLengthHeader = request.headers.get('content-length')
@@ -489,20 +486,24 @@ export async function POST(request: NextRequest): Promise<Response> {
 
       try {
         if (sourceType === 'text' && textContent) {
-          // Text-based generation - use text directly
+          // Text-based generation - use progressive pattern (fast initial + background continuation)
           sendMessage({ type: 'progress', stage: 'Analyzing your text', percent: 30 })
-          const result = await generateCourseFromText(textContent, title, userContext, intensityMode)
+          const textAsDocument = {
+            type: 'pdf' as const,
+            title: title || 'Text Course',
+            content: textContent,
+            sections: [{ title: 'Content', content: textContent, pageNumber: 1 }],
+            metadata: { pageCount: 1 },
+            images: [],
+          }
+          const result = await generateInitialCourse(textAsDocument, title, [], userContext, intensityMode)
           generatedCourse = result.generatedCourse
-          extractedContent = textContent // Use the user's text as extracted content
-
-          // Try to fetch web images based on course title/topics
-          try {
-            const webImages = await searchEducationalImages(generatedCourse.title)
-            if (webImages.length > 0) {
-              _courseImageUrls = webImages.map((img) => img.url)
-            }
-          } catch {
-            // Web image search failed, continue without images
+          extractedContent = textContent
+          ;(generatedCourse as GeneratedCourseWithMetadata)._progressiveMetadata = {
+            lessonOutline: result.lessonOutline,
+            documentSummary: result.documentSummary,
+            totalLessons: result.totalLessons,
+            lessonsReady: result.generatedCourse.lessons.length,
           }
         } else if (documentContent) {
           // Document-based generation - use PROGRESSIVE generation for fast response
@@ -614,13 +615,18 @@ export async function POST(request: NextRequest): Promise<Response> {
 
         let errorMessage = 'Failed to generate course. Please try again.'
         let errorCode: string = ErrorCodes.AI_PROCESSING_FAILED
+        let retryable = true
 
-        if (error instanceof ClaudeAPIError) {
+        if (error instanceof CourseValidationError) {
+          errorCode = error.code
+          errorMessage = error.message
+          retryable = false
+        } else if (error instanceof ClaudeAPIError) {
           errorCode = mapClaudeAPIErrorCode(error.code)
           errorMessage = getUserFriendlyError(error)
         }
 
-        sendMessage({ type: 'error', error: errorMessage, code: errorCode, retryable: true })
+        sendMessage({ type: 'error', error: errorMessage, code: errorCode, retryable })
         stopHeartbeat()
         closeStream()
         return

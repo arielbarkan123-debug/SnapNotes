@@ -13,6 +13,15 @@ import { createLogger } from '@/lib/logger'
 
 const log = createLogger('ai:course-validator')
 
+export class CourseValidationError extends Error {
+  code: string
+  constructor(message: string, code: string) {
+    super(message)
+    this.name = 'CourseValidationError'
+    this.code = code
+  }
+}
+
 // =============================================================================
 // Forbidden Content Patterns
 // =============================================================================
@@ -264,10 +273,13 @@ export function filterForbiddenContent(course: GeneratedCourse): GeneratedCourse
     log.info({ filteredLessonCount, filteredStepCount, courseTitle: course.title, remaining: filteredLessons.length, original: originalLessonCount }, 'Filtered forbidden content from course')
   }
 
-  // Ensure we still have content
+  // Guardrail: if all lessons were removed, the input was entirely exam logistics — reject it
   if (filteredLessons.length === 0) {
-    log.warn('All lessons were filtered! Keeping original course.')
-    return course
+    log.warn({ courseTitle: course.title }, 'All lessons filtered as forbidden content — rejecting course')
+    throw new CourseValidationError(
+      'Your content appears to contain only exam logistics (duration, point values, materials). Please provide the subject matter you want to learn, not the exam instructions.',
+      'CONTENT_REJECTED',
+    )
   }
 
   return {
