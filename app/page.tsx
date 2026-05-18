@@ -455,6 +455,33 @@ async function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-400 py-12">
       <div className="container mx-auto px-4">
+        {/* Contact block */}
+        <div className="border-b border-gray-800 pb-8 mb-8 text-center md:text-start">
+          <h3 className="text-white text-sm font-semibold mb-3">
+            {t('footer.contactTitle')}
+          </h3>
+          <div className="flex flex-col md:flex-row gap-2 md:gap-6 text-sm">
+            <span>
+              {t('footer.privacyLabel')}:{' '}
+              <a
+                href="mailto:privacy@xplus1.ai"
+                className="hover:text-white underline"
+              >
+                privacy@xplus1.ai
+              </a>
+            </span>
+            <span>
+              {t('footer.legalLabel')}:{' '}
+              <a
+                href="mailto:legal@xplus1.ai"
+                className="hover:text-white underline"
+              >
+                legal@xplus1.ai
+              </a>
+            </span>
+          </div>
+        </div>
+
         <div className="flex flex-col md:flex-row justify-between items-center gap-6">
           {/* Logo */}
           <div className="flex items-center gap-2">
@@ -487,6 +514,13 @@ async function Footer() {
             <span className="text-gray-600">|</span>
             <Link href="/privacy" className="hover:text-white transition-colors">{t('footer.privacy')}</Link>
             <Link href="/terms" className="hover:text-white transition-colors">{t('footer.terms')}</Link>
+            <span className="text-gray-600">|</span>
+            <a href="mailto:privacy@xplus1.ai" className="hover:text-white transition-colors">
+              {t('footer.privacyEmail')}
+            </a>
+            <a href="mailto:legal@xplus1.ai" className="hover:text-white transition-colors">
+              {t('footer.legalEmail')}
+            </a>
           </nav>
 
           {/* Copyright */}

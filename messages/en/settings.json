@@ -161,7 +161,7 @@
     "title": "Account",
     "description": "Manage your account",
     "dangerZone": "Danger Zone",
-    "dangerZoneDesc": "To delete your account and all associated data, you will be directed to email support.",
+    "dangerZoneDesc": "To delete your account and all associated data, you will be directed to email our privacy team at privacy@xplus1.ai.",
     "deleteAccount": "Delete Account",
     "typeDeleteToConfirm": "Type DELETE to confirm:",
     "cancel": "Cancel",

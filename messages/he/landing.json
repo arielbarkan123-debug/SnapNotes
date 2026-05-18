@@ -50,6 +50,11 @@
     "signUp": "הרשמה",
     "privacy": "מדיניות פרטיות",
     "terms": "תנאי שימוש",
+    "privacyEmail": "פרטיות",
+    "legalEmail": "משפטי",
+    "contactTitle": "צור קשר",
+    "privacyLabel": "פרטיות",
+    "legalLabel": "משפטי",
     "copyright": "© {year} X+1. כל הזכויות שמורות."
   }
 }

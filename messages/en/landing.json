@@ -50,6 +50,11 @@
     "signUp": "Sign Up",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
+    "privacyEmail": "Privacy",
+    "legalEmail": "Legal",
+    "contactTitle": "Contact",
+    "privacyLabel": "Privacy",
+    "legalLabel": "Legal",
     "copyright": "© {year} X+1. All rights reserved."
   }
 }

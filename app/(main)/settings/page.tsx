@@ -344,12 +344,11 @@ export default function SettingsPage() {
     }
   }
 
-  // Delete account - directs user to contact support (no server-side deletion endpoint yet)
+  // Delete account - directs user to the privacy team (GDPR Art. 17 / right-to-erasure request)
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== 'DELETE') return
 
-    // Open mailto link so the user can request deletion from support
-    window.location.href = 'mailto:support@xplus1.ai?subject=Account%20Deletion%20Request&body=Please%20delete%20my%20account%20and%20all%20associated%20data.'
+    window.location.href = 'mailto:privacy@xplus1.ai?subject=Account%20Deletion%20Request&body=Please%20delete%20my%20account%20and%20all%20associated%20data.'
     toast.info(t('toast.deleteContactSupport'))
     setShowDeleteConfirm(false)
     setDeleteConfirmText('')
